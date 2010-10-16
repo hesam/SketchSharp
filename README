@@ -1,0 +1,83 @@
+Skottie: Sketching using Boogie
+
+This tool is a fork starting from:
+    Boogie v54898
+    SpecSharp v54900
+
+
+BUILD INSTRUCTIONS
+------------------
+
+A. Builld SscSharp [* Run as Admin ]
+
+   cd $SKOTTIE\SpecSharp\SpecSharp\Microsoft.SpecSharp\LastKnownGood9
+   clean.cmd
+   RegisterLKG.cmd
+
+   cd $SKOTTIE\SpecSharp\SpecSharp
+   devenv SpecSharp.sln /build DebugCommandLine
+   devenv SpecSharp.sln /build Debug
+
+B. Build Boogie/SscBoogie
+
+   cd $SKOTTIE\Boogie\Binaries
+   nmake
+   cd ..\Source
+   devenv Boogie.sln /build Debug
+   cd ..\..\SpecSharp\SscBoogie\Binaries
+   nmake
+   cd ..\Source
+   devenv SscBoogie.sln /build Debug
+   cd ..\Binaries
+   nmake register
+
+COMPILING INSTRUCTIONS
+----------------------
+
+$SKOTTIE\Boogie\Binaries\ssc.exe /debug+ <FILENAME>.ssc
+
+    * Notes: 
+      
+        /debug+ is required!
+
+SKETCHING INSTRUCTIONS
+----------------------
+
+$SKOTTIE\SpecSharp\SscBoogie\Binaries\SscBoogie.exe /sketch <Options> <FILENAME>.exe
+
+    * Notes: 
+      
+        /sketch is required!
+        
+        [Inline] attribute enabled on method decls
+
+    * Options:
+
+        /proverLog:C:\Temp\z3-@PROC@
+
+            store Z3 call logs for various sketching steps for debugging
+        
+        /traceSketch
+
+            print sketching related debug info
+    
+        /numCEGARItrs:N        
+
+            MAX number of CEGAR based synthesis iterations (default = 20)
+
+        /numRandInpGen:N       
+
+            number of random tuples for CEGAR synthesis (default = 20)
+
+        /numThreads:N
+
+            runs Parallel Z3 with N threads (default = 0)
+
+	/unboundRandInpArrLen
+
+            do not impose implicit array length bound (= 10) when generating random arrays as input
+
+CONTACT
+-------------------
+Please send mail to Hesam Samimi (hesam@ucla.edu) if there are any problems
+
