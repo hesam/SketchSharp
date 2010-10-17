@@ -1,0 +1,32 @@
+namespace test3
+{
+  public class MyClass2
+  {
+    public int M0(int[]! a)
+      requires a.Length == 12;
+    {
+      return a[0];
+    }
+
+    public int M1(int[][]! a)
+      requires a.Length == 12;
+    {
+      int[] b = a[2];
+      if (b != null) {
+        if (b.Length == 8) {
+          return b[3];
+        } else if (b.Length == 7) {
+          return ((!)a[2])[3];
+        }
+      }
+      return 4;
+    }
+
+    public int M2(int[,]! a)
+      requires a.Length == 12;
+    {
+      return a[2,3];  // error: (either) index may be out of bounds
+    }
+  }
+}
+

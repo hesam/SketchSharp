@@ -1,0 +1,33 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using System.Runtime.InteropServices;
+
+namespace System.ComponentModel {
+  // Summary:
+  //     Specifies the visibility a property has to the design-time serializer.
+  [ComVisible(true)]
+  public enum DesignerSerializationVisibility {
+    // Summary:
+    //     The code generator does not produce code for the object.
+    Hidden = 0,
+    //
+    // Summary:
+    //     The code generator produces code for the object.
+    Visible = 1,
+    //
+    // Summary:
+    //     The code generator produces code for the contents of the object, rather than
+    //     for the object itself.
+    Content = 2,
+  }
+}

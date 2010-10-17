@@ -1,0 +1,20 @@
+using Microsoft.Contracts;
+
+public class A
+{
+  public int X = 0;
+}
+
+public class Test
+{
+  [Rep] private A! a = new A();
+ 
+  public void Modify()
+  {
+    assume a.IsConsistent;
+    for (int i = 0; i < 10; i++)
+    {
+      expose (a) { a.X = i; }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+using Microsoft.Contracts;
+
+class ObjectInv {
+  void Test1(object! o) {
+    expose(o) {}
+  }
+
+  void Test2(object! o) {
+    additive expose(o) {}
+  }
+
+  void Test3(object! o) {
+    assert o.IsValid	;
+  }
+
+  void Test4(object! o) {
+    assert o.IsPrevalid;
+  }
+}

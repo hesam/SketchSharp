@@ -1,0 +1,355 @@
+﻿using System;
+using System.Collections.Generic;
+using Graphing;
+
+namespace Microsoft.Boogie
+{
+  public class UnusedVarEliminator : VariableCollector {
+    public static void Eliminate(Program! program) {
+      UnusedVarEliminator elim = new UnusedVarEliminator();
+      elim.Visit(program);
+    }
+  
+    private UnusedVarEliminator() {
+      base();
+    }
+      
+	public override Implementation! VisitImplementation(Implementation! node) {
+	  //Console.WriteLine("Procedure {0}", node.Name);
+	  Implementation! impl = base.VisitImplementation(node);
+	  //Console.WriteLine("Old number of local variables = {0}", impl.LocVars.Length);
+	  Microsoft.Boogie.VariableSeq! vars = new Microsoft.Boogie.VariableSeq();
+	  foreach (Variable! var in impl.LocVars) {
+	    if (usedVars.Contains(var))
+	      vars.Add(var);
+	  }
+	  impl.LocVars = vars;
+	  //Console.WriteLine("New number of local variables = {0}", impl.LocVars.Length);
+	  //Console.WriteLine("---------------------------------");
+	  usedVars.Clear();
+	  return impl;
+	}
+  }
+  
+  public class ModSetCollector : StandardVisitor {
+    static Procedure proc;
+    static Dictionary<Procedure!, Set<Variable!>!>! modSets;
+    static bool moreProcessingRequired;
+    
+    public static void DoModSetAnalysis(Program! program) {
+      int procCount = 0;
+      foreach (Declaration! decl in program.TopLevelDeclarations) {
+        if (decl is Procedure)
+          procCount++;
+      }
+      Console.WriteLine("Number of procedures = {0}", procCount);
+      
+      modSets = new Dictionary<Procedure!, Set<Variable!>!>();
+      
+      Set<Procedure!> implementedProcs = new Set<Procedure!> ();
+      foreach (Declaration! decl in program.TopLevelDeclarations) {
+        if (decl is Implementation) {
+          Implementation impl = (Implementation) decl;
+          if (impl.Proc != null)
+            implementedProcs.Add(impl.Proc);
+        }
+      }
+      foreach (Declaration! decl in program.TopLevelDeclarations) {
+        if (decl is Procedure && !implementedProcs.Contains((Procedure!) decl)) {
+          proc = (Procedure) decl;
+          foreach (IdentifierExpr! expr in proc.Modifies) {
+            ProcessVariable(expr.Decl);
+          }
+          proc = null;
+        }
+      }
+      
+      moreProcessingRequired = true;
+      while (moreProcessingRequired) {
+        moreProcessingRequired = false;
+        ModSetCollector modSetCollector = new ModSetCollector();
+        modSetCollector.Visit(program);
+      }
+      
+      procCount = 0;
+      foreach (Procedure! x in modSets.Keys) {
+        procCount++;
+        Console.Write("{0} : ", x.Name);
+        foreach (Variable! y in modSets[x]) {
+          Console.Write("{0}, ", y.Name);
+        }
+        Console.WriteLine("");
+      }
+      Console.WriteLine("Number of procedures with nonempty modsets = {0}", procCount);
+    }
+    
+    public override Implementation! VisitImplementation(Implementation! node) {
+      proc = node.Proc;
+      Implementation! ret = base.VisitImplementation(node);
+      proc = null;
+      
+      return ret;
+    }
+    public override Cmd! VisitAssignCmd(AssignCmd! assignCmd) {
+      Cmd ret = base.VisitAssignCmd(assignCmd);
+      foreach (AssignLhs! lhs in assignCmd.Lhss) {
+	    ProcessVariable(lhs.DeepAssignedVariable);
+	  }
+      return ret;
+    }
+    public override Cmd! VisitHavocCmd(HavocCmd! havocCmd) {
+      Cmd ret = base.VisitHavocCmd(havocCmd);
+      foreach (IdentifierExpr! expr in havocCmd.Vars) {
+        ProcessVariable(expr.Decl);
+	  }
+	  return ret;
+    }
+    public override Cmd! VisitCallCmd(CallCmd! callCmd) {
+      Cmd ret = base.VisitCallCmd(callCmd);
+      Procedure callee = callCmd.Proc;
+      if (callee != null && modSets.ContainsKey(callee)) {
+        foreach (Variable var in modSets[callee]) {
+          ProcessVariable(var);
+        }
+      }
+      return ret;
+    }
+    private static void ProcessVariable(Variable var) {
+      Procedure! localProc = (!)proc;
+      if (var == null) return;
+	  if (!(var is GlobalVariable)) return;
+	  if (var.Name == "alloc") return;
+	  if (!modSets.ContainsKey(localProc)) {
+	    modSets[localProc] = new Set<Variable!> ();
+	  }
+	  if (modSets[localProc].Contains(var)) return;
+	  moreProcessingRequired = true;
+	  modSets[localProc].Add(var);
+    }
+  }
+  
+  public class VariableCollector : StandardVisitor {
+	public System.Collections.Generic.Set<Variable!>! usedVars;
+	public VariableCollector() {
+	  usedVars = new System.Collections.Generic.Set<Variable!>();
+	}
+	
+    public override Expr! VisitIdentifierExpr(IdentifierExpr! node) {
+      if (node.Decl != null) {
+        usedVars.Add(node.Decl);
+      }
+      return node;
+    }
+  } 
+  
+  public class BlockCoalescer : StandardVisitor { 
+    public static void CoalesceBlocks(Program! program) {
+      BlockCoalescer blockCoalescer = new BlockCoalescer();
+      blockCoalescer.Visit(program);
+    }
+    
+    private static Set<Block!>! ComputeMultiPredecessorBlocks(Implementation !impl) {
+      Set<Block!> visitedBlocks = new Set<Block!>();
+      Set<Block!> multiPredBlocks = new Set<Block!>();
+      Stack<Block!> dfsStack = new Stack<Block!>();
+      dfsStack.Push(impl.Blocks[0]);
+      while (dfsStack.Count > 0) {
+        Block! b = dfsStack.Pop();
+        if (visitedBlocks.Contains(b)) {
+          multiPredBlocks.Add(b);
+          continue;
+        }
+        visitedBlocks.Add(b);
+        if (b.TransferCmd == null) continue;
+        if (b.TransferCmd is ReturnCmd) continue;
+        assert b.TransferCmd is GotoCmd;
+        GotoCmd gotoCmd = (GotoCmd) b.TransferCmd;
+        if (gotoCmd.labelTargets == null) continue;
+        foreach (Block! succ in gotoCmd.labelTargets) {
+          dfsStack.Push(succ);
+        }
+      }
+      return multiPredBlocks;
+    }
+    
+    public override Implementation! VisitImplementation(Implementation! impl) {
+      //Console.WriteLine("Procedure {0}", impl.Name);
+      //Console.WriteLine("Initial number of blocks = {0}", impl.Blocks.Count);
+      
+      Set<Block!> multiPredBlocks = ComputeMultiPredecessorBlocks(impl);
+      Set<Block!> visitedBlocks = new Set<Block!>();
+      Set<Block!> removedBlocks = new Set<Block!>();
+      Stack<Block!> dfsStack = new Stack<Block!>();
+      dfsStack.Push(impl.Blocks[0]);
+      while (dfsStack.Count > 0) {
+        Block! b = dfsStack.Pop();
+        if (visitedBlocks.Contains(b)) continue;
+        visitedBlocks.Add(b);
+        if (b.TransferCmd == null) continue;
+        if (b.TransferCmd is ReturnCmd) continue;
+        assert b.TransferCmd is GotoCmd;
+        GotoCmd gotoCmd = (GotoCmd) b.TransferCmd;
+        if (gotoCmd.labelTargets == null) continue;
+        if (gotoCmd.labelTargets.Length == 1) {
+          Block! succ = (!)gotoCmd.labelTargets[0];
+          if (!multiPredBlocks.Contains(succ)) {
+            foreach (Cmd! cmd in succ.Cmds) {
+              b.Cmds.Add(cmd);
+            }
+            b.TransferCmd = succ.TransferCmd;
+            if (!b.tok.IsValid && succ.tok.IsValid) {
+              b.tok = succ.tok;
+              b.Label = succ.Label;
+            }
+            removedBlocks.Add(succ);
+            dfsStack.Push(b);
+            visitedBlocks.Remove(b);
+            continue;
+          }
+        } 
+        foreach (Block! succ in gotoCmd.labelTargets) {
+          dfsStack.Push(succ);
+        }
+      }
+      
+      List<Block!> newBlocks = new List<Block!>();
+      foreach (Block! b in impl.Blocks) {
+        if (!removedBlocks.Contains(b)) {
+          newBlocks.Add(b);
+        }
+      }
+      impl.Blocks = newBlocks;
+      
+      // Console.WriteLine("Final number of blocks = {0}", impl.Blocks.Count);
+      return impl;
+    }
+  }
+  
+  public class LiveVariableAnalysis {
+    public static void ClearLiveVariables(Implementation! impl) {
+      foreach (Block! block in impl.Blocks) {
+        block.liveVarsBefore = null;
+      }
+    }
+    
+	public static void ComputeLiveVariables(Implementation! impl) {
+	  Microsoft.Boogie.Helpers.ExtraTraceInformation("Starting live variable analysis");
+	  Graphing.Graph<Block> dag = new Graph<Block>();
+      dag.AddSource((!)impl.Blocks[0]); // there is always at least one node in the graph
+      foreach (Block b in impl.Blocks)
+      {
+        GotoCmd gtc = b.TransferCmd as GotoCmd;
+        if (gtc != null)
+        {
+          assume gtc.labelTargets != null;
+          foreach (Block! dest in gtc.labelTargets)
+          {
+            dag.AddEdge(dest, b);
+          }
+        }
+      }
+      
+      IEnumerable<Block> sortedNodes = dag.TopologicalSort();
+	  foreach (Block! block in sortedNodes) {
+	    Set<Variable!>! liveVarsAfter = new Set<Variable!>();
+	    if (block.TransferCmd is GotoCmd) {
+	      GotoCmd gotoCmd = (GotoCmd) block.TransferCmd;
+	      if (gotoCmd.labelTargets != null) {
+	        foreach (Block! succ in gotoCmd.labelTargets) {
+	          assert succ.liveVarsBefore != null;
+	          liveVarsAfter.AddRange(succ.liveVarsBefore);
+	        }
+	      }
+	    }
+	    
+        CmdSeq cmds = block.Cmds;
+	    int len = cmds.Length;
+	    for (int i = len - 1; i >= 0; i--) {
+	      Propagate(cmds[i], liveVarsAfter);
+	    }
+	    
+	    block.liveVarsBefore = liveVarsAfter;
+	  }
+	}
+	
+	// perform in place update of liveSet
+	private static void Propagate(Cmd! cmd, Set<Variable!>! liveSet) {
+	  if (cmd is AssignCmd) {
+	    AssignCmd! assignCmd = (AssignCmd) cmd;
+	    // I must first iterate over all the targets and remove the live ones.
+	    // After the removals are done, I must add the variables referred on 
+	    // the right side of the removed targets
+	    Set<int> indexSet = new Set<int>();
+	    int index = 0;
+	    foreach (AssignLhs! lhs in assignCmd.Lhss) {
+	      Variable var = lhs.DeepAssignedVariable;
+	      if (var != null && liveSet.Contains(var)) {
+	        indexSet.Add(index);
+	        if (lhs is SimpleAssignLhs) {
+	          // we should only remove non-map target variables because there is an implicit
+	          // read of a map variable in an assignment to it
+			  liveSet.Remove(var);
+			}
+	      }
+	      index++;
+	    }
+	    index = 0;
+	    foreach (Expr! expr in assignCmd.Rhss) {
+	      if (indexSet.Contains(index)) {
+	        VariableCollector! collector = new VariableCollector();
+	        collector.Visit(expr);
+	        liveSet.AddRange(collector.usedVars);
+	        AssignLhs lhs = assignCmd.Lhss[index];
+	        if (lhs is MapAssignLhs) {
+	          // If the target is a map, then all indices are also read
+	          MapAssignLhs malhs = (MapAssignLhs) lhs;
+	          foreach (Expr e in malhs.Indexes) {
+	            VariableCollector! c = new VariableCollector();
+	            c.Visit(e);
+	            liveSet.AddRange(c.usedVars);
+	          }
+	        }
+	      }
+	      index++;
+	    }
+	  } else if (cmd is HavocCmd) {
+	    HavocCmd! havocCmd = (HavocCmd) cmd;
+	    foreach (IdentifierExpr! expr in havocCmd.Vars) {
+	      if (expr.Decl != null) {
+	        liveSet.Remove(expr.Decl);
+	      }
+	    }
+	  } else if (cmd is PredicateCmd) {
+	    assert (cmd is AssertCmd || cmd is AssumeCmd);
+	    PredicateCmd! predicateCmd = (PredicateCmd) cmd;
+	    if (predicateCmd.Expr is LiteralExpr) {
+	      LiteralExpr le = (LiteralExpr) predicateCmd.Expr;
+	      if (le.IsFalse) {
+	        liveSet.Clear();
+	      }
+	    } else {
+	      VariableCollector! collector = new VariableCollector();
+	      collector.Visit(predicateCmd.Expr);
+	      liveSet.AddRange(collector.usedVars);
+	    }
+	  } else if (cmd is CommentCmd) {
+        // comments are just for debugging and don't affect verification
+      } else if (cmd is SugaredCmd) {
+        SugaredCmd! sugCmd = (SugaredCmd) cmd;
+        Propagate(sugCmd.Desugaring, liveSet);
+      } else if (cmd is StateCmd) {
+        StateCmd! stCmd = (StateCmd) cmd;
+        CmdSeq! cmds = stCmd.Cmds;
+        int len = cmds.Length;
+        for (int i = len - 1; i >= 0; i--) {
+          Propagate(cmds[i], liveSet);
+        }
+        foreach (Variable! v in stCmd.Locals) {
+          liveSet.Remove(v);
+        }
+      } else {
+        assert false;
+      }
+	}
+  }
+}

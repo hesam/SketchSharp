@@ -1,0 +1,145 @@
+public class ReturnFinally {
+  public static int x;
+
+  public int y;
+  invariant 0 <= y;
+
+  public void TryFinally0()  // error: postcondition violation
+    modifies x;
+    ensures x == 6;
+  {
+    try {
+    } finally {
+      x = 10;
+    }
+  }
+
+  public void TryFinally1()  // error: postcondition violation
+    modifies x;
+    ensures x == 6;
+  {
+    try {
+      x = 6;
+    } finally {
+      x = 10;
+    }
+  }
+
+  public void TryFinally2()
+    modifies x;
+    ensures x == 6;
+  {
+    try {
+      x = 10;
+    } finally {
+      x = 6;
+    }
+  }
+
+  public void TryFinally3()
+  {
+    try {
+    } finally {
+      assert true;
+    }
+  }
+
+  public virtual void Expose0(bool b)
+    modifies y;
+  {
+    expose (this) {
+      this.y = -4;
+      if (b) { return; }
+      this.y = 2;
+    }  // error: object invariant might not hold (in the event that b is true)
+  }
+
+  public virtual void Expose1(bool b)
+    requires !b;
+    modifies y;
+  {
+    expose (this) {
+      this.y = -4;
+      if (b) { return; }
+      this.y = 2;
+    }
+  }
+
+  public virtual void Expose2(bool b, int x)
+    modifies y;
+  {
+    for (int i = 0; i < x; i++) {
+      expose (this) {
+        this.y = -4;
+        if (b) { break; }
+        this.y = 2;
+      }  // error: object invariant might not hold (in the event that b is true)
+    }
+  }
+
+  public virtual void Expose3(bool b, int x)
+    modifies y;
+  {
+    for (int i = 0; i < x; i++) {
+      expose (this) {
+        this.y = -4;
+        if (b) { continue; }
+        this.y = 2;
+      }  // error: object invariant might not hold (in the event that b is true)
+    }
+  }
+
+  public virtual void Expose4(bool b, int x)
+    modifies y;
+  {
+    for (int i = 0; i < x; i++) {
+      expose (this) {
+        this.y = -4;
+        if (b) { goto END; }
+        this.y = 2;
+      }  // error: object invariant might not hold (in the event that b is true)
+    }
+    END: {}
+  }
+
+  public void M() {
+    try {
+      // skip
+    } finally {
+      assert false;  // error
+    }
+  }
+
+  public void N() {
+    try {
+      return;
+    } finally {
+      assert false;  // error
+    }
+  }
+
+  public void P0(int x)
+    requires 0 <= x;
+  {
+    try {
+    } finally {
+      while (0 < x)
+        invariant 0 <= x;
+      {
+        x--;
+      }
+    }
+  }
+
+  public void P1(int x)
+  {
+    try {
+    } finally {
+      while (0 < x)
+        invariant 0 <= x;  // error: invariant might not hold
+      {
+        x--;
+      }
+    }
+  }
+}

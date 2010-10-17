@@ -1,0 +1,16 @@
+using System;
+
+public sealed class MyClass
+{
+  public string! Concat(string str0, string str1)
+    ensures result.Length ==
+              (str0 == null ? 0 : str0.Length) + (str1 == null ? 1 : str1.Length);
+  {
+    return "hello"; // bogus
+  }
+
+  public void M(int x, bool b, bool c)
+    requires x == 12 ? b : c;
+  {
+  }
+}

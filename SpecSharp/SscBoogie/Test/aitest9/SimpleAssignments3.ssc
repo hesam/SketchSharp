@@ -1,0 +1,19 @@
+// Test the assignment and the join
+
+class SimpleAssignments3
+{
+	public void AnotherMethod(int value)
+	{
+		int x;
+		int y;
+
+		if(value > 2)
+			x = -5;
+		else
+			x = -12;
+
+		y = x;
+		
+		assert -50 <= y && y <= -2;	
+	}
+}

@@ -1,0 +1,82 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Text
+{
+
+    public class ASCIIEncoding
+    {
+
+        public int GetMaxCharCount (int byteCount)
+            requires byteCount >= 0 otherwise ArgumentOutOfRangeException;
+
+        public int GetMaxByteCount (int charCount)
+            requires charCount >= 0 otherwise ArgumentOutOfRangeException;
+
+        public string GetString (Byte[]! bytes, int byteIndex, int byteCount)
+            requires bytes != null otherwise ArgumentNullException;
+            requires byteIndex >= 0 otherwise ArgumentOutOfRangeException;
+            requires byteCount >= 0 otherwise ArgumentOutOfRangeException;
+            requires (bytes.Length - byteIndex) >= byteCount otherwise ArgumentOutOfRangeException;
+
+        public string GetString (Byte[]! bytes)
+            requires bytes != null otherwise ArgumentNullException;
+
+        public int GetChars (Byte[]! bytes, int byteIndex, int byteCount, Char[]! chars, int charIndex)
+            requires bytes != null otherwise ArgumentNullException;
+            requires chars != null otherwise ArgumentNullException;
+            requires byteIndex >= 0 otherwise ArgumentOutOfRangeException;
+            requires byteCount >= 0 otherwise ArgumentOutOfRangeException;
+            requires (bytes.Length - byteIndex) >= byteCount otherwise ArgumentOutOfRangeException;
+            requires charIndex >= 0 otherwise ArgumentOutOfRangeException;
+            requires charIndex <= chars.Length otherwise ArgumentOutOfRangeException;
+            requires (chars.Length - charIndex) >= byteCount otherwise ArgumentException;
+
+        public int GetCharCount (Byte[]! bytes, int index, int count)
+            requires bytes != null otherwise ArgumentNullException;
+            requires index >= 0 otherwise ArgumentOutOfRangeException;
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+            requires (bytes.Length - index) >= count otherwise ArgumentOutOfRangeException;
+
+        public int GetBytes (string! chars, int charIndex, int charCount, Byte[]! bytes, int byteIndex)
+            requires chars != null otherwise ArgumentNullException;
+            requires bytes != null otherwise ArgumentNullException;
+            requires charIndex >= 0 otherwise ArgumentOutOfRangeException;
+            requires charCount >= 0 otherwise ArgumentOutOfRangeException;
+            requires (chars.Length - charIndex) >= charCount otherwise ArgumentOutOfRangeException;
+            requires byteIndex >= 0 otherwise ArgumentOutOfRangeException;
+            requires byteIndex <= bytes.Length otherwise ArgumentOutOfRangeException;
+            requires (bytes.Length - byteIndex) >= charCount otherwise ArgumentException;
+
+        public int GetBytes (Char[]! chars, int charIndex, int charCount, Byte[]! bytes, int byteIndex)
+            requires chars != null otherwise ArgumentNullException;
+            requires bytes != null otherwise ArgumentNullException;
+            requires charIndex >= 0 otherwise ArgumentOutOfRangeException;
+            requires charCount >= 0 otherwise ArgumentOutOfRangeException;
+            requires (chars.Length - charIndex) >= charCount otherwise ArgumentOutOfRangeException;
+            requires byteIndex >= 0 otherwise ArgumentOutOfRangeException;
+            requires byteIndex <= bytes.Length otherwise ArgumentOutOfRangeException;
+            requires (bytes.Length - byteIndex) >= charCount otherwise ArgumentException;
+
+        public int GetByteCount (string! chars)
+            requires chars != null otherwise ArgumentNullException;
+
+        public int GetByteCount (Char[]! chars, int index, int count)
+            requires chars != null otherwise ArgumentNullException;
+            requires index >= 0 otherwise ArgumentOutOfRangeException;
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+            requires (chars.Length - index) >= count otherwise ArgumentOutOfRangeException;
+
+        public ASCIIEncoding ();
+    }
+}

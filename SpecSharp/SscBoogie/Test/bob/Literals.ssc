@@ -1,0 +1,18 @@
+class Test
+{
+   [Microsoft.Contracts.Pure] static bool Foo(string! s) { return true; }
+
+   [Microsoft.Contracts.Pure] static bool Quux(long l) { return true; }
+
+   static void Bar()
+      requires Foo("Bar");
+      requires Quux(0L);
+      requires Quux(0x100000000L);
+   {
+   }
+
+   static double Quiz(double x, double y)
+   {
+      return x / y;
+   }
+}

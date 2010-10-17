@@ -1,0 +1,35 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security.Policy
+{
+
+    public class UnionCodeGroup
+    {
+
+        public string MergeLogic
+        {
+          get;
+        }
+
+        public CodeGroup Copy ();
+
+        public CodeGroup ResolveMatchingCodeGroups (Evidence! evidence)
+            requires evidence != null otherwise ArgumentNullException;
+
+        public PolicyStatement Resolve (Evidence! evidence)
+            requires evidence != null otherwise ArgumentNullException;
+
+        public UnionCodeGroup (IMembershipCondition membershipCondition, PolicyStatement policy);
+    }
+}

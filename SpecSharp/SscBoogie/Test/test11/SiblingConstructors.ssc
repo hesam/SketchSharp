@@ -1,0 +1,36 @@
+class SiblingConstructors {
+  int i;
+  int j;
+  invariant i < j;
+
+  public SiblingConstructors(int x, int y)
+    requires x < y;
+  {
+    base();
+    this.i = x;
+    this.j = y;
+  }
+
+  public SiblingConstructors(int z) {
+    this(z, z+1);
+    i++;  // error: 'this' is not sufficiently exposed (the assignment may thus break the invariant)
+    j++;
+  }
+
+  public SiblingConstructors(int z, bool useDelta, int delta)
+    requires useDelta ==> 0 < delta;
+  {
+    this(z, useDelta ? z+delta : z+1);
+    j++;  // in this order (increment j first, then i), the assignments are fine
+    i++;
+  }
+
+  public SiblingConstructors(int z, bool b)
+  {
+    this(z, z + (b ? 1 : 2));
+    expose (this) {  // coming back from the sibling constructor, the object is exposable
+      i++;
+      j++;
+    }
+  }
+}

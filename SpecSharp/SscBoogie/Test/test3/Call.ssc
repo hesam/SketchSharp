@@ -1,0 +1,20 @@
+public class Call {
+  int x;
+
+  void M(int y)
+    requires x + y == 10;
+  {
+  }
+
+  public static void Main() {
+    Call d = new Call();
+    expose (d)
+    {
+      d.x = 5;
+    }
+    d.M(d.x);  // fine
+
+    Call c = new Call();
+    c.M(5);  // precondition violation
+  }
+}

@@ -1,0 +1,30 @@
+
+-------------------- BagDataRefinement --------------------
+
+Spec# program verifier finished with 18 verified, 0 errors
+
+-------------------- PureIsBaseCall --------------------
+PureIsBaseCall.ssc(47,5): Error: Assertion might not hold: p == 8
+PureIsBaseCall.ssc(56,5): Error: Assertion might not hold: q == 8
+PureIsBaseCall.ssc(92,7): Error: Assertion might not hold: Y == by
+PureIsBaseCall.ssc(127,5): Error: Assertion might not hold: t == 18
+PureIsBaseCall.ssc(148,5): Error: Assertion might not hold: a.M() == 18
+Error: Method CBprime.M(), unsatisfied postcondition: result == 18
+PureIsBaseCall.ssc(201,5): Error: Assertion might not hold: 10 <= h
+PureIsBaseCall.ssc(279,5): Error: Assertion might not hold: im % 2 == 0
+PureIsBaseCall.ssc(280,5): Error: Assertion might not hold: im % 3 == 0
+PureIsBaseCall.ssc(284,5): Error: Assertion might not hold: sm % 2 == 0
+PureIsBaseCall.ssc(286,5): Error: Assertion might not hold: sm % 5 == 0
+PureIsBaseCall.ssc(302,5): Error: Assertion might not hold: s.AlwaysPureM() % 2 == 0
+PureIsBaseCall.ssc(304,5): Error: Assertion might not hold: s.AlwaysPureM() % 5 == 0
+PureIsBaseCall.ssc(306,5): Error: Assertion might not hold: t.AlwaysPureM() % 2 == 0
+PureIsBaseCall.ssc(307,5): Error: Assertion might not hold: t.AlwaysPureM() % 3 == 0
+PureIsBaseCall.ssc(347,7): Error: Assertion might not hold: z == 72
+
+Spec# program verifier finished with 67 verified, 16 errors
+
+-------------------- ConstructorInContract --------------------
+Error: Method Target.Foo1(), unsatisfied postcondition: new Target().k != 0
+Error: Method Target.Foo3(), unsatisfied postcondition: new Target(5).k != 5
+
+Spec# program verifier finished with 3 verified, 2 errors

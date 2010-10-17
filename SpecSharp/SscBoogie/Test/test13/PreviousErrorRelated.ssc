@@ -1,0 +1,223 @@
+
+public class PreviousErrorRelated {
+  private int val = 0;
+
+  public void testMethod0() 
+    modifies val; 
+  {
+    val = 1;
+    while (val == 1) 
+      invariant (0 <= val && val <= 1);
+    {
+      val = 0;
+    }
+    assert val == 0; // passes
+  }
+
+  public void testMethod1() 
+    modifies val; 
+  {
+    val = 1;
+    while (val == 1) {
+      val = 0;
+    }
+    assert val == 0; // fails
+  }
+
+  public void testMethod2() 
+    modifies val; 
+  {
+    val = 0;
+    while (val == 0) {
+      val = 1;
+    }
+    assert val == 0; //fails
+  }
+
+  public void testMethod3() 
+    modifies val; 
+  {
+    val = 0;
+    while (val == 0) 
+      invariant (val == 0); //fails
+    {
+      val = 1;
+    }
+   
+  }
+
+  public void testMethod4() 
+    modifies val; 
+  {
+    val = 0;
+    while (val == 0) 
+      invariant (val == 1); //fails
+    {
+      val = 1;
+    }
+  }
+
+
+  public void testMethodIf0(bool a)
+    requires a;
+  {
+    int z = 0;
+    if (a) 
+    {
+      z = 1; // taken
+    } else {
+      z = 2;
+    }
+    assert false;
+  }
+
+  public void testMethodIf1(bool a)
+    requires !a;
+  {
+    int z = 0;
+    if (a) 
+    {
+      z = 1;
+    } else {
+      z = 2; // taken
+    }
+    assert false;
+  }
+
+  public void testMethodQuCo0(bool a)
+    requires a;
+  {
+    bool z = a ? true : false; // 'taken'
+    assert false;
+  }
+
+  public void testMethodQuCo1(bool a)
+    requires !a;
+  {
+    bool z = a ? true : false; // 'taken'
+    assert false;
+  }
+  
+  public void testMethodSwitch0(int x)
+    requires x == 2;
+  {
+    int z = 0;
+    switch (x) {
+    case 2:  // fall through
+    case 4:  z = 2;  break;
+    default:  z = 4;  break; //taken
+    }
+    assert false; 
+  }
+
+  public void testMethodSwitch1(int x)
+    requires x == 4;
+  {
+    int z = 0;
+    switch (x) {
+    case 2:  // fall through
+    case 4:  z = 2;  break; //taken
+    default:  z = 4;  break;
+    }
+    assert false; 
+  }
+
+  public void testMethodSwitch2(int x)
+    requires x == 6;
+  {
+    int z = 0;
+    switch (x) {
+    case 2:  // fall through
+    case 4:  z = 2;  break;
+    default:  z = 4;  break; //taken
+    }
+    assert false; 
+  }
+
+  public void testMethodLong(bool a)
+    requires a;
+  {
+    int z = 0;
+    if (a) {
+      z = 1; //taken
+    } else {
+      z = 2;
+    }
+    z = 3;
+
+    if (!a) {
+      z = 1; 
+    } else {
+      z = 2; //taken
+    }
+    z = 3;
+
+    z = a ? 4 : 5; // taken: first one, not distinguishable!
+    z = 6;
+
+    z = a ? 4 : 5; // taken: second one, not distinguishable!
+    z = 6;
+   
+    assert 3 == 3 || 5 == 5; // no trace info wanted!
+    z = 7;
+
+    assert 4 == 4 && 7 == 7; // no trace info wanted!
+    z = 8;
+
+    int x = 4;
+    switch (x) {
+    case 4:  z = 0;  break; //taken
+    default:  z = 1;  break;
+    }
+    z = 2;
+
+    x = 3;
+    switch (x) {
+    case 4:  z = 3;  break;
+    default:  z = 4;  break;//taken
+    }
+    z = 5;  
+    x = z;
+    assert false;
+  }
+
+  public void testMethodLoop0() {
+    int x = 0;
+    int z = 0;
+    while (x < 4) 
+      invariant x != 5;
+    {
+      z = 1;
+      if (x < 3) {
+        z = 2; //taken
+        x = 5;
+        continue;
+      } 
+      z = z;
+      x++;
+    }
+    //assert false;
+  }
+
+  public void testMethodLoop1() {
+    int x = 0;
+    while (x < 4) 
+      invariant x != 5;
+    {
+      if (x < 3) {
+        x = 5; //taken
+      } else {
+        x++;
+      }
+    }
+  }
+
+  public void testMethodLoop2(int x) {
+    while (x < 10) {
+      x ++;
+    }
+    x = 11;
+    assert false;
+  }
+
+}

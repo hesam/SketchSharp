@@ -1,0 +1,79 @@
+using Microsoft.Contracts;
+
+public class C {
+  int x;
+
+  // no invariant in this class, so compiler will not emit a PACK statement at the
+  // end of the constructor; Boogie is still supposed to do it, though
+  public C(int y) {
+    x = y;
+  }
+
+  // since this is a deferring constructor, Boogie should not add a PACK
+  public C() {
+    this(6);
+  }
+}
+
+public class E {
+  int x;
+
+  // a non-deferring constructor should start in a state where the object is already
+  // unpacked, so one is not allowed to unpack it
+  [NotDelayed]
+  public E(bool b) {
+    x = 6;
+    expose (this) {  // error: object is already exposed
+      x++;
+    }
+  }
+
+  // since this is a deferring constructor, Boogie should not add a PACK
+  [NotDelayed]
+  public E(int w, int z) {
+    this(false);  // this(w+z < 10);
+    expose (this) {
+      x++;
+    }
+  }
+}
+
+public class D {
+  int x;
+  invariant 0 <= x;
+
+  // there is an invariant in this class, so the compiler will emit a PACK at the end of
+  // the constructor; Boogie should just translate that PACK statement (not add another,
+  // for example)
+  public D(int y)
+    requires 0 <= y;
+  {
+    x = y;
+  }
+
+  // a non-deferring constructor should start in a state where the object is already
+  // unpacked, so one is not allowed to unpack it
+  [NotDelayed]
+  public D(bool b) {
+    x = 6;
+    expose (this) {  // error: object is already exposed
+      x++;
+    }
+  }
+
+  // this is a deferring constructor, so the compiler does not emit an UNPACK or PACK,
+  // and Boogie should not change that
+  public D() {
+    this(6);
+  }
+
+  // this is also a deferring constructor, so the compiler does not emit an UNPACK or PACK,
+  // and Boogie should not change that
+  [NotDelayed]
+  public D(int w, int z) {
+    this(false);  // this(w+z < 10);
+    expose (this) {
+      x++;
+    }
+  }
+}

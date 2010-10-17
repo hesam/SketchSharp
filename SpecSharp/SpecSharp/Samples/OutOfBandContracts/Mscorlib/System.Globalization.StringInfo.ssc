@@ -1,0 +1,38 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Globalization
+{
+
+    public class StringInfo
+    {
+
+        public StringInfo ();
+
+        public static Int32[] ParseCombiningCharacters (string! str)
+            requires str != null otherwise ArgumentNullException;
+
+        public static TextElementEnumerator GetTextElementEnumerator (string! str, int index)
+            requires str != null otherwise ArgumentNullException;
+            requires index >= 0 otherwise ArgumentOutOfRangeException;
+            requires index == 0 otherwise ArgumentOutOfRangeException;
+
+        public static TextElementEnumerator GetTextElementEnumerator (string str);
+
+        public static string GetNextTextElement (string! str, int index)
+            requires str != null otherwise ArgumentNullException;
+            requires index >= 0 otherwise ArgumentOutOfRangeException;
+
+        public static string GetNextTextElement (string str);
+    }
+}

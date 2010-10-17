@@ -1,0 +1,99 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.IO.IsolatedStorage
+{
+
+    public class IsolatedStorageFileStream
+    {
+
+        public bool CanWrite
+        {
+          get;
+        }
+
+        public Int64 Position
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+        }
+
+        public bool CanSeek
+        {
+          get;
+        }
+
+        public bool IsAsync
+        {
+          get;
+        }
+
+        public Int64 Length
+        {
+          get;
+        }
+
+        public bool CanRead
+        {
+          get;
+        }
+
+        public int Handle
+        {
+          get;
+        }
+
+        public void EndWrite (IAsyncResult asyncResult);
+
+        public IAsyncResult BeginWrite (Byte[] buffer, int offset, int numBytes, AsyncCallback userCallback, object stateObject);
+
+        public int EndRead (IAsyncResult asyncResult);
+
+        public IAsyncResult BeginRead (Byte[] buffer, int offset, int numBytes, AsyncCallback userCallback, object stateObject);
+
+        public void WriteByte (byte value);
+
+        public void Write (Byte[] buffer, int offset, int count);
+
+        public Int64 Seek (Int64 offset, System.IO.SeekOrigin origin);
+
+        public int ReadByte ();
+
+        public int Read (Byte[] buffer, int offset, int count);
+
+        public void SetLength (Int64 value);
+
+        public void Flush ();
+
+        public void Close ();
+
+        public IsolatedStorageFileStream (string! path, System.IO.FileMode mode, System.IO.FileAccess access, System.IO.FileShare share, int bufferSize, IsolatedStorageFile isf)
+            requires path != null otherwise ArgumentNullException;
+            requires path.Length != 0 otherwise ArgumentException;
+
+        public IsolatedStorageFileStream (string path, System.IO.FileMode mode, System.IO.FileAccess access, System.IO.FileShare share, int bufferSize);
+
+        public IsolatedStorageFileStream (string path, System.IO.FileMode mode, System.IO.FileAccess access, System.IO.FileShare share, IsolatedStorageFile isf);
+
+        public IsolatedStorageFileStream (string path, System.IO.FileMode mode, System.IO.FileAccess access, System.IO.FileShare share);
+
+        public IsolatedStorageFileStream (string path, System.IO.FileMode mode, System.IO.FileAccess access, IsolatedStorageFile isf);
+
+        public IsolatedStorageFileStream (string path, System.IO.FileMode mode, System.IO.FileAccess access);
+
+        public IsolatedStorageFileStream (string path, System.IO.FileMode mode, IsolatedStorageFile isf);
+
+        public IsolatedStorageFileStream (string path, System.IO.FileMode mode);
+    }
+}

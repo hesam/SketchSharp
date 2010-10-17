@@ -1,0 +1,86 @@
+using Microsoft.Contracts;
+
+public class C {
+  int x;
+  invariant 0 <= x;
+
+  public void M0(C! c) {
+    assert 0 <= c.x;  // follows from invariant
+  }
+
+  public void M1([Delayed] C! c) {
+    assert 0 <= c.x;  // error, because [Delayed] means "c" is not necessarily consistent on entry
+  }
+
+  public void M2() {
+    assert 0 <= x;  // again, all is fine here, of course
+  }
+
+  [Delayed]
+  public void M3() {
+    assert 0 <= x;  // error, because [Delayed] means "this" is not necessarily consistent on entry
+  }
+
+  [Delayed]
+  public void N0(C! c) {
+    assert 0 <= c.x;  // fine, because [Delayed] on "this" does not affect "c" 
+  }
+
+  public void N1([Delayed] C! c) {
+    assert 0 <= x;  // ... and vice versa
+  }
+
+  public int X {
+    [Delayed]
+    get { return x; }
+  }
+
+  public int Y {
+    get { return x; }
+  }
+
+  public C(bool b)
+    ensures X == 5;  // fine
+  {
+    x = 5;
+  }
+
+  public C(int b)
+  {
+    x = 5;
+    assert X == 5;  // fine here, too
+  }
+
+  [NotDelayed]
+  public C(float d)
+    ensures Y == 5;  // error, because precondition-antecedent of #Y does not hold
+  {
+    x = 5;
+  }
+
+  [NotDelayed]
+  public C(double d)
+  {
+    x = 5;
+    assert Y == 5;  // error, because precondition-antecedent of #Y does not hold here either
+  }
+}
+
+internal class D {
+  int x;
+  public int Y { get { return x; } }
+
+  [NotDelayed]
+  public D()
+    ensures Y == 5;  // holds here, because D has no subclasses and postcondition check happens after pack
+  {
+    x = 5;
+  }
+
+  [NotDelayed]
+  public D(int d)
+  {
+    x = 5;
+    assert Y == 5;  // error, because the pack hasn't happened yet here
+  }
+}

@@ -1,0 +1,67 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System
+{
+
+    public class Exception
+    {
+
+        public string HelpLink
+        {
+          get;
+          set;
+        }
+
+        public string StackTrace
+        {
+          get;
+        }
+
+        public System.Reflection.MethodBase TargetSite
+        {
+          get;
+        }
+
+        public string Source
+        {
+          get;
+          set;
+        }
+
+        public Exception InnerException
+        {
+          get;
+        }
+
+        public string Message
+        {
+          get;
+        }
+
+        public void GetObjectData (System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context)
+            requires info != null otherwise ArgumentNullException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public Exception GetBaseException ();
+
+        public Exception (string message, Exception innerException);
+
+        public Exception (string message);
+
+        public Exception ();
+    }
+}

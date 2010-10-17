@@ -1,0 +1,42 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Net
+{
+
+    public class AuthenticationManager
+    {
+
+        public static System.Collections.IEnumerator RegisteredModules
+        {
+          get;
+        }
+
+        public static void Unregister (string! authenticationScheme)
+            requires authenticationScheme != null otherwise ArgumentNullException;
+
+        public static void Unregister (IAuthenticationModule! authenticationModule)
+            requires authenticationModule != null otherwise ArgumentNullException;
+
+        public static void Register (IAuthenticationModule! authenticationModule)
+            requires authenticationModule != null otherwise ArgumentNullException;
+
+        public static Authorization PreAuthenticate (WebRequest! request, ICredentials credentials)
+            requires request != null otherwise ArgumentNullException;
+
+        public static Authorization Authenticate (string! challenge, WebRequest! request, ICredentials! credentials)
+            requires request != null otherwise ArgumentNullException;
+            requires credentials != null otherwise ArgumentNullException;
+            requires challenge != null otherwise ArgumentNullException;
+    }
+}

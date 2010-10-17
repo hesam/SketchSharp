@@ -1,0 +1,55 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+namespace System.Compiler{
+    using System;
+    using System.Collections;
+    using Microsoft.SpecSharp;  //PM: needed to refer to ErrorHandler
+    using Microsoft.Contracts;  //PM: needed to refer to Pure, etc.
+    
+  public abstract class Set
+  {
+    public static ISet! Difference(IEnumerable! a, ISet! b);
+
+    public static ISet! Union(ISet! a, ISet! b);
+
+    public static ISet! Intersect(ISet! a, ISet! b);
+        
+    public static object NonSubsetWitness(ISet! a, ISet! b);
+
+    public delegate bool SetFilter(object! obj);
+
+    public static ISet! Filter(ISet! a, SetFilter! filter);
+    
+    //public static readonly ISet! Empty;
+  }
+  //PM: added a trivial contract to the constructor    
+  public class StandardCheckingVisitor : StandardVisitor{
+    public ErrorHandler ErrorHandler;
+
+    [NotDelayed]
+    public StandardCheckingVisitor(ErrorHandler errorHandler)
+      ensures this.ErrorHandler == errorHandler;
+  }
+  public interface ISet{
+    [Pure][Reads(ReadsAttribute.Reads.Owned)]
+    bool Contains(Object o);
+  }
+  public interface IWorkList: ICollection
+  {
+    bool Add(object o);
+    bool AddAll(IEnumerable objs);
+    [Pure] bool IsEmpty();
+    object Pull();
+  }
+    
+    
+} // System.Compiler

@@ -1,0 +1,166 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Globalization
+{
+
+    public class CultureInfo
+    {
+
+        public static CultureInfo! CurrentUICulture
+        {
+          get;
+        }
+
+        public TextInfo! TextInfo
+        {
+          get;
+        }
+
+        public Calendar[]! OptionalCalendars
+        {
+          get;
+        }
+
+        public string! DisplayName
+        {
+          get;
+        }
+
+        public bool UseUserOverride
+        {
+          get;
+        }
+
+        public int LCID
+        {
+          get;
+        }
+
+        public NumberFormatInfo! NumberFormat
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string! ThreeLetterWindowsLanguageName
+        {
+          get;
+        }
+
+        public CompareInfo! CompareInfo
+        {
+          get;
+        }
+
+        public string! ThreeLetterISOLanguageName
+        {
+          get;
+        }
+
+        public string! NativeName
+        {
+          get;
+        }
+
+        public static CultureInfo! CurrentCulture
+        {
+          get;
+        }
+
+        public bool IsNeutralCulture
+        {
+          get;
+        }
+
+        public string! Name
+        {
+          get;
+        }
+
+        public Calendar! Calendar
+        {
+          get;
+        }
+
+        public string! TwoLetterISOLanguageName
+        {
+          get;
+        }
+
+        public static CultureInfo! InstalledUICulture
+        {
+          get;
+        }
+
+        public DateTimeFormatInfo! DateTimeFormat
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public CultureInfo Parent
+        {
+          get;
+        }
+
+        public string! EnglishName
+        {
+          get;
+        }
+
+        public static CultureInfo! InvariantCulture
+        {
+          get;
+        }
+
+        public bool IsReadOnly
+        {
+          get;
+        }
+
+        public static CultureInfo ReadOnly (CultureInfo! ci)
+            requires ci != null otherwise ArgumentNullException;
+
+        public object Clone ();
+
+        public void ClearCachedData ();
+
+        public object GetFormat (Type formatType);
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string! ToString ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object value);
+
+        public static CultureInfo[] GetCultures (CultureTypes types);
+
+        public static CultureInfo CreateSpecificCulture (string name);
+
+        public CultureInfo (int culture, bool useUserOverride);
+
+        public CultureInfo (int culture);
+
+        public CultureInfo (string! name, bool useUserOverride)
+            requires name != null otherwise ArgumentNullException;
+
+        public CultureInfo (string name);
+    }
+}

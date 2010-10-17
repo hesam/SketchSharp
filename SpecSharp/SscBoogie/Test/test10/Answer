@@ -1,0 +1,67 @@
+
+-------------------- AssignToRepField --------------------
+AssignToRepField.ssc(24,5): Error: illegal assignment to rep field, RHS may already have a different owner
+AssignToRepField.ssc(29,5): Error: illegal assignment to rep field, RHS may already have a different owner
+AssignToRepField.ssc(70,5): Error: Assignment to field RepFieldWithInvariant.f of non-exposed target object may break invariant: f == null ==> x == 0
+AssignToRepField.ssc(92,5): Error: Assignment to additive field AdditiveField.f requires the target object to be additively exposed
+AssignToRepField.ssc(98,7): Error: Assignment to additive field AdditiveField.f requires the target object to be additively exposed
+
+Spec# program verifier finished with 14 verified, 5 errors
+
+-------------------- PeerFields --------------------
+PeerFields.ssc(22,7): Error: RHS might be immutable, and not allowed in peer fields
+PeerFields.ssc(45,7): Error: Call of PeerFields.N(int x), unsatisfied precondition: this.IsConsistent
+PeerFields.ssc(51,5): Error: The call to PeerFields.M(int x) requires target object to be peer consistent
+PeerFields.ssc(58,5): Error: The call to PeerFields.M(int x) requires target object to be peer consistent
+PeerFields.ssc(66,7): Error: The call to PeerFields.M(int x) requires target object to be peer consistent
+PeerFields.ssc(75,9): Error: The call to PeerFields.M(int x) requires target object to be peer consistent
+PeerFields.ssc(73,7): Related information:     (trace position)
+PeerFields.ssc(97,7): Error: illegal assignment to peer field, target object and RHS may have different owners or an owner might not be exposed
+PeerFields.ssc(106,7): Error: illegal assignment to peer field, target object and RHS may have different owners or an owner might not be exposed
+PeerFields.ssc(113,5): Error: Target object of assignment is not allowed to be committed
+PeerFields.ssc(119,5): Error: Target object of assignment is not allowed to be committed
+PeerFields.ssc(137,7): Error: Call of Child.M(), unsatisfied precondition: IsPeerConsistent
+PeerFields.ssc(156,7): Error: Call of Child.M(), unsatisfied precondition: IsPeerConsistent
+PeerFields.ssc(163,7): Error: illegal assignment to peer field, target object and RHS may have different owners or an owner might not be exposed
+PeerFields.ssc(171,9): Error: illegal assignment to peer field, target object and RHS may have different owners or an owner might not be exposed
+
+Spec# program verifier finished with 10 verified, 14 errors
+
+-------------------- Assumptions --------------------
+Assumptions.ssc(40,7): Error: illegal assignment to rep field, RHS may already have a different owner
+Assumptions.ssc(49,9): Error: illegal assignment to rep field, RHS may already have a different owner
+Assumptions.ssc(61,9): Error: illegal assignment to rep field, RHS may already have a different owner
+Assumptions.ssc(73,9): Error: illegal assignment to rep field, RHS may already have a different owner
+
+Spec# program verifier finished with 5 verified, 4 errors
+
+-------------------- RepAssign --------------------
+RepAssign.ssc(28,5): Error: when target object is valid, it is not allowed to have the same owner as RHS, because that would cause a cycle in the ownership relation
+RepAssign.ssc(36,5): Error: when target object is valid, it is not allowed to have the same owner as RHS, because that would cause a cycle in the ownership relation
+RepAssign.ssc(44,5): Error: when target object is valid, it is not allowed to have the same owner as RHS, because that would cause a cycle in the ownership relation
+
+Spec# program verifier finished with 4 verified, 3 errors
+
+-------------------- Capture --------------------
+Capture.ssc(15,5): Error: method invocation may violate the modifies clause of the enclosing method
+Capture.ssc(22,5): Error: method invocation may violate the modifies clause of the enclosing method
+Capture.ssc(54,7): Error: The call to T.P() requires target object to be peer consistent
+
+Spec# program verifier finished with 10 verified, 3 errors
+
+-------------------- AssignToNonInvariantField --------------------
+AssignToNonInvariantField.ssc(69,5): Error: Assignment to field T.c0 of non-exposed target object may break invariant: SomeRelation(c0, c1, d, e)
+AssignToNonInvariantField.ssc(75,5): Error: Assignment to field T.c1 of non-exposed target object may break invariant: SomeRelation(c0, c1, d, e)
+AssignToNonInvariantField.ssc(81,5): Error: Assignment to field T.d of non-exposed target object may break invariant: SomeRelation(c0, c1, d, e)
+AssignToNonInvariantField.ssc(87,5): Error: Assignment to field T.e of non-exposed target object may break invariant: SomeRelation(c0, c1, d, e)
+AssignToNonInvariantField.ssc(119,5): Error: Target object of assignment is not allowed to be committed
+AssignToNonInvariantField.ssc(124,5): Error: Target object of assignment is not allowed to be committed
+AssignToNonInvariantField.ssc(142,5): Error: Target object of assignment is not allowed to be committed
+AssignToNonInvariantField.ssc(148,7): Error: Assignment to field RepClass.Y of non-exposed target object may break invariant: Y == YY
+AssignToNonInvariantField.ssc(197,5): Error: Assignment to field AnotherClient.r of non-exposed target object may break invariant: r.Z == 12
+AssignToNonInvariantField.ssc(205,5): Error: Assignment to field AnotherClient.r of non-exposed target object may break invariant: r.Z == 12
+AssignToNonInvariantField.ssc(242,5): Error: Object invariant possibly does not hold: r.Z == 12
+AssignToNonInvariantField.ssc(253,7): Error: All of the object's owned components must be fully valid
+AssignToNonInvariantField.ssc(263,5): Error: Target object of assignment is not allowed to be committed
+
+Spec# program verifier finished with 30 verified, 13 errors

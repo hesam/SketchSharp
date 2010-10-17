@@ -1,0 +1,50 @@
+// This file tests the "branch expression improvement" that we do in the translation by
+// reaching back into the target stream to find the definition of the variable that is
+// used as the condition in the branch statement.  If the definition is found, it is
+// removed and its RHS is used as a replacement for the branch condition.  This whole
+// process means that we produce guard expressions that are nicer for the abstract
+// interpreter and a drastically reduced number of formula-as-term functions that go
+// into the VC generation.
+
+public class T {
+  int x;
+
+  public void M(T! t, int y) {
+    if (y < 3 && t.x != 3) {
+      M(t, y);
+    }
+    if (t.x != 3) {
+      M(t, y);
+    }
+    if (t == null) {
+      M(t, y);
+    }
+    if (!!(t == null)) {
+      M(t, y);
+    }
+    if (!!(y < 3)) {
+      M(t, y);
+    }
+    if (!!(y < 3 && t.x != 3)) {
+      M(t, y);
+    }
+  }
+
+  bool b;
+
+  public void N(bool c) {
+    if (b) { N(c); }
+    if (c) { N(c); }
+    if (b && c) { N(c); }
+    if (!c) { N(c); }
+    if (!!c) { N(c); }
+    if (P(x)) { N(c); }
+    if (!P(x)) { N(c); }
+    int k;
+    if (Q(out k)) { N(c); }
+    if (!Q(out k)) { N(c); }
+  }
+
+  public bool P(int z) { return true; }
+  public bool Q(out int k) { k = 5; return false; }
+}

@@ -1,0 +1,62 @@
+using Microsoft.Contracts;
+
+// -------------------- captured parameters --------------------
+
+public class Capture {
+  public void Foo([Captured] object! o) {}
+
+  public void Caller0() {
+    Capture c = new Capture();
+    Foo(c);
+  }
+
+  public void Caller1(object! o) {
+    assume Owner.None(o);
+    Foo(o);
+  }  // error: violation of modifies clause
+
+  public void Caller2(object! o)
+    modifies o.*;
+  {
+    assume Owner.None(o);
+    Foo(o);
+  }  // error: violation of modifies clause ("o.*" does not include owner fields; must use [Captured])
+
+  public void Caller3([Captured] object! o) {
+    Foo(o);
+  }
+}
+
+// -------------------- disjoint ownership --------------------
+
+public class C {
+  int x;
+  invariant 0 <= x;
+
+  public void M(T! t)
+    requires Owner.Different(this, t);
+    modifies this.*, t.*;
+  {
+    t.P();
+    expose (this) {
+      x++;
+      t.P();
+    }
+  }
+
+  public void N(T! t)
+    // note the absence of the precondition Owner.Different(this, t).
+    modifies this.*, t.*;
+  {
+    t.P();
+    expose (this) {
+      x++;
+      t.P();  // error: t might not be peer consistent
+    }
+  }
+}
+
+public class T {
+  public void P() {
+  }
+}

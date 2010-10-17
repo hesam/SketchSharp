@@ -1,0 +1,119 @@
+// This file contains several tests for struct types.  However, we really haven't spent any quality time with
+// the design of structs.  Consequently, the support we currently give for invariants, pre- and postconditions,
+// modifies clauses, when to check and assume invariants, etc. is mostly broken.  Nevertheless, it seemed
+// worthwhile to include some tests for structs, so that's what this file does.
+
+public struct St {
+  internal int x;
+  invariant 0 <= x;
+
+  internal St(int y)
+    requires 0 <= y;
+    ensures x == y;
+  {
+    x = y;
+  }
+
+  internal St(bool b)
+  {
+    x = b ? 2 : -2;  // error: violates invariant  // BUGBUG: this is currently not checked
+  }
+
+  internal void M(int[]! a)
+    requires 0 <= x && x < a.Length;
+//BUGBUG: our treatment of the following line is not working:    modifies x;
+    ensures old(x) < x;
+  {
+    int inc = a[x];
+    if (inc <= 0) {
+      inc = 1;
+    }
+    x += inc;
+  }
+
+  internal void N()
+    modifies this;
+//BUGBUG: a bug in the compiler prevents us from using this line:    ensures this == old(this);
+  {
+    x = 1 + x - 1;
+  }
+
+  internal void P()
+  {
+    assert 0 <= x;  // follows from the invariant
+  }
+
+  internal void Q()
+  {
+    x = -2;
+    assert 0 <= x;  // error: the invariant does not apply here  // BUGBUG: our current, not-yet-fully-implemented support for invariants in structs unsoundly lets us prove this assert
+  }
+
+  internal void R()
+  {
+    x = -2;  // error: violates invariant  // BUGBUG: this is currently not checked
+  }
+
+  internal void S(ref int y, out int z) {
+    z = y;
+    assert x == 8;  // error: cannot be concluded from invariant
+  }
+}
+
+/*\
+ *  Test to make sure all subtypes of a type are found even if the type
+ *  is an inner class to a struct.
+ *  Previously, only OtherClass.Subtype1 was found as a subtype of S.C,
+ *  where it really has two subtypes, S.SubType0 and OtherClass.SubType1.
+\*/
+internal struct S{ // must be struct
+
+  internal class C{}
+
+  internal class Subtype0 : C { }
+
+}
+internal class OtherClass {
+
+  private class Subtype1 : S.C{}
+
+  public static void Main() {assert false;}
+}
+/*\
+ *  Test out parameters and return values.
+\*/
+public struct MahStruekt {
+  public void M0() {}
+  public void M1(out int x) { x = 5; }
+  public int M2() { return 6; }
+  public int M3(out int x) { x = 7;  return 8; }
+  public int M4(out int x, int y, ref int z) { x = y; y = z; z = x; return 10+x+y+z; }
+
+  public static int Client() {
+    int a, c, r;
+    MahStruekt s = new MahStruekt();
+    s.M0();
+    s.M1(out a);
+    r = s.M2();
+    r = s.M3(out c);
+    r = s.M4(out a, 65, ref c);
+    return r+a+c;
+  }
+}
+public struct BigNum {
+  public static bool TryParse(string! s, out BigNum r) {
+    r = new BigNum();
+    return true;
+  }
+  public static void Client(int x, int y) {
+    BigNum big0, big1;
+    if (x <= y && BigNum.TryParse("hello", out big0) && BigNum.TryParse("bye", out big1)) {
+      big0 = big1;
+    } else {
+      big1 = big0;
+    }
+  }
+}
+/*\
+ *  End of test.
+\*/

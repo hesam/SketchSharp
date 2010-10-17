@@ -1,0 +1,257 @@
+using System.Collections.Generic;
+using Microsoft.Contracts;
+
+public class Data {
+}
+
+public class C {
+  public void M(int i)
+  {
+    List<Data!> list = new List<Data!>();
+    Data d;
+
+    for (; i < 100; i++) {
+      d = new Data();
+      Owner.AssignSame(d, Owner.ElementProxy(list));
+      list.Add(d);
+    }
+
+    d = new Data();
+    Owner.AssignSame(d, Owner.ElementProxy(list));
+    list.Add(d);
+  }
+}
+
+public class D {
+  [Peer]
+  List<Data!> list;
+
+  [Pure]
+  public List<Data!> GetList()
+  {
+    return list;
+  }
+
+  public void SetListA([Captured] List<Data!>! value)
+    requires GetList() == null;  // set it only once
+    modifies list;
+    ensures GetList() == value;
+  {
+    assert list == null;  // just to test that the precondition is understood here
+    list = value;
+  }
+
+  [Captured]
+  public void SetListB(List<Data!>! value)
+    requires GetList() == null;  // set it only once
+    modifies list;
+    ensures GetList() == value;
+  {
+    assert list == null;  // just to test that the precondition is understood here
+    Owner.AssignSame(this, value);
+    list = value;
+  }
+
+  public void M(int i)
+    requires GetList() != null;
+    modifies list.*;
+  {
+    assert list != null;  // follows from precondition, and required by the type checker
+    Data d;
+
+    List<Data!> oldList = list;
+    for (; i < 100; i++)
+      invariant oldList == list;  // to make up for this.* being part of the modifies clause
+    {
+      d = new Data();
+      Owner.AssignSame(d, Owner.ElementProxy(list));
+      list.Add(d);
+    }
+
+    d = new Data();
+    Owner.AssignSame(d, Owner.ElementProxy(list));
+    list.Add(d);
+  }
+
+  public void N(int i)
+    requires GetList() != null;
+    modifies this.0, list.*;
+  {
+    assert list != null;  // follows from precondition, and required by the type checker
+    Data d;
+
+    for (; i < 100; i++)
+      // no given loop invariant
+    {
+      d = new Data();
+      Owner.AssignSame(d, Owner.ElementProxy(list));
+      list.Add(d);
+    }
+
+    d = new Data();
+    Owner.AssignSame(d, Owner.ElementProxy(list));
+    list.Add(d);
+  }
+}
+
+public class E {
+  [Peer]
+  List<Data!> list;
+
+  public List<Data!> TheList {
+    get {
+      return list;
+    }
+    [Captured]
+    set
+      requires TheList == null;  // set it only once
+      requires value != null;
+      // optional:  modifies list;
+      ensures TheList == value;
+    {
+      assert list == null;  // just to test that the precondition is understood here
+      Owner.AssignSame(this, value);
+      list = value;
+    }
+  }
+
+  public void M(int i)
+    requires TheList != null;
+    modifies list.*;
+  {
+    assert list != null;  // follows from precondition, and required by the type checker
+    Data d;
+
+    List<Data!> oldList = list;
+    for (; i < 100; i++)
+      invariant oldList == list;  // to make up for this.* being part of the modifies clause
+    {
+      d = new Data();
+      Owner.AssignSame(d, Owner.ElementProxy(list));
+      list.Add(d);
+    }
+
+    d = new Data();
+    Owner.AssignSame(d, Owner.ElementProxy(list));
+    list.Add(d);
+  }
+}
+
+public class F {
+  [Peer]
+  List<Data!> list;
+
+  public List<Data!> TheList {
+    get {
+      return list;
+    }
+    [param: Captured]
+    set
+      requires TheList == null;  // set it only once
+      requires value != null;
+      modifies list;
+      ensures TheList == value;
+    {
+      assert list == null;  // just to test that the precondition is understood here
+      list = value;
+    }
+  }
+}
+
+public class G_Parent {
+  public G_Parent(int token) {}
+}
+public class G : G_Parent {
+  [Peer] public readonly Data! data;
+
+  [Captured]
+  public G(int token, Data! d) {
+    base(token);  // is there a way in Spec# to make this call after the Owner assignment?
+    Owner.AssignSame(this, d);
+    data = d;
+  }
+
+  public G([Captured] Data! d, int token) {
+    data = d;
+    base(token);
+  }
+}
+
+// -------------------------------------------------------------
+
+public class Token {}
+public class Type {}
+public class TypeProxy : Type { public Type T; }
+
+public class Expression {
+  public readonly Token! tok;
+  Type type;
+  public Type Type {  // filled in during resolution
+    [Verify(false)]  // TODO: how do we allow Type.get to modify type and still be [Pure]?
+    get
+      ensures type == null ==> result == null;
+    {
+      while (true) {
+        TypeProxy t = type as TypeProxy;
+        if (t != null && t.T != null) {
+          type = t.T;
+        } else {
+          assume type == null || type.IsPeerConsistent;
+          return type;
+        }
+      }
+    }
+    set
+      requires Type == null;  // set it only once
+      requires value != null;
+      modifies type;
+    {
+      type = value;
+      while (true) {
+        TypeProxy t = type as TypeProxy;
+        if (t != null && t.T != null) {
+          type = t.T;
+        } else {
+          return;
+        }
+      }
+    }
+  }
+  
+  public Expression(Token! tok)
+    // ensures Type == null; // cannot be proved, so we use this instead:
+    ensures type == null;    // ...which is good enough for clients
+  {
+    this.tok = tok;
+  }
+
+  public static void Client() {
+    Expression e = new Expression(new Token());
+    assert e.Type == null;
+    e.Type = new Type();  // allowed, since e.Type == null;
+  }
+}
+
+// -------------------------------------------------------------
+
+public class CapA {
+  public CapA() { }
+}
+
+public class CapB : CapA {
+  [Captured]
+  public CapB(CapT! t)
+    ensures Owner.Same(this, t);  // the subclass constructor needs to know something about the new owner
+  {
+    Owner.AssignSame(this, t);
+  }
+}
+
+public class CapC : CapB {
+  [Captured]
+  public CapC(CapT! t) {
+    base(t);
+  }
+}
+
+public class CapT {}

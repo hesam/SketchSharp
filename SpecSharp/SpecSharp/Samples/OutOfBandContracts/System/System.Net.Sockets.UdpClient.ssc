@@ -1,0 +1,76 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Net.Sockets
+{
+
+    public class UdpClient
+    {
+
+        public void DropMulticastGroup (System.Net.IPAddress! multicastAddr, int ifindex)
+            requires multicastAddr != null otherwise ArgumentNullException;
+            requires ifindex >= 0 otherwise ArgumentException;
+
+        public void DropMulticastGroup (System.Net.IPAddress! multicastAddr)
+            requires multicastAddr != null otherwise ArgumentNullException;
+
+        public void JoinMulticastGroup (System.Net.IPAddress! multicastAddr, int timeToLive)
+            requires multicastAddr != null otherwise ArgumentNullException;
+
+        public void JoinMulticastGroup (int ifindex, System.Net.IPAddress! multicastAddr)
+            requires multicastAddr != null otherwise ArgumentNullException;
+            requires ifindex >= 0 otherwise ArgumentException;
+
+        public void JoinMulticastGroup (System.Net.IPAddress multicastAddr);
+
+        public Byte[] Receive (ref System.Net.IPEndPoint remoteEP);
+
+        public int Send (Byte[]! dgram, int bytes)
+            requires dgram != null otherwise ArgumentNullException;
+
+        public int Send (Byte[]! dgram, int bytes, string hostname, int port)
+            requires dgram != null otherwise ArgumentNullException;
+            requires hostname == null otherwise InvalidOperationException;
+            requires port == 0 otherwise InvalidOperationException;
+
+        public int Send (Byte[]! dgram, int bytes, System.Net.IPEndPoint endPoint)
+            requires dgram != null otherwise ArgumentNullException;
+            requires endPoint == null otherwise InvalidOperationException;
+
+        public void Connect (System.Net.IPEndPoint! endPoint)
+            requires endPoint != null otherwise ArgumentNullException;
+
+        public void Connect (System.Net.IPAddress! addr, int port)
+            requires addr != null otherwise ArgumentNullException;
+
+        public void Connect (string hostname, int port);
+
+        public void Close ();
+
+        public UdpClient (string! hostname, int port)
+            requires hostname != null otherwise ArgumentNullException;
+
+        public UdpClient (System.Net.IPEndPoint! localEP)
+            requires localEP != null otherwise ArgumentNullException;
+
+        public UdpClient (int port, AddressFamily family)
+            requires (int)family == 2 || (int)family == 23 otherwise ArgumentException;
+
+        public UdpClient (int port);
+
+        public UdpClient (AddressFamily family)
+            requires (int)family == 2 || (int)family == 23 otherwise ArgumentException;
+
+        public UdpClient ();
+    }
+}

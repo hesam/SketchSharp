@@ -1,0 +1,64 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Resources
+{
+
+    public class ResourceManager
+    {
+
+        public bool IgnoreCase
+        {
+          get;
+          set;
+        }
+
+        public Type ResourceSetType
+        {
+          get;
+        }
+
+        public string BaseName
+        {
+          get;
+        }
+
+        public object GetObject (string! name, System.Globalization.CultureInfo culture)
+            requires name != null otherwise ArgumentNullException;
+
+        public object GetObject (string! name);
+
+        public string! GetString (string! name, System.Globalization.CultureInfo culture)
+            requires name != null otherwise ArgumentNullException;
+
+        public string! GetString (string! name);
+
+        public ResourceSet GetResourceSet (System.Globalization.CultureInfo! culture, bool createIfNotExists, bool tryParents)
+            requires culture != null otherwise ArgumentNullException;
+
+        public static ResourceManager CreateFileBasedResourceManager (string baseName, string resourceDir, Type usingResourceSet);
+
+        public void ReleaseAllResources ();
+
+        public ResourceManager (Type! resourceSource)
+            requires resourceSource != null otherwise ArgumentNullException;
+
+        public ResourceManager (string! baseName, System.Reflection.Assembly! assembly, Type usingResourceSet)
+            requires baseName != null otherwise ArgumentNullException;
+            requires assembly != null otherwise ArgumentNullException;
+
+        public ResourceManager (string! baseName, System.Reflection.Assembly! assembly)
+            requires baseName != null otherwise ArgumentNullException;
+            requires assembly != null otherwise ArgumentNullException;
+    }
+}

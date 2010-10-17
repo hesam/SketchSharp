@@ -1,0 +1,143 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Globalization
+{
+
+    public class CompareInfo
+    {
+
+        public int LCID
+        {
+          get;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object value);
+
+        public SortKey GetSortKey (string source);
+
+        public SortKey GetSortKey (string source, CompareOptions options);
+
+        public int LastIndexOf (string source, string value, int startIndex, int count, CompareOptions options)
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+
+        public int LastIndexOf (string source, Char value, int startIndex, int count, CompareOptions options)
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+
+        public int LastIndexOf (string source, string value, int startIndex, int count)
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+
+        public int LastIndexOf (string source, string value, int startIndex, CompareOptions options);
+
+        public int LastIndexOf (string source, string value, int startIndex);
+
+        public int LastIndexOf (string source, Char value, int startIndex, int count)
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+
+        public int LastIndexOf (string source, Char value, int startIndex, CompareOptions options);
+
+        public int LastIndexOf (string source, Char value, int startIndex);
+
+        public int LastIndexOf (string! source, string value, CompareOptions options)
+            requires source != null otherwise ArgumentNullException;
+
+        public int LastIndexOf (string! source, Char value, CompareOptions options)
+            requires source != null otherwise ArgumentNullException;
+
+        public int LastIndexOf (string! source, string value)
+            requires source != null otherwise ArgumentNullException;
+
+        public int LastIndexOf (string! source, Char value)
+            requires source != null otherwise ArgumentNullException;
+
+        public int IndexOf (string source, string value, int startIndex, int count, CompareOptions options)
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+
+        public int IndexOf (string source, Char value, int startIndex, int count, CompareOptions options)
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+
+        public int IndexOf (string source, string value, int startIndex, int count)
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+
+        public int IndexOf (string source, string value, int startIndex, CompareOptions options);
+
+        public int IndexOf (string! source, string value, int startIndex)
+            requires source != null otherwise ArgumentNullException;
+            requires startIndex <= source.Length otherwise ArgumentOutOfRangeException;
+
+        public int IndexOf (string source, Char value, int startIndex, int count)
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+
+        public int IndexOf (string source, Char value, int startIndex, CompareOptions options);
+
+        public int IndexOf (string! source, Char value, int startIndex)
+            requires source != null otherwise ArgumentNullException;
+            requires startIndex <= source.Length otherwise ArgumentOutOfRangeException;
+
+        public int IndexOf (string source, string value, CompareOptions options);
+
+        public int IndexOf (string source, Char value, CompareOptions options);
+
+        public int IndexOf (string source, string value);
+
+        public int IndexOf (string source, Char value);
+
+        public bool IsSuffix (string source, string suffix);
+
+        public bool IsSuffix (string! source, string! suffix, CompareOptions options)
+            requires source != null otherwise ArgumentNullException;
+            requires suffix != null otherwise ArgumentNullException;
+            requires (int)((int)options & -32) == 0 || (int)options == 1073741824 otherwise ArgumentException;
+
+        public bool IsPrefix (string source, string prefix);
+
+        public bool IsPrefix (string! source, string! prefix, CompareOptions options)
+            requires source != null otherwise ArgumentNullException;
+            requires prefix != null otherwise ArgumentNullException;
+            requires (int)((int)options & -32) == 0 || (int)options == 1073741824 otherwise ArgumentException;
+
+        public int Compare (string string1, int offset1, int length1, string string2, int offset2, int length2, CompareOptions options)
+            requires length1 >= 0 otherwise ArgumentOutOfRangeException;
+            requires length2 >= 0 otherwise ArgumentOutOfRangeException;
+
+        public int Compare (string string1, int offset1, string string2, int offset2);
+
+        public int Compare (string string1, int offset1, string string2, int offset2, CompareOptions options);
+
+        public int Compare (string string1, int offset1, int length1, string string2, int offset2, int length2);
+
+        public int Compare (string string1, string string2, CompareOptions options);
+
+        public int Compare (string string1, string string2);
+
+        public static CompareInfo GetCompareInfo (string! name)
+            requires name != null otherwise ArgumentNullException;
+
+        public static CompareInfo GetCompareInfo (int culture);
+
+        public static CompareInfo GetCompareInfo (string! name, System.Reflection.Assembly! assembly)
+            requires name != null otherwise ArgumentNullException;
+            requires assembly != null otherwise ArgumentNullException;
+
+        public static CompareInfo GetCompareInfo (int culture, System.Reflection.Assembly! assembly)
+            requires assembly != null otherwise ArgumentNullException;
+    }
+}

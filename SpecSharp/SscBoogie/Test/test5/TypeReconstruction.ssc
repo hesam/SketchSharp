@@ -1,0 +1,7 @@
+public class C {
+  // test type reconstruction: when incorrect, it thinks z is a bool.
+  public void M0(int x) {
+    int z = x < 10 ? 1 : 0;
+    assert z == 0;
+  }
+}

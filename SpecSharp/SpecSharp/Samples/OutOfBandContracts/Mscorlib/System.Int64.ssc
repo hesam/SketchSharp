@@ -1,0 +1,63 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System
+{
+    public struct Int64
+    {
+
+        public static int Parse (string! value)
+            requires value != null otherwise ArgumentNullException;
+            
+        public override string! ToString();
+        
+        [Pure]
+        public static bool operator <= (Int64 op1, int op2);
+        [Pure]
+        public static bool operator >= (Int64 op1, int op2);
+        [Pure]
+        public static bool operator < (Int64 op1, int op2);
+        [Pure]
+        public static bool operator > (Int64 op1, int op2);
+
+
+        [Pure]
+        public static bool operator <= (int op1, Int64 op2);
+        [Pure]
+        public static bool operator >= (int op1, Int64 op2);
+        [Pure]
+        public static bool operator < (int op1, Int64 op2);
+        [Pure]
+        public static bool operator > (int op1, Int64 op2);
+        
+        [Pure]
+        public static bool operator <= (Int64 op1, uint op2);
+        [Pure]
+        public static bool operator >= (Int64 op1, uint op2);
+        [Pure]
+        public static bool operator < (Int64 op1, uint op2);
+        [Pure]
+        public static bool operator > (Int64 op1, uint op2);
+
+
+        [Pure]
+        public static bool operator <= (uint op1, Int64 op2);
+        [Pure]
+        public static bool operator >= (uint op1, Int64 op2);
+        [Pure]
+        public static bool operator < (uint op1, Int64 op2);
+        [Pure]
+        public static bool operator > (uint op1, Int64 op2);
+    }
+}

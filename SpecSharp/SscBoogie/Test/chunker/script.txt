@@ -1,0 +1,22 @@
+Chunker Demo with reference types non-null *not* the default.
+Numbers correspond to file name: ChunkerXX.ssc.
+
+0. Start with chunker0.ssc (You can start with just a blank solution, but chunker0 at least shows you where to get to.)
+1. Add non-null marking to field "src" in declaration.
+2. Add non-null marking to "source" in ctor. Note that this is binding on clients: they cannot call the ctor with a possibly null value.
+3. Add non-null marking to return value from NextChunk and postcondition "result.Length == ChunkSize". "Now that we're adding contracts to the ctor, might as well add some to NextChunk."
+4. Squiggly is from the first precondition of Substring. Hit Ctrl-K-I to show the tooltip for Substring with its three invariants. Add "invariant 0 <= n" after field declarations.
+5. Squiggly is from the second precondition of Substring. Add "invariant 0 < ChunkSize" after field declarations.
+6. Squiggly is on the close brace of the ctor. Add precondition "0 < chunkSize" to ctor.
+7. Squiggly is from the third precondition of Substring. Create if-then-else in NextChunk conditioned on precondition of SubString:
+    string s;
+    if (n + ChunkSize <= src.Length) {
+      s = src.Substring(n, ChunkSize);
+    } else {
+      s = src.Substring(n);
+    }
+   Note that this could have been done automatically with a "promote to runtime test" refactoring strategy. Other strategies include "promote to precondition".
+8. Add second conjunct to invariant on n: "&& n <= src.Length".
+9. Error trace shows that the offending update is in the else-branch. Change "n += ChunkSize" to "n += s.Length". Note that no expose block is needed since the update to n is "atomic" and guarantees the invariant is maintained. If you want to show something that requires an expose block look in the directory for the examples with StringBuilder in it (ChunkerRep.ssc).
+10. change the strict equality in the postcondition of NextChunk to be "<=".
+11. (Checking already at level 2) Add modifies "modifies this.*;" to NextChunk.

@@ -1,0 +1,608 @@
+`/p:v2
+using System;
+using Microsoft.SpecSharp.Collections;
+
+class Test{
+  static void Main(){
+    Seq<int> s = new Seq<int>();
+    s.Add(1);
+    s.Add(2);
+    s.Add(3);
+    foreach (int i in s)
+      Console.WriteLine(i);
+  }
+}
+`
+1
+2
+3
+`
+`/p:v2
+//using Microsoft.SpecSharp.Collections;
+
+class Elt {
+
+  bool b = forall{int i in (0:1); i > 0};
+  
+  public static void Main(){
+    Elt e = new Elt();
+    System.Console.WriteLine(e.b);
+  }
+
+}
+`
+False
+`
+`/p:v2 /debug /r:System.dll
+using System;
+using Diag = System.Diagnostics;
+using System.Collections.Generic;
+using Microsoft.SpecSharp.Collections;
+
+namespace Microsoft.SpecSharp.Collections{
+  class Class1{
+    static Set<T> NewSet<T>(params T[] args){
+      Set<T> r = new Set<T>();
+      for(int i = 0; i< args.Length; i++) 
+        r.Add(args[i]);
+      return r;
+    }
+    
+    static Map<S,T> NewMap<S,T>(params Pair<S,T>[]! args){
+      Map<S,T> r = new Map<S,T>();
+      for(int i = 0; i< args.Length; i++) 
+        r.Override(new KeyValuePair<S,T>(args[i].First, args[i].Second));
+      return r;
+    }
+    static Seq<T> NewSeq<T>(params T[]! args){
+      Seq<T> r = new Seq<T>();
+      for(int i = 0; i< args.Length; i++) 
+        r.Add(args[i]);
+      return r;
+    }
+    static Vector<T> NewVector<T>(params T[]! args){
+      Vector<T> r = new Vector<T>();
+      for(int i = 0; i< args.Length; i++) 
+        r.Add(args[i]);
+      return r;
+    }
+ 
+    public static void Main(){
+      
+      TestPair();
+      TestVector();
+      TestSeq();
+      TestMap();
+      TestList();
+      TestRedBlackTree();
+      TestSet();
+    }
+    static void TestList() {
+      bool added;
+      LinkedList<int> l1 = new LinkedList<int>(1,null);
+      Diag.Debug.Assert(l1.head.Equals(1) && l1.tail == null);
+      
+      LinkedList<int> l2 = new LinkedList<int>(2,l1);
+      Diag.Debug.Assert(l2.head.Equals(2) && l2.tail == l1);
+      
+      LinkedList<int> l3 = l2.Add(3,false,out added);
+      Diag.Debug.Assert(l3.head.Equals(3) && l3.tail == l2 && added);
+
+      LinkedList<int> l4 = l3.Add(2,false, out added);
+      Diag.Debug.Assert(l4 == l3 && !added);
+
+      Diag.Debug.Assert(LinkedList<int>.Lookup(l4,3).Equals(3));
+      Diag.Debug.Assert(LinkedList<int>.Lookup(l1,0) == null);
+
+      LinkedList<int> l5 = l4.Add(17,true, out added);
+      Diag.Debug.Assert(LinkedList<int>.Lookup(l5,17).Equals(17) && added);
+
+      LinkedList<int> l6 = l5.Add(1,true, out added);
+
+      Diag.Debug.Assert(LinkedList<int>.Lookup(l6,17).Equals(17));
+      Diag.Debug.Assert(LinkedList<int>.Lookup(l6,1).Equals(1) && !added);
+
+    }
+
+    static void TestRedBlackTree() {
+      bool added;
+      RedBlackTree<int> t = RedBlackTree<int>.Insert(null, 1, true, out added);
+      Diag.Debug.Assert(RedBlackTree<int>.Lookup(t,1).Equals(1) && added);
+      Random r = new Random();
+      const int n = 100;
+      //int[] given = {1,6,2};
+      for(int i = 0; i < n; i++){
+        //int x = given[i]; // 
+        int x = r.Next(n);
+        t = RedBlackTree<int>.Insert(t,  x, true, out added);
+        Diag.Debug.Assert(RedBlackTree<int>.Lookup(t,x).Equals(x));
+        //Console.WriteLine(t + " added=" + added);
+        IEnumerator<int> w = t.GetEnumerator();
+        while(w.MoveNext()){
+          int y = w.Current;
+          //Console.Write(y + " ");
+        }
+        //Console.WriteLine();
+      }
+  
+    }
+    static void TestSet(){
+      Diag.Debug.Assert(new Set<int>() == new Set<int>());
+      Diag.Debug.Assert(NewSet<int>(1) == NewSet<int>(1));
+      Diag.Debug.Assert(NewSet<int>(1) != NewSet<int>(2));
+
+      Set<int> r = NewSet<int>(1,2,3);
+      Set<int> s = NewSet<int>(3,2,1);
+
+      Diag.Debug.Assert(r == s);
+
+
+
+    
+      Diag.Debug.Assert(NewSet<int>() == NewSet<int>() );
+      Diag.Debug.Assert(NewSet<int>(1,1) == NewSet<int>(1));
+      Diag.Debug.Assert(NewSet<int>(1,2) == NewSet<int>(2,1));
+
+      Diag.Debug.Assert(NewSet<int>() == NewSet<int>() );
+      Diag.Debug.Assert(!(NewSet<int>() != NewSet<int>()) );
+
+      Diag.Debug.Assert(NewSet<int>() <= NewSet<int>());
+      Diag.Debug.Assert(NewSet<int>() <= NewSet<int>(1));
+      Diag.Debug.Assert(!(NewSet<int>(1,2,3) <= NewSet<int>(1,2)));
+
+      Diag.Debug.Assert(!(NewSet<int>() < NewSet<int>()));
+      Diag.Debug.Assert(NewSet<int>(1) < NewSet<int>(1,2));
+      Diag.Debug.Assert(!(NewSet<int>(1,2,3) < NewSet<int>(1,2)));
+
+      Diag.Debug.Assert(NewSet<int>() >= NewSet<int>());
+      Diag.Debug.Assert(NewSet<int>(1,2,3) >= NewSet<int>(1,3,2));
+      Diag.Debug.Assert(!(NewSet<int>(1,2,3) >= NewSet<int>(4)));
+
+      Diag.Debug.Assert(NewSet<int>(1) + NewSet<int>(2) == NewSet<int>(1,2));
+      Diag.Debug.Assert(NewSet<int>(1,2) + NewSet<int>(2) == NewSet<int>(1,2));
+
+      Diag.Debug.Assert(NewSet<int>(1,2) - NewSet<int>(2) == NewSet<int>(1));
+      Diag.Debug.Assert(NewSet<int>(1,2) - NewSet<int>(3) == NewSet<int>(1,2));
+
+      Diag.Debug.Assert(NewSet<int>(1,2) * NewSet<int>(2) == NewSet<int>(2));
+      
+      Diag.Debug.Assert(NewSet<int>(1,2)*NewSet<int>(3) == NewSet<int>());
+      Diag.Debug.Assert(Set<int>.BigUnion(NewSet<Set<int>>(NewSet<int>(1,2),NewSet<int>(2,1),NewSet<int>(3))) == NewSet<int>(1,2,3));  
+      Diag.Debug.Assert(Set<int>.BigIntersect(NewSet<Set<int>>(NewSet<int>(1,2),NewSet<int>(2,1),NewSet<int>(3,1))) == NewSet<int>(1));
+
+      Set<int> h = new Set<int>();
+      h.Add(1);
+      h.Add(3);
+      h.Remove(1);
+      h.Remove(2);
+      h.Remove(4);
+
+      Diag.Debug.Assert(h.Count == 1);
+      Diag.Debug.Assert(h == NewSet<int>(3));
+    
+      Set<int> k = new Set<int>();
+      k[1] = true;
+      k[3] = true;
+      k[1] = false;
+      k[2] = false;
+      Diag.Debug.Assert(h == k);
+
+      System.Random rr = new Random();
+      Set<int> ss = new Set<int>(); int ii = 0, jj = 0;
+      for(int i = 0; i< 10000; i++) {
+        int n = rr.Next(30);
+        ss.Add(n); ii++;
+        int m = rr.Next(30);
+        ss.Remove(m); jj++;
+      }
+      
+
+
+    }
+    
+    static void TestMap(){
+    
+      Map<int,char> m1 = NewMap<int,char>(new Pair<int,char>[]{new Pair<int,char>(1,'a'), new Pair<int,char>(1,'b')});
+      Map<int,char> m2 = NewMap<int,char>(new Pair<int,char>[]{new Pair<int,char>(1,'b')});
+
+      Diag.Debug.Assert(NewMap<int,char>() == NewMap<int,char>() );
+
+      Diag.Debug.Assert(NewMap<int,char>(new Pair<int,char>(1,'a'), new Pair<int,char>(1,'b')) == NewMap<int,char>(new Pair<int,char>(1,'b')));
+      Diag.Debug.Assert(NewMap<int,char>(new Pair<int,char>(1,'a'), new Pair<int,char>(2,'b')) == NewMap<int,char>(new Pair<int,char>(2,'b'),new Pair<int,char>(1,'a')));
+
+      Diag.Debug.Assert((NewMap<int,char>(new Pair<int,char>(1,'a')) != NewMap<int,char>(new Pair<int,char>(1,'b'))) );
+
+//      Diag.Debug.Assert(NewMap<int,char>() <= NewMap<int,char>());
+//      Diag.Debug.Assert(NewMap<int,char>() <= NewMap<int,char>(new Pair<int,char>(1,'a')));
+//      Diag.Debug.Assert(NewMap<int,char>(new Pair<int,char>(1,'a')) <= NewMap<int,char>(new Pair<int,char>(1,'a')));
+//      
+//      Diag.Debug.Assert(!(NewMap<int,char>() < NewMap<int,char>()));
+//      Diag.Debug.Assert(NewMap<int,char>(new Pair(<int,char>1,'a')) < NewMap<int,char>(new Pair<int,char>(1,'a'), new Pair<int,char>(2,'a')));
+//      Diag.Debug.Assert(!(NewMap<int,char>(new Pair<int,char>(1,'a'), new Pair<int,char>(2,'a')) < NewMap<int,char>(new Pair<int,char>(2,'a'))));
+//
+//      Diag.Debug.Assert(NewMap<int,char>() >= NewMap<int,char>());
+//      Diag.Debug.Assert(NewMap<int,char>(new Pair<int,char>(1,'a'), new Pair<int,char>(2,'a')) >= NewMap<int,char>(new Pair<int,char>(1,'a'), new Pair<int,char>(2,'a')));
+//      Diag.Debug.Assert(!(NewMap<int,char>(new Pair<int,char>(1,'a'), new Pair<int,char>(2,'a')) >= NewMap<int,char>(new Pair<int,char>(4,'e'))));
+
+      Diag.Debug.Assert(NewMap<int,char>(new Pair<int,char>(1,'a')) + NewMap<int,char>(new Pair<int,char>(2,'b')) == NewMap<int,char>(new Pair<int,char>(1,'a'), new Pair<int,char>(2,'b')));
+      
+      Map<int,char> x1 = NewMap<int,char>(new Pair<int,char>(1,'a'), new Pair<int,char>(2,'a'));
+      Map<int,char> x2 = NewMap<int,char>(new Pair<int,char>(1,'d'));
+      Map<int,char> r = x1 + x2;
+      Map<int,char> x3 = NewMap<int,char>(new Pair<int,char>(1,'d'), new Pair<int,char>(2,'a'));
+      
+
+      Diag.Debug.Assert(NewMap<int,char>(new Pair<int,char>(1,'a'), new Pair<int,char>(2,'a')) + NewMap<int,char>(new Pair<int,char>(1,'d')) == NewMap<int,char>(new Pair<int,char>(1,'d'), new Pair<int,char>(2,'a')));
+
+      //Diag.Debug.Assert(NewMap<int,char>(1,2) - NewMap<int,char>(2) == NewMap<int,char>(1));
+      //Diag.Debug.Assert(NewMap<int,char>(1,2) - NewMap<int,char>(3) == NewMap<int,char>(1,2));
+
+      //Diag.Debug.Assert(NewMap<int,char>(1,2) * NewMap<int,char>(2) == NewMap<int,char>(2));
+      //Diag.Debug.Assert(NewMap<int,char>(1,2) * NewMap<int,char>(3) == NewMap<int,char>());
+
+
+      //Diag.Debug.Assert(Map.BigUnion(NewMap(NewMap(1,2),NewMap(2,1),NewMap(3))) == NewMap(1,2,3));
+      //Diag.Debug.Assert(Map.BigIntersect(NewMap(NewMap(1,2),NewMap(2,1),NewMap(3,1))) == NewMap(1));
+
+      Map<int,char> h = new Map<int,char>(); 
+      h.Add(new KeyValuePair<int,char>(1,'a'));
+      h.Add(new KeyValuePair<int,char>(2,'b'));
+      h.RemoveKey(1);
+      h.Remove(new KeyValuePair<int,char>(2,'b'));
+      Diag.Debug.Assert(h == NewMap<int,char>());
+    
+      Map<int,bool> k = new Map<int,bool>();
+      k[1] = true;
+      k[3] = true;
+      k[1] = false;
+      k[2] = false;
+      Diag.Debug.Assert(k == NewMap<int,bool>(new Pair<int,bool>(1,false),new Pair<int,bool>(3,true),new Pair<int,bool>(2,false)));
+
+
+      Map<int,bool> lm = new Map<int,bool>();
+      foreach(KeyValuePair<int,bool> d in k) 
+        lm.Add(d);
+      Diag.Debug.Assert(k == lm);
+
+
+      Set<int> s = new Set<int>();
+      foreach(int i in k.Keys) 
+        s.Add(i);
+      Diag.Debug.Assert(s == NewSet<int>(1,2,3));
+
+      Set<bool> s2 = new Set<bool>();
+      foreach(bool b in k.Values)
+        s2.Add(b);
+      Diag.Debug.Assert(s2 == NewSet<bool>(true,false));
+      
+
+    }
+    
+    static void TestPair(){
+      Diag.Debug.Assert(Object.Equals(new Pair<int,int>(1,2).First, 1));
+      Diag.Debug.Assert(Object.Equals(new Pair<int,int>(1,2).Second, 2));
+      Diag.Debug.Assert(new Pair<int,int>(1,2)==new Pair<int,int>(1,2));
+      Diag.Debug.Assert(new Pair<int,int>(1,2)!=new Pair<int,int>(1,1));
+    }
+
+    static void TestVector(){
+    /*
+      Diag.Debug.Assert(NewVector() == NewVector<int>());
+
+      Vector a = NewVector<int>(1);
+      Vector b = a;
+      b.Add(2);
+      Vector c = a+NewVector<int>(2);
+
+      Diag.Debug.Assert(a+NewVector<int>(2) == b);
+
+      Vector t1 = NewVector<int>(1);
+      Vector t2 = NewVector<int>(2);
+
+      Vector s = NewVector<int>(1,1);
+      Vector t = NewVector<int>(1,1);
+
+      Diag.Debug.Assert(NewVector<int>(1,1) == NewVector<int>(1,1));
+
+      Diag.Debug.Assert(!(NewVector<int>(1,2) == NewVector<int>(2,1)));
+
+      Diag.Debug.Assert(!(NewVector<int>() != NewVector<int>()) );
+
+//      Diag.Debug.Assert(NewVector<int>() <= NewVector<int>());
+//      Diag.Debug.Assert(NewVector<int>() <= NewVector<int>(1));
+//      Diag.Debug.Assert(!(NewVector<int>(1,2,3) <= NewVector<int>(1,2)));
+//
+//      Diag.Debug.Assert(!(NewVector<int>() < NewVector<int>()));
+//      Diag.Debug.Assert(NewVector<int>(1) < NewVector<int>(1,2));
+//      Diag.Debug.Assert(!(NewVector<int>(1,2,3) < NewVector<int>(1,2)));
+//
+//      Diag.Debug.Assert(NewVector<int>() >= NewVector<int>());
+//      Diag.Debug.Assert(NewVector<int>(1,2,3,4) >= NewVector<int>(1,2,3));
+//      
+      
+      //?? Diag.Debug.Assert(!(NewVector<int>(1,2,3) >= NewVector<int>(4)));
+
+      
+
+      Diag.Debug.Assert(NewVector<int>(1) + NewVector<int>(2) == NewVector<int>(1,2));
+      Diag.Debug.Assert(NewVector<int>(1,2) + NewVector<int>(2) == NewVector<int>(1,2,2));
+
+      //Diag.Debug.Assert(NewVector<int>(1,2) - NewVector<int>(2) == NewVector<int>(1));
+      //Diag.Debug.Assert(NewVector<int>(1,2) - NewVector<int>(3) == NewVector<int>(1,2));
+
+      //Diag.Debug.Assert(NewVector<int>(1,2) * NewVector<int>(2) == NewVector<int>(2));
+      //Diag.Debug.Assert(NewVector<int>(1,2) * NewVector<int>(3) == NewVector<int>());
+
+
+      //Diag.Debug.Assert(Vector.Concat(NewVector<int>(NewVector<int>(1,2),NewVector<int>(2,1),NewVector<int>(3))) == NewVector<int>(1,2,2,1,3));
+      //Diag.Debug.Assert(Vector.BigIntersect(NewVector<int>(NewVector<int>(1,2),NewVector<int>(2,1),NewVector<int>(3,1))) == NewVector<int>(1));
+
+      Vector h = new Vector();
+      h.Add(1);
+      h.Add(3);
+      h.Remove(1);
+      h.Remove(2);
+      Diag.Debug.Assert(h == NewVector<int>(3));
+    
+      Vector k = new Vector();
+      
+    
+      for(int i = 0; i<5;i++)
+        k.Add(null);
+      k[1] = true; 
+      k[3] = true;
+      k[1] = false;
+      k[2] = false;
+      Diag.Debug.Assert(k == NewVector<bool>(null,false,false,true,null));
+
+      
+      Vector iter = new Vector<int>() ;//{1,2,3,4,5};
+      Vector iter2 = NewVector<int>(1,2,3,4,5);
+
+      Diag.Debug.Assert(iter == iter2);
+
+      Diag.Debug.Assert(NewVector<int>(1,2,1).Contains(2));
+      Diag.Debug.Assert(!NewVector<int>(1,2,1).Contains(3));
+      Diag.Debug.Assert(NewVector<int>(1,2,1).IndexOf(1)==0);
+      Diag.Debug.Assert(NewVector<int>(1,2,1).LastIndexOf(1)==2);
+      Diag.Debug.Assert(NewVector<int>(1,2,1).LastIndexOf(3)==-1);
+
+      //Diag.Debug.Assert(Vector.Zip(NewVector<int>(1,2,3,4,5),NewVector<int>(1,2,3,4)).Count==4);
+      //Pair p = Vector.Unzip(Vector.Zip(NewVector<int>(1,2,3,4,5),NewVector<int>(1,2,3,4)));
+      //Console.WriteLine(p);
+      //Diag.Debug.Assert(Object.Equals(p.First, p.Second));
+      //Diag.Debug.Assert((Vector) p.First == NewVector<int>(1,2,3,4));
+
+      //bool bla = Forall{int x in iter; x > 0};
+ 
+
+
+    */
+    } 
+
+
+    static void TestSeq(){
+    /*
+      Diag.Debug.Assert(NewSeq<int>() == NewSeq<int>());
+
+      Seq a = new Seq(1);
+      Seq b = a;
+      b.Add(2);
+Seq c = a+new Seq{2};
+
+      Diag.Debug.Assert(a+new Seq{2} == b);
+
+      Seq t1 = new Seq{1};
+      Seq t2 = new Seq{2};
+
+      Seq s = NewSeq<int>(1,1);
+      Seq t = NewSeq<int>(1,1);
+
+      Diag.Debug.Assert(NewSeq<int>(1,1) == NewSeq<int>(1,1));
+
+      Diag.Debug.Assert(!(NewSeq<int>(1,2) == NewSeq<int>(2,1)));
+
+      Diag.Debug.Assert(!(NewSeq<int>() != NewSeq<int>()) );
+
+//      Diag.Debug.Assert(NewSeq<int>() <= NewSeq<int>());
+//      Diag.Debug.Assert(NewSeq<int>() <= NewSeq<int>(1));
+//      Diag.Debug.Assert(!(NewSeq<int>(1,2,3) <= NewSeq<int>(1,2)));
+//
+//      Diag.Debug.Assert(!(NewSeq<int>() < NewSeq<int>()));
+//      Diag.Debug.Assert(NewSeq<int>(1) < NewSeq<int>(1,2));
+//      Diag.Debug.Assert(!(NewSeq<int>(1,2,3) < NewSeq<int>(1,2)));
+//
+//      Diag.Debug.Assert(NewSeq<int>() >= NewSeq<int>());
+//      Diag.Debug.Assert(NewSeq<int>(1,2,3,4) >= NewSeq<int>(1,2,3));
+      
+      //?? Diag.Debug.Assert(!(NewSeq<int>(1,2,3) >= NewSeq<int>(4)));
+
+      
+
+      Diag.Debug.Assert(NewSeq<int>(1) + NewSeq<int>(2) == NewSeq<int>(1,2));
+      Diag.Debug.Assert(NewSeq<int>(1,2) + NewSeq<int>(2) == NewSeq<int>(1,2,2));
+
+      Diag.Debug.Assert(NewSeq<int>(1,2) - NewSeq<int>(2) == NewSeq<int>(1));
+      Diag.Debug.Assert(NewSeq<int>(1,2) - NewSeq<int>(3) == NewSeq<int>(1,2));
+
+      //Diag.Debug.Assert(NewSeq<int>(1,2) * NewSeq<int>(2) == NewSeq<int>(2));
+      //Diag.Debug.Assert(NewSeq<int>(1,2) * NewSeq<int>(3) == NewSeq<int>());
+
+
+      Diag.Debug.Assert(Seq.Concat(NewSeq<int>(NewSeq<int>(1,2),NewSeq<int>(2,1),NewSeq<int>(3))) == NewSeq<int>(1,2,2,1,3));
+      //Diag.Debug.Assert(Seq.BigIntersect(NewSeq<int>(NewSeq<int>(1,2),NewSeq<int>(2,1),NewSeq<int>(3,1))) == NewSeq<int>(1));
+
+      Seq h = new Seq();
+      h.Add(1);
+      h.Add(3);
+      h.Remove(1);
+      h.Remove(2);
+      Diag.Debug.Assert(h == NewSeq<int>(3));
+    
+      Seq k = new Seq();
+      
+    
+      for(int i = 0; i<5;i++)
+        k.Add(null);
+      k[1] = true; 
+      k[3] = true;
+      k[1] = false;
+      k[2] = false;
+      Diag.Debug.Assert(k == NewSeq<bool>(null,false,false,true,null));
+
+      Diag.Debug.Assert(NewSeq<int>(1,2,1).Contains(2));
+      Diag.Debug.Assert(!NewSeq<int>(1,2,1).Contains(3));
+      Diag.Debug.Assert(NewSeq<int>(1,2,1).IndexOf(1)==0);
+      Diag.Debug.Assert(NewSeq<int>(1,2,1).LastIndexOf(1)==2);
+      Diag.Debug.Assert(NewSeq<int>(1,2,1).LastIndexOf(3)==-1);
+
+
+      
+      Seq iter = new Seq{1,2,3,4,5};
+      Seq iter2 = NewSeq<int>(1,2,3,4,5);
+
+      Diag.Debug.Assert(iter == iter2);
+
+      Diag.Debug.Assert(Seq.Zip(NewSeq<int>(1,2,3,4,5),NewSeq<int>(1,2,3,4)).Count==4);
+      Pair p = Seq.Unzip(Seq.Zip(NewSeq<int>(1,2,3,4,5),NewSeq<int>(1,2,3,4)));
+      Diag.Debug.Assert(Object.Equals(p.First, p.Second));
+      Diag.Debug.Assert((Seq) p.First == NewSeq<int>(1,2,3,4));
+ 
+
+      Diag.Debug.Assert(Object.Equals(NewSeq<int>(1,2,3,4).Head,1));
+      Diag.Debug.Assert(Object.Equals(NewSeq<int>(1,2,3,4).Last,4));
+      Diag.Debug.Assert(NewSeq<int>(1,2,3,4).Tail == NewSeq<int>(2,3,4));
+      Diag.Debug.Assert(NewSeq<int>(1,2,3,4).Front == NewSeq<int>(1,2,3));
+      
+ 
+*/    
+    } 
+  }
+}
+`
+(10,25): warning CS2638: Using possibly null pointer to get array length
+(11,15): warning CS2613: Conversion to 'T!' fails if the value is null
+(30,15): warning CS2613: Conversion to 'T!' fails if the value is null
+(58,25): warning CS2614: Receiver might be null (of type 'object')
+(62,25): warning CS2614: Receiver might be null (of type 'object')
+(66,25): warning CS2614: Receiver might be null (of type 'object')
+(67,25): warning CS2614: Receiver might be null (of type 'object')
+(86,15): warning CS0219: The variable 'y' is assigned but its value is never used
+(74,25): warning CS2614: Receiver might be null (of type 'object')
+(82,27): warning CS2614: Receiver might be null (of type 'object')
+(84,30): warning CS2614: Receiver might be null (of type 'Microsoft.SpecSharp.Collections.RedBlackTree<int>')
+(169,21): warning CS0219: The variable 'm1' is assigned but its value is never used
+(170,21): warning CS0219: The variable 'm2' is assigned but its value is never used
+(195,21): warning CS0219: The variable 'r' is assigned but its value is never used
+(196,21): warning CS0219: The variable 'x3' is assigned but its value is never used
+`
+`
+// bug 83: tests whether the common supertype is calculated correctly
+using System;
+using System.Collections.Generic;
+class T {
+  public static void Main() {
+    IEnumerable<Q> arr = { new S(), new Q() };
+  }
+}
+class Q {}
+class S : Q {}
+`
+`
+`
+// bug 83: tests whether the common supertype is calculated correctly
+using System;
+using System.Collections.Generic;
+interface I{}
+interface J{}
+interface K : I,J{}
+interface L : J {}
+interface M : K, L {}
+interface N : L {}
+
+class C1 : M {}
+class C2 : N {}
+
+class T {
+  public static void Main() {
+    IEnumerable<L> arr = { new C1(), new C2() };
+  }
+}
+`
+`
+`
+// bug 83: tests whether the common supertype is calculated correctly
+using System;
+using System.Collections.Generic;
+interface I{}
+interface J{}
+interface K : I,J{}
+interface L : J {}
+interface M : K, L {}
+interface N : L {}
+
+class C1 : M {}
+class C2 : N {}
+
+class T {
+  public static void Main() {
+    IEnumerable<M> arr = { new C1(), new C2() };
+  }
+}
+`
+(16,26): error CS0029: Cannot implicitly convert type 'System.Collections.Generic.IEnumerable<L>' to 'System.Collections.Generic.IEnumerable<M>'
+`
+`
+// Additional quantifier: "number of" times a predicate holds over a collection
+public class C{
+  public void f(int[] xs)
+    requires count{int x in xs; x > 0} > 3;
+  {}
+}
+class M{
+  public static void Main(){
+    C c = new C();
+    int[] A = new int[]{0,1,2,3,4};
+    c.f(A);
+  }
+}
+`
+`
+`
+// Additional quantifier: "number of" times a predicate holds over a collection
+public class C{
+  public void f(int[] xs)
+    requires count{int x in xs; x > 0} > 3;
+  {}
+}
+class M{
+  public static void Main(){
+    C c = new C();
+    int[] A = new int[]{0,1,2,0,4};
+    c.f(A);
+  }
+}
+`
+Precondition 'count{int x in xs; x > 0} > 3' violated from method 'C.f(System.Int32[])'
+`
+`/debug
+// Tests whether multiple quantifiers can exist in a method
+using System;
+class M{
+  public static bool bar(string[] xs, int y){
+    if (y > 3)
+      return forall{string! s in xs; s.Length > 0};
+    return forall{string! s in xs; s.Length > y};
+  }
+  public static void Main(){
+    string[] A = new string[]{"xx","xx"};
+    Console.WriteLine(bar(A,4));
+    Console.WriteLine(bar(A,3));
+    Console.WriteLine(bar(A,1));
+  }
+}
+`
+True
+False
+True
+`

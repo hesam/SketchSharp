@@ -1,0 +1,8 @@
+class Test
+{
+    static void Foo(int[]! stuff)
+        requires 0 < stuff.Length && 0 <= stuff[0];
+    {
+        assert stuff[0] != -1;
+    }
+}

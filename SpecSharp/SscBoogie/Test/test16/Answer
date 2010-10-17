@@ -1,0 +1,50 @@
+
+-------------------- FoxtrotChecking --------------------
+FoxtrotChecking.ssc(17,3): warning CS2663: Object invariant possibly does not hold: x <= y
+FoxtrotChecking.ssc(24,15): warning CS2663: On exit from C.M1(), all objects must satisfy their invariants
+FoxtrotChecking.ssc(44,5): warning CS2663: The call to T.Mx() requires target object to satisfy the invariant declared in T
+FoxtrotChecking.ssc(47,15): warning CS2663: On exit from C.R(), all objects must satisfy their invariants
+FoxtrotChecking.ssc(58,15): warning CS2663: On exit from C.S1(), all objects must satisfy their invariants
+FoxtrotChecking.ssc(68,5): warning CS2663: The call to C.Bprivate() requires target object to satisfy the invariant declared in C
+FoxtrotChecking.ssc(78,5): warning CS2663: The call to C.BSinside(int q, C! c0, C! c1) requires c0 to satisfy the invariant declared in C
+FoxtrotChecking.ssc(88,5): warning CS2663: The call to C.BSinside(int q, C! c0, C! c1) requires c0 to satisfy the invariant declared in C
+FoxtrotChecking.ssc(103,5): warning CS2663: Assertion might not hold: x <= y
+FoxtrotChecking.ssc(107,5): warning CS2663: Assertion might not hold: c1.x <= c1.y
+
+-------------------- Chunker --------------------
+
+Spec# program verifier finished with 4 verified, 0 errors
+-------------------- FoxtrotLoops1.ssc --------------------
+FoxtrotLoops1.ssc(7,7): Error: Array index possibly above upper bound
+FoxtrotLoops1.ssc(17,7): Error: Array index possibly above upper bound
+FoxtrotLoops1.ssc(19,5): Error: Assertion might not hold: false
+FoxtrotLoops1.ssc(25,17): Error: After loop iteration: Loop invariant might not hold: s < 100
+FoxtrotLoops1.ssc(27,7): Related information:     (trace position)
+FoxtrotLoops1.ssc(28,9): Related information:     (trace position)
+FoxtrotLoops1.ssc(37,17): Error: After loop iteration: Loop invariant might not hold: s < 100
+FoxtrotLoops1.ssc(39,7): Related information:     (trace position)
+FoxtrotLoops1.ssc(48,17): Error: After loop iteration: Loop invariant might not hold: s < 100
+FoxtrotLoops1.ssc(50,7): Related information:     (trace position)
+FoxtrotLoops1.ssc(51,9): Related information:     (trace position)
+
+Spec# program verifier finished with 1 verified, 6 errors
+-------------------- FoxtrotLoops1.ssc /loopUnroll:1 --------------------
+FoxtrotLoops1.ssc(7,7): Error: Array index possibly above upper bound
+FoxtrotLoops1.ssc(25,17): Error: Initially: Loop invariant might not hold: s < 100
+FoxtrotLoops1.ssc(37,17): Error: Initially: Loop invariant might not hold: s < 100
+
+Spec# program verifier finished with 3 verified, 3 errors
+-------------------- FoxtrotLoops5.ssc --------------------
+FoxtrotLoops5.ssc(9,7): Error: Assertion might not hold: a[i] != 7
+FoxtrotLoops5.ssc(18,7): Error: Assertion might not hold: x != 7
+FoxtrotLoops5.ssc(17,5): Related information:     (trace position)
+
+Spec# program verifier finished with 1 verified, 2 errors
+-------------------- FoxtrotLoops5.ssc /loopUnroll:2 --------------------
+
+Spec# program verifier finished with 3 verified, 0 errors
+-------------------- FoxtrotLoops5.ssc /loopUnroll:3 --------------------
+FoxtrotLoops5.ssc(9,7): Error: Assertion might not hold: a[i] != 7
+FoxtrotLoops5.ssc(18,7): Error: Assertion might not hold: x != 7
+
+Spec# program verifier finished with 1 verified, 2 errors

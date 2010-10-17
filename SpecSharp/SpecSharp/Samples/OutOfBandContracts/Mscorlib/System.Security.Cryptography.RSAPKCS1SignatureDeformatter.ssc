@@ -1,0 +1,32 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security.Cryptography
+{
+
+    public class RSAPKCS1SignatureDeformatter
+    {
+
+        public bool VerifySignature (Byte[]! rgbHash, Byte[]! rgbSignature)
+            requires rgbHash != null otherwise ArgumentNullException;
+            requires rgbSignature != null otherwise ArgumentNullException;
+
+        public void SetHashAlgorithm (string strName);
+
+        public void SetKey (AsymmetricAlgorithm key);
+
+        public RSAPKCS1SignatureDeformatter (AsymmetricAlgorithm key);
+
+        public RSAPKCS1SignatureDeformatter ();
+    }
+}

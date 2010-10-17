@@ -1,0 +1,45 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security.Permissions
+{
+
+    public class RegistryPermission
+    {
+
+        public void FromXml (System.Security.SecurityElement esd);
+
+        public System.Security.SecurityElement ToXml ();
+
+        public System.Security.IPermission Copy ();
+
+        public System.Security.IPermission Union (System.Security.IPermission other);
+
+        public System.Security.IPermission Intersect (System.Security.IPermission target);
+
+        public bool IsSubsetOf (System.Security.IPermission target);
+
+        public bool IsUnrestricted ();
+
+        public string GetPathList (RegistryPermissionAccess access);
+
+        public void AddPathList (RegistryPermissionAccess access, string pathList);
+
+        public void SetPathList (RegistryPermissionAccess access, string pathList);
+
+        public RegistryPermission (RegistryPermissionAccess access, string pathList);
+
+        public RegistryPermission (PermissionState state)
+            requires (int)state == 1 || (int)state == 0 otherwise ArgumentException;
+    }
+}

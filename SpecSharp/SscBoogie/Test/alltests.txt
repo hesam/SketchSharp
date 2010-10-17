@@ -1,0 +1,26 @@
+test3            Use    Simple end-to-end tests
+test5            Use    More simple end-to-end tests
+test6            Use    Various loop tests
+test8            Use    Delegates
+test9            Use    Generics (to be beefed up as we add more support)
+test10           Use    The new rep/peer regime
+test11           Use    More simple end-to-end tests
+aitest9          Use    Test for the abstract domain of intervals
+quanttest        Use    Quantifiers in Spec# contracts tests
+framecond        Use    Heap frame conditions tests
+objinv           Use    Object invariant tests
+Bag              Use    The stages of the Bag demo, testing the plug-in and making sure the demo works
+chunker          Use    The stages of the Chunker demo, testing the plug-in and making sure the demo works
+bob              Use	   Boogie-on-Boogie bug fix regression tests
+iterators        Use    The Iterator design pattern
+test12           Use    Visibility based invariants
+test13           Use    ExistsUnique
+BoundedStack     Use    Example with several loops
+textbook         Long   Some textbook examples (computing squares and cubes, binary search, fibonacci, ...)
+WindowsCard      Use    Defensive virtual machine interpreter
+PrettySx         Use    Flattens and cleans up Simplify S-expression input
+test15           SoonAgain    Benchmarks for error messages
+test16           Use    Tests methodology of visible-state semantics and loop unrolling
+test18           Use    More purity and model-field tests
+test22           Use    Programs included in the Spec# tutorial
+test14           NeedsDafny    Verifications of Boogie itself

@@ -1,0 +1,40 @@
+public class T {
+  public virtual string M()
+    ensures true;
+  {
+    return null;
+  }
+}
+
+public class U : T {
+  public override string M()
+    ensures result != null;
+  {
+    return "hello";
+  }
+}
+
+public class MainClass {
+  public static void Main() {
+    T t = new T();
+    U u = new U();
+
+    object o;
+    t.M();
+    u.M();
+  }
+
+  public static void BoogieTest0(T! t)
+    modifies t.*;
+  {
+    object o = t.M();
+    assert o != null;  // error
+  }
+
+  public static void BoogieTest0(U! u)
+    modifies u.*;
+  {
+    object o = u.M();
+    assert o != null;  // correct
+  }
+}

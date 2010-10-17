@@ -1,0 +1,23 @@
+class X {
+  int SumTo (int N)
+    requires 0 <= N;
+    ensures result == sum{int k in (0..N+1); k};  // (written to match erroneous invariant)
+  {
+    int s = 0; 
+    for (int i = 0; i <= N; i++)
+      invariant i <= N+1;
+      invariant s == sum{int k in (0..i); k}; // ERROR: change to (0: 1) to fix it
+    {
+      s += i;
+    }
+    return s;
+  }
+}
+
+//current error:
+// SumZeroToN1.ssc(9,17): Error: After loop iteration: Loop invariant might not hold: s == sum{int k in (0..i); k}
+// SumZeroToN1.ssc(11,7):    (trace position related to previous error)
+
+//better error:
+// point to i being included in the interval while it should not be included;
+// concrete example: i = 2, s = 1 , sum{...} = 3;

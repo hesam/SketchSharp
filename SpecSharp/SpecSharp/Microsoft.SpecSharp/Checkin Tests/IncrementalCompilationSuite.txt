@@ -1,0 +1,158 @@
+compilation test1
+file foo
+using System;
+
+public class Test{
+  public static void Main(string[] args){
+    Console.WriteLine("Hello");
+  }
+  int foo;
+}
+`
+before
+Console.WriteLine("Hello");
+`
+after
+`
+output
+1: 
+3: Test
+4: Test.Main(System.String[])
+6: Test.foo
+3: Test.#ctor
+`
+compilation test2
+file foo
+using System;
+
+public class Test{
+  public static void Main(string[] args){
+    Console.WriteLine("Hello");
+  }
+  int foo;
+}
+`
+before
+Console.WriteLine("Hello");
+`
+after
+Console.WriteLine("Hello");
+Console.WriteLine("There");
+`
+before
+}`
+after
+// a stupid comment
+}`
+output
+1: 
+3: Test
+4: Test.Main(System.String[])
+9: Test.foo
+3: Test.#ctor
+`
+compilation test3
+file foo
+using System;
+
+public class Test{
+  public static void Main(string[] args){
+    Console.WriteLine("Hello");
+  }
+  int foo;
+}
+`
+before
+Console.WriteLine("Hello");
+`
+after
+Console.WriteLine("Hello, hello");
+`
+output
+1: 
+3: Test
+4: Test.Main(System.String[])
+7: Test.foo
+3: Test.#ctor
+`
+before
+Console.WriteLine("Hello, hello");
+`
+after
+Console.WriteLine("Hello");
+`
+output
+1: 
+3: Test
+4: Test.Main(System.String[])
+7: Test.foo
+3: Test.#ctor
+`
+before
+int foo;
+`
+after
+char foo;
+`
+output
+update of test3 resulted in a new compilation instance
+Received update event on symbol table: test3
+changedMembers[0].FullName == Test.foo
+changedMembers[1].FullName == Test
+`
+compilation test4
+file foo
+using System;
+
+public class Test{
+  public static void Main(string[] args){
+  }
+}
+`
+compilation test4a
+file foo2
+public class fooClass{
+  public int bar;
+}
+`
+before
+  public int bar;
+`
+after
+  public char bar;
+`
+output
+update of test4a resulted in a new compilation instance
+Received update event on symbol table: test4a
+changedMembers[0].FullName == fooClass.bar
+changedMembers[1].FullName == fooClass
+`
+compilation test5
+file foo
+using System;
+
+public class Test{
+  public static void Main(string[] args){
+  }
+  fooClass foo;
+}
+`
+compilation test5a
+file foo2
+public class fooClass{
+  public int bar;
+}
+`
+before
+  public int bar;
+`
+after
+  public char bar;
+`
+output
+update of test5a resulted in a new compilation instance
+Received update event on symbol table: test5a
+changedMembers[0].FullName == fooClass.bar
+changedMembers[1].FullName == fooClass
+update of test5 resulted in a new compilation instance
+`

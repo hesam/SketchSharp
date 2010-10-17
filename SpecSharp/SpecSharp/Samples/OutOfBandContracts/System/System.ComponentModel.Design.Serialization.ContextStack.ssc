@@ -1,0 +1,38 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.ComponentModel.Design.Serialization
+{
+
+    public class ContextStack
+    {
+
+        public object Current
+        {
+          get;
+        }
+
+        public object this [int level]
+        {
+          get
+            requires level >= 0 otherwise ArgumentOutOfRangeException;
+        }
+
+        public ContextStack ();
+
+        public void Push (object! context)
+            requires context != null otherwise ArgumentNullException;
+
+        public object Pop ();
+    }
+}

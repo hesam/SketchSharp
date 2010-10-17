@@ -1,0 +1,39 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Diagnostics {
+  // Summary:
+  //     Specifies what messages to output for the System.Diagnostics.Debug, System.Diagnostics.Trace
+  //     and System.Diagnostics.TraceSwitch classes.
+  public enum TraceLevel {
+    // Summary:
+    //     Output no tracing and debugging messages.
+    Off = 0,
+    //
+    // Summary:
+    //     Output error-handling messages.
+    Error = 1,
+    //
+    // Summary:
+    //     Output warnings and error-handling messages.
+    Warning = 2,
+    //
+    // Summary:
+    //     Output informational messages, warnings, and error-handling messages.
+    Info = 3,
+    //
+    // Summary:
+    //     Output all debugging and tracing messages.
+    Verbose = 4,
+  }
+}

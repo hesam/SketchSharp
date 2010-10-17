@@ -1,0 +1,83 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Reflection
+{
+
+    public class ParameterInfo
+    {
+
+        public MemberInfo Member
+        {
+          get;
+        }
+
+        public object DefaultValue
+        {
+          get;
+        }
+
+        public ParameterAttributes Attributes
+        {
+          get;
+        }
+
+        public Type ParameterType
+        {
+          get;
+        }
+
+        public string Name
+        {
+          get;
+        }
+
+        public bool IsLcid
+        {
+          get;
+        }
+
+        public bool IsOut
+        {
+          get;
+        }
+
+        public bool IsOptional
+        {
+          get;
+        }
+
+        public bool IsRetval
+        {
+          get;
+        }
+
+        public int Position
+        {
+          get;
+        }
+
+        public bool IsIn
+        {
+          get;
+        }
+
+        public bool IsDefined (Type! attributeType, bool inherit)
+            requires attributeType != null otherwise ArgumentNullException;
+
+        public Object[] GetCustomAttributes (Type! attributeType, bool inherit)
+            requires attributeType != null otherwise ArgumentNullException;
+
+        public Object[] GetCustomAttributes (bool inherit);
+    }
+}

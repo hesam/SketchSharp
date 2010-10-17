@@ -1,0 +1,66 @@
+Writing to Output.trace for /trace filtering...
+Start 
+ 
+-------------------- VisibilityBasedInvariants -------------------- 
+
+Running abstract interpretation...
+
+
+
+
+
+
+
+
+
+
+VisibilityBasedInvariants.ssc(102,5): Error: Object invariant possibly does not hold: x == th.y
+
+VisibilityBasedInvariants.ssc(109,7): Error: Assignment to field Thing.y may violate a visibility-based invariant declared in class Friend
+
+
+
+Spec# program verifier finished with 11 verified, 2 errors
+ 
+-------------------- Spouse -------------------- 
+
+Running abstract interpretation...
+
+
+
+Spouse.ssc(38,9): Error: illegal assignment to peer field, target object and RHS may have different owners or an owner might not be exposed
+
+
+
+
+
+
+
+Spouse.ssc(118,5): Error: assigning an owner requires the subject to be un-owned
+
+Spouse.ssc(122,5): Error: the specified owner frame must be a supertype of the allocated type of the specified owner reference
+
+
+
+Spouse.ssc(138,5): Error: assigning an owner requires the subject to be un-owned
+
+
+
+
+
+
+Spec# program verifier finished with 15 verified, 4 errors
+ 
+-------------------- List2 -------------------- 
+
+Running abstract interpretation...
+
+
+
+
+
+
+
+
+
+Spec# program verifier finished with 8 verified, 0 errors

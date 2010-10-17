@@ -1,0 +1,24 @@
+public class DefinedExpressions
+{
+  public int Division(int den) {
+    return 5 / den;  // error: division by zero
+  }
+  public int Division(bool b, int[]! a) {
+    if (b) {
+      return 5 / "hello".Length;
+    } else {
+      return 5 / 2 + a.Length;
+    }
+  }
+
+  public int Modulo(int den) {
+    return 5 % den;  // error: division by zero
+  }
+  public int Modulo(bool b, int[]! a) {
+    if (b) {
+      return 5 % "hello".Length;
+    } else {
+      return 5 % 2 + a.Length;
+    }
+  }
+}

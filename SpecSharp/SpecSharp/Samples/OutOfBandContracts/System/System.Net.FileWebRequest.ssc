@@ -1,0 +1,94 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Net
+{
+
+    public class FileWebRequest
+    {
+
+        public string ContentType
+        {
+          get;
+          set;
+        }
+
+        public string Method
+        {
+          get;
+          set;
+        }
+
+        public ICredentials Credentials
+        {
+          get;
+          set;
+        }
+
+        public string ConnectionGroupName
+        {
+          get;
+          set;
+        }
+
+        public WebHeaderCollection Headers
+        {
+          get;
+        }
+
+        public Int64 ContentLength
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentException;
+        }
+
+        public IWebProxy Proxy
+        {
+          get;
+          set;
+        }
+
+        public bool PreAuthenticate
+        {
+          get;
+          set;
+        }
+
+        public int Timeout
+        {
+          get;
+          set
+            requires value >= 0 || value == -1 otherwise ArgumentOutOfRangeException;
+        }
+
+        public Uri RequestUri
+        {
+          get;
+        }
+
+        public WebResponse GetResponse ();
+
+        public System.IO.Stream GetRequestStream ();
+
+        public WebResponse EndGetResponse (IAsyncResult! asyncResult)
+            requires asyncResult != null;
+
+        public System.IO.Stream EndGetRequestStream (IAsyncResult! asyncResult)
+            requires asyncResult != null;
+
+        public IAsyncResult BeginGetResponse (AsyncCallback callback, object state);
+
+        public IAsyncResult BeginGetRequestStream (AsyncCallback callback, object state);
+    }
+}

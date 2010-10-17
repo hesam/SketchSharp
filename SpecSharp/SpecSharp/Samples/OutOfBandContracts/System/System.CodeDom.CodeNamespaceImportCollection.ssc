@@ -1,0 +1,42 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.CodeDom
+{
+
+    public class CodeNamespaceImportCollection
+    {
+
+        public CodeNamespaceImport this [int index]
+        {
+          get;
+          set;
+        }
+
+        public int Count
+        {
+          get;
+        }
+
+        public CodeNamespaceImportCollection ();
+
+        public System.Collections.IEnumerator GetEnumerator ();
+
+        public void Clear ();
+
+        public void AddRange (CodeNamespaceImport[]! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public void Add (CodeNamespaceImport value);
+    }
+}

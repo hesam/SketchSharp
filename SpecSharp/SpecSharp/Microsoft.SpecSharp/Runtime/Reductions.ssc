@@ -1,0 +1,174 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+#define SpecSharp
+
+using System;
+using System.Diagnostics;
+//using SC = System.Collections;
+#if CCINamespace
+using Microsoft.Cci;
+#else
+using System.Compiler;
+#endif
+using Microsoft.Contracts;
+using System.Collections.Generic;
+
+namespace Microsoft.SpecSharp.Collections{
+
+/// <summary>
+/// The sealed class Reductions contains all standard reduction operators, like 
+/// Forall, Exists, ExistsOne, Choose, Minimum, Maximum, Average, StandardDeviation
+/// </summary>
+[Anonymous]
+public sealed class Reductions{
+
+  //[Pure][Reads(ReadsAttribute.Reads.Nothing)]
+  /// <summary>
+  /// Universal quantification: True, if all bindings in bindings are true, false otherwise 
+  /// </summary>
+  [Pure][Reads(ReadsAttribute.Reads.Everything)]
+  public static bool Forall(IEnumerable<bool>! bindings){
+    foreach(bool v in bindings)
+      if (!v)
+        return false;        
+    return true;
+  }
+
+  /// <summary>
+  /// Existential quantification: True, if at least one binding in bindings is true, false otherwise 
+  /// </summary>
+  [Pure][Reads(ReadsAttribute.Reads.Everything)]
+  public static bool Exists(IEnumerable<bool>! bindings){
+    foreach(bool v in bindings)
+      if (v)
+        return true;        
+    return false;
+  }
+
+  /// <summary>
+  /// Unique quantification: True, if exactly one binding in bindings is true, false otherwise 
+  /// </summary>
+  [Pure][Reads(ReadsAttribute.Reads.Everything)]
+  public static bool ExistsOne(IEnumerable<bool>! bindings) {
+    int i=0;
+    foreach(bool v in bindings)
+      if (v)
+        i++;
+    return i==1;
+  }
+
+  /// <summary>
+  /// Returns the minimum of the given bindings, provided at least one binding exists, int.MinValue otherwise
+  /// </summary>
+  [Pure][Reads(ReadsAttribute.Reads.Everything)]
+  public static int Minimum(IEnumerable<int>! bindings) {
+    int m=0; bool has=false;
+    foreach(int v in bindings){
+      if (!has){
+        m = v;
+        has = true;
+      }
+      if (v < m)
+        m = v;
+    }
+    return (has? m : int.MinValue);
+  }
+  /// <summary>
+  /// Returns the maximum of the given int bindings, provided at least one binding exists, int.MaxValue otherwise 
+  /// </summary>
+  [Pure][Reads(ReadsAttribute.Reads.Everything)]
+  public static int Maximum(IEnumerable<int>! bindings){
+    int m=0; bool has=false;
+    foreach(int v in bindings){
+      if (!has){
+        m = v;
+        has = true;
+      }
+      if (v > m)
+        m = v;
+    }
+    return (has? m : int.MaxValue);
+  }
+
+  /// <summary>
+  /// Returns the minimum of given IComparable bindings, provided at least one binding exists, null otherwise
+  /// </summary>
+  [Pure][Reads(ReadsAttribute.Reads.Everything)]
+  public static IComparable Minimum(IEnumerable<IComparable>! bindings){
+    IComparable m = null;
+    foreach(IComparable v in bindings){
+      if (v != null){
+        if (m == null || v.CompareTo(m) < 0)
+          m = v;
+      }
+    }
+    return m;
+  }
+
+  /// <summary>
+  /// Returns the maximum of given IComparable bindings, provided at least one binding exists, null otherwise
+  /// </summary>
+  [Pure][Reads(ReadsAttribute.Reads.Everything)]
+  public static IComparable Maximum(IEnumerable<IComparable>! bindings) {
+    IComparable m = null;
+    foreach(IComparable v in bindings){
+      if (v != null){
+        if (m == null || v.CompareTo(m) > 0)
+          m = v;
+      }
+    }
+    return m;
+  }
+
+  /// <summary>
+  /// Returns the sum of given int bindings, provided at least one binding exists, 0 otherwise
+  /// </summary>
+  [Pure][Reads(ReadsAttribute.Reads.Everything)]
+  public static int Sum(IEnumerable<int>! bindings){
+    if (bindings == null) return 0;
+    int total=0;
+    foreach(int v in bindings)
+      total+=v;
+    return total;
+  }
+
+  /// <summary>
+  /// Returns the average of given int bindings, throws ...Violation if no binding exists
+  /// </summary>
+  [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+  public static int Average(ICollection<int>! bindings)
+    //requires bindings.Count > 0; //TODO: need a contract for ICollection
+  {
+    assume bindings.Count > 0;
+    long total=0;
+    long count=0;
+    foreach(int v in bindings){
+      total += v;
+      count++;
+    }
+    return  (int)(total / count);
+  }
+  /// <summary>
+  /// Return the standard deviation of given double bindings, throws ...Violation if no binding exists
+  /// </summary>
+  [Pure][Reads(ReadsAttribute.Reads.Everything)]
+  public double StandardDeviation(ICollection<double>! bindings)
+    //requires bindings.Count > 0; //TODO: need a contract for ICollection
+  {
+    assume bindings.Count > 0;
+    double sumX=0, sumX2=0;
+    int count=0;
+    foreach(double v in bindings){
+      sumX += v;
+      sumX2 += (v * v);
+      count++;
+    }
+    int c = count - 1;
+    return Math.Sqrt((sumX2/c) - ((sumX * sumX)/count/c));
+  }
+}
+
+}

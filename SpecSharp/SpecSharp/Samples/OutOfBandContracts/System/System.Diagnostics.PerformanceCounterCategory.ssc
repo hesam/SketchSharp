@@ -1,0 +1,92 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Diagnostics
+{
+
+    public class PerformanceCounterCategory
+    {
+
+        public string CategoryHelp
+        {
+          get;
+        }
+
+        public string MachineName
+        {
+          get;
+          set;
+        }
+
+        public string! CategoryName
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+            requires value.Length != 0 otherwise ArgumentException;
+        }
+
+        public InstanceDataCollectionCollection ReadCategory ();
+
+        public static bool InstanceExists (string! instanceName, string! categoryName, string machineName)
+            requires instanceName != null otherwise ArgumentNullException;
+            requires categoryName != null otherwise ArgumentNullException;
+            requires categoryName.Length != 0 otherwise ArgumentException;
+
+        public static bool InstanceExists (string instanceName, string categoryName);
+
+        public bool InstanceExists (string! instanceName)
+            requires instanceName != null otherwise ArgumentNullException;
+
+        public String[] GetInstanceNames ();
+
+        public static PerformanceCounterCategory[] GetCategories (string machineName);
+
+        public static PerformanceCounterCategory[] GetCategories ();
+
+        public PerformanceCounter[] GetCounters (string! instanceName)
+            requires instanceName != null otherwise ArgumentNullException;
+
+        public PerformanceCounter[] GetCounters ();
+
+        public static bool Exists (string! categoryName, string machineName)
+            requires categoryName != null otherwise ArgumentNullException;
+            requires categoryName.Length != 0 otherwise ArgumentException;
+
+        public static bool Exists (string categoryName);
+
+        public static void Delete (string categoryName);
+
+        public static PerformanceCounterCategory Create (string categoryName, string categoryHelp, string counterName, string counterHelp);
+
+        public static PerformanceCounterCategory Create (string categoryName, string categoryHelp, CounterCreationDataCollection counterData);
+
+        public static bool CounterExists (string! counterName, string! categoryName, string machineName)
+            requires counterName != null otherwise ArgumentNullException;
+            requires categoryName != null otherwise ArgumentNullException;
+            requires categoryName.Length != 0 otherwise ArgumentException;
+
+        public static bool CounterExists (string counterName, string categoryName);
+
+        public bool CounterExists (string! counterName)
+            requires counterName != null otherwise ArgumentNullException;
+
+        public PerformanceCounterCategory (string! categoryName, string machineName)
+            requires categoryName != null otherwise ArgumentNullException;
+            requires categoryName.Length != 0 otherwise ArgumentException;
+
+        public PerformanceCounterCategory (string categoryName);
+
+        public PerformanceCounterCategory ();
+    }
+}

@@ -1,0 +1,87 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.IO
+{
+
+    public class File
+    {
+
+        public static void Move (string! sourceFileName, string! destFileName)
+            requires sourceFileName != null otherwise ArgumentNullException;
+            requires destFileName != null otherwise ArgumentNullException;
+            requires sourceFileName.Length != 0 otherwise ArgumentException;
+            requires destFileName.Length != 0 otherwise ArgumentException;
+
+        public static FileStream! OpenWrite (string! path);
+
+        public static FileStream! OpenRead (string! path);
+
+        public static void SetAttributes (string! path, FileAttributes fileAttributes);
+
+        public static FileAttributes GetAttributes (string! path);
+
+        public static DateTime GetLastWriteTimeUtc (string! path);
+
+        public static DateTime GetLastWriteTime (string! path);
+
+        public static void SetLastWriteTimeUtc (string! path, DateTime lastWriteTimeUtc);
+
+        public static void SetLastWriteTime (string! path, DateTime lastWriteTime);
+
+        public static DateTime GetLastAccessTimeUtc (string! path);
+
+        public static DateTime GetLastAccessTime (string! path);
+
+        public static void SetLastAccessTimeUtc (string! path, DateTime lastAccessTimeUtc);
+
+        public static void SetLastAccessTime (string! path, DateTime lastAccessTime);
+
+        public static DateTime GetCreationTimeUtc (string! path);
+
+        public static DateTime GetCreationTime (string! path);
+
+        public static void SetCreationTimeUtc (string! path, DateTime creationTimeUtc);
+
+        public static void SetCreationTime (string! path, DateTime creationTime);
+
+        public static FileStream! Open (string! path, FileMode mode, FileAccess access, FileShare share);
+
+        public static FileStream! Open (string! path, FileMode mode, FileAccess access);
+
+        public static FileStream! Open (string! path, FileMode mode);
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public static bool Exists (string! path);
+
+        public static void Delete (string! path)
+            requires path != null otherwise ArgumentNullException;
+
+        public static FileStream! Create (string! path, int bufferSize);
+
+        public static FileStream! Create (string! path);
+
+        public static void Copy (string! sourceFileName, string! destFileName, bool overwrite);
+
+        public static void Copy (string! sourceFileName, string! destFileName);
+
+        public static StreamWriter! AppendText (string! path)
+            requires path != null otherwise ArgumentNullException;
+
+        public static StreamWriter! CreateText (string! path)
+            requires path != null otherwise ArgumentNullException;
+
+        public static StreamReader! OpenText (string! path)
+            requires path != null otherwise ArgumentNullException;
+    }
+}

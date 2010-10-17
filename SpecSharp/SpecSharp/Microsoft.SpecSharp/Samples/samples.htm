@@ -1,0 +1,181 @@
+<html>
+  <style> BODY { COLOR: black; FONT-FAMILY: verdana; FONT-SIZE: xx-small; FONT-STYLE: normal; }
+	TD,TH { COLOR: black; FONT-FAMILY: verdana; FONT-SIZE: xx-small; FONT-STYLE: normal; }
+	P { BACKGROUND: none transparent scroll repeat 0% 0%; FONT-FAMILY: verdana; }
+	BR { FONT-FAMILY: verdana; }
+	select { font-size:xx-small; }
+	</style>
+  <body>
+    <img src="../XenCharacter.jpg" width="117" height="116" align="right" title="This is the Chinese character for Zen">
+
+    <H3><A href="." target="new">Xen Samples</A></H3>
+    <P>The following samples&nbsp;are written entirely in the Xen Programming 
+      Language and demonstrate the various aspects of the Xen Type System and
+      what is possible with the XML and SQL integration in Xen.</P>
+    <H5>Setup Information</H5>
+    <P>Some of these samples connect to&nbsp;the Northwind&nbsp;database released 
+      with SQL 2000.&nbsp;These samples store the database connection string in the 
+      application configuration file named *.exe.config.&nbsp; Before running these 
+      samples you may need to modify those settings to point to a SQL server database 
+      that you have access to.</P>
+    <P>Xen PetShop and NorthwindASP samples require IIS and ASP.Net installed on your 
+      machine. If you had IIS installed on your machine at the time you installed 
+      Xen, installer has already configured it for you and you are all set to proceed 
+      to samples.</P>
+    <P><EM>In case you did not have IIS installed</EM>, in order to run Xen PetShop 
+      or NorthWind ASP samples, please perform the following steps:</P>
+    <UL>
+      <LI>
+      Install IIS (Add/Remove System Components).
+      <LI>
+      Run Visual Studio 2003 installer (Add/Remove Programs) to configure ASP.Net.
+      <LI>
+        Using IIS manager, create a virtual directories:
+        <UL>
+          <LI>
+            <STRONG>MsXenNorthwind</STRONG> with default settings, mapped to the <A href="Northwind" target="new">
+              Xen\samples\Northwind</A>
+          folder.
+          <LI>
+            <STRONG>MsXenPetShop</STRONG> with default settings, mapped to the <A href="XenPetShop" target="new">
+              Xen\samples\XenPethshop</A> folder.&nbsp;&nbsp;</LI></UL>
+      </LI>
+    </UL>
+    <H5><A href="XenPetShop" target="new">Pet Shop .Net Sample</A></H5>
+    <BLOCKQUOTE>
+      <P>This sample is based on .Net Pet Shop Case Study (1.3). The data access part 
+        of the sample is rewritten using Xen SQL features: select, insert, update, and 
+        delete expressions and transaction blocks. See for details source file <a href="XenPetShop\Components\SqlStoredProc.xs">XenPetShop\Components\SqlStoredProc.xs</a> </p>
+      <p>Here are some of the highlights from the comparison between the original sample and its Xen version:</p>
+      <UL>
+        <LI>
+        No more SQL statement in quoted strings. Instead SQL select, insert, update and 
+        delete statements are part of the language syntax.
+        <LI>
+        No more runtime errors for possible illegal SQL syntax. Instead SQL syntax is 
+        verified at compiler time.
+        <LI>
+        No more runtime errors for possible database schema mismatch. Instead database 
+        schema is&nbsp;imported as managed types&nbsp;and is verified at compiler time.
+        <LI>
+        No more messing with SqlParameters. Instead you simply pass local variable into 
+        a select expression.
+        <LI>
+        No more IDataReader and manual copying of data into your managed structures. 
+        Instead built-in tuple type is used or custom objects can be constructed 
+        directly in the select statement.
+        <LI>
+          No more transaction API. Instead a built-in transaction block is used and it 
+          ensures no missing commit or rollback.
+        </LI>
+      </UL>
+      <p>Before running Xen PetShop Sample you will need to install the PetShop DataBase. 
+      Make sure you have SQL 2000 server and a user name/password that has sufficient permissions to create a database. 
+      Perform the following steps:</p>
+      <ul>
+      <li>Modify installation script <a href="XenPetShop\DataBase\">XenPetShop\DataBase\CreateDatabase.cmd</a> supplying 
+      a server name, login name and password as instructed in the file.</li>
+      <li>Execute the installation script <a href="XenPetShop\DataBase\">XenPetShop\DataBase\CreateDatabase.cmd</a> 
+      on the machine that has SQL 2000 Client tools installed. The script will install the <STRONG>Petshop</STRONG> 
+      data base prepopulate necessary data. The script will also create a user 
+      <STRONG>xenpetshop</STRONG> with password <STRONG>xenpetshop</STRONG></li>
+       </li>
+       <li> Open <STRONG><a href="XenPetShop\">XenPetshop\XenPetshop.xsproj</a></STRONG> project, file <STRONG>web.config</STRONG>
+       and modify in the <STRONG>appSettings</STRONG> section the name of the server (by default 'xenhost') to point to 
+       the server that you just configured.</li>       
+      </ul>      
+      </p>
+      <P>To run the sample, compile <STRONG>XenPetshop\XenPetshop.xsproj</STRONG> and 
+        launch the <A href="http://localhost/MsXenPetShop/default.aspx" target="new">default.aspx</A>
+        page.</P>
+    </BLOCKQUOTE>
+    <H5><A href="Northwind" target="new">Northwind - ASP.NET Scenario</A></H5>
+    <BLOCKQUOTE>
+      <P>This is an ASP.NET application that connects to SQL Server Northwind database 
+        via an tool-generated "interop" assembly named Northwind.dll and produces an 
+        HTML table showing lists of customers and orders.&nbsp; This is done via a 
+        custom System.Web.Control implemented in Xen that does the SQL select and 
+        yields XML literals that build&nbsp;the HTML tables using a&nbsp;simple set 
+        of&nbsp;HTML objects that are modeled in Xen. The HTML is generated as XML, so 
+        it is really XHTML. This XML output could be any user defined XML and is not 
+        limited to HTML. Check out main.xs where you will see very tight integration 
+        between the SQL queries on one side and the XHTML generation on the other, 
+        especially in the OrderDetails class.
+      </P>
+      <P>To run this sample, load <STRONG>NorthwindASP.xsproj</STRONG> in Visual 
+        Studio, check the <STRONG>Web.Config</STRONG> file to make sure the Northwind 
+        database connection string is correct, build the project and launch the web 
+        page <A href="http://localhost/MsXenNorthwind/customersbycountry.aspx" target="new">
+          CustomersByCountry.aspx</A>.</P>
+    </BLOCKQUOTE>
+    <H5><A href="XQuery" target="new">XQuery Use Cases - XQuery and Xen Object 
+        Queries side-by-side...</A></H5>
+    <BLOCKQUOTE>
+      <P>This sample is based on the W3C <A target="new" href="http://www.w3.org/TR/xmlquery-use-cases">
+          XQuery Use Cases</A> .&nbsp; It demostrates the power of the Xen type system 
+        and object queries capabilities, and demonstrates the impact of adding strong 
+        typing to an XML query language.&nbsp;&nbsp; To run this sample, load the <STRONG>
+          xquery.xsproj</STRONG> project in Visual Studio and&nbsp;hit F5. This sample 
+        includes a <A target="new" href="XQuery/readme.htm">readme</A> that discusses the 
+        differences between XQuery and Xen in these various use cases.
+      </P>
+    </BLOCKQUOTE>
+    <H5><A href="sqlxml" target="new">SqlXml - WinForms SQL Scenario</A></H5>
+    <BLOCKQUOTE>
+      <P>This is a WinForms demo that loads customer information out of the Northwind 
+        database and presents it in a grid.&nbsp; It also caches the customer 
+        information locally in a cache.xml file using the XmlSerializer.&nbsp; This 
+        demo shows a consistent programming model over XML and SQL data.&nbsp;&nbsp; It 
+        also shows how objects can be constructed directly in the SQL select projection 
+        list using XML literal expressions. To run this sample, check the <STRONG>sqlxml.exe.config</STRONG>
+        file to make sure the Northwind database connection string is correct, 
+        then&nbsp;load the <STRONG>sqlxml.xsproj</STRONG> project in Visual Studio 
+        and&nbsp;hit F5.</P>
+    </BLOCKQUOTE>
+    <H5><A href="xsvg" target="new">XSVG - WinForms XML Scenario</A></H5>
+    <BLOCKQUOTE>
+      <P>This is a WinForms demo showing Xen XML literal expressions for manipulating 
+        SVG graphic elements. SVG is the W3C XML standard for Scalable Vector Graphics. 
+        Included with this sample is a separate svg.dll which renders SVG graphics and 
+        the interface between this dll and the Xen sample is a serialized stream of XML 
+        data. So this sample also shows how to use the Xen XmlSerializer which has 
+        extended serialization capabilities based on the Xen type system extensions. 
+        &nbsp; To run this sample, load the<STRONG> demo.xsproj</STRONG> project in 
+        Visual Studio and&nbsp;hit F5.</P>
+    </BLOCKQUOTE>
+    <H5><A href="Ledger" target="new">Ledger - XSLT Scenario</A></H5>
+    <BLOCKQUOTE>
+      <P>This demo shows the Xen equivalent of the&nbsp;<A href="Ledger/Ledger.xsl" target="new">Ledger.xsl</A>&nbsp;style 
+        sheet. The demo loads XML data via XmlSerialization and transforms it to XHTML 
+        objects using a nested series of transforming "iterators" then it displays the 
+        result in a Web Browser control. This shows than Xen can do some XSLT scenarios 
+        just as elegantly as XSLT, but because Xen is based on a general purpose 
+        programming language the Xen approach is also more powerful. For example, the 
+        XSL style sheet requires the use of &lt;msxsl:script&gt; blocks for some 
+        things. In Xen this code is inlined, which makes it more managable and a lot 
+        more debuggable. To run this sample, load the <STRONG>Ledger.xsproj</STRONG> project 
+        in Visual Studio and&nbsp;hit F5.</P>
+	<P> <STRONG>WARNING:</STRONG> You may get an error during compilation about missing Microsoft.mshtml.dll. 
+	In this case close VS, open ledger.xsproj in the notepad and change the HintPath attribute value 
+	on the <Reference...> element for the Microsoft.mshtml assembly to point to \Program Files\Microsoft.NET\Primary Interop Assemblies\Microsoft.mshtml.dll
+	</P>
+
+    </BLOCKQUOTE>
+    <H5><A href="Hamlet" target="new">Hamlet - From DTD to XSD to Xen...</A></H5>
+    <BLOCKQUOTE>
+      <P>The <A href="http://www.xml.com/pub/r/396"  target="new">Shakespeare XML samples</A> by Jon 
+        Bosak are an XML industry classic. In this sample&nbsp;we took&nbsp;the 
+        Play.dtd, converted it to XSD, then imported the XSD into a Xen project.&nbsp; 
+        This shows how to use the XmlSerializer to round trip the Hamlet.xml document 
+        which&nbsp;demonstrates good fidelity between XML content models and the Xen 
+        type system.</P>
+    </BLOCKQUOTE>
+<br/><br/><br/><hr size="5" color="brown" width="80%"/>
+<center>
+[ Back to <a href="../welcome.htm">Welcome Page</a> ]
+</center>
+
+<br/><br/>
+
+  </body>
+</html>

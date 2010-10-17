@@ -1,0 +1,13 @@
+class C {
+  int M(int x, int y, int k)
+  {
+    return k / (x-y); //ERROR: potential division by 0
+  }
+}
+
+//current error:
+// divisionByZero.ssc(4,5): Error: division by zero
+
+//better error:
+// concrete example: x == 1; y == 1; k == 3; division by zero
+// or at least: x-y == 0; k == 3; division by zero

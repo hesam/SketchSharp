@@ -1,0 +1,275 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+#define SpecSharp
+
+using System;
+using System.Diagnostics;
+//using SC = System.Collections;
+#if CCINamespace
+using Microsoft.Cci;
+#else
+using System.Compiler;
+#endif
+using Microsoft.Contracts;
+using System.Collections.Generic;
+
+// using RedBlackTree
+
+namespace Microsoft.SpecSharp.Collections{
+
+public struct Set<T>: IEnumerable<T!>{
+  private int count; 
+  RedBlackTree<T!> elems;
+        
+// Constructors - - - - - - - - - - - - - - - - - - - - - - - - - -
+        
+  public Set(T! elt){
+    bool added = false;
+    count = 1; elems = RedBlackTree<T!>.Insert(null,elt, false, out added);
+  }
+  public Set(IEnumerable<T!> os) {
+    count = 0;
+    elems = null;
+    bool added = false;
+    if (os == null) return;
+    foreach(T! o in os) {
+      Debug.Assert(o != null);
+      elems=RedBlackTree<T!>.Insert(elems,o, false, out added);
+      if (added) count++;
+    }
+  }
+//
+
+  /// <summary>
+  /// Returns the cardinality (number of elements) in the Set
+  /// </summary>
+  public int Count{
+    get { return count; }
+  }
+
+  // Iterators - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  /// <summary>
+  /// Returns an enumerator that can iterate through a Set
+  /// </summary>
+  [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+  public IEnumerator<T!>! GetEnumerator() { 
+    if (elems==null) return new EmptyEnumerator<T>();
+    return elems.GetEnumerator();
+  }
+  
+  [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+  System.Collections.IEnumerator! System.Collections.IEnumerable.GetEnumerator(){
+    return ((IEnumerable<T!>)this).GetEnumerator();
+  }
+
+  // Equality - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  /// <summary>
+  /// True, if o is a set and contains the elements as this, false otherwise [Time: see ==]
+  /// </summary>
+  public override bool Equals (object o){ 
+    return o is Set<T> && this == (Set<T>)o;
+  }
+
+  /// <summary>
+  /// Returns the hashcode of the contained elements [Time: this.Count]
+  /// </summary>
+  public override int GetHashCode(){
+    if (elems==null) return 0;
+    return elems.GetHashCode();
+  }
+  /// <summary>
+  /// Membership: True, if this Set contains o, false otherwise [Time: log(this.count)]
+  /// </summary>
+  public bool Contains(T! o){
+    return RedBlackTree<T!>.Lookup(elems,o)!=null;
+  }
+  /// <summary>
+  /// Equality: True, if s and t contains the same elements, false otherwise [Time: min(s.Count,t.Count)*log(max(s.Count,t.Count))]
+  /// </summary>
+  public static bool operator ==(Set<T> s, Set<T> t) {
+    if (s.Count != t.Count) return false;
+    foreach(T o in s) 
+      if (!t.Contains(o))
+        return false;
+    return true;
+  }
+  /// <summary>
+  /// Inequality: True, if s and t do not contain the same elements, false otherwise [Time: see ==]
+  /// </summary>
+  public static bool operator != (Set<T> s, Set<T> t){
+    return !(s==t);
+  }
+  /// <summary>
+  /// Subset: True, if every element from s is also a member of t, false otherwise [Time: see ==]
+  /// </summary>
+  public static bool operator <= (Set<T> s, Set<T> t){
+    if (!(s.Count <= t.Count)) 
+      return false;
+    foreach(T o in s)
+      if (!t.Contains(o))
+        return false;
+    return true; 
+  }
+  /// <summary>
+  /// Proper Subset: True, if s is a subset of t and in addition s is different from t, false otherwise [Time: see ==]
+  /// </summary>
+  public static bool operator < (Set<T> s, Set<T> t){ 
+    if (!(s.Count < t.Count)) 
+      return false;
+    foreach(T o in s)
+      if (!t.Contains(o))
+        return false;
+    return true; 
+  }
+  /// <summary>
+  /// Superset: True, if every element from t is also a member of s, false otherwise [Time: see ==]
+  /// </summary>
+  public static bool operator >= (Set<T> s, Set<T> t){ 
+    return t <= s;  
+  }
+  /// <summary>
+  /// Proper Superset: True, if s is a superset of t and in addition s is different from t, false otherwise [Time: see ==]
+  /// </summary>
+  public static bool operator > (Set<T> s, Set<T> t){ 
+    return t < s; 
+  }
+            
+  // In situ operations - - - - - - - - - - - - - - - - - - - - - - - -
+        
+  /// <summary>
+  /// Membership:  Get returns true, if this contains it (where it!=null), false otherwise; Set where value==true includes it in this, set where value==false exludes it [Time: log(this.Count)]
+  /// </summary>
+  public bool this[T! it]{            
+    get{
+      return this.Contains(it);
+    } 
+    set{
+      if (value) 
+        this.Add(it); 
+      else 
+        this.Remove(it);
+    } 
+  }  
+    
+  /// <summary>
+  /// Exclude value (where value!=null) from this [Time: log(this.Count)]
+  /// </summary>
+  public void Remove(T! value){
+    bool deleted = false;
+    elems = RedBlackTree<T!>.Remove(elems,value,out deleted);
+    if (deleted)
+      count--;
+  }
+    
+  /// <summary>
+  /// Include value (where value!=null) in this [Time: log(this.Count)]
+  /// </summary>
+  public int Add(T! value) {
+    bool added;
+    elems = RedBlackTree<T!>.Insert(elems,value,false, out added);
+    if (added) count++;
+    return count;
+  }
+        
+  // To String - - - - - - - - - - - - - - - - - - - - - - - -
+  /// <summary>
+  /// Formats this set as "Set{elem_1, ..., elem_n}" [Time: this.Count]
+  /// </summary>
+  public override string ToString() {
+    if (elems == null)
+      return "Set{}";
+    else {
+      string s = "Set{";
+      bool succ = false;
+      foreach(T o in elems) {
+        if (succ) s+=", "; else succ = true;
+        s+= o.ToString();
+      }
+      return s+"}";
+    }
+  }
+
+  // Pure Set Operations- - - - - - - - - - - - - - - - - - - - -
+
+  /// <summary>
+  /// Union: Returns the set containing all the elements from both s and t [Time: max(s.Count,t.Count)*log(s.Count,t.Count)]
+  /// </summary>
+  public static Set<T> operator + (Set<T> s, Set<T> t){
+    Set<T> r;
+    if (s.Count > t.Count) {
+      r = s;
+      foreach(T o in t)
+        r.Add(o);
+    } else {
+      r = t;
+      foreach(T o in s)
+        r.Add(o);
+    }
+    return r;
+  }    
+  /// <summary>
+  /// Difference: Returns the set containing all the elements from s that are not in s2 [Time: t.Count*log(s.Count)]
+  /// </summary>
+  public static Set<T> operator - (Set<T> s, Set<T> t){ 
+    Set<T> r = s;
+    foreach(T o in t)
+      r.Remove(o);
+    return r;  
+  }
+  /// <summary>
+  /// Intersection: Returns the set containing the elements thar are both in s and t [Time: max(s.Count,t.Count)*log(s.Count,t.Count)]
+  /// </summary>
+  public static Set<T> operator * (Set<T> s, Set<T> t){ 
+    Set<T> r;
+    if (s.Count < t.Count) {
+      r = s;
+      foreach(T o in s)
+        if (!t.Contains(o))
+          r.Remove(o);
+    } else {
+      r = t;
+      foreach(T o in t)
+        if (!s.Contains(o))
+          r.Remove(o);
+    }
+    return r;
+  }
+        
+  /// <summary>
+  /// Distributed Union: The resulting set is the union of all the elements of s, 
+  /// i.e. it contains all the elements of all the elements of s [Time: s.Count * ...]
+  /// </summary>
+  public static Set<T> BigUnion(Set<Set<T>> s) {
+    Set<T> r = new Set<T>();  int i = 0;
+    foreach(Set<T> ks in s){
+      if (i==0)
+        r = ks;
+      else
+        r = r+ks;
+      i++;
+    }
+    return r;
+  }
+
+  /// <summary>
+  /// Distributed Intersection: The resulting set is the intersection of all the elements of s, 
+  /// i.e. it contains the elements that are in all elements [Time: max(s.Count,t.Count)*log(s.Count,t.Count)]
+  /// </summary>
+  public static Set<T> BigIntersect(Set<Set<T>> s) { 
+    Set<T> r = new Set<T>(); int i = 0;
+    foreach(Set<T> ks in s){
+      if (i==0)
+        r = ks;
+      else
+        r = r*ks;
+      i++;
+    }
+    return r;
+  }
+}
+
+}

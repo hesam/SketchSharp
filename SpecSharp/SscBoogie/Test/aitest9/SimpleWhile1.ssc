@@ -1,0 +1,17 @@
+class SimpleWhile1 
+{
+	public void Example()
+	{		
+		int counter = 12;	
+	
+		for(int i=0; i < 100; i++) 
+		{
+			if(i % 5 == 0)
+				counter -= 11; 
+			else
+				counter ++;
+		}
+		
+		assert counter >= -12;	// cannot prove it: it needs a better handling of conditionals
+	}
+}

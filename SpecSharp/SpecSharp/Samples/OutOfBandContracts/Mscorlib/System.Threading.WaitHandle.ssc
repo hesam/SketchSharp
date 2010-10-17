@@ -1,0 +1,56 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Threading
+{
+
+    public class WaitHandle
+    {
+
+        public int Handle
+        {
+          get;
+          set;
+        }
+
+        public void Close ();
+
+        public static int WaitAny (WaitHandle[] waitHandles);
+
+        public static int WaitAny (WaitHandle[] waitHandles, TimeSpan timeout, bool exitContext);
+
+        public static int WaitAny (WaitHandle[]! waitHandles, int millisecondsTimeout, bool exitContext)
+            requires waitHandles != null otherwise ArgumentNullException;
+            // NOT LEGAL BECAUSE MAX_WAITHANDLES IS PRIVATE
+            //requires waitHandles.Length <= System.Threading.WaitHandle.MAX_WAITHANDLES otherwise NotSupportedException;
+            requires millisecondsTimeout >= -1 otherwise ArgumentOutOfRangeException;
+
+        public static bool WaitAll (WaitHandle[] waitHandles);
+
+        public static bool WaitAll (WaitHandle[] waitHandles, TimeSpan timeout, bool exitContext);
+
+        public static bool WaitAll (WaitHandle[]! waitHandles, int millisecondsTimeout, bool exitContext)
+            requires waitHandles != null otherwise ArgumentNullException;
+            // INVALID BECAUSE MAX_WAITHANDLES IS PRIVATE
+            //requires waitHandles.Length <= System.Threading.WaitHandle.MAX_WAITHANDLES otherwise NotSupportedException;
+            requires millisecondsTimeout >= -1 otherwise ArgumentOutOfRangeException;
+
+        public bool WaitOne ();
+
+        public bool WaitOne (TimeSpan timeout, bool exitContext);
+
+        public bool WaitOne (int millisecondsTimeout, bool exitContext);
+
+        public WaitHandle ();
+    }
+}

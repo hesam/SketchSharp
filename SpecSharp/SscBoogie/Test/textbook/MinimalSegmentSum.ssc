@@ -1,0 +1,28 @@
+// Author:Rosemary Monahan
+// 13 Mar 2007
+// The minimum Seqment Sum (A Method of Programming, Dijkstra & Feijen)
+
+using Microsoft.Contracts;
+
+public class C {
+  public static int MinSum(int[]! b)
+    ensures result == min{int j in (0..b.Length); min{int i in (0..j); sum{int k in (i: j); b[k]}}};
+  {
+    int x = 0; // x is the min seg sum to date
+    int y = 0; // y is the min seg sum that leads up to index n
+    for (int n = 0; n < b.Length; n++)
+      invariant 0 <= n && n <= b.Length;
+      invariant x == min{int j in (0..n); min{int i in (0..j); sum{int k in (i: j); b[k]}}};
+      invariant y == min{int i in (0..n); sum{int k in (i: n); b[k]}};
+    { 
+      y += b[n]; 
+      if (0 <= y) {
+        y = 0;
+      } else if (y < x) {
+        x = y;
+      }
+    }
+
+    return x;
+  }
+}

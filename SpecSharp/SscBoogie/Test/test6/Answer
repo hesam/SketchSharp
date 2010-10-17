@@ -1,0 +1,28 @@
+
+-------------------- AllocBeforeLoop --------------------
+AllocBeforeLoop.ssc(9,7): Error: Array index possibly below lower bound
+
+Spec# program verifier finished with 1 verified, 1 error
+
+-------------------- CallLoop --------------------
+
+Spec# program verifier finished with 3 verified, 0 errors
+
+-------------------- DefaultLoopInv0 --------------------
+DefaultLoopInv0.ssc(40,14): Error: After loop iteration: In a loop, an owner is allowed to be changed only for captured parameters and objects allocated during the loop iteration
+DefaultLoopInv0.ssc(41,9): Related information:     (trace position)
+
+Spec# program verifier finished with 6 verified, 1 error
+
+-------------------- Factory.ssc --------------------
+
+-------------------- FieldUpdateLoop.ssc --------------------
+
+-------------------- ModifyOther.ssc --------------------
+
+-------------------- WhileTrueLoop.ssc --------------------
+
+-------------------- Irreducible.ssc --------------------
+Irreducible.ssc(3,14): warning CS2663: Irreducible flow graphs are unsupported.  Encountered in implementation Test.Irreducible$System.Int32.
+
+-------------------- PeerConsistentLoop.ssc --------------------

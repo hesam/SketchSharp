@@ -1,0 +1,11 @@
+# Aste started: 2010-07-08 01:00:03
+# Host id: Boogiebox
+# [2010-07-08 01:00:08] SpecSharp revision: 54390
+# [2010-07-08 01:00:24] Boogie revision: 54890
+# [2010-07-08 01:00:30] SscBoogie revision: 54839
+[2010-07-08 01:25:52] 1 out of 25 test(s) in D:\Temp\aste\Boogie\Test\alltests.txt failed
+['stratifiedinline']
+# [2010-07-08 01:27:38] Released nightly of Boogie
+[2010-07-08 02:45:07] 18 out of 24 test(s) in D:\Temp\aste\SscBoogie\Test\alltests.txt failed
+['test3', 'test5', 'test6', 'test10', 'test11', 'aitest9', 'objinv', 'Bag', 'chunker', 'bob', 'iterators', 'test12', 'test13', 'BoundedStack', 'textbook', 'WindowsCard', 'PrettySx', 'test16']
+# [2010-07-08 02:48:15] Released nightly of SscBoogie

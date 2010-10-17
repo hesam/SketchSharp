@@ -1,0 +1,34 @@
+public class C {
+  byte[] bytes;
+
+  void M0(int[]! a) {
+    for (int i = 0; i < a.Length; i++) {
+      assert int.MinValue <= a[i] && a[i] <= int.MaxValue;
+    }
+  }
+
+  void M1(int[]! a, int x) {
+    if (0 <= x && x < a.Length) {
+      assert short.MinValue <= a[x];  // error
+    }
+  }
+
+  void M2(long[]! a, int x) {
+    if (0 <= x && x < a.Length) {
+      assert int.MinValue <= a[x];  // error
+    }
+  }
+
+  void M3(long[]! a, int x) {
+    if (0 <= x && x < a.Length) {
+      assert long.MinValue <= a[x] && a[x] <= long.MaxValue;
+    }
+  }
+
+  void N(int x) {
+    if (bytes != null && 0 <= x && x < bytes.Length) {
+      assert byte.MinValue <= bytes[x] && bytes[x] <= byte.MaxValue;
+      assert bytes[x] < 100;  // error
+    }
+  }
+}

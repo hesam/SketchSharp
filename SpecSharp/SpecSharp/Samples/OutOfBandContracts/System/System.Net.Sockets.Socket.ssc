@@ -1,0 +1,224 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Net.Sockets
+{
+
+    public class Socket
+    {
+
+        public int Available
+        {
+          get;
+        }
+
+        public ProtocolType ProtocolType
+        {
+          get;
+        }
+
+        public System.Net.EndPoint RemoteEndPoint
+        {
+          get;
+        }
+
+        public int Handle
+        {
+          get;
+        }
+
+        public System.Net.EndPoint LocalEndPoint
+        {
+          get;
+        }
+
+        public static bool SupportsIPv4
+        {
+          get;
+        }
+
+        public static bool SupportsIPv6
+        {
+          get;
+        }
+
+        public bool Blocking
+        {
+          get;
+          set;
+        }
+
+        public bool Connected
+        {
+          get;
+        }
+
+        public SocketType SocketType
+        {
+          get;
+        }
+
+        public AddressFamily AddressFamily
+        {
+          get;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        public Socket EndAccept (IAsyncResult! asyncResult)
+            requires asyncResult != null otherwise ArgumentNullException;
+
+        public IAsyncResult BeginAccept (AsyncCallback callback, object state);
+
+        public int EndReceiveFrom (IAsyncResult! asyncResult, ref System.Net.EndPoint endPoint)
+            requires asyncResult != null otherwise ArgumentNullException;
+
+        public IAsyncResult BeginReceiveFrom (Byte[]! buffer, int offset, int size, SocketFlags socketFlags, ref System.Net.EndPoint remoteEP, AsyncCallback callback, object state)
+            requires buffer != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires offset <= buffer.Length otherwise ArgumentOutOfRangeException;
+            requires size >= 0 otherwise ArgumentOutOfRangeException;
+            requires size <= (buffer.Length - offset) otherwise ArgumentOutOfRangeException;
+
+        public int EndReceive (IAsyncResult! asyncResult)
+            requires asyncResult != null otherwise ArgumentNullException;
+
+        public IAsyncResult BeginReceive (Byte[]! buffer, int offset, int size, SocketFlags socketFlags, AsyncCallback callback, object state)
+            requires buffer != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires offset <= buffer.Length otherwise ArgumentOutOfRangeException;
+            requires size >= 0 otherwise ArgumentOutOfRangeException;
+            requires size <= (buffer.Length - offset) otherwise ArgumentOutOfRangeException;
+
+        public int EndSendTo (IAsyncResult! asyncResult)
+            requires asyncResult != null otherwise ArgumentNullException;
+
+        public IAsyncResult BeginSendTo (Byte[]! buffer, int offset, int size, SocketFlags socketFlags, System.Net.EndPoint! remoteEP, AsyncCallback callback, object state)
+            requires buffer != null otherwise ArgumentNullException;
+            requires remoteEP != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires offset <= buffer.Length otherwise ArgumentOutOfRangeException;
+            requires size >= 0 otherwise ArgumentOutOfRangeException;
+            requires size <= (buffer.Length - offset) otherwise ArgumentOutOfRangeException;
+
+        public int EndSend (IAsyncResult! asyncResult)
+            requires asyncResult != null otherwise ArgumentNullException;
+
+        public IAsyncResult BeginSend (Byte[]! buffer, int offset, int size, SocketFlags socketFlags, AsyncCallback callback, object state)
+            requires buffer != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires offset <= buffer.Length otherwise ArgumentOutOfRangeException;
+            requires size >= 0 otherwise ArgumentOutOfRangeException;
+            requires size <= (buffer.Length - offset) otherwise ArgumentOutOfRangeException;
+
+        public void EndConnect (IAsyncResult! asyncResult)
+            requires asyncResult != null otherwise ArgumentNullException;
+
+        public IAsyncResult BeginConnect (System.Net.EndPoint! remoteEP, AsyncCallback callback, object state)
+            requires remoteEP != null otherwise ArgumentNullException;
+
+        public static void Select (System.Collections.IList checkRead, System.Collections.IList checkWrite, System.Collections.IList! checkError, int microSeconds)
+            requires checkError != null otherwise ArgumentNullException;
+
+        public bool Poll (int microSeconds, SelectMode mode);
+
+        public Byte[] GetSocketOption (SocketOptionLevel optionLevel, SocketOptionName optionName, int optionLength);
+
+        public void GetSocketOption (SocketOptionLevel optionLevel, SocketOptionName optionName, Byte[] optionValue);
+
+        public object GetSocketOption (SocketOptionLevel optionLevel, SocketOptionName optionName);
+
+        public void SetSocketOption (SocketOptionLevel optionLevel, SocketOptionName optionName, object! optionValue)
+            requires optionValue != null otherwise ArgumentNullException;
+            requires (int)optionLevel == 41 otherwise ArgumentException;
+            requires (int)optionName == 12 || (int)optionName == 13 otherwise ArgumentException;
+
+        public void SetSocketOption (SocketOptionLevel optionLevel, SocketOptionName optionName, Byte[] optionValue);
+
+        public void SetSocketOption (SocketOptionLevel optionLevel, SocketOptionName optionName, int optionValue);
+
+        public int IOControl (int ioControlCode, Byte[] optionInValue, Byte[] optionOutValue)
+            requires ioControlCode != -2147195266 otherwise InvalidOperationException;
+
+        public int ReceiveFrom (Byte[] buffer, ref System.Net.EndPoint remoteEP);
+
+        public int ReceiveFrom (Byte[] buffer, SocketFlags socketFlags, ref System.Net.EndPoint remoteEP);
+
+        public int ReceiveFrom (Byte[] buffer, int size, SocketFlags socketFlags, ref System.Net.EndPoint remoteEP);
+
+        public int ReceiveFrom (Byte[]! buffer, int offset, int size, SocketFlags socketFlags, ref System.Net.EndPoint remoteEP)
+            requires buffer != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires offset <= buffer.Length otherwise ArgumentOutOfRangeException;
+            requires size >= 0 otherwise ArgumentOutOfRangeException;
+            requires size <= (buffer.Length - offset) otherwise ArgumentOutOfRangeException;
+
+        public int Receive (Byte[]! buffer, int offset, int size, SocketFlags socketFlags)
+            requires buffer != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires offset <= buffer.Length otherwise ArgumentOutOfRangeException;
+            requires size >= 0 otherwise ArgumentOutOfRangeException;
+            requires size <= (buffer.Length - offset) otherwise ArgumentOutOfRangeException;
+
+        public int Receive (Byte[] buffer);
+
+        public int Receive (Byte[] buffer, SocketFlags socketFlags);
+
+        public int Receive (Byte[] buffer, int size, SocketFlags socketFlags);
+
+        public int SendTo (Byte[] buffer, System.Net.EndPoint remoteEP);
+
+        public int SendTo (Byte[] buffer, SocketFlags socketFlags, System.Net.EndPoint remoteEP);
+
+        public int SendTo (Byte[] buffer, int size, SocketFlags socketFlags, System.Net.EndPoint remoteEP);
+
+        public int SendTo (Byte[]! buffer, int offset, int size, SocketFlags socketFlags, System.Net.EndPoint! remoteEP)
+            requires buffer != null otherwise ArgumentNullException;
+            requires remoteEP != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires offset <= buffer.Length otherwise ArgumentOutOfRangeException;
+            requires size >= 0 otherwise ArgumentOutOfRangeException;
+            requires size <= (buffer.Length - offset) otherwise ArgumentOutOfRangeException;
+
+        public int Send (Byte[]! buffer, int offset, int size, SocketFlags socketFlags)
+            requires buffer != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires offset <= buffer.Length otherwise ArgumentOutOfRangeException;
+            requires size >= 0 otherwise ArgumentOutOfRangeException;
+            requires size <= (buffer.Length - offset) otherwise ArgumentOutOfRangeException;
+
+        public int Send (Byte[] buffer);
+
+        public int Send (Byte[] buffer, SocketFlags socketFlags);
+
+        public int Send (Byte[] buffer, int size, SocketFlags socketFlags);
+
+        public Socket Accept ();
+
+        public void Listen (int backlog);
+
+        public void Shutdown (SocketShutdown how);
+
+        public void Close ();
+
+        public void Connect (System.Net.EndPoint! remoteEP)
+            requires remoteEP != null otherwise ArgumentNullException;
+
+        public void Bind (System.Net.EndPoint! localEP)
+            requires localEP != null otherwise ArgumentNullException;
+
+        public Socket (AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType);
+    }
+}

@@ -1,0 +1,61 @@
+public class Chunker
+{
+  string src;
+  int ChunkSize;
+  int n;  // the number of characters returned so far
+
+  // We include several versions of the following method, because there
+  // are several possible errors to report on the same line.  This way, we can
+  // control the error messages in the test output.
+
+  public string NextChunk()
+  {
+    // assume src != null;
+    assume 0 <= n;
+    assume 0 <= ChunkSize;
+    assume src != null ==> n + ChunkSize <= src.Length;
+    string s = src.Substring(n, ChunkSize);
+    n += ChunkSize;
+    return s;
+  }
+
+  public string AnotherNextChunk()
+  {
+    assume src != null;
+    // assume 0 <= n;
+    assume 0 <= ChunkSize;
+    assume src != null ==> n + ChunkSize <= src.Length;
+    string s = src.Substring(n, ChunkSize);
+    n += ChunkSize;
+    return s;
+  }
+
+  public string AndAnotherNextChunk()
+  {
+    assume src != null;
+    assume 0 <= n;
+    // assume 0 <= ChunkSize;
+    assume src != null ==> n + ChunkSize <= src.Length;
+    string s = src.Substring(n, ChunkSize);
+    n += ChunkSize;
+    return s;
+  }
+
+  public string AndTheFinalNextChunk()
+  {
+    assume src != null;
+    assume 0 <= n;
+    assume 0 <= ChunkSize;
+    // assume src != null ==> n + ChunkSize <= src.Length;
+    string s = src.Substring(n, ChunkSize);
+    n += ChunkSize;
+    return s;
+  }
+
+  public Chunker(string source, int chunkSize)
+  {
+    src = source;
+    ChunkSize = chunkSize;
+    n = 0;
+  }
+}

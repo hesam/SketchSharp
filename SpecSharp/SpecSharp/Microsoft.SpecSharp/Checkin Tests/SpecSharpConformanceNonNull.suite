@@ -1,0 +1,3432 @@
+``/debug+
+struct LiftedDomain<T> {
+  public static implicit operator LiftedDomain<T>(T/*!*/ value) { throw new System.Exception(); }
+}
+
+class C<Type> {
+  LiftedDomain<Type> M(Type/*!*/  t) {
+     return t;
+  }
+}
+
+class Test{public static void Main(){}}
+`
+`
+// Direct assignment, no violation.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N! f = new N();
+    public N test(N! p,N np){
+      N! a=this;
+      N b=np;
+
+      a=p;p=a;
+      f=p;p=f;
+      a=f;f=a;
+      sf=a;a=sf;
+      sf=f;f=sf;
+      sf=p;p=sf;
+      
+      b=a;
+      b=p;
+      b=f;
+      b=sf;
+      
+      return b;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+No Violation
+`
+// Warning: Direct assignment.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N! f = new N();
+    N  nf;
+    public N test(N! p,N np){
+      N! a=this;
+      N b=np;
+
+      a=b;
+      
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(13,9): warning CS2613: Conversion to 'test.N!' fails if the value is null
+No Violation
+`
+// Warning: Direct assignment.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N! f = new N();
+    N  nf;
+    public N test(N! p,N np){
+      N! a=this;
+      N b=np;
+
+      p=b;
+      
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(13,9): warning CS2613: Conversion to 'test.N!' fails if the value is null
+No Violation
+`
+// Warning: Direct assignment.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N! f = new N();
+    N  nf;
+    public N test(N! p,N np){
+      N! a=this;
+      N b=np;
+
+      f=b;
+      sf=b;
+      
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(13,9): warning CS2613: Conversion to 'test.N!' fails if the value is null
+No Violation
+`
+// Warning: Direct assignment.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N! f = new N();
+    N  nf;
+    public N test(N! p,N np){
+      N! a=this;
+      N b=np;
+
+      sf=b;
+      
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(13,10): warning CS2613: Conversion to 'test.N!' fails if the value is null
+No Violation
+`
+// Error: Direct assignment.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N! f = new N();
+    N  nf;
+    public N test(N! p){
+      N! a=this;
+      a=null;
+      p=null;
+      f=null;
+      sf=null;
+      
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(11,9): warning CS2612: Null cannot be used where a non-null value is expected
+(12,9): warning CS2612: Null cannot be used where a non-null value is expected
+(13,9): warning CS2612: Null cannot be used where a non-null value is expected
+(14,10): warning CS2612: Null cannot be used where a non-null value is expected
+No Violation
+`
+// Warning: Direct assignment with one-step tracking.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N! f = new N();
+    N  nf;
+    public N test(N! p, N np){
+      N! a=this;
+      N b=null; nf=null;
+      a=b;
+      return a;
+    }
+    public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(12,9): warning CS2612: Null cannot be used where a non-null value is expected
+No Violation
+`
+// Warning: Direct assignment with one-step tracking.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N! f = new N();
+    N  nf;
+    public N test(N! p, N np){
+      N a=this;
+      N b=null; nf=null;
+      a=b;
+      p=a;
+      return a;
+    }
+  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(13,9): warning CS2612: Null cannot be used where a non-null value is expected
+No Violation
+`
+// Warning: Direct assignment with one-step tracking.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N! f = new N();
+    N  nf;
+    public N test(N p, N np){
+      N a=this;
+      N b=null; nf=null;
+      a=b;
+      p=a;
+      f=p;
+      return a;
+    }
+  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(14,9): warning CS2612: Null cannot be used where a non-null value is expected
+No Violation
+`
+// Warning: Direct assignment with one-step tracking.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N f = new N();
+    public N test(N p, N np){
+      N a=this;
+      N b=null;
+      a=b;
+      p=a;
+      f=p;
+      sf=f;
+      return a;
+    }
+  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(14,10): warning CS2612: Null cannot be used where a non-null value is expected
+No Violation
+`
+// Warning: Direct assignment with one-step tracking.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    public N test(N! p, N np){
+      N! a=np;
+      return a;
+    }
+  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(8,12): warning CS2613: Conversion to 'test.N!' fails if the value is null
+No Violation
+`
+`/debug+ /d:NONNULLTYPECHECK
+// Tracing variable
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N! f = new N();
+    N  nf;
+    static N snf;
+    public N test(N! p,N np){
+      N! a;
+      N b;
+      b=f;a=b;  // via local.
+      nf=f;
+      snf=f;
+      np=f;a=np; // Via parameter.
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+No Violation
+`
+// Tracing variable (Multiple steps).
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N! f = new N();
+    public N test(N! p,N np){
+      N! a;
+      N b;
+      N c;
+      b=f;
+      c=b;
+      b=c;
+      a=b;
+      f=b;
+      sf=b;
+      p=b;
+      
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+No Violation
+`
+// Tracing variable (Multiple steps): Warning
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N! f = new N();
+    N  nf;
+    static N snf;
+    public N test(N! p,N np){
+      N! a;
+      N b;
+      snf=np; nf=snf; b=np;
+      a=b;
+      
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(14,9): warning CS2613: Conversion to 'test.N!' fails if the value is null
+No Violation
+`
+// Tracing null (Multiple steps): Warning
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N! f = new N();
+    N  nf;
+    static N snf;
+    public N test(N! p,N np){
+      N! a;
+      N b;
+      np=null;
+      b=np;
+      N c=b;
+      snf=c;
+      nf=c;
+      b=c;
+      a=b;
+      
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(19,9): warning CS2612: Null cannot be used where a non-null value is expected
+No Violation
+`
+// Branch test
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    public N test(N p){
+      N! a = f;
+      if(p!=null)
+        a=p;
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+No Violation
+`
+// Branch test
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    public N test(N p){
+      N! a;
+      if(p==null){ a = f;
+      }else
+        a=p;
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+No Violation
+`
+`/debug+ /d:NONNULLTYPECHECK
+// Branch test
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    public void test(N p){
+      N! a;
+      if(f==null)
+        f=null;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(11,11): warning CS2612: Null cannot be used where a non-null value is expected
+No Violation
+`
+// Branch test
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    public N test(N p){
+      N! a;
+      if(f!=null){
+      }else
+        f=null;
+      return null;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(12,11): warning CS2612: Null cannot be used where a non-null value is expected
+No Violation
+`
+// Branch merge
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    public N test(N p){
+      N! a;
+      if(p==null)
+        sf=null;
+      f=p;
+      return null;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(12,9): warning CS2613: Conversion to 'test.N!' fails if the value is null
+No Violation
+`
+// Branch merge
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    public N test(N p){
+      N! a;
+      if(p==null)
+        sf=p;
+      f=p;
+      return f;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(12,9): warning CS2613: Conversion to 'test.N!' fails if the value is null
+No Violation
+`
+// Branch merge
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    public N test(N p){
+      N! a;
+      if(p!=null)
+        sf=p;
+      f=p;
+      return f;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(12,9): warning CS2613: Conversion to 'test.N!' fails if the value is null
+No Violation
+`
+// Branch merge
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    N! f = new N();
+    public N test(N p){
+      N! a;
+      N b;
+      if(p==null){
+        b=f;
+      }else{
+        b=p;
+      }
+     
+      a=b;
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+No Violation
+`
+// Instance field 
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N! f = new N();
+    public N test(N p){
+      N! a = this;
+      N b;
+      b=null;
+      a.f=b;
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(12,11): warning CS2612: Null cannot be used where a non-null value is expected
+No Violation
+`
+// static field 
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N! sf;
+    N! f = new N();
+    public N test(N p){
+      N! a = this;
+      N b;
+      b=null;
+      sf=b;
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(12,10): warning CS2612: Null cannot be used where a non-null value is expected
+No Violation
+`
+// Instance field.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    N nf1, nf2;
+    public N test(N p){
+      N! a=this;
+      N b;
+      b=a;
+      b.nf1=a;
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+No Violation
+`
+// Instance field.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    N nf1, nf2;
+    public N test(N p){
+      N! a=f;
+      N b = p;
+      b.nf1=a;
+      return null;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(12,7): warning CS2614: Receiver might be null (of type 'test.N')
+No Violation
+`
+// Instance field.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    N nf1, nf2;
+    public N test(N p){
+      N! a=this;
+      N b;
+      b=null;
+      b.nf1=a;
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(13,7): warning CS2637: Receiver must not be null (of type 'test.N')
+No Violation
+`
+// Receiver: Method call.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    N nf1, nf2;
+    public N test(N np,N! p){
+      N! a=this;
+      N b;
+      b=a;
+      b.test(b,a);
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+No Violation
+`
+// Receiver: Method call.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+
+    N! f = new N();
+
+    public N test(N np,N! p){
+      N! a=this;
+      N b=np;
+      b.test(b,a);
+      return b;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(12,7): warning CS2614: Receiver might be null (of type 'test.N')
+No Violation
+`
+// Receiver: Method call.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    N nf1, nf2;
+    public N test(N np,N! p){
+      N! a=this;
+      N b;
+      b=null;
+      b.test(b,a);
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(13,7): warning CS2637: Receiver must not be null (of type 'test.N')
+No Violation
+`
+// Parameter matching.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+
+    N! f = new N();
+    N nf1, nf2;
+    public N test(N np,N! p){
+      N! a=this;
+      a.test(np,np);
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(11,17): warning CS2613: Conversion to 'test.N!' fails if the value is null
+No Violation
+`
+// return value matching.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    N nf1, nf2;
+    public N test(N np,N! p){
+      N! a=this;
+      a=a.test(sf,f);
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(11,9): warning CS2613: Conversion to 'test.N!' fails if the value is null
+No Violation
+`
+  
+// return value matching.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    N nf1, nf2;
+    public N! test(N np,N! p){
+      N! a=this;
+      a=a.test(sf,f);
+      return a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+No Violation
+`
+// return checking.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    N nf1, nf2;
+    public N! test(N np,N! p){
+      return p;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+No Violation
+`
+// return checking.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    N nf1, nf2;
+    public N! test(N np,N! p){
+      return np;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(10,14): warning CS2613: Conversion to 'test.N!' fails if the value is null
+No Violation
+`
+// return checking.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    N nf1, nf2;
+    public N! test(N np,N! p){
+      return null;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(10,14): warning CS2612: Null cannot be used where a non-null value is expected
+No Violation
+`
+// exception.
+using System;
+using Microsoft.Contracts;
+using System.IO;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    N nf1, nf2;
+    public N test(N np,N! p){
+      try{
+        np=p;
+        throw new IOException();
+      }catch(FieldAccessException e){
+        p=np;      
+      }catch(FileNotFoundException e){
+        p=np;
+      }catch(IOException e){
+        p=np;
+      }catch(Exception e){
+        p=np;
+      }finally{
+        p=np;
+      }
+      return p;
+    }
+    public static void Main(){              Console.WriteLine("No Violation");      }
+  }
+}
+`
+(14,35): warning CS0219: The variable 'e' is assigned but its value is never used
+(16,36): warning CS0219: The variable 'e' is assigned but its value is never used
+(18,26): warning CS0219: The variable 'e' is assigned but its value is never used
+(20,24): warning CS0219: The variable 'e' is assigned but its value is never used
+No Violation
+`
+// exception.
+using System;
+using Microsoft.Contracts;
+using System.IO;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    N nf1, nf2;
+    public N test(N np,N! p){
+      try{
+        throw new IOException();
+      }catch(FieldAccessException e){
+        p=np;      
+      }catch(FileNotFoundException e){
+        p=np;
+      }catch(IOException e){
+        p=np;
+      }catch(Exception e){
+        p=np;
+      }finally{
+        p=np;
+      }
+      return p;
+    }
+    public static void Main(){              Console.WriteLine("No Violation");      }
+  }
+}
+`
+(13,35): warning CS0219: The variable 'e' is assigned but its value is never used
+(15,36): warning CS0219: The variable 'e' is assigned but its value is never used
+(17,26): warning CS0219: The variable 'e' is assigned but its value is never used
+(19,24): warning CS0219: The variable 'e' is assigned but its value is never used
+(18,11): warning CS2613: Conversion to 'test.N!' fails if the value is null
+(16,11): warning CS2613: Conversion to 'test.N!' fails if the value is null
+(22,11): warning CS2613: Conversion to 'test.N!' fails if the value is null
+No Violation
+`
+// exception.
+using System;
+using Microsoft.Contracts;
+using System.IO;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    N nf1, nf2;
+    public N test(N np,N! p){
+      np=null;
+      try{
+        throw new IOException();
+      }catch(FieldAccessException e){
+        p=np;      
+      }catch(FileNotFoundException e){
+        p=np;
+      }catch(IOException e){
+        p=np;
+      }catch(Exception e){
+        p=np;
+      }finally{
+        p=np;
+      }
+      return p;
+    }
+    public static void Main(){              Console.WriteLine("No Violation");      }
+  }
+}
+`
+(14,35): warning CS0219: The variable 'e' is assigned but its value is never used
+(16,36): warning CS0219: The variable 'e' is assigned but its value is never used
+(18,26): warning CS0219: The variable 'e' is assigned but its value is never used
+(20,24): warning CS0219: The variable 'e' is assigned but its value is never used
+(19,11): warning CS2612: Null cannot be used where a non-null value is expected
+(17,11): warning CS2612: Null cannot be used where a non-null value is expected
+(23,11): warning CS2612: Null cannot be used where a non-null value is expected
+No Violation
+`
+// exception: In a reverse order.
+using System;
+using Microsoft.Contracts;
+using System.IO;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    N nf1, nf2;
+    public N test(N np,N! p){
+      try{
+        if(np==null)
+          throw new IOException();
+      }catch(FieldAccessException e){
+        p=np;      
+      }catch(FileNotFoundException e){
+        p=np;
+      }catch(IOException e){
+        p=np;
+      }catch(Exception e){
+        p=np;
+      }finally{
+        p=np;
+      }
+      return p;
+    }
+    public static void Main(){              Console.WriteLine("No Violation");      }
+  }
+}
+`
+(14,35): warning CS0219: The variable 'e' is assigned but its value is never used
+(16,36): warning CS0219: The variable 'e' is assigned but its value is never used
+(18,26): warning CS0219: The variable 'e' is assigned but its value is never used
+(20,24): warning CS0219: The variable 'e' is assigned but its value is never used
+(19,11): warning CS2612: Null cannot be used where a non-null value is expected
+(17,11): warning CS2612: Null cannot be used where a non-null value is expected
+(23,11): warning CS2612: Null cannot be used where a non-null value is expected
+No Violation
+`
+// exception: In a reverse order.
+using System;
+using Microsoft.Contracts;
+using System.IO;
+namespace test{
+  public class N{
+    static N sf;
+    N! f = new N();
+    N nf1, nf2;
+    public N test(N np,N! p){
+      try{
+        if(np!=null)
+          throw new IOException();
+      }catch(FieldAccessException e){
+        p=np;      
+      }catch(FileNotFoundException e){
+        p=np;
+      }catch(IOException e){
+        p=np;
+      }catch(Exception e){
+        p=np;
+      }finally{
+        p=np;
+      }
+      return p;
+    }
+    public static void Main(){              Console.WriteLine("No Violation");      }
+  }
+}
+`
+(14,35): warning CS0219: The variable 'e' is assigned but its value is never used
+(16,36): warning CS0219: The variable 'e' is assigned but its value is never used
+(18,26): warning CS0219: The variable 'e' is assigned but its value is never used
+(20,24): warning CS0219: The variable 'e' is assigned but its value is never used
+(23,11): warning CS2612: Null cannot be used where a non-null value is expected
+No Violation
+`
+// check that delegate construction on non null receiver works.
+delegate void TestDel();
+
+namespace MyNS
+{
+  delegate int TestDel(int intI);
+
+  class MyClass {
+
+    int TestMeth(int intI) {
+      return 0;
+    }    
+
+    public static int Main() {
+      MyClass! test = new MyClass();
+      TestDel! td = new TestDel(test.TestMeth);
+      return td(0);
+    }
+  }
+
+}
+`
+`
+// check that non null arrays work
+
+namespace MyNS
+{
+  class MyClass {
+
+    void TestMeth(int[]! data) {
+      int i = data[0];
+      data[1] = i;
+    }    
+
+    public static void Main() {
+    }
+  }
+
+}
+`
+`
+// check that non null arrays of non null things work
+
+namespace MyNS
+{
+  class MyClass {
+
+    void TestMeth(object![]! data) {
+      object! o = data[0];
+      string s = o.ToString();
+      
+      data[1] = s; // should fail
+      
+    }    
+
+    public static void Main() {
+    }
+  }
+
+}
+`
+(11,17): warning CS2613: Conversion to 'string!' fails if the value is null
+`
+// check non null out parameters
+class T {
+
+
+  public static void Main() {
+
+
+    T! t;
+    T s;
+    
+    FillInOut(out t);
+
+    FillInOut(out s); // correctly complains
+
+    FillInRef(ref t);
+
+    FillInRef(ref s); // correctly complains
+    
+    FillPNOut(out s);
+    FillPNOut(out t);
+    FillPNRef(ref s);
+    FillPNRef(ref t);
+  }
+
+  public static void FillInOut(out T! br) {
+    br = new T();
+  }
+
+  public static void FillInRef(ref T! br) {
+  }
+  
+  public static void FillPNOut(out T br) {
+    br = null;
+  }
+  
+  public static void FillPNRef(ref T br) {
+    br = null;
+  }
+}
+`
+(13,15): error CS0029: Cannot implicitly convert type 'out T' to 'out T!'
+(17,15): error CS0029: Cannot implicitly convert type 'ref T' to 'ref T!'
+(20,15): error CS0029: Cannot implicitly convert type 'out T!' to 'out T'
+(22,15): error CS0029: Cannot implicitly convert type 'ref T!' to 'ref T'
+`
+// check non-null out parameters
+class T {
+
+
+  public static void Main() {
+
+    T! t;
+    
+    FillIn(out t);
+    
+    
+  }
+
+  public static void FillIn(out T! br) {
+    br = new T();
+  }
+  
+  public static void FillInBad(out T! br) {
+    br = null;
+  }
+
+  public static void FillInAlsoBad(out T! br, T value) {
+    br = value;
+  }
+
+}
+`
+(19,10): warning CS2612: Null cannot be used where a non-null value is expected
+(23,10): warning CS2613: Conversion to 'T!' fails if the value is null
+`
+// Check that warnings don't prevent run
+using System;
+
+class T {
+
+  T! next = new T();
+  
+  public static void Main() {
+
+    Console.WriteLine("Ran.");    
+  }
+
+  public static void FillIn(T br) {
+    T! x = br; x.next = x;
+  }
+
+  public static void TestUnbox(Object o) {
+    UseIntValue( (int)o );
+  }
+  
+  private static void UseIntValue(int x) {}
+
+}
+`
+(14,12): warning CS2613: Conversion to 'T!' fails if the value is null
+(18,18): warning CS2638: Using possibly null pointer to unbox
+Ran.
+`
+`/debug /d:NONNULLTYPECHECK
+using System;
+
+class T {
+
+	int x;
+	T! y = new T();
+	
+  public static void Main() {
+
+    Console.WriteLine("Ran.");    
+    
+  }
+
+  public static void A() {
+    T! x = null; x.y = x;  // warn here
+  }
+
+  public static void B(T br) {
+    T! x = (T!)br; x.y = x;  // don't warn here
+  }
+
+  public static void C(T br) {
+    T! x = br; x.y = x;  // warn here
+  }
+
+  public static void D(T! br) {
+    T! x = br; x.y = x;  // don't warn here
+  }
+
+  public void UnboxA(Object o) {
+    if (o == null) {
+      this.x = (int)o; // warn here.
+    }
+  }
+
+  public static int UnboxB(Object o) {
+    object! x = (object!)o; // no warning here.
+    return (int)x;  // no warning here.
+  }
+  
+  public static void UnboxC(Object o) {
+    int x = (int)o; x++; // warn here.
+  }
+
+  public static int UnboxD(Object! o) {
+    return (int)o;  // no warning here.
+  }
+
+  public static int UnboxE(Object o) { 
+    assume o != null;
+    return (int)o;   // no warning here
+  }
+}
+`
+(15,12): warning CS2612: Null cannot be used where a non-null value is expected
+(23,12): warning CS2613: Conversion to 'T!' fails if the value is null
+(32,16): warning CS2639: Using null pointer to unbox
+(42,13): warning CS2638: Using possibly null pointer to unbox
+Ran.
+`
+`/debug /d:NONNULLTYPECHECK
+using System;
+using System.Collections;
+
+class T {
+
+
+  public static void Main() {
+
+    Console.WriteLine("Ran.");    
+    
+  }
+
+  public static void A(IEnumerable! e) {
+
+      int sum = 0;
+
+      foreach(int x in e) {
+          sum += x;
+      }
+  }
+
+  public static void B(IEnumerable! e) {
+
+      string sum = "";
+
+      foreach(object! x in e) {
+          sum += x.ToString();
+      }
+  }
+
+}
+`
+Ran.
+`
+class C { public const string! x = "hi"; }
+class M { public static void Main() {} }
+`
+`
+// && shortcut
+using System;
+
+public class N {}
+
+public class AndShortcut {
+    
+    public string Test(N x, N y){
+
+      string s = null;
+      if (x != null && y != null) { 
+        s = x.ToString() + y.ToString();
+      }
+      return s;
+    }
+    
+    public string Control(N x, N y) {
+      if (x != null && y != null) { return null; }
+      string s = x.ToString() + y.ToString();
+      return s;
+    }
+    
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+}
+`
+(19,18): warning CS2614: Receiver might be null (of type 'N')
+(19,33): warning CS2614: Receiver might be null (of type 'N')
+No Violation
+`
+// || shortcut
+using System;
+
+public class N {}
+
+public class OrShortcut {
+    
+    public string Test(N x, N y){
+
+      if (x == null || y == null) return null;
+
+      return x.ToString() + y.ToString();
+    }
+    
+    public string Control(N x, N y) {
+
+      if (x != null || y != null) { return null; }
+      string s = x.ToString() + y.ToString();
+      return s;
+    }
+    
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+}
+`
+(18,18): warning CS2637: Receiver must not be null (of type 'N')
+(18,33): warning CS2637: Receiver must not be null (of type 'N')
+No Violation
+`
+// const string
+public class T {
+
+  public static void Foo(string! s) {
+  }
+  
+  public static void Main() {
+    Foo("bar");
+  }
+  
+  public void Control(string s) {
+    Foo(s);
+  }
+}
+`
+(12,9): warning CS2613: Conversion to 'string!' fails if the value is null
+`
+`/debug /d:NONNULLTYPECHECK
+// check asserts/assumes
+public class T {
+
+  public static void Main() {
+  }
+  
+  void Foo(string s)
+    requires s != null;
+  {
+    Bar(s);
+  }
+  
+  void Bar(string! t) {
+  }
+  
+  void CheckAssert(string sa1) {
+    assert (sa1 != null);
+    Bar(sa1);
+  }
+  
+  void CheckAssume(string sa1) {
+    assume (sa1 != null);
+    Bar(sa1);
+  }
+
+}
+`
+`
+`/d:DEFASSIGN /debug
+public class PrefixScope 
+{
+
+    public string[] Table;
+    
+    public PrefixScope ParentScope;
+    
+}
+
+public class T : PrefixScope
+{
+    
+
+   internal string this[int key]{
+
+      get{
+
+        PrefixScope pScope = this;
+
+        do{
+
+          string result = pScope.Table[key];
+
+          if (result != null){
+
+            if (pScope != this) this[key] = result;
+
+            return result;
+
+          }
+
+          pScope = pScope.ParentScope;
+
+        }while (pScope != null);
+
+        return null;
+
+      }
+
+      set{
+
+        this.Table[key] = value;
+
+      }
+
+    }
+
+ 
+ public static void Main() {}
+
+   
+}
+`
+(22,27): warning CS2638: Using possibly null pointer as array
+(42,9): warning CS2638: Using possibly null pointer as array
+`
+`/d:NONNULLTYPECHECK /debug
+public class T {
+
+       void M(string s) 
+         requires s != null;
+       {
+         Foo(s);
+       }
+
+       void Foo(string! t) {}
+
+       public static void Main() {}
+}
+`
+`
+`/d:NONNULLTYPECHECK
+// check initobj instruction
+public class T {
+
+  public static int Main() {
+    S s = new S();
+    return s.x;
+  }
+
+  public static int Foo() {
+    S s;
+    return s.x;
+  }
+
+}
+
+struct S {
+  public int x;
+}
+`
+(11,12): warning CS0170: Use of possibly unassigned field 'x'
+`
+// check that typeof(T) is non-null
+
+using System;
+
+public class T {
+
+  public static void Main() {}
+  
+  Type! Get() {
+    return typeof(T);
+  }
+}
+`
+`
+using System;
+
+namespace ClassLibrary1
+{
+    public class Class1
+    {
+  		static void Foo (params object[]! x) {
+  		  Console.WriteLine(x.Length);
+  		}
+  		
+  		public static void Main(string[] pars){
+  		  Foo();
+  		}
+    
+    }
+}
+`
+0
+`
+class C {
+  public void Foo() { System.Console.WriteLine("foo"); }
+}
+ 
+class D : C { }
+ 
+class Foo {
+  void Bar (ref D x) { x = new D(); }
+  
+  public static void Main(){
+    D! d = new D();
+    Foo f = new Foo();
+    f.Bar(ref d);
+    d.Foo();    
+  }
+}
+`
+(13,11): error CS0029: Cannot implicitly convert type 'ref D!' to 'ref D'
+`
+class C {
+  public void Foo() { System.Console.WriteLine("foo"); }
+}
+ 
+class D : C { }
+ 
+class Foo {
+  void Bar (out D x) { x = new D(); }
+  
+  public static void Main(){
+    D! d = new D();
+    Foo f = new Foo();
+    f.Bar(out d);
+    d.Foo();    
+  }
+}
+`
+(13,11): error CS0029: Cannot implicitly convert type 'out D!' to 'out D'
+`
+class C {
+  public void Foo() { System.Console.WriteLine("foo"); }
+}
+ 
+class D : C { }
+ 
+class Foo {
+  void Bar (out D! x) { x = new D(); }
+  
+  public static void Main(){
+    D! d = new D();
+    Foo f = new Foo();
+    f.Bar(out d);
+    d.Foo();    
+  }
+}
+`
+foo
+`
+public class Class1{
+  public Class1(bool b, string x, string! y)
+  {
+			string s = b ? x : y;
+			System.Console.WriteLine(s);
+  }
+  public static void Main(){
+    new Class1(true, "foo", "bar");
+    new Class1(false, "foo", "bar");
+  }
+}
+`
+foo
+bar
+`
+`/d:NONNULLTYPECHECK
+class C {
+    void Foo (out string! s) { s = "hi"; }
+
+    void Baz (string! s) { }
+
+    void Bar ()
+
+    {
+
+        string! s;
+
+        Foo(out s);
+
+        Baz(s); // warning CS2613: Conversion to 'string!' fails if the value is null
+
+    }
+
+    public static void Main () { C x = new C(); x.Bar(); }
+
+}
+`
+`
+`/d:NONNULLTYPECHECK
+using System;
+using Microsoft.SpecSharp.Collections;
+
+namespace ClassLibrary1
+{
+    struct S 
+    { 
+        public string Test(object that) {
+            if (that is S) {
+                return that.ToString();
+            }
+            return null;
+        }
+        
+        public static void Main() {}
+    }
+
+}
+`
+`
+`/d:NONNULLTYPECHECK
+using System;
+using Microsoft.SpecSharp.Collections;
+
+namespace ClassLibrary1
+{
+    struct S 
+    { 
+        int x; 
+        public override bool Equals (object that) { return that is S ? ((S)that).x == this.x : false; }
+
+        public static void Main() {}
+    }
+
+}
+`
+`
+`/d:NONNULLTYPECHECK
+struct S 
+
+{ 
+
+  int i; 
+
+  public S (int i) { this.i = i; }
+
+  public bool Neg { get { return i < 0; } } 
+
+}
+
+ 
+
+class C
+
+{
+
+  public static void Main () {}
+
+  bool Test()
+  {
+
+    S[,] matrix = new S[2,3];
+
+    return matrix[0,0].Neg; // No warning!!!
+  }
+
+}
+`
+`
+`/d:NONNULLTYPECHECK
+class T {
+
+    public static void Main() {}
+
+    public static string M(string t, string! q) {
+
+        string s = t!=null?q:null;
+
+        string! r = t!=null?q:null;
+
+        return r + s;
+    }
+}
+`
+(9,21): warning CS2613: Conversion to 'string!' fails if the value is null
+`
+`/d:NONNULLTYPECHECK
+class C
+{
+  protected string s = "ok";
+}
+ 
+class D : C
+{
+  public static string Foo (D! x) 
+  { 
+    return x.s;  // error CS1540: Cannot access protected member 'C.s' via a qualifier of type 'D!'; the qualifier must be of type 'D' (or derived from it)
+  }
+ 
+  public static void Main () { D x = new D(); System.Console.WriteLine(Foo(x)); }
+}
+`
+ok
+`
+`/d:NONNULLTYPECHECK
+// Non-null instance field initialization: no error
+using System;
+public class C {
+  public string! s = "I'm not null!";
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+I'm not null!
+`
+`/d:NONNULLTYPECHECK /warnaserror
+// Non-null instance field initialization: error
+using System;
+public class C {
+  public string! s;
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(4,3): error CS2676: The non-null field C.s is not initialized by the default constructor
+`
+`/d:NONNULLTYPECHECK
+// Non-null instance field initialization: error
+using System;
+public class C {
+  public string! s = "I'm not null!";
+  public string! t = s;
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(5,22): error CS0236: A field initializer cannot reference the nonstatic field, method, or property 'C.s'
+`
+`/d:NONNULLTYPECHECK
+// Non-null instance field initialization in explict constructor: error
+using System;
+public class C {
+  public string! s;
+  [Microsoft.Contracts.NotDelayed]
+  public C() { this.s = "I'm not null!"; }
+  public C(int i) { this.s = "I'm not null!"; }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(6,14): warning CS2645: The non-null field C.s must be initialized before base constructor call
+I'm not null!
+`
+`/d:NONNULLTYPECHECK
+// Non-null instance field initialization in explict constructor: no error
+using System;
+public class C {
+  public string! s;
+  public C() { this.s = "I'm not null!"; base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+I'm not null!
+`
+`/d:NONNULLTYPECHECK /warnaserror
+// Non-null instance field initialization in explict constructor: error
+using System;
+public class C {
+  public string! s;
+  [Microsoft.Contracts.NotDelayed]
+  public C() { }
+  public C(int i) { }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(6,14): error CS2645: The non-null field C.s must be initialized before base constructor call
+(7,10): error CS2666: The non-null field C.s must be initialized by the end of the delayed constructor
+`
+`/d:NONNULLTYPECHECK /warnaserror
+// Non-null instance field initialization in explict constructor: error
+using System;
+public class C {
+  public string! s;
+  [Microsoft.Contracts.NotDelayed]
+  public C() { base(); }
+  public C(int i) { base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(6,16): error CS2645: The non-null field C.s must be initialized before base constructor call
+(7,10): error CS2666: The non-null field C.s must be initialized by the end of the delayed constructor
+`
+`/d:NONNULLTYPECHECK
+// Non-null instance field initialization in explict constructor: error
+using System;
+public class C {
+  public string! s;
+  public string! t;
+  public C() { s = "I'm not null!"; t = s; base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(6,41): error CS0120: An object reference is required for the nonstatic field, method, or property 'C.s'
+`
+`/d:NONNULLTYPECHECK
+// Non-null instance field initialization in explict constructor: error
+using System;
+public class C {
+  public string! s;
+  public string! t;
+  public C() { s = "I'm not null!"; t = this.s; base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(6,41): error CS0027: Keyword this is not available in the current context
+`
+`/d:NONNULLTYPECHECK
+// C# form of base call still allowed: no error
+using System;
+public class C {
+  public string! s = "I'm not null!";
+  public C() : base() { }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+I'm not null!
+`
+`/d:NONNULLTYPECHECK
+// Non-null instance field initialization in field initializer with explict base call in body of ctor: no error
+using System;
+public class C {
+  public string! s = "I'm not null!";
+  public C() { base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+I'm not null!
+`
+`/d:NONNULLTYPECHECK /warnaserror
+// C# form of base call still allowed: error because non-null field not initialized
+using System;
+public class C {
+  public string! s;
+  [Microsoft.Contracts.NotDelayed]
+  public C() : base() { }
+  public C(int i) : base() { } // delayed ctor
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(6,16): error CS2645: The non-null field C.s must be initialized before base constructor call
+(7,10): error CS2666: The non-null field C.s must be initialized by the end of the delayed constructor
+`
+`/d:NONNULLTYPECHECK
+// C# form of base call still allowed: error because non-null field initialized too late
+using System;
+public class C {
+  public string! s;
+  [Microsoft.Contracts.NotDelayed]
+  public C() : base() { this.s = "I'm not null!"; }
+  public C(int i) : base() { this.s = "I'm not null!"; } // okay if delayed ctor (default)
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(6,16): warning CS2645: The non-null field C.s must be initialized before base constructor call
+I'm not null!
+`
+`/d:NONNULLTYPECHECK
+// C# form of base call still allowed: error because also called in body of ctor
+using System;
+public class C {
+  public string! s;
+  public C() : base() { this.s = "I'm not null!"; base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(5,51): error CS0175: Use of keyword base is not valid in this context
+`
+`/d:NONNULLTYPECHECK
+// C# form of "this" call still allowed: no error
+using System;
+public class C {
+  public string! s = "I'm not null!";
+  public C() : this(3) { }
+  public C(int i) { }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+I'm not null!
+`
+`/d:NONNULLTYPECHECK
+// C# form of "this" call still allowed: no error (and can be called before initializing non-null fields)
+using System;
+public class C {
+  public string! s;
+  public C() : this(3) { }
+  public C(int i) { s = "I'm not null!"; base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+I'm not null!
+`
+`/d:NONNULLTYPECHECK
+// Spec# form of "this" call allowed: no error (and can be called before initializing non-null fields)
+using System;
+public class C {
+  public string! s;
+  public C() { this(3); }
+  public C(int i) { s = "I'm not null!"; base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+I'm not null!
+`
+`/d:NONNULLTYPECHECK
+// Can't mix "this" and "base" calls in the same ctor
+using System;
+public class C {
+  public string! s;
+  public C() { this(3); base(); }
+  public C(int i) { s = "I'm not null!"; base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(5,25): error CS0175: Use of keyword base is not valid in this context
+`
+`/d:NONNULLTYPECHECK
+// Can't mix "this" and "base" calls in the same ctor
+using System;
+public class C {
+  public string! s;
+  public C() { base(); this(3); }
+  public C(int i) { s = "I'm not null!"; base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(5,24): error CS2647: No such method
+`
+`/d:NONNULLTYPECHECK
+// test use of "this" before base call
+using System;
+public class C {
+  public void foo(C c) {}
+  public string! s;
+  public C() { s = "I'm not null!"; foo(this); base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(6,37): error CS0120: An object reference is required for the nonstatic field, method, or property 'C.foo(C)'
+`
+`/d:NONNULLTYPECHECK
+using System;
+public class C {
+  public string! s;
+  public object o;
+  public C() { o = this; base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(5,20): error CS0027: Keyword this is not available in the current context
+`
+`/d:NONNULLTYPECHECK
+// test use of "this" before base call
+using System;
+public class C {
+  public void foo(C c) {}
+  public string! s;
+  public C() { s += "I'm not null!"; base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(6,16): error CS0120: An object reference is required for the nonstatic field, method, or property 'C.s'
+`
+`/d:NONNULLTYPECHECK
+// test that it is the field of "this" that is checked and not the same field on another object
+using System;
+public class C {
+  public string! s;
+  [Microsoft.Contracts.NotDelayed]
+  public C(C! otherC) { otherC.s = "I'm not null!"; base(); }
+  [Microsoft.Contracts.NotDelayed]
+  public C() { s = "I'm not null!"; base(); }
+}
+public class D {
+  public string! s;
+  public D(D! otherD) { otherD.s = "I'm not null!"; base(); }
+  public D() { s = "I'm not null!"; base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(6,53): warning CS2645: The non-null field C.s must be initialized before base constructor call
+(12,10): warning CS2666: The non-null field D.s must be initialized by the end of the delayed constructor
+I'm not null!
+`
+`/d:NONNULLTYPECHECK
+// using an out param to intialize a field
+using System;
+public class A {
+  public static void foo(out string! x) { x = "I'm not null!"; }
+}
+public class C {
+  public string! s;
+  [Microsoft.Contracts.NotDelayed]
+  public C() { A.foo(out s); base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+I'm not null!
+`
+`/d:NONNULLTYPECHECK
+// using a ref param to intialize a field: error
+using System;
+public class A {
+  public static void foo(ref string! x) { x = "I'm not null!"; }
+}
+public class C {
+  public string! s;
+  public C() { A.foo(ref s); base(); }
+}
+class M {
+  public static void Main() {
+    try { Console.WriteLine(new C().s); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}
+`
+(8,26): error CS0120: An object reference is required for the nonstatic field, method, or property 'C.s'
+`
+`/d:NONNULLTYPECHECK
+// Repro from Bug #130
+public class T { public readonly int k; }
+
+public class C
+{
+  T! t = new T();
+
+  invariant t.k == 5;
+
+  public void M()
+  {
+    int x = 12;  // must have nonempty body to trigger bug
+  }
+
+  public static void Main() { }
+}
+`
+(12,9): warning CS0219: The variable 'x' is assigned but its value is never used
+`
+using System;
+
+public class Test{
+  public static void Bar(object! foo){
+    Console.WriteLine(foo);
+  }
+  public static void Main(string[] args){
+    int one = 1;
+    Bar(one);
+  }
+}
+`
+1
+`
+using System;
+
+public class Test{
+  public static void Bar(object! foo){
+    Console.WriteLine(foo);
+  }
+  public static void Main(string[] args){
+    Bar(1);
+  }
+}
+`
+1
+`
+class M {
+  const string! foo = "fum";
+  public static void Main() {
+    System.Console.WriteLine(foo);
+  }
+}
+`
+fum
+`
+`
+// Test that it is okay to see *a* call to the base ctor, as long as the receiver isn't "this"
+class A{}
+class B: A{public A! f = new A();}
+public class Program{public static void Main(){}}
+`
+`
+`
+// Test that it is okay to see *a* call to the supertype ctor
+class A{}
+class B: A{}
+class C : B{public A! f = new A();}
+public class Program{public static void Main(){}}
+`
+`
+using System;
+using System.Collections.Generic;
+
+public interface IFoo<T>{
+  IList<T>! GetList();
+}
+
+public class Foo<T> : IFoo<T>{
+  public virtual IList<T>! GetList(){return new List<T>(0);}
+}
+
+public class Test{public static void Main(){}}
+`
+`
+class Test{
+  static void M(out string! s) {
+    s = "hello";
+    P(s);              // the compiler complains that it cannot resolve P
+  }
+  public static void P(string[] s)
+  {
+  }
+  public static void P(string s)
+  {
+    System.Console.WriteLine(s);
+  }
+  public static void Main(){
+    string! str = "null";
+    M(out str);
+    System.Console.WriteLine(str);
+  }
+}
+`
+hello
+hello
+`
+`/d:DEBUG
+// test runtime exception from implicit null cast.
+public class T {
+  public static void Main() {
+    try{
+      T! x = (null); // implicit cast, should produce coercion at runtime which fails.
+    }catch(System.Exception e){
+      System.Console.WriteLine(e.GetType().Name);
+    }
+  }
+
+  int x;
+
+  int m(int k, object a, object b) {
+      k = ((T!)(b)).x;          // parentheses should not cause null warning.
+    return k;
+  }
+}
+`
+(5,15): warning CS2612: Null cannot be used where a non-null value is expected
+(5,10): warning CS0219: The variable 'x' is assigned but its value is never used
+(7,32): warning CS2614: Receiver might be null (of type 'System.Type')
+NullException
+`
+`
+class Test{
+  static void Main(){
+    object o = "Hi!";
+    System.Console.WriteLine(o is string!);
+  }
+}
+`
+True
+`
+`
+class Test{
+  static void Main(){
+    object o = 3;
+    System.Console.WriteLine(o is string!);
+  }
+}
+`
+False
+`
+`
+// Check that the callee throws an ArgumentNullException if the argument is null.
+class Test{
+  public static void Foo(string! s){}
+  static void Main(){
+    try{
+      // Use reflection to avoid call-site non-null checks.
+      ((!)typeof(Test).GetMethod("Foo")).Invoke(null, new object[] {null});
+    }catch(System.Reflection.TargetInvocationException e){
+      System.Console.WriteLine(e.InnerException.Message);
+    }
+  }
+}
+`
+Value cannot be null.
+Parameter name: s
+`
+`
+// Check that the callee throws an ArgumentNullException if the argument is null.
+class Test{
+  public static void Foo(string! s){}
+  static void Main(){
+    try{
+      // Use reflection to avoid call-site non-null checks.
+      ((!)typeof(Test).GetMethod("Foo")).Invoke(null, new object[] {"hi"});
+      System.Console.WriteLine("Nothing happened.");
+    }catch(System.Reflection.TargetInvocationException e){
+      System.Console.WriteLine(e.InnerException.Message);
+    }
+  }
+}
+`
+Nothing happened.
+`
+`/debug
+// Bug 172: test to make sure "e as T!" is typed as T, not T!
+using System;
+public class A {
+  public static void Main() { Console.WriteLine("Ran."); }
+  public static A M0(object o) {
+    A a = o as A;
+    return a;
+  }
+  public static A M1(object! o) {
+    A a = o as A!;   // the compiler produces a bogus warning about this line, if included
+    return a;
+  }
+  public static A M2(object o) {
+    A a = o as A!;   // the compiler produces a bogus warning about this line
+    return a;
+  }
+}
+`
+Ran.
+`
+`
+// tests to make sure that a non-null cast on a value type is flagged as an error
+using System;
+class C{
+  int n;
+  public C(int[] x){
+    this.n = (!) x.Length;
+  }
+  public static void Main() { Console.WriteLine("Ran."); }
+}
+`
+(6,14): warning CS2545: Type 'int' already cannot be null since it is a value type
+(6,18): warning CS2638: Using possibly null pointer to get array length
+Ran.
+`
+//
+// Tests order of visit of diamonds in CFG
+//
+using System;
+
+    public class t {
+
+        public static void Main() {
+        }
+
+        public string Foo(bool b1, bool b2, bool b3, bool b4) {
+
+            string! t;
+            string s;
+            if (b1) {
+                s = "loop";
+                t = null;
+            }
+            else {
+                s = "no loop";
+                t = null;
+            }
+            s = "Out of loop";
+            t = null;
+
+            if (b2) { goto end; }
+
+            if (b3) {
+                s = "in true diamond";
+                t = null;
+            }
+            s = "post diamond 1";
+            t = null;
+
+            if (!b4) {
+                s = "in false diamond";
+                t = null;
+            }
+            s = "post diamond 2";
+            t = null;
+
+
+        end:
+            s = "end";
+            t = null;
+            return s + t;
+        }
+    }
+`
+(17,21): warning CS2612: Null cannot be used where a non-null value is expected
+(21,21): warning CS2612: Null cannot be used where a non-null value is expected
+(24,17): warning CS2612: Null cannot be used where a non-null value is expected
+(30,21): warning CS2612: Null cannot be used where a non-null value is expected
+(33,17): warning CS2612: Null cannot be used where a non-null value is expected
+(37,21): warning CS2612: Null cannot be used where a non-null value is expected
+(40,17): warning CS2612: Null cannot be used where a non-null value is expected
+(45,17): warning CS2612: Null cannot be used where a non-null value is expected
+`
+using System;
+
+public class Test {
+
+    public static void Main() {}
+
+    public static void P1(ref string data, ref string! data2) {
+        P2(ref data);
+        P3(out data);
+        P2(ref data2);
+        P3(out data2);
+        P4(ref data);
+        P5(out data);
+        P4(ref data2);
+        P5(out data2);
+    }
+
+    public static void P2(ref string! data) {
+    }
+
+    public static void P3(out string! data) {
+      data = "";
+    }
+
+    public static void P4(ref string data) {
+    }
+
+    public static void P5(out string data) {
+      data = null;
+    }
+}
+`
+(8,12): error CS0029: Cannot implicitly convert type 'ref string' to 'ref string!'
+(9,12): error CS0029: Cannot implicitly convert type 'out string' to 'out string!'
+(14,12): error CS0029: Cannot implicitly convert type 'ref string!' to 'ref string'
+(15,12): error CS0029: Cannot implicitly convert type 'out string!' to 'out string'
+`
+public class MyPrinter {
+  public static void Main() {
+    MyPrinter mp = new MyPrinter();
+    System.Console.WriteLine("Main says: {0}", mp);
+  }
+
+  public override string! ToString() {
+    return "Hello, this is MyPrinter";
+  }
+}
+`
+Main says: Hello, this is MyPrinter
+`
+// Check that fields of structs are handled properly
+struct S {
+
+    public string s;
+}
+
+public class Test {
+
+    S s;
+
+    public static void Main() {}
+
+    public static string Foo(Test! t) {
+
+        if (t.s.s != null) {
+            return t.s.s.ToString();
+        }
+        return "";
+    }
+
+    public static string Foo2(Test! t) {
+
+        return t.s.s.ToString();
+    }
+}
+`
+(23,16): warning CS2614: Receiver might be null (of type 'string')
+`
+// Test that we rembember null-checks against Property results
+//
+public class Test {
+
+    string s;
+
+    string S {
+        get { return s; }
+        set { this.s = value; }
+    }
+
+    public static void Main() {}
+
+    public static string Foo(Test! t) {
+
+        if (t.S != null) {
+            string! ns = t.S;
+            return ns.ToString();
+        }
+        return t.S.ToString();
+    }
+
+    public static string Foo2(Test! t) {
+
+        return t.S.ToString();
+    }
+
+    public static string Foo3(Test! t) {
+        string s = t.S.ToString();
+
+        s = t.S.ToString(); // repeat, don't warn
+        return s;
+    }
+
+    public static string Foo4(Test! t) {
+
+        if (t.S != null) {
+            string! ns = t.S;
+            
+            t.S = GetString();  // explicit property assignment invalidates knowledge
+
+            ns = t.S;
+
+            return ns;
+        }
+        return null;
+    }
+
+    public static string GetString() { return null; }
+
+}
+`
+(20,16): warning CS2637: Receiver must not be null (of type 'string')
+(25,16): warning CS2614: Receiver might be null (of type 'string')
+(29,20): warning CS2614: Receiver might be null (of type 'string')
+(42,18): warning CS2613: Conversion to 'string!' fails if the value is null
+`
+`/p:v2
+// This demonstrated a bug where the type of the parameter to the closure class's ctor was
+// always wrapped with a non-null type even if it was a struct.
+using System;
+using System.Collections.Generic;
+public struct D<T> : IEnumerable<T> {
+  T[] xs;
+  public IEnumerator<T> GetEnumerator() {
+    if (xs == null) yield break;
+    for (int i = 0; i < (xs == null ? 0 : xs.Length); i++)
+      yield return xs[i];
+  }
+  System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator(){
+    return ((IEnumerable<T>)this).GetEnumerator();
+  }
+}
+class Program { static void Main(string[] args) {} }
+`
+(10,20): warning CS2638: Using possibly null pointer as array
+`
+`/p:v2
+using System;
+using System.Collections.Generic;
+ 
+public class Node<T>{
+  public T elt;
+  public Node<T> next;
+}
+public struct C<T> : IEnumerable<T> {
+  Node<T> head;
+  C(Node<T>! y) { this.head = y; }
+  public IEnumerator<T> GetEnumerator() {
+    for (Node<T> t = this.head; t != null; t = (t == null ? null : t.next))
+      yield return t.elt;
+  }
+  System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator(){
+    return ((IEnumerable<T>)this).GetEnumerator();
+  }
+}
+public class Test {
+  public static void Main() {}
+}
+`
+`
+using System;
+public class C{
+  string s;
+  public static int foo(C! o){
+    assert o.s != null;
+    return o.s.Length;
+  }
+}
+public struct T{
+  string s;
+  public static int foo(T o){
+    assert o.s != null;
+    return o.s.Length;
+  }
+  public static int bar(T o){
+    return o.s == null ? 0 : o.s.Length;
+  }
+}
+class Program { static void Main(string[] args) {} }
+`
+`
+using System;
+using System.Collections.Generic;
+ 
+public class Node {
+    public string s;
+    public static string! Test(Node! n1, Node! n2) {
+        if (n1.s != null) {
+            n2.s = null;
+            return n1.s;
+        }
+        return "";
+    }
+}
+public class Test {
+  public static void Main() {}
+}
+`
+(9,20): warning CS2613: Conversion to 'string!' fails if the value is null
+`
+`/debug
+// Allow non-null types on operator overloads
+class C{
+  static public bool operator<(C! c1, C c2){ return true; }
+  static public bool operator>(C c1, C c2){ return true; }
+}
+class M{ public static void Main(){} }
+`
+`
+`/debug
+// Don't allow non-null in new expressions when it isn't an array
+public class C{}
+public class M {
+  public static void Main(){
+    C! c = new C!();
+  }
+}
+`
+(5,18): error CS1526: A new expression requires () or [] or {} after the type
+`
+`/debug
+// Don't allow non-null in new expressions when it isn't an array
+public class C<T>{}
+public class M {
+  public static void Main(){
+    C<int>! c = new C<int>!();
+  }
+}
+`
+(5,28): error CS1526: A new expression requires () or [] or {} after the type
+`
+`/debug
+using System;
+using System.Collections;
+class C{}
+class M{
+  public static void Main(){
+    IList i = new ArrayList();
+    i.Add(new C());
+    C c = (C!) i[0];
+    Console.WriteLine(c.ToString());
+  }
+}
+`
+C
+`
+`/debug
+// test to make sure generics instantiated with a non-null type are checked correctly
+using System;
+class C<T>{
+  public T x;
+}
+class Ex<G>{
+  G! foo(C<G>!  c){ G! g = c.x; return g; } // should be a warning about the assignment to g.
+  G! bar(C<G!>! c){ G! g = c.x; return g; } // should *not* be a warning about the assignment to g.
+}
+class M{ public static void Main(){} }
+`
+(7,28): warning CS2613: Conversion to 'G!' fails if the value is null
+`
+// Test that null is not compatible with unconstrained type parameters
+class C {
+
+      public T Test1<T>() {
+        return null;
+      }
+      public T Test2<T>() where T:class {
+        return null;
+      }
+      public T Test3<T>() where T:C {
+        return null;
+      }
+      public T Test4<T>() {
+        return (T)null;
+      }
+
+      public static void Main() {}
+}
+`
+(5,16): error CS0403: Cannot convert null to type parameter 'T' because it could be a value type. Consider using 'T.default' instead.
+(8,16): warning CS2612: Null cannot be used where a non-null value is expected
+(11,16): warning CS2612: Null cannot be used where a non-null value is expected
+(14,19): error CS0037: Cannot convert null to 'T' because it is a value type
+`
+//
+//  Test nullable optional modifier on type parameters and out
+//  interaction
+//
+class C<T> {
+
+    T? data;
+    
+    public void Set(T? data) {
+        this.data = data;
+    }
+
+    public void Get1(out T? data) {
+        data = this.data;
+    }
+    public void Get2(out T! data) {
+        data = this.data;
+    }
+    public void Get3(out T data) {
+        data = this.data;
+    }
+
+    ///////////////////////////////////
+    public T? Use11() {
+        T? temp;
+        Get1(out temp);
+        return temp;
+    }
+
+    public T! Use12() {
+        T! temp;
+        Get1(out temp);
+        return temp;
+    }
+
+    public T Use13() {
+        T temp;
+        Get1(out temp);
+        return temp;
+    }
+
+    ///////////////////////////////////
+    public T? Use21() {
+        T? temp;
+        Get2(out temp);
+        return temp;
+    }
+
+    public T! Use22() {
+        T! temp;
+        Get2(out temp);
+        return temp;
+    }
+
+    public T Use23() {
+        T temp;
+        Get2(out temp);
+        return temp;
+    }
+
+    ///////////////////////////////////
+    public T? Use31() {
+        T? temp;
+        Get3(out temp);
+        return temp;
+    }
+
+    public T! Use32() {
+        T! temp;
+        Get3(out temp);
+        return temp;
+    }
+
+    public T Use33() {
+        T temp;
+        Get3(out temp);
+        return temp;
+    }
+
+}
+public class Test { public static void Main() {} }
+`
+(32,14): error CS0029: Cannot implicitly convert type 'out T!' to 'out T?'
+(38,14): error CS0029: Cannot implicitly convert type 'out T' to 'out T?'
+(45,14): error CS0029: Cannot implicitly convert type 'out T?' to 'out T!'
+(57,14): error CS0029: Cannot implicitly convert type 'out T' to 'out T!'
+(64,14): error CS0029: Cannot implicitly convert type 'out T?' to 'out T'
+(70,14): error CS0029: Cannot implicitly convert type 'out T!' to 'out T'
+`
+`/debug
+// make sure "?" trumps "!" for generic types
+class C<T>{
+  public void foo(out T? t){ t = default(T); return; }
+}
+class M{
+  public static void Main(){
+    C<string!> c = new C<string!>();
+    string? s;
+    c.foo(out s);
+  }
+}
+`
+`
+// Checks that non-null checker understands AssertHelper.AssertLoopInvariant
+//
+using System;
+using Microsoft.Contracts;
+public sealed class IterList
+{
+    void TestLoopInv(Node np) {
+        assert np != null;
+        while( true  ) 
+            invariant np != null;
+            // check that non-null checker is not confused here
+            invariant 0 <= np.index;
+        {
+            np = np.next;
+            assert np != null;
+        }
+    }
+
+    public static void Main() {}
+}
+ 
+sealed class Node 
+{
+    public Node next;
+    public int index;
+}
+`
+`
+public class C {
+
+  public static int FlowAllowed(ref Expr! e)
+
+  {
+
+    assume e.T != null;
+
+    int y = e.T.X;  // warning CS2614: Receiver might be null (of type 'Type')
+
+    return y;
+
+  }
+
+  public static void Main() {
+    Expr! expr = new Expr();
+    expr.T = new Type();
+    FlowAllowed(ref expr);
+  }
+}
+
+ 
+
+public class Expr {
+
+  public Type T;
+
+}
+
+ 
+
+public class Type {
+
+  public int X;
+
+}
+`
+`
+`/disable:nullparametervalidation
+// 
+// Checks that AddressDereference tags resulting expression as
+// non-null if reference was to non-null pointer.
+//
+// The null parameter validation masks this error, as it dynamically
+// tests and the non-null analysis picks that up.
+// 
+using System;
+using System.Collections;
+
+public class Test {
+
+        public void Lex(ref string! input)
+        {
+            while (input.Length != 0) {
+            }
+        }
+
+   public static void Main() {}
+}
+`
+`
+using System;
+
+class Test {
+
+    public static void Main() {}
+
+    public static void Repro() {
+
+        string child = null;
+        // the non-null analysis didn't havoc ref and out parameters
+        SetChild(out child);
+
+
+        assert child != null;
+
+        // do something obviously bad that won't be caught if
+        // the non-null checker erronously believes this to be dead code
+        
+        string p = null;
+        CallWithNonNull(p);
+    }
+
+
+    public static void SetChild(out string p) {
+        p = "";
+    }
+
+    public static void CallWithNonNull(string! p){}
+}
+`
+(20,25): warning CS2612: Null cannot be used where a non-null value is expected
+`
+using System;
+
+struct S {
+    public string data;
+}
+
+class Test {
+
+    public static void Main() {}
+
+    public static void Repro() {
+
+        S s = new S();
+        s.data = null;
+
+        // the non-null analysis didn't havoc ref and out parameters
+        SetChild(out s);
+
+        assert s.data != null;
+
+        // do something obviously bad that won't be caught if
+        // the non-null checker erronously believes this to be dead code
+        
+        string p = null;
+        CallWithNonNull(p);
+    }
+
+
+    public static void SetChild(out S p) {
+        p.data = "";
+    }
+
+    public static void CallWithNonNull(string! p){}
+}
+`
+(25,25): warning CS2612: Null cannot be used where a non-null value is expected
+`
+`/p:v11 /noconfig
+//
+//  Test that non-null type of this is captured in closure
+//
+namespace Microsoft.MidoriTest
+{
+    using System;
+    using System.Collections;
+
+    public class Chore
+    {
+        public delegate void Thunk();
+        public Chore(Thunk/*!*/ f) {
+        }
+    }
+
+    internal class IntMap
+    {
+        private readonly IntMap/*!*/ _function;
+        private readonly Queue/*!*/ /*<Chore>*/ _queue;
+
+        public IntMap() {
+           _function = this;
+           _queue = new Queue();
+        }
+
+        public IntMap(IntMap/*!*/ f) {
+            _function = f;
+            _queue = new Queue();
+        }
+
+        public void Get(int n, int f) {
+            _queue.Enqueue(new Chore(delegate() {
+                _function.Get(n, f);
+            }));
+            Console.WriteLine("Get called");
+        }
+
+        public static void Main() {
+
+            IntMap m = new IntMap();
+            IntMap n = new IntMap(m);
+            
+            n.Get(1,2);       
+        }
+
+    }
+}
+`
+Get called
+`
+using System;
+using System.Collections.Generic;
+
+class MyMap {
+}
+
+class C {
+private void ApplyCombineNameMap(IEnumerable<KeyValuePair<string!, string!>>! map)
+        {
+            foreach (KeyValuePair<string!,string!> entry in map)
+            {
+                string! sourceName = entry.Key; // to test get_Key set the result type right
+                string! representative = sourceName;
+                    
+                foo(representative);
+            }
+
+            return;
+        }
+        
+        public void foo(string! s) {
+        }
+        
+        public static void Main(string[]! args) {
+        }
+}
+`
+`
+using System;
+using System.Collections.Generic;
+
+class MyMap {
+}
+
+class C {
+private void ApplyCombineNameMap(string![]! s)
+        {
+            string s1 = s[1];
+                    
+            foo(s1);
+            return;
+        }
+        
+        public void foo(string! s) {
+        }
+        
+        public static void Main(string[]! args) {
+        }
+}
+`
+`
+using System;
+using Microsoft.Contracts;
+
+class Node {
+   public NodePool! graph;
+   string! info;
+   [Delayed] public Node([Delayed] NodePool! g, string! i){
+     this.graph = g;
+     if (this.graph == null) // this is not allowed in earlier version but is ok now. 
+      	System.Console.WriteLine("this.graph is null");
+     else 
+      	System.Console.WriteLine("this.graph is not null");
+     info = i;
+   }
+}
+
+class NodePool { 
+   // a pool of nodes
+   Node! head; 
+   public Node! sen;
+   
+   public NodePool() {
+     head = new Node(this, "head");
+     sen = new Node(this, "sentinel");
+   }   
+}
+
+public class Program
+{
+  static void Main(string[]! args)
+    requires forall{string s in args; s != null};
+  {
+    // how about this version, which should be similar 
+    NodePool pool = new NodePool() ; // new Node(pool, "head"), new Node(pool, "sentinel"));
+    System.Console.WriteLine("{0}", pool); 
+  }
+}
+`
+this.graph is not null
+this.graph is not null
+NodePool
+`
+using System;
+using Microsoft.Contracts;
+
+class Node {
+   public NodePool! graph;
+   string! info;
+   private static void foo([Delayed] string! s){}
+   private static void foo1(ref string s) {}
+   private static void bar([Delayed]NodePool! x){}
+   
+   [Delayed] public Node([Delayed] NodePool! g, string! i){
+     Node! n = g.sen;  // not ok, because n will be existentially delayed, thus g.sen will not be non-null, thus a warning
+     string! s = this.info; // same as above; should be a warning
+     string s1;
+     if (n.graph != null) { // fine
+        NodePool! x = n.graph ; // warning: n is existential, thus possibly null
+        bar(x);
+        s1 = ("very good");
+     }
+     else s1 = this.info;
+
+     foo(s1); // warning: might null because of this.info
+
+     if (s!= null) {
+       s1 = s; // also ok
+     }
+     else 
+       s1 = "";
+       
+     foo(s1); // should be ok
+     foo(s1); // should be ok
+     
+     s1 = null; foo1(ref s1); // s1 is changed
+     foo(s1); //  warning
+     
+     graph = g;  // avoid other warnings
+     info = i;
+     
+   }
+}
+
+class NodePool {
+   // a pool of nodes
+   Node! head;
+   public Node! sen;
+   public NodePool(Node! h, Node! s){
+      head = h;
+      sen = s;
+   }
+
+   public NodePool() {
+     head = new Node(this, "head");
+     sen = new Node(this, "sentinel");
+   }
+   void AddNode(Node! n){
+
+   }
+}
+
+
+
+
+public class Program
+{
+  static void Main(string[]! args)
+    requires forall{string s in args; s != null};
+  {
+  }
+}
+`
+(12,12): warning CS2613: Conversion to 'Node!' fails if the value is null
+(13,14): warning CS2613: Conversion to 'string!' fails if the value is null
+(22,10): warning CS2613: Conversion to 'string!' fails if the value is null
+(34,10): warning CS2613: Conversion to 'string!' fails if the value is null
+`
+//
+// Test redundant warning for cast
+//
+public class Test {
+  public static void Main(string![] args) {
+
+    foreach(string arg in args) {
+      ProcessArg((!)arg);
+    }
+  }
+
+  public static void ProcessArg(string! arg) {}
+}
+`
+(8,18): warning CS2723: Non-null coercion is unnecessary
+`
+`/unsafe
+//
+// Check that pointer add/sub retains non-null information
+//
+public class C {
+
+    public static void Main() {}
+
+    unsafe public static byte*! Test1(int*! ptr) {
+        
+        return (byte*)((byte*)ptr + 1);
+    }
+
+    unsafe public static byte*! Test2(int*! ptr) {
+        
+        return (byte*)(1 + (byte*)ptr);
+    }
+
+    unsafe public static byte*! Test3(int* ptr) {
+        
+        return (byte*)((byte*)ptr + 1);
+    }
+
+    unsafe public static byte*! Test4(int* ptr) {
+        
+        return (byte*)(1 + (byte*)ptr);
+    }
+}
+`
+(20,16): warning CS2613: Conversion to 'byte*!' fails if the value is null
+(25,16): warning CS2613: Conversion to 'byte*!' fails if the value is null
+`
+// Check once field can only be written when null (instance)
+using Microsoft.Contracts;
+
+class C {
+  [Once]
+  string f;
+
+  string! P {
+    get { 
+      f = "asdf";
+      return f;
+    }
+  }
+
+  public static void Main() {}
+}
+`
+(10,7): warning CS2663: [Once] fields can be written only if null
+`
+// Check once field can only be written when null (static)
+using Microsoft.Contracts;
+
+class C {
+  [Once]
+  static string f;
+
+  static string! P {
+    get { 
+      f = "asdf";
+      return f;
+    }
+  }
+
+  public static void Main() {}
+}
+`
+(10,7): warning CS2663: [Once] fields can be written only if null
+`
+// Check once field can only be written when null (pass instance)
+using Microsoft.Contracts;
+
+class C {
+  [Once]
+  string f;
+
+  string! P {
+    get { 
+      if (f == null) {
+        f = "asdf";
+      }
+      return f;
+    }
+  }
+
+  public static void Main() {}
+}
+`
+`
+// Check once field can only be written when null (pass static)
+using Microsoft.Contracts;
+
+class C {
+  [Once]
+  static string f;
+
+  static string! P {
+    get { 
+      if (f == null) {
+        f = "asdf";
+      }
+      return f;
+    }
+  }
+
+  public static void Main() {}
+}
+`
+`
+// Check coercion from string![] to string[] is implicit
+using System;
+
+public class Test {
+  public static void Main() {
+    string[] args = Foo();
+    Ignore(args); // to avoid no-use warning.
+  }
+
+  static string![] Foo() { return null; }
+  static void Ignore(string[] args) {}
+}
+`
+`
+//
+// Test delayed modifier on non-object arrays
+//
+public class Test {
+
+    Test[]! data;
+
+    public Test() {
+        data = new[Delayed] Test[] {this, this, this, this, this};
+    }
+
+    public static void Main() {
+        Test t = new Test();
+
+        t.data[3] = t;
+    }
+}
+`
+`
+//
+// Test auto dereference coercion removing non-null bang when casting
+//
+public class C {
+  bool M(out T t) {
+    t = T.Make();
+    U u = t as U;
+    return u != null;
+  }
+
+  bool M_in(T t) {
+    U u = t as U;
+    return u != null;
+  }
+
+  bool N(out T! t) {
+    t = T.Make();  // Also: commenting out this line produces no warning about "t" in the next line
+    U u = t as U;   // The compiler reports a spurious error here
+    return u != null;
+  }
+
+  bool N_in(T! t) {
+    t = T.Make();
+    U u = t as U;
+    return u != null;
+  }
+
+  bool P(out T t) {
+    t = T.Make();
+    return t is U;
+  }
+
+  bool Q(out T! t) {
+    t = T.Make();  // Also: commenting out this line produces no warning about "t" in the next line
+    return t is U;   // The compiler reports a spurious error here
+  }
+}
+
+public class D {
+  bool M(out T t) {
+    t = T.Make();
+    U u = (T)t as U;
+    return u != null;
+  }
+
+  bool P(out T t) {
+    t = T.Make();
+    return (T)t is U;
+  }
+}
+
+public class T {
+  public static T! Make() {
+    return new U();
+  }
+}
+public class U : T { 
+  public static void Main() {}
+}
+`
+`

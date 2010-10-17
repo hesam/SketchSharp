@@ -1,0 +1,491 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+using System;
+using Cci = System.Compiler;
+using Bpl = Microsoft.Boogie;
+using Microsoft.Contracts;
+using System.Collections;
+using System.Collections.Generic;
+
+namespace Microsoft.Boogie
+{
+  sealed class GenerateModifiesContribution : Cci.StandardVisitor
+  {
+    // Should only call the constructor and the ModifiesContrib, ExposeModifiesContrib properties from the outside.
+
+    private Bpl.Expr! modifiesContrib = Bpl.Expr.True;
+    private Bpl.Expr! exposeContrib = Bpl.Expr.True;
+
+    private Bpl.Expr arrays = null;
+    private Bpl.Expr arrayElementsModifiesContrib = null;
+
+    public Bpl.Expr! ModifiesContrib
+    {
+      get { return new Bpl.OldExpr(Token.NoToken, modifiesContrib); }
+    }
+
+    public Bpl.Expr! ExposeContrib
+    {
+      get {
+        return new Bpl.OldExpr(Token.NoToken, exposeContrib); 
+      }
+    }
+
+    public Bpl.Expr ArrayElementsModifiesContrib
+    {
+      get {
+        Bpl.Expr c;
+        if (arrayElementsModifiesContrib == null) {
+          return null;
+        } else if (arrays == null) {
+          c = arrayElementsModifiesContrib;
+        } else {
+          c = Bpl.Expr.And(arrays, arrayElementsModifiesContrib);
+        }
+        return new Bpl.OldExpr(Token.NoToken, c);
+      }
+    }
+
+    // Construct a formula that characterises /all/ modifiable array
+    // locations (this also captures cases where only whole arrays may
+    // be modified)
+    public Bpl.Expr! AllArrayElementsModifiesContrib
+    {
+      get {
+        Bpl.Expr c;
+        if (arrayElementsModifiesContrib == null) {
+          c = arrays;
+        } else if (arrays == null) {
+          c = arrayElementsModifiesContrib;
+        } else {
+          c = Bpl.Expr.And(arrays, arrayElementsModifiesContrib);
+        }
+        if (c == null)
+          return Bpl.Expr.True;
+        return new Bpl.OldExpr(Token.NoToken, c);
+      }
+    }
+    
+    public readonly List<Bpl.Expr!>! StaticFields = new List<Bpl.Expr!>();
+    
+    [NotDelayed]
+    public GenerateModifiesContribution(MethodSignature! sig,
+        Bpl.IdentifierExpr! boundReference, Bpl.IdentifierExpr! boundField, Bpl.IdentifierExpr! boundIndex,
+        string! heapname)
+    {
+      this.sink = sig.sink;
+      this.signature = sig;
+      this.method = sig.method;
+      this.declaringType = (!)sig.method.DeclaringType;
+      this.virtualSignature = sig.virtualSignature;
+      this.heapname = heapname;
+      
+      this.boundReference = boundReference;
+      this.boundField = boundField;
+      this.boundIndex = boundIndex;
+      this.parametersMentionedAsTopLevelTargets = new Set();
+      base();
+      
+      if (sig.method.Contract != null)
+        this.VisitExpressionList(sig.method.Contract.Modifies);
+      
+      if (CommandLineOptions.Clo.ModifiesDefault == 3 || CommandLineOptions.Clo.ModifiesDefault == 4) {
+        // by default, methods have an implicit "modifies this.$exposeVersion;"
+        bool isImmutable;
+        if (!method.IsPure && !method.IsConfined && !method.IsStateIndependent && // exclude pure methods
+            !method.IsStatic && method.ThisParameter != null &&                   // only for instance methods
+            !(method is Cci.InstanceInitializer) &&                               // exclude constructors
+            method.DeclaringType != null && !method.DeclaringType.IsValueType &&  // exclude methods of structs
+            !(method.DeclaringType is Cci.DelegateNode) &&                        // exclude methods of delegates
+            (Sink.IsImmutable(method.DeclaringType, out isImmutable) ==> !isImmutable) && // not if "this" is known to be of an Immutable type
+            !thisDotZero)  // and don't do it if this.0 is mentioned explicitly in the modifies clause
+        {
+          ModifiesExposeVersion(method.ThisParameter);
+        }
+      }
+      
+      if (CommandLineOptions.Clo.ModifiesDefault == 5 || CommandLineOptions.Clo.ModifiesDefault == 6) {
+        if (!method.IsPure && !method.IsConfined && !method.IsStateIndependent &&
+            method.DeclaringType != null && !(method.DeclaringType is Cci.DelegateNode))  // don't do anything for methods of delegates
+        {
+          bool isImmutable;
+          
+          // start with "this" parameter, if any
+          if (method.IsStatic || method.ThisParameter == null) {
+            // there is no "this" parameter
+          } else if (parametersMentionedAsTopLevelTargets[method.ThisParameter]) {
+            // this.<something> is already mentioned explicitly in modifies clause, so don't apply any default
+          } else if (method is Cci.InstanceInitializer) {
+            // no need to mention "this" in modifies clause of (class or struct) constructor
+          } else if (method.DeclaringType.IsValueType) {
+            // TODO: what to do with structs?
+          } else if (Sink.IsImmutable(method.DeclaringType, out isImmutable) ==> !isImmutable) {
+            // we're in a method of a mutable class
+            Bpl.Expr targetObject = new ExpressionTranslator(sink,null,null,sig.currentParamMap,null).TranslateExpression(method.ThisParameter, heapname);
+            Bpl.Expr typeExpr;
+            if (!virtualSignature && Sink.IsAdditive(method)) {
+              sink.AddType(method.DeclaringType);
+              typeExpr = sink.TypeNameExpression(method.DeclaringType);
+            } else {
+              typeExpr = sink.Function(Sink.BuiltinFunction.Typeof, targetObject);
+            }
+            modifiesContrib = Bpl.Expr.And(modifiesContrib, ModifiesAnyField(targetObject, typeExpr));
+          }
+          
+          // now for the other parameters
+          if (CommandLineOptions.Clo.ModifiesDefault == 6 && method.Parameters != null) {
+            for (int i=0, n = method.Parameters == null ? 0 : method.Parameters.Count; i<n; i++)
+            {
+              assert method.Parameters != null;
+              Cci.Parameter parm = method.Parameters[i];
+              if (parm != null && !parametersMentionedAsTopLevelTargets[parm]) {
+                Cci.TypeNode parmType = Sink.ParameterType(parm);
+                if (parmType.IsValueType) {
+                  // TODO: what to do with structs?
+                } else if (Sink.IsImmutable(parmType, out isImmutable) ==> !isImmutable) {
+                  // type of parameter may be a mutable reference type
+                  string name = (parm.Name == null || parm.Name.Name == "") ? "param"+i : Sink.CleanUpName((!)parm.Name.Name);
+                  assert name.Length > 0;
+                  Bpl.Expr targetObject = Sink.Ident(Sink.ParameterName(name, Sink.ParameterDirection.In), sink.Convert(parmType));
+
+                  Bpl.Expr typeExpr;
+                  if (Sink.IsAdditive(parm)) {
+                    sink.AddType(parmType);
+                    typeExpr = sink.TypeNameExpression(parmType);
+                  } else {
+                    typeExpr = sink.Function(Sink.BuiltinFunction.Typeof, targetObject);
+                  }
+                  modifiesContrib = Bpl.Expr.And(modifiesContrib, ModifiesAnyField(targetObject, typeExpr));
+                }
+              }
+            }
+          }
+        }
+
+      }
+    }
+    
+    // Should not call anything below here from outside.
+    
+    private Sink! sink;
+    private MethodSignature! signature;
+    private Cci.Method! method;
+    private Cci.TypeNode! declaringType;
+    private bool virtualSignature;
+    private string! heapname;
+    
+    private Bpl.IdentifierExpr! boundReference;
+    private Bpl.IdentifierExpr! boundField;
+    private Bpl.IdentifierExpr! boundIndex;
+    private Set! parametersMentionedAsTopLevelTargets;
+    private bool thisDotZero = false;
+
+    public override Cci.Expression VisitMethodCall(Cci.MethodCall call)
+    {
+      if (call == null) return call;
+      
+      Cci.MemberBinding callee = call.Callee as Cci.MemberBinding;
+      if (callee == null) return call;
+      
+      Cci.Method modTerm = callee.BoundMember as Cci.Method;
+      if (modTerm == null) return call;
+      
+      if (modTerm.DeclaringType == Cci.SystemTypes.Guard)
+      {
+        if (modTerm.Name.Name == "ModifiesObject")
+        {
+          assume call.Operands != null;
+          Cci.Expression! cciTarget = (!) call.Operands[0];
+          Bpl.Expr! targetObject = new ExpressionTranslator(sink,null,null,signature.currentParamMap,null).TranslateExpression(cciTarget, heapname);
+          
+          RecordParameterTargets(cciTarget);
+          ComposeExposeContrib(cciTarget, true);
+          
+          if (!cciTarget.Type.IsValueType) {
+            Bpl.Expr typeExpr = null;
+            if (cciTarget.NodeType == Cci.NodeType.This) {
+              if (!virtualSignature && Sink.IsAdditive(this.method)) {
+                sink.AddType(declaringType);
+                typeExpr = sink.TypeNameExpression(declaringType);
+              }
+            } else {
+              Cci.Parameter parm = AsParameter(cciTarget);
+              if (parm != null && Sink.IsAdditive(parm)) {
+                Cci.TypeNode parmType = Sink.ParameterType(parm);
+                sink.AddType(parmType);
+                typeExpr = sink.TypeNameExpression(parmType);
+              }
+            }
+            if (typeExpr == null) {
+              typeExpr = sink.Function(Sink.BuiltinFunction.Typeof, targetObject);
+            }
+            modifiesContrib = Bpl.Expr.And(modifiesContrib, ModifiesAnyField(targetObject, typeExpr));
+          }
+                                         
+        } 
+        else if (modTerm.Name.Name == "ModifiesPeers")
+        {
+          assume call.Operands != null;
+          Cci.Expression! cciTarget = (!) call.Operands[0];
+          Bpl.Expr! targetObject = new ExpressionTranslator(sink,null,null,signature.currentParamMap,null).TranslateExpression(cciTarget, heapname);
+          
+          RecordParameterTargets(cciTarget);
+          ComposeExposeContrib(cciTarget, true);
+          
+          modifiesContrib = Bpl.Expr.And(modifiesContrib, ModifiesAnyPeerField(targetObject));
+        } 
+        else if (modTerm.Name.Name == "ModifiesArray")
+        {
+          assume call.Operands != null;
+          Bpl.Expr! targetObject = new ExpressionTranslator(sink,null,null,signature.currentParamMap,null).TranslateExpression((!) call.Operands[0], heapname);
+          // treat a[i] and a[*] as a.* (plus, deal with the index i below)
+          Bpl.Expr typeExpr = sink.Function(Sink.BuiltinFunction.Typeof, targetObject);
+          modifiesContrib = Bpl.Expr.And(modifiesContrib, ModifiesAnyField(targetObject, typeExpr));
+          
+          RecordParameterTargets((!)call.Operands[0]);
+          ComposeExposeContrib((!)call.Operands[0], true);
+          
+          Bpl.Expr c = Bpl.Expr.Neq(boundReference, targetObject);
+          if (arrays == null) {
+            arrays = c;
+          } else {
+            arrays = Bpl.Expr.And(arrays, c);
+          }
+        }
+        else if (modTerm.Name.Name == "ModifiesNothing")
+        {
+          assume call.Operands != null;
+          RecordParameterTargets((!)call.Operands[0]);
+        }
+      }
+      
+      return call;
+    }
+    
+    public override Cci.Expression VisitMemberBinding(Cci.MemberBinding binding)
+    {
+      assume binding != null;
+      
+      ComposeExposeContrib(binding, false);
+      
+      Cci.Field cciField = binding.BoundMember as Cci.Field;
+      if (cciField != null)
+      {
+        Cci.TypeNode declType = (!)cciField.DeclaringType;
+        if (declType.IsValueType) {
+          // TODO: what to do with structs?
+        } else {
+          Bpl.Expr reference;
+          if (cciField.IsStatic) {
+            sink.AddType(declType);
+            reference = sink.Function(Sink.BuiltinFunction.ClassRepr, sink.TypeNameExpression(cciField.DeclaringType));
+          } else {
+            RecordParameterTargets((!)binding.TargetObject);
+            reference = new ExpressionTranslator(sink,null,null,signature.currentParamMap,null).TranslateExpression(binding.TargetObject, heapname);
+          }
+
+          sink.AddField(cciField);
+          Bpl.IdentifierExpr! field = sink.FieldIdent(cciField);
+      
+          modifiesContrib = Bpl.Expr.And(modifiesContrib, ModifiesField(reference, field));
+          StaticFields.Add(field);
+        }
+      }
+      
+      return binding;
+    }
+
+    public override Cci.Expression VisitIndexer(Cci.Indexer indexer) {
+      if (indexer == null || indexer.Object == null || indexer.Operands == null) return null;
+      
+      RecordParameterTargets(indexer.Object);
+
+      Bpl.Expr reference = new ExpressionTranslator(sink,null,null,signature.currentParamMap,null).TranslateExpression(indexer.Object, heapname);
+      
+      Bpl.Expr[] indices = new Bpl.Expr[indexer.Operands.Count];
+      for (int i = 0; i < indices.Length; i++) {
+        indices[i] = new ExpressionTranslator(sink,null,null,signature.currentParamMap,null).TranslateExpression((!)indexer.Operands[i], heapname);
+      }
+      Bpl.Expr index = sink.ArrayIndex(reference, indices);
+
+      // allow reference.$elementsT to be modified at all
+      Cci.TypeNode elementType = indexer.ElementType;
+      // When coming from ssc /verify, indexers are not normalized and they don't have an ElementType
+      // But they have had their Type set and that has to be the same.
+      if (elementType == null){
+        elementType = (!)indexer.Type;
+      }
+      Bpl.Expr c = ModifiesField(reference, sink.Fields.Elements(sink.Convert(elementType)));
+      modifiesContrib = Bpl.Expr.And(modifiesContrib, c);
+      
+      // allow reference.$elements to be modified just at index
+      c = ModifiesArrayElement(reference, index);
+      if (arrayElementsModifiesContrib == null) {
+        arrayElementsModifiesContrib = c;
+      } else {
+        arrayElementsModifiesContrib = Bpl.Expr.And(arrayElementsModifiesContrib, c);
+      }
+
+      return indexer;
+    }
+
+    private Bpl.Expr! ModifiesAnyField(Bpl.Expr! reference, Bpl.Expr! typeBound)
+    {
+      // $o != reference || !(typeBound <: DeclType($f)) || !$IncludedInModifiesStar($f)
+      // that is, the negation of:
+      //   $o == reference && typeBound <: DeclType($f) && $IncludedInModifiesStar($f)
+      return
+        Bpl.Expr.Or(Bpl.Expr.Neq(boundReference, reference),
+          Bpl.Expr.Or(Bpl.Expr.Not(Bpl.Expr.Subtype(typeBound, sink.Function(Sink.BuiltinFunction.DeclType, boundField))),
+            Bpl.Expr.Not(sink.Function(Sink.BuiltinFunction.IncludedInModifiesStar, boundField))));
+    }
+
+    private Bpl.Expr! ModifiesAnyPeerField(Bpl.Expr! reference)
+    {
+      // $o.owner != reference.owner || !$IncludedInModifiesStar($f)
+      // that is, the negation of:
+      //   $o.owner == reference.owner && $IncludedInModifiesStar($f)
+      // (Is there any reason also to look at "$typeof($o) <: DeclType($f)" here?  --KRML)
+      return Bpl.Expr.Or(
+        sink.om.EqualOwners(boundReference, reference, sink.HeapExpr(), false),
+        Bpl.Expr.Not(sink.Function(Sink.BuiltinFunction.IncludedInModifiesStar, boundField)));
+    }
+
+    private Bpl.Expr! ModifiesField(Bpl.Expr! reference, Bpl.IdentifierExpr! field)
+    {
+      return
+          Bpl.Expr.Or(
+              Bpl.Expr.Neq(boundReference, reference),        
+              Bpl.Expr.Neq(boundField, field)
+          );
+    }
+        
+    private Bpl.Expr! ModifiesArrayElement(Bpl.Expr! reference, Bpl.Expr! index)
+    {
+      return
+          Bpl.Expr.Or(
+              Bpl.Expr.Neq(boundReference, reference),        
+              Bpl.Expr.Neq(boundIndex, index)
+          );
+    }
+    
+    private void ComposeExposeContrib(Cci.Expression! binding, bool wasStar) {
+      if (CommandLineOptions.Clo.ModifiesDefault == 0) {
+        return;
+      }
+      Cci.Expression remainder = binding;
+
+      // peel off first first field, unless "remainder" was a star (.*)
+      if (!wasStar) {
+        if (remainder is Cci.MemberBinding) {
+          remainder = ((Cci.MemberBinding) remainder).TargetObject;            
+        } else if (remainder is Cci.Indexer) {
+          remainder = ((Cci.Indexer) remainder).Object;
+        }
+      }
+
+      while (remainder != null) {
+        ModifiesExposeVersion(remainder);
+        if (CommandLineOptions.Clo.ModifiesDefault != 2 && CommandLineOptions.Clo.ModifiesDefault != 4) {
+          // add remainder.snapshot to modifies clause only for the top-level expression
+          return;
+        }
+        
+        // peel off next field
+        if (remainder is Cci.MemberBinding) {
+          remainder = ((Cci.MemberBinding) remainder).TargetObject;            
+        } else if (remainder is Cci.Indexer) {
+          remainder = ((Cci.Indexer) remainder).Object;
+        } else {
+          // done
+          break;
+        }
+      }      
+    }
+
+    List<Cci.Parameter!> exposeVersionParametersSeen;
+    
+    private void ModifiesExposeVersion(Cci.Expression! obj) {
+      if (obj.Type.IsValueType) {
+        return;
+      }
+      
+      if (obj is Cci.Parameter) {
+        // Logically, there's no need to avoid duplicates here, but reading the expressions is easier
+        // if duplicates are removed (and performance may potentially increase as well).  We don't
+        // bother doing a full structural test of the various "obj" parameters passed to this method,
+        // but we'll check for the common case, which is parameters (including the receiver parameter,
+        // of course).
+        Cci.Parameter parm = (Cci.Parameter)obj;
+        if (exposeVersionParametersSeen == null) {
+          exposeVersionParametersSeen = new List<Cci.Parameter!>();
+        } else if (exposeVersionParametersSeen.Contains(parm)) {
+          // parameter already processed
+          return;
+        }
+        exposeVersionParametersSeen.Add(parm);
+      }
+      
+      Bpl.IdentifierExpr! expVer = sink.Fields.ExposeVersion;
+      Bpl.Expr thisReplacement = null;
+
+      if (signature.InParameters != null && signature.InParameters.Length > 0) {
+        thisReplacement = Sink.IdentWithClean((!)signature.InParameters[0]);
+      }
+
+      Bpl.Expr reference = new ExpressionTranslator(sink,thisReplacement,null,signature.currentParamMap,null).TranslateExpression(obj, heapname);
+      exposeContrib = Bpl.Expr.And(exposeContrib, ModifiesField(reference, expVer));
+
+    }
+    
+    private void RecordParameterTargets(Cci.Expression! cciTarget) {
+      Cci.Parameter p = AsParameter(cciTarget);
+      if (p != null) {
+        if (p is Cci.This) {
+          parametersMentionedAsTopLevelTargets.Add(this.method.ThisParameter);
+          thisDotZero = true;
+        } else {
+          parametersMentionedAsTopLevelTargets.Add(p);
+        }
+
+      }
+    }
+    
+    Cci.Parameter? AsParameter(Cci.Expression! cciTarget) {
+      switch (cciTarget.NodeType) {
+        case Cci.NodeType.This:
+        case Cci.NodeType.Parameter:
+          return (Cci.Parameter)cciTarget;
+          
+        case Cci.NodeType.ImplicitThis:
+          return this.method.ThisParameter;
+
+        case Cci.NodeType.MemberBinding:
+          {
+            // this seems to be what in-parameters look like when running the compiler with the /verify option
+            Cci.MemberBinding mb = (Cci.MemberBinding)cciTarget;
+            Cci.ParameterField paramField = mb.BoundMember as Cci.ParameterField;
+            if (paramField != null) {
+              return paramField.Parameter;
+            }
+          }
+          break;
+        case Cci.NodeType.AddressDereference:
+          {
+            // probably a ref/out-parameter
+            Cci.AddressDereference e = (Cci.AddressDereference)cciTarget;
+            return e.Address as Cci.Parameter;  // this will return null if it's not a Cci.Parameter after all
+          }
+          break;
+          
+        default:
+          break;
+      }
+      
+      return null;
+    }
+  }
+}

@@ -1,0 +1,2219 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using Cci = System.Compiler;
+using Bpl = Microsoft.Boogie;
+using Microsoft.Contracts;
+
+namespace Microsoft.Boogie
+{
+  class MethodSignature 
+  {
+    internal Sink! sink;
+    private OwnershipModel! om;
+    
+    internal Bpl.VariableSeq! InParameters, OutParameters;
+    internal Bpl.RequiresSeq! Requires;
+    internal Bpl.EnsuresSeq! Ensures;
+    internal Bpl.IdentifierExprSeq! Modifies;
+    
+    private Hashtable! preStateParamMap = new Hashtable();
+    internal Hashtable! PreStateParamMap {
+      get { return this.preStateParamMap; }
+      set { this.preStateParamMap = value; }
+    }
+ 
+    private Hashtable! postStateParamMap = new Hashtable(); // Only used if not isPure
+
+    internal Hashtable/*<Cci.Parameter, Bpl.Variable>*/ currentParamMap;
+
+    private Bpl.Formal thisin = null;
+    private Bpl.Variable resultParameter = null;
+    
+    internal Cci.Method! method;
+    internal bool virtualSignature;
+    
+    List<CapturedParameterInfo!>! capturedParameters = new List<CapturedParameterInfo!>();
+    class CapturedParameterInfo {
+      public readonly Bpl.Expr! p;
+      public readonly bool isNonNull;
+      public CapturedParameterInfo(Bpl.Expr! p, bool isNonNull) {
+        this.p = p;
+        this.isNonNull = isNonNull;
+      }
+    }
+    
+    // just an abbreviation
+    private static Bpl.IToken! NoToken = Bpl.Token.NoToken; 
+
+    [NotDelayed]
+    public MethodSignature (Cci.Method! method, Sink! sink, OwnershipModel! om, bool forPurityAxiom)
+    : this(method, false, sink, om, forPurityAxiom)
+    {
+    }
+    
+    private bool MethodHasOutParam(Cci.Method! method){
+      bool result = false;
+      for (int i = 0, n = method.Parameters == null ? 0 : method.Parameters.Count; i < n; i++){
+        Cci.Parameter p = method.Parameters[i];
+        if (p == null) continue;
+        if (p.IsOut) { result = true; break; }
+      }
+      return result;
+    }
+    
+    /// <summary>
+    /// This constructor initializes all fields, adding types as necessary to "sink". Note that no procedure is added to "sink".
+    /// If the method is pure, it is ensured that purity functions and axioms are declared in "sink".
+    /// </summary>
+    [NotDelayed]
+    public MethodSignature (Cci.Method! method, bool virtualSignature, Sink! sink, OwnershipModel! om, bool forPurityAxiom)
+      requires method.DeclaringType != null;
+      requires method.ReturnType != null;
+    {
+      this.sink = sink;
+      this.om = om;
+      bool lite = CommandLineOptions.Clo.CheckingLevel < 1;
+      this.InParameters = new Bpl.VariableSeq();
+      this.OutParameters = new Bpl.VariableSeq();
+
+      this.Requires = new Bpl.RequiresSeq();
+      this.Ensures = new Bpl.EnsuresSeq();
+      this.Modifies = new Bpl.IdentifierExprSeq();
+      
+      this.method = method;
+      this.virtualSignature = virtualSignature;
+
+      Bpl.TypeVariable! alpha = new Bpl.TypeVariable(Token.NoToken, "alpha");
+      GenModifiesAlpha = alpha;
+      GenModifiesO = new Bpl.BoundVariable(Token.NoToken,
+                                           new Bpl.TypedIdent(Bpl.Token.NoToken, "$o", sink.RefType));
+      GenModifiesF = new Bpl.BoundVariable(Token.NoToken,
+                                           new Bpl.TypedIdent(Bpl.Token.NoToken, "$f", sink.FieldType(alpha)));
+      GenModifiesInd = new Bpl.BoundVariable(Token.NoToken,
+                                             new Bpl.TypedIdent(Bpl.Token.NoToken, "$i", Bpl.Type.Int));
+      
+      base();
+
+      bool isPure = method.IsPure || method.IsConfined || method.IsStateIndependent;
+      bool isConsistencyCheckMethod = method.Name.Name.StartsWith("Boogie.ContractConsistencyCheck"); //true if this is a methodology method whose specification is be special-cased.
+
+      //HS D
+      if (method.GetAttribute(Cci.SystemTypes.InlineAttribute) != null) 
+              method.Inline = true;
+      
+      if ( ! method.IsStatic)
+      {
+        Bpl.Type! type = sink.Convert(method.DeclaringType);
+        Bpl.TypedIdent ident = Sink.TypedIdent(method.DeclaringType is Cci.Struct ? "this$in" : "this", type);
+        ident.WhereExpr = Bpl.Expr.And(sink.TypeAssumption(Sink.Ident(ident.Name, ident.Type), method.DeclaringType, true), sink.IsAllocated(ident));
+        thisin = new Bpl.Formal(NoToken, ident, true);
+        this.InParameters.Add(thisin);
+
+        Formal thisout;
+        if (type.Equals(sink.RefType))
+        {
+          thisout = thisin;
+
+          if (method is Cci.InstanceInitializer)
+          {
+            // In order to avoid having to introduce a value for $inv that is a supertype of Object,
+            // we assume that the Object frame is packed from the start.
+            this.Requires.Add(new Bpl.Requires(true, om.IsExposable(Sink.IdentWithClean(thisin), (!) Cci.SystemTypes.Object), "object is fully unpacked:  this.inv == Object"));
+          }
+
+          if (method.GetAttribute(Cci.SystemTypes.CapturedAttribute) != null) {
+            Bpl.Expr param = Sink.Ident(thisin);
+            this.capturedParameters.Add(new CapturedParameterInfo(param, true));
+            if (method is Cci.InstanceInitializer) {
+              // constructors already get the "precondition for captured" for free, see way below--in fact,
+              // constructors get a stronger condition
+            } else {
+              AddPreconditionForCaptured(param, "this", true);
+            }
+          }
+        }
+        else if (Sink.IsStruct(method.DeclaringType))
+        {
+          if (isPure) {
+            thisout = thisin;
+          } else {
+            thisout = new Bpl.Formal(NoToken, Sink.TypedIdent("this$out", type), false);
+            this.OutParameters.Add(thisout);
+          }
+        }
+        else
+        {
+          thisout = thisin;
+        }
+        #region Compensate for Spec# compiler bugs
+        if (method.ThisParameter == null) { method.ThisParameter = new Cci.This(); }
+        #endregion
+        preStateParamMap.Add(method.ThisParameter, thisin);
+        postStateParamMap.Add(method.ThisParameter, thisout);
+      }
+      
+      if (method.ReturnType != Cci.SystemTypes.Void)
+      {
+        Bpl.Type translatedType = this.sink.Convert(method.ReturnType);
+        TypedIdent typedident = Sink.TypedIdent(Prelude.ResultVariableName, translatedType);
+        if (sink.IsImpossibleType(method.ReturnType)) {
+          this.Ensures.Add(new Bpl.Ensures(true, Bpl.Expr.False, "return type is impossible"));
+        } else {
+          typedident.WhereExpr = Bpl.Expr.And(sink.TypeAssumption(typedident.Name, method.ReturnType, translatedType), sink.IsAllocated(typedident));
+        }
+        resultParameter = new Bpl.Formal(NoToken, typedident, false);
+
+        this.OutParameters.Add(resultParameter);
+        
+        bool isNonNull;
+        if (!lite && isPure && !isConsistencyCheckMethod && Sink.IsReferenceType(method.ReturnType, out isNonNull) 
+          && (method.GetAttribute(Cci.SystemTypes.ResultNotNewlyAllocatedAttribute) != null
+            // Bartok's [NoHeapAllocation] implies [ResultNotNewlyAllocated]
+            || method.GetAttribute(Cci.SystemTypes.BartokNoHeapAllocationAttribute) != null)) {
+          // emit: ensures old($Heap)[$result, $allocated] == true for methods marked as ResultNotNewlyAllocated        
+          Bpl.Ensures! ens = new Ensures(false, sink.IsAllocatedOfRef(Sink.IdentWithClean(resultParameter), new Bpl.OldExpr(NoToken, sink.HeapExpr()), true), "return value pre-allocated");
+          ens.ErrorData = String.Format("Postcondition violation: {0} is marked ResultNotNewlyAllocated, and such methods are not allowed to return newly allocated objects.", method.Name.ToString());
+          this.Ensures.Add(ens);
+        }
+      }
+
+      for (int i=0, n = method.Parameters == null ? 0 : method.Parameters.Count; i<n; i++)
+      {
+        assert method.Parameters != null;
+        Cci.Parameter parameter = method.Parameters[i];
+        if (parameter == null) { continue; }
+        string! name = (parameter.Name == null || parameter.Name.Name == "") ? "param"+i : Sink.CleanUpName((!)parameter.Name.Name);
+        assert name.Length > 0;
+        
+        bool isInParameter = Sink.IsInParameter(parameter);
+        bool isOutParameter = Sink.IsOutParameter(parameter);// && !isPure;
+        //assert isOutParameter ==> !isPure;        
+
+        Cci.TypeNode type = Sink.ParameterType(parameter);
+        bool isImpossibleType = sink.IsImpossibleType(type);
+        Bpl.Type! bplType = this.sink.Convert(type);
+
+        Bpl.Formal inFormal = null;
+        Bpl.Formal outFormal = null;
+        if (isInParameter)
+        {
+          Bpl.TypedIdent ident = Sink.TypedIdent(Sink.ParameterName(name, Sink.ParameterDirection.In), bplType);
+          if (isImpossibleType) {
+            this.Requires.Add(new Bpl.Requires(true, Bpl.Expr.False, string.Format("type of in-parameter '{0}' is impossible", name)));
+          } else {
+            ident.WhereExpr = Bpl.Expr.And(sink.TypeAssumption(ident.Name, type, bplType), sink.IsAllocated(ident));
+          }
+          inFormal = new Bpl.Formal(NoToken, ident, true);
+          this.InParameters.Add(inFormal);
+          preStateParamMap.Add(parameter, inFormal);
+          
+          if (parameter.GetAttribute(Cci.SystemTypes.CapturedAttribute) != null) {
+            Bpl.Expr param = Sink.Ident(inFormal);
+            bool isNonNull = Sink.IsNonNullType((!)parameter.Type);
+            this.capturedParameters.Add(new CapturedParameterInfo(param, isNonNull));
+            AddPreconditionForCaptured(param, name, isNonNull);
+          }
+        }
+        if (isOutParameter)
+        {
+          Bpl.TypedIdent ident = Sink.TypedIdent(Sink.ParameterName(name, Sink.ParameterDirection.Out), bplType);
+          if (isImpossibleType) {
+            this.Ensures.Add(new Bpl.Ensures(true, Bpl.Expr.False, string.Format("type of out-parameter '{0}' is impossible", name)));
+          } else {
+            ident.WhereExpr = Bpl.Expr.And(sink.TypeAssumption(ident.Name, type, bplType), sink.IsAllocated(ident));
+          }
+          outFormal = new Bpl.Formal(NoToken, ident, false);
+          this.OutParameters.Add(outFormal);
+        }
+        postStateParamMap.Add(parameter, outFormal == null ? inFormal : outFormal);
+      }
+
+      AddSpecialParametersFormal(forPurityAxiom, isPure, method, this.InParameters);
+     
+      PopulatePrePost(this.Requires, this.Ensures, isConsistencyCheckMethod);
+
+      // We need to add the heap to the modifies clause even for pure methods, because although conceptually the heap doesn't change,
+      // in the current implementation we must still allow the implementation to assign to $Heap.
+      this.Modifies.Add(sink.HeapExpr());
+      this.Modifies.Add(sink.ActivityIndicator());
+      
+      if (!isConsistencyCheckMethod) {
+        if (!MethodHasOutParam(method) && isPure) {
+          // emit:  ensures $Heap == old($Heap); for methods that Might not Return Newly Allocated Object
+          if (method.ReturnType != null && 
+            (method.ReturnType.IsValueType 
+            || method.GetAttribute(Cci.SystemTypes.ResultNotNewlyAllocatedAttribute) != null
+            // Bartok's [NoHeapAllocation] implies [ResultNotNewlyAllocated]
+            || method.GetAttribute(Cci.SystemTypes.BartokNoHeapAllocationAttribute) != null)) {
+            this.Ensures.Add(new Ensures(true, Bpl.Expr.Eq(sink.HeapExpr(), new Bpl.OldExpr(NoToken, sink.HeapExpr()))));
+          }
+          
+          
+          if (resultParameter != null)
+          {
+            string functionName = MethodSignature.GetFunctionForPureMethod(method, sink);
+            
+            if (method.ImplicitlyImplementedInterfaceMethods != null && method.ImplicitlyImplementedInterfaceMethods.Count > 0) {
+              AddAxiomToConnectPureMethodToInterfaceMethod(method, functionName);
+            }
+            
+            // add postcondition to the procedure:
+            //   ensures result == #M(args);
+            // or for a virtual method:
+            //   ensures $isBaseCall || result == #M(args);
+            List<Bpl.Expr!> args = new List<Bpl.Expr!>(this.InParameters.Length+1);
+            args.Add(sink.HeapExpr());
+            foreach (Bpl.Variable! p in this.InParameters) {
+              if (!IsSpecialParameter(p)) {
+                args.Add(Sink.IdentWithClean(p));
+              }
+            }
+            Bpl.Expr e = Bpl.Expr.Eq(Sink.IdentWithClean(resultParameter),
+                                     sink.Function(functionName, this.sink.Convert(method.ReturnType), args));
+            if (method.IsVirtual) {
+              e = Bpl.Expr.Or(Sink.Ident("$isBaseCall", Bpl.Type.Bool), e);
+            }
+            this.Ensures.Add(new Ensures(true, e));
+          }          
+        }        
+        this.AddFrameConditions();
+      }
+    }
+
+    static bool IsSpecialParameter(Bpl.Variable! p) {
+      return p.Name.StartsWith("$");
+    }
+    
+    static void AddSpecialParametersFormal(bool forPurityAxiom, bool methodIsPure, Cci.Method! method, Bpl.VariableSeq! formals)
+      requires forPurityAxiom ==> methodIsPure;
+    {
+      if (!forPurityAxiom && methodIsPure && method.IsVirtual) {
+        // add an extra in-parameter:  $isBaseCall
+        Bpl.Formal p = new Bpl.Formal(NoToken, Sink.TypedIdent("$isBaseCall", Bpl.Type.Bool), true);
+        formals.Add(p);
+      }
+    }
+
+    public static void AddSpecialParametersActual(bool forPurityAxiom, bool methodIsPure, Cci.Method! method, Bpl.ExprSeq! inParamActuals, bool isBaseCall)
+      requires forPurityAxiom ==> methodIsPure;
+    {
+      if (!forPurityAxiom && methodIsPure && method.IsVirtual) {
+        // add argument for $isBaseCall
+        inParamActuals.Add(Bpl.Expr.Literal(isBaseCall));
+      }
+    }
+
+    void PopulatePrePost(Bpl.RequiresSeq! oRequires, Bpl.EnsuresSeq! oEnsures, bool forUseInConsistencyCheckMethod)
+      requires method.DeclaringType != null;
+      requires method.ReturnType != null;
+    {
+      bool lite = CommandLineOptions.Clo.CheckingLevel < 1;
+
+      //
+      // Add user declared pre- and postconditions
+      //
+      Cci.MethodContract contract = method.Contract;
+      if (contract != null)
+      {
+        Cci.Method savedCurrentMethod = sink.currentMethod;
+        sink.currentMethod = method;
+        
+        Cci.RequiresList reqs = contract.Requires;
+        if (reqs != null)
+        {
+//          Hashtable savedParamMap = sink.currentParamMap;
+//          sink.currentParamMap = preStateParamMap;
+          
+          string specComment = "user-declared preconditions";
+          foreach (Cci.Requires req in reqs) {
+            if (req == null || req.Condition == null) { continue; }
+            Bpl.Expr expr = new ExpressionTranslator(sink,null,null,this.preStateParamMap,null).TranslateExpression(req.Condition, Prelude.HeapName);
+            Bpl.Requires reqNode = new Bpl.Requires(false, expr, specComment);
+              string errorText = req.Condition.SourceContext.SourceText;
+              if (errorText == null){
+                errorText = "(" + req.Condition.SourceContext.StartLine.ToString() + "," + req.Condition.SourceContext.StartColumn + ")";
+              }
+            reqNode.ErrorData = string.Format("Call of {0}, unsatisfied precondition: {1}", sink.errorHandler.GetMethodSignature(method, false, true), errorText);
+            oRequires.Add(reqNode);
+            specComment = null;
+          }
+          
+//          sink.currentParamMap = savedParamMap;
+        }
+
+        Cci.EnsuresList enrs = method.Contract.Ensures;
+        if (enrs != null)
+        {
+//          Hashtable savedPreStateMap = sink.preStateParamMap;
+//          Hashtable savedParamMap = sink.currentParamMap;
+//          sink.preStateParamMap = preStateParamMap;
+//          sink.currentParamMap = postStateParamMap;
+          
+          string specComment = "user-declared postconditions";
+          foreach (Cci.Ensures ens in enrs) {
+            if (ens == null || ens.PostCondition == null) { continue; }
+            if (ens is Cci.EnsuresNormal){
+              Bpl.Expr expr = new ExpressionTranslator(sink,null,null,this.postStateParamMap,this.preStateParamMap).TranslateExpression(ens.PostCondition, Prelude.HeapName); 
+              Bpl.Ensures ensNode = new Bpl.Ensures(false, expr, specComment);
+              string errorText = ens.PostCondition.SourceContext.SourceText;
+              if (errorText == null){
+                errorText = "(" + ens.PostCondition.SourceContext.StartLine.ToString() + "," + ens.PostCondition.SourceContext.StartColumn + ")";
+              }
+              ensNode.ErrorData = string.Format("Method {0}, unsatisfied postcondition: {1}", sink.errorHandler.GetMethodSignature(method, false, true), errorText);
+              oEnsures.Add(ensNode);
+              specComment = null;
+            }
+          }
+          
+//          assert sink.preStateParamMap == preStateParamMap;
+//          assert sink.currentParamMap == postStateParamMap;
+//          sink.preStateParamMap = savedPreStateMap;
+//          sink.currentParamMap = savedParamMap;
+
+          // And add some hardcoded postconditions for Array copy methods.
+          switch (method.FullName) {
+            case "System.Array.Copy(optional(Microsoft.Contracts.NonNullType) System.Array,System.Int32,optional(Microsoft.Contracts.NonNullType) System.Array,System.Int32,System.Int32)":
+            case "System.Array.Copy(System.Array,System.Int64,System.Array,System.Int64,System.Int64)":
+              assume InParameters.Length == 5;
+              AddArrayCopySpecs(oEnsures,
+                Sink.Ident((!)InParameters[0]), Sink.Ident((!)InParameters[1]),
+                Sink.Ident((!)InParameters[2]), Sink.Ident((!)InParameters[3]),
+                Sink.Ident((!)InParameters[4]));
+              break;
+            
+            case "System.Array.Copy(optional(Microsoft.Contracts.NonNullType) System.Array,optional(Microsoft.Contracts.NonNullType) System.Array,System.Int32)":
+            case "System.Array.Copy(System.Array,System.Array,System.Int64)":
+              assume InParameters.Length == 3;
+              AddArrayCopySpecs(oEnsures,
+                Sink.Ident((!)InParameters[0]), Bpl.Expr.Literal(0),
+                Sink.Ident((!)InParameters[1]), Bpl.Expr.Literal(0),
+                Sink.Ident((!)InParameters[2]));
+              break;
+
+            case "System.Array.CopyTo(optional(Microsoft.Contracts.NonNullType) System.Array,System.Int32)":
+            case "System.Array.CopyTo(optional(Microsoft.Contracts.NonNullType) System.Array,System.Int64)":
+              assume InParameters.Length == 3;
+              AddArrayCopySpecs(oEnsures,
+                Sink.Ident((!)InParameters[0]), Bpl.Expr.Literal(0),
+                Sink.Ident((!)InParameters[1]), Sink.Ident((!)InParameters[2]),
+                sink.ArrayLength(Sink.Ident((!)InParameters[0])));
+              break;
+
+            default:
+              break;
+          }
+        }
+        
+        assert sink.currentMethod == method;
+        sink.currentMethod = savedCurrentMethod;
+      }
+
+      //
+      // Add default clauses
+      //
+      bool isPure = method.IsPure || method.IsConfined || method.IsStateIndependent;
+      string methodSignatureFullName = sink.errorHandler.GetMethodSignature(method, false, true);
+      assume methodSignatureFullName != null;  // Will this actually always hold?  --KRML
+      ParameterConditions pc;
+      switch (CommandLineOptions.Clo.MethodologySelection) {
+        case CommandLineOptions.Methodology.Boogie:
+          pc = new BoogieParameterConditions(methodSignatureFullName,
+            isPure, method.IsVirtual, virtualSignature, oRequires, oEnsures, sink, om);
+          break;
+        case CommandLineOptions.Methodology.VisibleState:
+          pc = new VisibleStateParameterConditions(methodSignatureFullName,
+            isPure, method.IsVirtual, virtualSignature, oRequires, oEnsures, sink, sink.HeapExpr());
+          break;
+        default:
+          assert false;
+      }
+
+
+      if (method.ApplyDefaultContract)
+      {
+        if (!method.IsStatic && !(method.DeclaringType is Cci.Struct))
+        {
+          assert thisin != null;  // since the method is not static
+          
+          if (virtualSignature)
+          {
+            if (!(method.DeclaringType is Cci.DelegateNode)) {
+              pc.ParameterContribution("target object", Sink.IdentWithClean(thisin), method.DeclaringType, Sink.IdentWithClean(thisin), true, true, /*NoDefault*/false, Sink.IsAdditive(method), Sink.IsInside(method), method.ThisParameter.IsUniversallyDelayed, -2, false);
+            }
+          }
+          else if (method is Cci.InstanceInitializer)
+          {
+            Bpl.Expr th = Sink.IdentWithClean(thisin);
+            
+            // free ensures $Heap[this, $allocated];
+            oEnsures.Add(new Bpl.Ensures(true, this.sink.IsAllocatedOfRef(th), "target object is allocated upon return"));
+
+            // ensures $Heap[this, $inv] == C && $Heap[this, $writable];
+            pc.ParameterContribution("target object", th, method.DeclaringType, th, false, true,
+              /*noDefault*/false, /*isAdditive*/true, /*isInside*/false, method.ThisParameter.IsUniversallyDelayed, -2, false);
+
+            if (method.GetAttribute(Cci.SystemTypes.CapturedAttribute) == null) {
+              // ensures $Heap[this, $ownerRef] == old($Heap)[this, $ownerRef] &&
+              //         $Heap[this, $ownerFrame] == old($Heap)[this, $ownerFrame];
+              // EXCEPT if "this" is captured
+              Bpl.Ensures ensNode = new Bpl.Ensures(lite, om.OwnerIsUnchanged(th, new Bpl.OldExpr(NoToken, sink.HeapExpr()), sink.HeapExpr()));
+              
+              ensNode.ErrorData = String.Format("Constructor {0} might change the owner of the receiver object ('this'), which by default is not allowed", methodSignatureFullName);
+              oEnsures.Add(ensNode);
+            }
+          
+            if (method.DeclaringType is Cci.Class) {
+              Bpl.Ensures ensNode = new Bpl.Ensures(lite, om.IsUnshared(th));
+              ensNode.ErrorData = String.Format("The constructor {0} should leave the receiver object in an unshared state", methodSignatureFullName);
+              oEnsures.Add(ensNode);
+            }
+          }
+          else if (method.IsVirtual && !method.IsFinal)
+          {
+            if (!(method.DeclaringType is Cci.DelegateNode)) {
+              pc.ParameterContribution("target object", Sink.IdentWithClean(thisin), method.DeclaringType, Sink.IdentWithClean(thisin), true, true, /*NoDefault*/false, Sink.IsAdditive(method), Sink.IsInside(method), method.ThisParameter.IsUniversallyDelayed, -2, false);
+            }
+          }
+          else
+          {
+            pc.ParameterContribution("target object", Sink.IdentWithClean(thisin), method.DeclaringType, Sink.IdentWithClean(thisin), true, true, /*NoDefault*/false, Sink.IsAdditive(method), Sink.IsInside(method), method.ThisParameter.IsUniversallyDelayed, -2, false);
+          }
+          
+          // For pure methods, indicate the pure reference arguments with a free precondition:  $AsPureObject(this)==this.
+          // This condition is used as a trigger in the FirstConsistentOwner axioms.
+          if (isPure) {
+            Bpl.Requires! reqNode = new Bpl.Requires(true, Bpl.Expr.Eq(sink.Function(Prelude.AsPureObject, sink.RefType, Sink.IdentWithClean(thisin)), Sink.IdentWithClean(thisin)), "parameter of a pure method");
+            oRequires.Add(reqNode);
+            Bpl.Ensures! ensNode = new Bpl.Ensures(true, Bpl.Expr.Eq(sink.Function(Prelude.AsPureObject, sink.RefType, Sink.IdentWithClean(thisin)), Sink.IdentWithClean(thisin)), "parameter of a pure method");
+            oEnsures.Add(ensNode);
+          }
+        }
+        
+        if (!(method is Cci.InstanceInitializer && method.DeclaringType is Cci.DelegateNode) && method.Parameters != null) {
+          foreach (Cci.Parameter! parameter in method.Parameters)
+          {
+            Cci.TypeNode! type = parameter.Type;
+            if (type is Cci.Reference)
+            {
+              type = (!)((Cci.Reference!) type).ElementType;
+            }
+            bool isNonNull;
+            if (Sink.IsReferenceType(type, out isNonNull))
+            {
+              bool isLockProtected = parameter.GetAttribute(Cci.SystemTypes.LockProtectedAttribute) != null;
+              // let's find out whether this parameter's type is a type variable
+              int pos = -2;
+              if (type.IsTemplateParameter) {                
+                bool dummy;
+                Cci.TypeNode! tn = (!)type.StripOptionalModifiers(out dummy);
+                pos = ((Cci.TypeParameter!) tn).ParameterListIndex;
+              } else if (method.Template != null) {
+                foreach (Cci.Parameter! templateParameter in method.Template.Parameters) {
+                  if (templateParameter.Name.Name.Equals(parameter.Name.Name)) {
+                    if (templateParameter.Type.IsTemplateParameter) {
+                      bool dummy;
+                      Cci.TypeNode! tn = (!)templateParameter.Type.StripOptionalModifiers(out dummy);
+                      pos = ((Cci.ITypeParameter!)tn).ParameterListIndex;
+                      break;
+                    }
+                  }
+                }
+              }                                            
+              
+              if (Sink.IsInParameter(parameter))
+              {
+                Bpl.Expr! preValue = Sink.IdentWithClean((Variable!) preStateParamMap[parameter]);
+                if (isLockProtected) {
+                  Bpl.Expr! preCondition = om.IsLockProtected(preValue);
+                  if (!isNonNull)
+                  {
+                    preCondition = Bpl.Expr.Or(Bpl.Expr.Eq(preValue, sink.Null), preCondition);
+                  }
+                  Bpl.Requires! reqNode = new Bpl.Requires(lite, preCondition);
+                  reqNode.ErrorData = string.Format("Call of '{0}': the object passed as the value of parameter '{1}' must be lock-protected", sink.errorHandler.GetMethodSignature(method, false, true), parameter.Name.Name);
+                  oRequires.Add(reqNode);
+                } else {                  
+                  pc.ParameterContribution(parameter.Name.Name, preValue, type, thisin == null ? null : Sink.IdentWithClean(thisin), true, false,
+                    /*noDefault*/false, Sink.IsAdditive(parameter), Sink.IsInside(parameter), parameter.IsUniversallyDelayed, pos, (this.method.DeclaringType is Cci.Struct));
+                }
+
+                // For pure methods, indicate the pure reference arguments with a free precondition:  $AsPureObject(this)==this.
+                // This condition is used as a trigger in the FirstConsistentOwner axioms.
+                if (isPure) {
+                  Bpl.Requires reqNode = new Bpl.Requires(true, Bpl.Expr.Eq(sink.Function(Prelude.AsPureObject, sink.RefType, preValue), preValue), "parameter of a pure method");
+                  oRequires.Add(reqNode);
+                  Bpl.Ensures ensNode = new Bpl.Ensures(true, Bpl.Expr.Eq(sink.Function(Prelude.AsPureObject, sink.RefType, preValue), preValue), "parameter of a pure method");
+                  oEnsures.Add(ensNode);
+                }
+              }
+              if (Sink.IsOutParameter(parameter))
+              {
+                Bpl.Expr! postValue = Sink.IdentWithClean((Variable!) postStateParamMap[parameter]);
+                pc.ParameterContribution(parameter.Name.Name, postValue, type, thisin == null ? null : Sink.IdentWithClean(thisin), false, false,
+                  /*noDefault*/false, Sink.IsAdditive(parameter), Sink.IsInside(parameter), /*isDelayed*/false, pos, (this.method.DeclaringType is Cci.Struct));
+              }
+            }
+          }
+        }
+        if (method.ReturnType != null && method.ReturnType != Cci.SystemTypes.Void)
+        {
+          bool isNonNull;
+          if (Sink.IsReferenceType(method.ReturnType, out isNonNull))
+          {
+            // let's find out whether this parameter's type is a type variable
+            int pos = -2;
+            if (method.ReturnType.IsTemplateParameter) {
+              bool dummy;
+              Cci.TypeNode! tn = (!)method.ReturnType.StripOptionalModifiers(out dummy);
+              pos = ((Cci.ITypeParameter!)tn).ParameterListIndex;
+            } else if (method.Template != null && method.Template.ReturnType.IsTemplateParameter) {
+              bool dummy;
+              Cci.TypeNode! tn = (!)method.Template.ReturnType.StripOptionalModifiers(out dummy);
+              pos = ((Cci.ITypeParameter!)tn).ParameterListIndex;
+            }
+            Bpl.Expr th = (method.IsStatic ? null : Sink.IdentWithClean((!)thisin));
+            pc.ParameterContribution("return value", Sink.IdentWithClean((!)resultParameter), method.ReturnType, th, false, false,
+              /*noDefault*/false, Sink.IsAdditiveReturn(method), Sink.IsInsideReturn(method), /*isDelayed*/false, pos, (this.method.DeclaringType is Cci.Struct));
+          }
+        }
+      }
+      
+      pc.CollectiveContribution();
+      
+      //
+      // Add contracts depending on method's attributes
+      //
+      if (!method.IsStatic && method.ReturnType != null &&
+          !(method.DeclaringType is Cci.Struct) && !(method is Cci.InstanceInitializer)) {
+        bool isNonNull;
+        if (Sink.IsReferenceType(method.ReturnType, out isNonNull)) {
+          assert thisin != null;  // since the method is not static
+          assert resultParameter != null;  // since there is a return type
+          bool isRep, isPeer, ownedFalse;
+          Sink.OwnedStatus(method, out isRep, out isPeer, out ownedFalse);
+          if (isRep) {
+            // ensures result == null || result.owner == (this, method.DeclaringType);
+            Bpl.Expr resultOwner = om.OwnerIs(Sink.IdentWithClean(resultParameter), Sink.IdentWithClean(thisin), sink.TypeNameExpression(method.DeclaringType), sink.HeapExpr());
+            if (!isNonNull) {
+              resultOwner = Bpl.Expr.Or(Bpl.Expr.Eq(Sink.IdentWithClean(resultParameter), sink.Null), resultOwner);
+            }
+            Bpl.Ensures! ensNode = new Bpl.Ensures(lite, resultOwner, "method returns Rep");
+            ensNode.ErrorData = string.Format("Postcondition violation: Result value of method {0} is specified to be owned by the receiver", sink.errorHandler.GetMethodSignature(method, false, true));
+            oEnsures.Add(ensNode);
+            
+          } else if (isPeer /* KRML: If we ever want pure methods to be Peer by default, including this:  || (isPure && !ownedFalse && method.ApplyDefaultContract) */ ) {
+            // ensures result == null || result.owner == this.owner;
+            string s0, s1;
+            if (isPeer) {
+              s0 = "method returns Peer";
+              s1 = "Postcondition violation: Result value of method {0} is specified to have the same owner as the receiver";
+            } else {
+              s0 = "pure method returns Peer";
+              s1 = "Postcondition violation: Result value of pure method {0} is to have the same owner as the receiver (use [Owned(false)] to override this default)";
+            }
+            Bpl.Expr resultOwner = om.EqualOwners(Sink.IdentWithClean(resultParameter), Sink.IdentWithClean(thisin), sink.HeapExpr());
+            if (!isNonNull) {
+              resultOwner = Bpl.Expr.Or(Bpl.Expr.Eq(Sink.IdentWithClean(resultParameter), sink.Null), resultOwner);
+            }
+            Bpl.Ensures! ensNode = new Bpl.Ensures(lite, resultOwner, s0);
+            ensNode.ErrorData = string.Format(s1, sink.errorHandler.GetMethodSignature(method, false, true));
+            oEnsures.Add(ensNode);
+          }
+        }
+      }
+      
+      //
+      // The following contracts are always applied, even when "no default contract" was specified
+      //
+      if (!method.IsStatic && !(method.DeclaringType is Cci.Struct) && method is Cci.InstanceInitializer)
+      {
+        assert thisin != null;
+        Bpl.Expr th = Sink.IdentWithClean(thisin);
+        
+        // free requires (forall $o :: $o != this ==> $Heap[$o, $ownerRef] != this);
+        // free requires this.owner == [this, $PeerGroupPlaceholder];
+        oRequires.Add(new Bpl.Requires(true, om.UnownedPeerGroupSingleton(th, sink.HeapExpr(), true), 
+                            string.Format("nothing is owned by [{0},*]", thisin.Name)+" and 'this' is alone in its own peer group"));                                
+        // free requires $BeingConstructed == this;
+        oRequires.Add(new Bpl.Requires(true, Bpl.Expr.Eq(Sink.Ident(Prelude.BeingContructedName, sink.RefType), th)));        
+       
+      } else
+        // free requires $BeingConstructed == null;
+        oRequires.Add(new Bpl.Requires(true, Bpl.Expr.Eq(Sink.Ident(Prelude.BeingContructedName, sink.RefType), sink.Null)));      
+      
+      if (method.GetAttribute(Microsoft.SpecSharp.Runtime.MustOverrideAttribute) != null){
+        // free requires $typeof(this) == method.DeclaringType
+        assert !method.IsStatic;
+        assert thisin != null;
+        Cci.Class c = this.method.DeclaringType as Cci.Class;
+        assert c != null;
+        sink.AddType(c);
+        Bpl.Expr self = Sink.IdentWithClean(thisin);
+        Bpl.Expr p = Bpl.Expr.Eq(sink.Function(Sink.BuiltinFunction.Typeof, self),sink.TypeNameExpression(c));
+        Bpl.Requires! reqNode = new Bpl.Requires(true, p);
+        oRequires.Add(reqNode);
+      } 
+      /*
+      // if method.DeclaringType is immutable then we can assume that it is peer consistent
+      // free requires this.om.IsPeerConsistent;
+      if(!method.IsStatic && thisin != null && this.method.DeclaringType.GetAttribute(Cci.SystemTypes.ImmutableAttribute) != null ){
+        Bpl.Expr self = Sink.IdentWithClean(thisin);
+        Bpl.Expr! p = om.IsPeerConsistent(self);
+        Bpl.Requires! reqNode = new Bpl.Requires(true, p);
+        oRequires.Add(reqNode);
+      } */
+                        
+      //If this is a method that is supposed to check if the purity axioms are sound, then suppress $PurityAxiomsCanBeAssumed.
+      //Furthermore, suppress all free postconditions that mention post, or
+      //that are not relevant to the purity axiom (as the axiom is generated from the postcondition of the checking method).
+      if (!forUseInConsistencyCheckMethod) {           
+        // free requires $PurityAxiomsCanBeAssumed;
+        oRequires.Add(new Bpl.Requires(true, Sink.Ident(Prelude.PurityAxiomsCanBeAssumed, Bpl.Type.Bool)));
+
+        if (CommandLineOptions.Clo.MethodologySelection == CommandLineOptions.Methodology.Boogie) {
+          // free ensures (forall $o ::
+          //     { $Heap[$o, $inv] }  { $Heap[$o, $localinv] }
+          //     $o != null && ! old($Heap)[$o, $allocated] && $Heap[$o, $allocated]
+          //     ==>
+          //     $Heap[$o, $inv] == $typeof($o) && $Heap[$o, $localinv] == $typeof($o));
+          {
+            Bpl.BoundVariable oVar = new Bpl.BoundVariable(NoToken, new Bpl.TypedIdent(NoToken, "$o", sink.RefType));
+            Bpl.Expr o = Sink.Ident(oVar);
+            Bpl.Expr c0 = Bpl.Expr.Neq(o, sink.Null);
+            Bpl.Expr c1 = sink.IsAllocatedOfRef(o, new Bpl.OldExpr(NoToken, sink.HeapExpr()), false);
+            Bpl.Expr c2 = sink.IsAllocatedOfRef(o);
+            Bpl.Expr q = new Bpl.ForallExpr(NoToken, new VariableSeq(oVar), om.ExposureTrigger(o, sink.HeapExpr()), Bpl.Expr.Imp(Bpl.Expr.And(c0, Bpl.Expr.And(c1, c2)), om.IsFullyValid(o)));
+            oEnsures.Add(new Bpl.Ensures(true, q, "newly allocated objects are fully valid"));
+          }
+                  
+          // free ensures (forall $o :: { $Heap[$o, $FirstConsistentOwner] }
+          //     old($Heap)[cast(old($Heap)[$o, $FirstConsistentOwner], ref), $exposeVersion] ==
+          //         $Heap [cast(old($Heap)[$o, $FirstConsistentOwner], ref), $exposeVersion]
+          //   ==>
+          //     old($Heap)[$o, $FirstConsistentOwner] == $Heap[$o, $FirstConsistentOwner]);
+          {
+            Bpl.BoundVariable oVar = new Bpl.BoundVariable(NoToken, new Bpl.TypedIdent(NoToken, "$o", sink.RefType));
+            Bpl.Expr o = Sink.Ident(oVar);
+            Bpl.Expr fco = sink.Fields.FirstConsistentOwner;
+            Bpl.Expr expver = sink.Fields.ExposeVersion;
+            Bpl.Expr oldHeap = new Bpl.OldExpr(NoToken, sink.HeapExpr());
+            Bpl.Expr oldCFO = Bpl.Expr.Select(oldHeap, o, fco);
+            Bpl.Expr newCFO = Bpl.Expr.Select(sink.HeapExpr(), o, fco);
+
+            Bpl.Expr expverUnchanged = Bpl.Expr.Eq(
+              Bpl.Expr.Select(oldHeap, oldCFO, expver),
+              Bpl.Expr.Select(sink.HeapExpr(), oldCFO, expver));
+            Bpl.Expr fcoUnchanged = Bpl.Expr.Eq(oldCFO, newCFO);
+
+            Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new ExprSeq(newCFO));
+            Bpl.Expr q = new Bpl.ForallExpr(NoToken, new VariableSeq(oVar), tr, Bpl.Expr.Imp(expverUnchanged, fcoUnchanged));
+            oEnsures.Add(new Bpl.Ensures(true, q, "first consistent owner unchanged if its exposeVersion is"));
+          }
+        }
+      }
+    }
+
+
+    /// <summary>
+    /// Returns the name of the BoogiePL function associated with the given pure method (i.e, returns the #M function name).
+    /// Declares and implements the purity methods and axioms for that method if that has not been done yet.    
+    /// </summary>
+    internal static string! GetFunctionForPureMethod(Cci.Method! method, Sink! sink)
+      requires method.IsPure || method.IsConfined || method.IsStateIndependent;
+      requires method.DeclaringType != null;
+      requires method.ReturnType != null;
+    {        
+        string uniqName = Sink.UniqueProcedureName(method);
+        string! methodName = "#" + uniqName;
+        if (method.Name.Name.Contains("Boogie.ContractConsistencyCheck.")) return methodName; //prevents (infinite) loop when contract of M calls M.
+              
+        if ( ! sink.translatedMethodsInContracts.Contains(uniqName))
+        { 
+          sink.translatedMethodsInContracts.Add(uniqName);          
+          switch (uniqName)
+          {
+            case "System.Array.GetLength$System.Int32":
+            case "System.Array.GetLowerBound$System.Int32":
+            case "System.Array.GetUpperBound$System.Int32":
+            case "System.Array.get_Length":
+            case "System.Array.get_Rank":
+            case "System.String.get_Length":
+            case "System.String.IsInterned$System.String$notnull":
+            case "System.String.Equals$System.String":
+            case "System.String.Equals$System.String$System.String":
+              // these should be declared in the prelude
+              break;
+            default:                         
+              MethodSignature.AddAxiomsForPureMethod(method,sink);
+              break;
+         }         
+       }
+       return methodName;
+    }
+
+
+    /// <summary>
+    /// Generate the specification:
+    ///   procedure Array.Copy(a: ref, i: int, b: ref, j: int, len: int);
+    ///     ensures (forall k: int :: { b[k] }
+    ///         (0 ATMOST k AND k LESS j+len  IMPLIES  old(a[k+i-j]) = b[k]) AND
+    ///       (!(0 ATMOST k AND k LESS j+len) IMPLIES  old(b[k]) = b[k]));
+    /// where each expression like a[k] really stands for the 5 expressions:
+    ///     ArrayGet($Heap[a, $elementsBool], k)
+    ///     ArrayGet($Heap[a, $elementsInt], k)
+    ///     ArrayGet($Heap[a, $elementsRef], k)
+    ///     ArrayGet($Heap[a, $elementsReal], k)
+    ///     ArrayGet($Heap[a, $elementsStruct], k)
+    /// </summary>
+    void AddArrayCopySpecs(Bpl.EnsuresSeq! oEnsures, Bpl.Expr! src, Bpl.Expr! si, Bpl.Expr! dst, Bpl.Expr! di, Bpl.Expr! len)
+    {
+      string comment = "hard-coded postcondition";
+      AddArrayCopySpecsAux(oEnsures, src, si, dst, di, len, Bpl.Type.Bool, ref comment);
+      AddArrayCopySpecsAux(oEnsures, src, si, dst, di, len, Bpl.Type.Int, ref comment);
+      AddArrayCopySpecsAux(oEnsures, src, si, dst, di, len, sink.RefType, ref comment);
+      AddArrayCopySpecsAux(oEnsures, src, si, dst, di, len, sink.RealType, ref comment);
+      AddArrayCopySpecsAux(oEnsures, src, si, dst, di, len, sink.StructType, ref comment);
+    }
+    
+    void AddArrayCopySpecsAux(Bpl.EnsuresSeq! oEnsures, Bpl.Expr! src, Bpl.Expr! si, Bpl.Expr! dst, Bpl.Expr! di, Bpl.Expr! len,
+                              Bpl.Type! elType, ref string comment)
+      ensures comment == null;
+    {
+      // k
+      Bpl.Variable kVar = Sink.BoundVar("$k", Bpl.Type.Int);
+      Bpl.Expr k = Sink.Ident(kVar);
+      
+      // j <= k && k < j+len
+      Bpl.Expr range = Bpl.Expr.And(Bpl.Expr.Le(di, k), Bpl.Expr.Lt(k, Bpl.Expr.Add(di, len)));
+      // b[k]
+      Bpl.Expr bk = sink.Function(Sink.BuiltinFunction.ArrayGet, sink.Elements(dst, sink.HeapExpr(), elType), k);
+      // old(a[k+i-j])
+      Bpl.Expr aKij = new Bpl.OldExpr(NoToken, sink.Function(Sink.BuiltinFunction.ArrayGet, sink.Elements(src, sink.HeapExpr(), elType), Bpl.Expr.Sub(Bpl.Expr.Add(k, si), di)));
+      // { b[k] }
+      Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new ExprSeq(bk));
+
+      Bpl.Expr body0 = Bpl.Expr.Imp(range, Bpl.Expr.Eq(aKij, bk));
+      Bpl.Expr body1 = Bpl.Expr.Imp(Bpl.Expr.Not(range), Bpl.Expr.Eq(new Bpl.OldExpr(NoToken, bk), bk));
+      Bpl.Expr q = new Bpl.ForallExpr(NoToken, new VariableSeq(kVar), tr, Bpl.Expr.And(body0, body1));
+      
+      oEnsures.Add(new Bpl.Ensures(false, q, comment));
+      comment = null;
+    }
+
+    ///<summary>
+    ///Uses the specification for pure method 'method' to generate a consistencyCheckerMethod that verifies the consistency
+    ///of its specification. Adds consistencyCheckerMethod unless user doesn't want to check consistency for this method.
+    ///Declares functions #method and (if method not pure) ##method. 
+    ///Uses the specification of consistencyCheckerMethod to add an axiom that ties #method to method.
+    ///Adds an axiom that ties the value of #method to that of ##method.
+    ///##method either does not depend on the heap (for stateindependent), or only on this.exposeversion (for confined) 
+    ///</summary>
+    public static void AddAxiomsForPureMethod(Cci.Method! method, Sink! sink)
+      requires method.IsPure || method.IsConfined || method.IsStateIndependent;
+      requires method.CciKind == Cci.CciMemberKind.Regular; //don't generate the axiom (and its check) for methodology methods.
+      requires method.DeclaringType != null;
+    {                         
+
+      #region Step 1: Create the Cci consistencyCheckerMethod contract 
+      
+        Cci.Method consistencyCheckerMethod = null;
+        Cci.TypeNode declType = method.DeclaringType;
+        assert declType != null;
+        Cci.Duplicator! duplicator = new Cci.Duplicator(declType.DeclaringModule, declType);
+        assert duplicator.DuplicateFor != null;
+        Cci.MethodContract sourceMc = method.Contract;
+        if (sourceMc == null) sourceMc = method.Contract = new Cci.MethodContract(method);
+        // Force deserialization (if necessary) to make sure sourceContract is fully populated
+        // This is needed for LocalForResult: it is populated in the sourceContract only if the
+        // postconditions have been deserialized.
+        int dummy = ((!)sourceMc.Requires).Count;
+        dummy = ((!)sourceMc.Ensures).Count + dummy; //use the dummy to suppress warning that it is not used
+        dummy = ((!)sourceMc.Modifies).Count + dummy;             
+        duplicator.SkipBodies = true; //a new body will be created, no need to duplicate method's one.
+        //recursive calls in the contract of the method should not be interpreted as calls to the checker method:
+        //i.e., they should not be duplicated. Therefore, we duplicate in two steps:
+        //step 1: copy everything but the contract.
+        duplicator.DuplicateFor[method.Contract.UniqueKey] = method.Contract;
+        consistencyCheckerMethod = duplicator.VisitMethod(method);
+        assume consistencyCheckerMethod != null; //Duplication should succeed for any valid IL method, and we assume the IL to be valid.
+        consistencyCheckerMethod.Name = Cci.Identifier.For("Boogie.ContractConsistencyCheck." + method.Name.Name);
+        //Step 2: Duplicate the contract, but do not update callsreferences to the original method.        
+        duplicator.DuplicateFor[method.UniqueKey] = method; //don't use a new duplicator as all other references should be replaced
+        // Need to set duplicator contract map to null before duplicating, otherwise, it won't do anything
+        duplicator.DuplicateFor[method.Contract.UniqueKey] = null;
+        consistencyCheckerMethod.Contract = duplicator.VisitMethodContract(method.Contract);
+        //Property-getters require special treatment as we have no way of making consistencyCheckerMethod.IsPropertyGetter true.  
+        //As a result, consistencyCheckerMethod.IsConfined will be false. To prevent this, we add a [Pure] attribute manually.                                         
+        //Whether the method ends up being confined or state-independent depends on the defaults in the Spec# compiler.
+        if (method.IsPropertyGetter) {
+          Cci.InstanceInitializer ctor = ((!)Cci.SystemTypes.PureAttribute).GetConstructor();
+          Cci.MemberBinding attrBinding = new Cci.MemberBinding(null, ctor);
+          if (consistencyCheckerMethod.Attributes == null)
+            consistencyCheckerMethod.Attributes = new Cci.AttributeList();
+          consistencyCheckerMethod.Attributes.Add(new Cci.AttributeNode(attrBinding, null));
+        }
+        //We have to get rid of all Exceptionhandlers since they refer to code blocks in the body of the original method.
+        //Since we just care about static checking for this method, this seems harmless enough.              
+        consistencyCheckerMethod.ExceptionHandlers = new Cci.ExceptionHandlerList();                             
+      
+      #endregion //step 1
+    
+      #region Step 2: Translate consistencyCheckerMethod to a bpl procedure 
+        Cci.Method savedCurrentMethod = sink.currentMethod; //We need to save all the old values, as we are in the middle of constructing another method!
+        sink.currentMethod = consistencyCheckerMethod;
+        Cci.IMap savedBlockTrans = sink.blockTranslation;
+        sink.blockTranslation = new Cci.HashedMap();
+        List<Bpl.Cmd!> savedCopyBackCommands = sink.copyBackCommands;
+        sink.copyBackCommands = new List<Bpl.Cmd!>();
+        
+        MethodSignature! checkerSig = new MethodSignature(consistencyCheckerMethod, sink, sink.om, true);                               
+        //Note that the translation of this special purpose method will vary slightly from that of the original method.
+        //Exactly how the translation varies is decided further down the pipeline.              
+      #endregion //step 2
+
+      #region Step 3: set up implementation in- and output-parameters
+    
+        //probably MOVE this part into a separate method that takes a sig and gives an empty implementation
+        // Need to copy the in and out parameters because there cannot be any
+        // where clauses on formals in implementations.
+        Bpl.VariableSeq! inParameters = new Bpl.VariableSeq();
+        Bpl.VariableSeq! outParameters = new Bpl.VariableSeq();
+                
+        // Each formal is now a clone of the original
+        Bpl.Variable thisVariable = null;
+        foreach(Variable! v in checkerSig.InParameters){
+          Variable vprime = (Variable!) v.Clone();
+          vprime.TypedIdent = (TypedIdent!) vprime.TypedIdent.Clone();
+          vprime.TypedIdent.WhereExpr = null;
+          inParameters.Add(vprime);
+          if (vprime.Name == "this") 
+            thisVariable = vprime;
+        }        
+        Bpl.Variable resultVariable = null;              
+        foreach(Variable! v in checkerSig.OutParameters){
+          Variable vprime = (Variable!) v.Clone();
+          vprime.TypedIdent = (TypedIdent!) vprime.TypedIdent.Clone();
+          vprime.TypedIdent.WhereExpr = null;
+          outParameters.Add(vprime);
+          if (vprime.Name == Prelude.ResultVariableName) {
+            resultVariable = vprime;         
+          }          
+        }
+      
+      #endregion //step 3
+              
+      #region Step 4 : Add checkerMethod sig + implementation unless user is not interested in checking correctness of this method          
+        if (!CommandLineOptions.Clo.NoConsistencyChecks && CilTranslator.TranslationVisitor.ShouldVerify(method) &&
+          CommandLineOptions.Clo.UserWantsToTranslateRoutine(method, Sink.UniqueProcedureName(method)) &&
+          savedCurrentMethod == method  )  //only generate the check if AddAxiomsForPureMethod was called as a result of 
+                           //translate of the method. This prevents check generation on a methodcall (under the assumption that AddAxioms is not called when translating a recursive non-generic methodcall).
+        {    
+          sink.AddProcedure(consistencyCheckerMethod, checkerSig); 
+              
+          //set up the postconditions that are used as guards in checkerImpl            
+          ExprSeq posts = new ExprSeq();
+          //duplicate the postcondition to avoid sharing problems. As the contract has not been resolved yet, use UnresolvedDuplicator.
+          UnresolvedDuplicator uDup = new UnresolvedDuplicator();
+          foreach (Ensures! ens in checkerSig.Ensures) {
+            if (ens.Free) continue; //free postconditions don't have to hold and should therefore not end up in the guard we are creating
+            posts.Add(uDup.VisitExpr(ens.Condition));
+          }
+          
+          sink.AddConsistencyCheckerImplementation(posts, inParameters, outParameters, consistencyCheckerMethod, null);
+        }
+      #endregion
+                    
+      #region Step 5: construct the purity axiom using the method specification (i.e., the #M axiom)
+        
+        //Declare the #M and ##M functions
+        MethodSignature.DeclareFunctionsForPureMethod(method, sink); //Todo: integrate this method as a region      
+                                                        
+        // procedure arguments and bound variables              
+        List<Bpl.Variable> bvars = new List<Bpl.Variable>();
+        List<Bpl.Expr!> oneHashFunArgs = new List<Bpl.Expr!>();              
+
+        Bpl.Variable heapVar = Sink.BoundVar(Prelude.HeapName, sink.HeapType);  //Slightly nicer if we would replace all occurrences of $Heap with $h               
+        bvars.Add(heapVar);                        
+        oneHashFunArgs.Add(sink.HeapExpr());
+        Bpl.Expr ante = sink.Function(Sink.BuiltinFunction.IsPreHeap, Sink.Ident(heapVar)); //start antecedent with IsPreHeap($Heap)
+
+
+        //set up the antecedent of the axiom:  (where clauses of) input parameters.
+        //For int parameters, the where clause is suppressed (see conclusion of axiom below for reasoning).
+        Bpl.Variable thisVarPurityAxiom = null;
+        foreach (Bpl.Variable! p in checkerSig.InParameters) {
+          Bpl.Variable pVar = Sink.BoundVar((!)p.Name, p.TypedIdent.Type);
+          bvars.Add(pVar);          
+          if (pVar.Name == "this") {
+            thisVarPurityAxiom = pVar;
+          }
+
+          oneHashFunArgs.Add(Sink.IdentWithClean(pVar));                                                          
+          if (p.TypedIdent.WhereExpr != null && ((p.TypedIdent.Type.IsBasic && !p.TypedIdent.Type.IsInt) || p.TypedIdent.Type.Equals(sink.RefType))) {
+            ante = Bpl.Expr.And(ante, p.TypedIdent.WhereExpr);
+          }
+        }                     
+        //add the non-free preconditions of checkerSig to the antecedent.        
+        foreach (Bpl.Requires! req in checkerSig.Requires) {
+          if (!req.Free) {
+            Bpl.Expr reqCond = sink.QuantifyOverActivityIndicator(req.Condition);
+            ante = Bpl.Expr.And(ante, reqCond);
+          }
+        }                            
+        
+        //Now set up the *conclusion* of the axiom: where clauses of output parameters.
+        //For int parameters, the where clause is suppressed for the following reason.
+        //Consider a method: [Pure] int m(int i) ensures result == i+1;
+        //It is unsound to generate an axiom that says that for all inputs in range, the output is inrange (doesn't hold gor i = maxint).
+        //As a nice side-effect, this takes away the need to have input-parameters of type int be in range, which makes the axiom easier to use.
+        //Todo: only have to suppress the InRange clause, not the entire where clause which could contain other info.
+        Bpl.Expr! concl = Bpl.Expr.True;
+        foreach (Bpl.Variable! p in checkerSig.OutParameters) {
+          if (p.Name != Prelude.ResultVariableName) {
+            Bpl.Variable pVar = Sink.BoundVar((!)p.Name, p.TypedIdent.Type);
+            bvars.Add(pVar);
+            oneHashFunArgs.Add(Sink.IdentWithClean(pVar));                  
+          }
+          if (p.TypedIdent.WhereExpr != null && ((p.TypedIdent.Type.IsBasic && !p.TypedIdent.Type.IsInt) || p.TypedIdent.Type.Equals(sink.RefType))) {
+            if (concl == Bpl.Expr.True) {
+              concl = p.TypedIdent.WhereExpr;
+            } else {
+              concl = Bpl.Expr.And(ante, p.TypedIdent.WhereExpr);
+            }
+          }
+        } 
+        
+        //Add the ensures clauses of checkerSig to the conclusion. Note that these include the free postconditions.
+        //However, we can't allow old() to appear in the axiom. User-supplied postconditions of pure methods are not
+        //allowed to mention old(). As the checkerMethod is not called in code, free postconditions don't matter for
+        //verification. Therefore, free postconditions that mention old(), or are not relevant to the axiom should
+        //not be generated for the checker method (ie, suppress them during AddProcedure(consistencyCheckerMethod, checkerSig)).
+        
+        //HACK: Not good enough, postcondions can also mention IsNew, which leads to a Bpl expression that contains old. 
+        //Visit each of the expression, and suppress on occurrence of old()
+        foreach (Bpl.Ensures! ens in checkerSig.Ensures) {
+          OldFinder of = new OldFinder();
+          of.VisitExpr(ens.Condition);
+          if (of.ContainsOld) continue;
+          Bpl.Expr ensCond = sink.QuantifyOverActivityIndicator(ens.Condition);
+          if (concl == Bpl.Expr.True) {
+            concl = ensCond;
+          } else {
+            concl = Bpl.Expr.And(concl, ensCond);
+          }
+        }
+        
+        //fetch the function that represents the procedure (it has been declared during translation of method)
+        string uniqName = Sink.UniqueProcedureName(method);
+        string! oneHashFunName = "#" + uniqName;
+        Bpl.Type returnType = sink.Convert(method.ReturnType);
+        Bpl.Expr oneHashFun = sink.Function(oneHashFunName, returnType, oneHashFunArgs);
+
+        // for constructors, we say that the result of #M is the new object    
+        if (method is Cci.InstanceInitializer)
+        {
+          Bpl.Expr res = Sink.Binary(BinaryOperator.Opcode.Eq, oneHashFun, Bpl.Expr.Ident((!)thisVarPurityAxiom));
+          concl = Bpl.Expr.And(concl, res);
+        }          
+        
+        Bpl.Expr cond = Bpl.Expr.Imp(ante, concl);
+
+        //Duplicate the condition, replacing result by fn.
+        UnresolvedDuplicator dupAndReplace = new UnresolvedDuplicator();              
+        if (resultVariable != null) {
+          dupAndReplace.ReplaceDict.Add(resultVariable.Name, oneHashFun);
+        }
+        cond = dupAndReplace.VisitExpr(cond); 
+
+        //quantify universally over the input parameters
+        if (bvars.Count > 0) {
+          Bpl.Trigger trig = new Bpl.Trigger(NoToken, true, new ExprSeq(oneHashFun));
+          cond = new Bpl.ForallExpr(NoToken, new VariableSeq(bvars.ToArray()), trig, cond);
+        }
+                                                                                            
+        //Add PurityAxiomsCanBeAssumed flag 
+        cond = Bpl.Expr.Imp(Sink.Ident(Prelude.PurityAxiomsCanBeAssumed, Bpl.Type.Bool), cond);
+        
+        string comment = "purity axiom";
+        if (method.IsStateIndependent) {
+          comment += " (state independent)";
+        } else if (method.IsConfined) {
+          comment += " (confined)";
+        } else {
+          assert method.IsPure;  comment += " (pure)";
+        }
+        sink.AddDeclaration(new Bpl.Axiom(NoToken, cond, comment), false);                                            
+      
+      #endregion //construct the purity axiom #M
+                        
+      #region Step 6: connect #C.M for the current class C with #B.M of the base class B
+        if (method.IsVirtual && !(method.DeclaringType is Cci.Struct)) {
+          // BUGBUG.  Is it really right to use "checkerSig" here?
+          checkerSig.AddAxiomToConnectPureMethodToSuperclassMethod(method);
+        }
+      #endregion // connect #C.M for the current class C with #B.M of the base class B
+      
+      #region Step 7: add the ## axiom (relating return values of the # function)
+                                  
+        bool isConfinedVersion = method.IsConfined && !method.IsStateIndependent &&
+            !method.IsStatic;  // currently exposeVersion only for objects
+        
+        if (consistencyCheckerMethod.ReturnType != Cci.SystemTypes.Void && //axiom talks about result of method
+          checkerSig.OutParameters.Length < 2 && //axiom is not sound if there are outparameters other than result
+          (isConfinedVersion || method.IsStateIndependent)) //pure methods can depend on anything, no axiom 
+        {                                                                                  
+          //The ## axiom expresses the following:
+          //If method.IsStateIndependent, then the return value of #M only depends on the input parameters.
+          //Otherwise, if the method is Confined, then the return value of #M depends on the exposeVersion.                                                                                                                
+        
+          //create M', where M' is either ##M(o,p) (for stateIndependent), or ##M(h[o,ExposeVersion],p) (for confined).
+          //first set up the arguments
+          List<Bpl.Expr!> twoHashFunArgs = new List<Bpl.Expr!>();
+          Bpl.Expr thisExpr = null;  //used for confined version
+          int nrOfParamsToSkip = 1; //we don't need heap parameter for ##M function
+          if (isConfinedVersion) {              
+            assert thisVariable != null;  //isConfinedVersion ==> not static, so must have this.
+            thisExpr = Sink.IdentWithClean(thisVariable);
+            twoHashFunArgs.Add(sink.ExposeVersion(thisExpr, Sink.Ident(heapVar))); //h[o,ExposeVersion]
+            nrOfParamsToSkip++; // we don't need 'this' (already added) and heap parameter for ##M function                              
+          }                                       
+          for (int i = nrOfParamsToSkip; i < oneHashFunArgs.Count; i++) 
+              twoHashFunArgs.Add(oneHashFunArgs[i]);                   
+          Bpl.Expr twoHashFun = sink.Function("#" + oneHashFunName, returnType, twoHashFunArgs); //creating M'
+                      
+          Bpl.Expr! twoHashCond = Bpl.Expr.Eq(oneHashFun, twoHashFun); //creating #M(h,o,p) == M'                        
+          
+          if (isConfinedVersion) {
+            //for confined, add antecedent:                             
+            //o != null && $typeof(o) <: T && h[o,inv] = typeof(o) && h[o,localinv] = typeof(o) && IsHeap(h) && h[o, $allocated] == true
+            assert thisExpr != null;                
+            Bpl.Expr twoHashAnte = Bpl.Expr.Neq(thisExpr, sink.Null);
+            twoHashAnte = Bpl.Expr.And(twoHashAnte, Bpl.Expr.Subtype(
+                                 sink.Function(Sink.BuiltinFunction.Typeof, thisExpr),
+                                 sink.TypeNameExpression(method.DeclaringType)));
+            twoHashAnte = Bpl.Expr.And(twoHashAnte, sink.om.IsFullyValid(thisExpr));
+            twoHashAnte = Bpl.Expr.And(twoHashAnte, sink.Function(Sink.BuiltinFunction.IsHeap, Sink.Ident(heapVar)));              
+            twoHashAnte = Bpl.Expr.And(twoHashAnte, sink.IsAllocatedOfRef(thisExpr, Sink.Ident(heapVar), true));
+            
+            twoHashCond = Bpl.Expr.Imp(twoHashAnte, twoHashCond);
+          }
+          
+          //For StateIndependent: axiom (forall h,o,p :: { #M(h,o,p) }          #M(h,o,p) == ##M(o,p));
+          //For Confined:         axiom (forall h,o,p :: { #M(h,o,p) } ante ==> #M(h,o,p) == ##M(h[o,ExposeVersion],p));
+          Bpl.Trigger trig = new Bpl.Trigger(NoToken, true, new ExprSeq(oneHashFun));
+          Bpl.Expr axiom = new Bpl.ForallExpr(NoToken, new VariableSeq(bvars.ToArray()), trig, twoHashCond);              
+          string twoHashComment = "state-independent methods do not depend on the heap";
+          if (isConfinedVersion)
+            twoHashComment = "expose version axiom for confined methods";              
+          sink.AddDeclaration(new Bpl.Axiom(NoToken, axiom, twoHashComment), false);                                                                                                                                                                   
+                                                     
+        }
+      #endregion //## axiom    
+      
+      sink.currentMethod = savedCurrentMethod;
+      sink.blockTranslation = savedBlockTrans;
+      sink.copyBackCommands = savedCopyBackCommands;
+                        
+    }
+       
+    
+    
+    //Duplicator that can deal with unresolved IdentifierExprs. Using ReplaceDict, IdentifierExprs can also be replaced during duplication.
+    //Warning: The result of UnresolvedDuplicator.Visit still shares some state with the input 
+    private class UnresolvedDuplicator : Duplicator {            
+      public IDictionary<string, Expr>! ReplaceDict = new Dictionary<string, Expr>(); //Replace identifierExpr with a name that is a key with the corresponding value            
+           
+      public override Expr! VisitIdentifierExpr(IdentifierExpr! node) {                                  
+        Expr resultExpr = null;
+        ReplaceDict.TryGetValue(node.Name, out resultExpr);
+        if (resultExpr != null) 
+          return resultExpr;
+        else 
+          return (IdentifierExpr!) node.Clone(); //As node has not been resolved, do not attempt to go into it's Decl (which will be null).     
+      }
+    }             
+    
+    ///<summary>ContainsOld is set to true when an oldExpr is found in the visited AST. Note: reset containsOld between uses.
+    ///Can deal with unresolved IdentifierExpr's.   
+    ///</summary>
+    private class OldFinder : StandardVisitor {
+      public bool ContainsOld = false;
+      
+      public override Expr! VisitOldExpr(OldExpr! node) {
+        this.ContainsOld = true;
+        return node;
+      }
+      
+      public override Expr! VisitIdentifierExpr(IdentifierExpr! node) {                                  
+        return node; //As node has not been resolved, do not attempt to go into it's Decl (which will be null).     
+      }
+    }
+    
+    
+    ///<summary>Helper method for AddAxiomsToPureMethod. Declares #M and ##M funtions for method in sink.</summary>
+    private static void DeclareFunctionsForPureMethod(Cci.Method! method, Sink! sink) 
+      requires method.DeclaringType != null;
+    {             
+      
+      //alternatively, this method could be another region in AddAxiomsForPureMethods
+      
+      string uniqName = Sink.UniqueProcedureName(method);
+      string! methodName = "#" + uniqName;
+      
+      // create and add #M declaration 
+      Bpl.VariableSeq formals = new Bpl.VariableSeq();
+      Bpl.VariableSeq formalsExpVer = new Bpl.VariableSeq();
+      formalsExpVer.Add(new Bpl.Formal(NoToken, new Bpl.TypedIdent(NoToken, "", sink.ExposeVersionType), true));
+                    
+      formals.Add(new Bpl.Formal(NoToken, new Bpl.TypedIdent(NoToken, "", sink.HeapType), true));            
+      if  (!method.IsStatic)
+      {
+         Bpl.Type! receiverType = sink.Convert(method.DeclaringType);
+         formals.Add(new Bpl.Formal(NoToken, new Bpl.TypedIdent(NoToken, "", receiverType), true));
+      }
+      for (int i=0, n = method.Parameters == null ? 0 : method.Parameters.Count; i<n; i++)
+      {
+        assert method.Parameters != null;
+        Cci.Parameter parm = method.Parameters[i];
+        if (parm == null) { continue; }
+        Cci.Reference ptrType = parm.Type as Cci.Reference;
+        Cci.TypeNode! parmType = ptrType == null ? parm.Type : (!)ptrType.ElementType;
+        formals.Add(new Bpl.Formal(NoToken, new Bpl.TypedIdent(NoToken, "", sink.Convert(parmType)), true));
+        formalsExpVer.Add(new Bpl.Formal(NoToken, new Bpl.TypedIdent(NoToken, "", sink.Convert(parmType)), true));
+      }
+      Bpl.Type returnType = (method is Cci.InstanceInitializer ? sink.Convert(method.DeclaringType) : sink.Convert(method.ReturnType));
+      Bpl.Variable result = new Bpl.Formal(NoToken, new Bpl.TypedIdent(NoToken, "", returnType), false);
+      Bpl.Function fun = new Bpl.Function(NoToken, methodName, formals, result);
+      sink.AddDeclaration(fun, true);
+                    
+      // declaring ##M function
+      if (method.IsStateIndependent) {
+        Bpl.Variable resultExpVer = new Bpl.Formal(NoToken, new Bpl.TypedIdent(NoToken, "", returnType), false);
+        Bpl.VariableSeq twoHashArgs = new Bpl.VariableSeq();
+        Bpl.VariableSeq bvars = new Bpl.VariableSeq();
+        List<Expr!> mArgs = new List<Expr!>(formals.Length);
+        List<Expr!> mmArgs = new List<Expr!>(formals.Length-1);
+        int i = -1;
+        foreach (Variable! v in formals) {
+          Variable bv = Sink.BoundVar(i == -1 ? "$h" : "$p" + i, v.TypedIdent.Type);
+          bvars.Add(bv);
+          Bpl.Expr pe = Sink.Ident(bv);
+          mArgs.Add(pe);
+          if (0 <= i) {
+            twoHashArgs.Add(v);
+            mmArgs.Add(pe);
+          }
+          i++;
+        }
+        assert twoHashArgs != null;
+        Bpl.Function funExpVer = new Bpl.Function(NoToken, "##" + uniqName, twoHashArgs, resultExpVer);
+        sink.AddDeclaration(funExpVer, true);                                
+      
+      } else if (method.IsConfined && !method.IsStatic) {
+        Bpl.Variable resultExpVer = new Bpl.Formal(NoToken, new Bpl.TypedIdent(NoToken, "", returnType), false);
+        Bpl.Function funExpVer = new Bpl.Function(NoToken, "##" + uniqName, formalsExpVer, resultExpVer);
+        sink.AddDeclaration(funExpVer, true);
+      }
+    }
+                           
+    
+    void AddAxiomToConnectPureMethodToInterfaceMethod(Cci.Method! method, string! functionName)
+      requires method.ImplicitlyImplementedInterfaceMethods != null &&
+          method.ImplicitlyImplementedInterfaceMethods.Count > 0;
+    {
+      Cci.TypeNode tn = method.DeclaringType;
+      assert tn != null;
+      Bpl.Expr thisExpr = Sink.IdentWithClean((!)InParameters[0]);
+      
+      List<Bpl.Variable> bvars = new List<Bpl.Variable>(this.InParameters.Length+1);
+      Bpl.Variable hVar = Sink.BoundVar(Prelude.HeapName, sink.HeapType);
+      bvars.Add(hVar);
+      List<Bpl.Expr!> args = new List<Bpl.Expr!>(this.InParameters.Length+1);
+      args.Add(sink.HeapExpr());
+      foreach (Bpl.Variable! p in this.InParameters) {
+        if (!IsSpecialParameter(p)) {
+          Bpl.Variable pVar = Sink.BoundVar((!)p.Name, p.TypedIdent.Type);
+          bvars.Add(pVar);
+          args.Add(Sink.IdentWithClean(pVar));
+        }
+      }
+      Bpl.Type returnType = this.sink.Convert(method.ReturnType);
+      Bpl.Expr fn = sink.Function(functionName, returnType, args);
+     
+      Bpl.Expr ifaceAnte;
+      Bpl.Variable boxedStruct = Sink.BoundVar("$bx", sink.RefType);
+      Bpl.Expr bx = Sink.Ident(boxedStruct);
+      bool isStruct = tn is Cci.Struct;
+      if (isStruct){
+        // IsHeap($Heap) && Box(this,bx)==bx [ && $typeof(bx) <: J ] (last conjunct gets added in loop)
+        ifaceAnte = sink.Function(Sink.BuiltinFunction.IsHeap, Sink.Ident(hVar));
+        ifaceAnte = Bpl.Expr.And(ifaceAnte, Bpl.Expr.Eq(sink.Function(Sink.BuiltinFunction.Box, thisExpr, bx),bx));
+      }else{
+        // this != null && typeof(this) <: tn
+        ifaceAnte = Bpl.Expr.Neq(thisExpr, sink.Null);
+        ifaceAnte = Bpl.Expr.And(ifaceAnte, Bpl.Expr.Subtype(
+                         sink.Function(Sink.BuiltinFunction.Typeof, thisExpr),
+                         sink.TypeNameExpression(tn)));
+      }
+      for (int i = 0, n = method.ImplicitlyImplementedInterfaceMethods.Count; i < n; i++){
+        Cci.Method ifaceMethod = method.ImplicitlyImplementedInterfaceMethods[i];
+        if (ifaceMethod == null) continue;
+        if (!(ifaceMethod.IsPure || ifaceMethod.IsConfined || ifaceMethod.IsStateIndependent)){
+          // A method can declare itself as pure even if it implements a non-pure
+          // interface method. (That purity is then binding on any overrides, but that
+          // doesn't have anything to do with generating this axiom.) It is good to notice
+          // when the iface method isn't pure because it is often a signal that an out-of-band
+          // contract is missing for the interface.
+          continue;
+          //Console.WriteLine("not pure: " + ifaceMethod.FullName);
+        }
+        string comment = "pure-method interface connection (" + this.method.FullName + " --> " + ifaceMethod.FullName + ")";
+        Bpl.VariableSeq boundVars = new VariableSeq(bvars.ToArray());
+        List<Bpl.Expr!> ifaceArgs;
+        Bpl.Trigger trigger;
+        if (isStruct){
+          // add $typeof($bx) <: J to the antecedent
+          assume ifaceMethod.DeclaringType != null;
+          ifaceAnte = Bpl.Expr.And(ifaceAnte, Bpl.Expr.Subtype(
+                           sink.Function(Sink.BuiltinFunction.Typeof, bx),
+                           sink.TypeNameExpression(ifaceMethod.DeclaringType)));
+          // add "$bx:ref" to the list of bound variables
+          boundVars.Add(boxedStruct);
+          // the arguments to the iface function are the same as to the struct's method
+          // but the "this" argument is the boxed version of the struct
+          ifaceArgs = new List<Bpl.Expr!>(this.InParameters.Length+1);
+          ifaceArgs.Add(sink.HeapExpr());
+          ifaceArgs.Add(sink.Function(Sink.BuiltinFunction.Box, thisExpr, bx));
+          for (int j = 1, m = this.InParameters.Length; j < m; j++){ // skip the "this" param
+            Bpl.Variable! p = (!)this.InParameters[j];
+            if (!IsSpecialParameter(p)) {
+              Bpl.Variable pVar = Sink.BoundVar((!)p.Name, p.TypedIdent.Type);
+              ifaceArgs.Add(Sink.IdentWithClean(pVar));
+            }
+          }
+        }else{
+          // the arguments to the iface function are the same as to the class's method
+          ifaceArgs = new List<Bpl.Expr!>(args);
+        }
+        string uniqName = MethodSignature.GetFunctionForPureMethod(ifaceMethod, sink);
+//        string uniqName = "#" + Sink.UniqueProcedureName(ifaceMethod);
+        Bpl.Expr ifaceExpr = sink.Function(uniqName, returnType, ifaceArgs);
+        Bpl.Expr expr = Bpl.Expr.Imp(ifaceAnte, Bpl.Expr.Eq(fn, ifaceExpr));
+        if (isStruct){
+          // the trigger is #I.M($Heap, Box(this,$bx))
+          trigger = new Bpl.Trigger(NoToken, true, new ExprSeq(ifaceExpr));
+          expr = new Bpl.ForallExpr(NoToken, boundVars, trigger, expr);
+        }else{
+          // no trigger
+          expr = new Bpl.ForallExpr(NoToken, boundVars, expr);
+        }
+        // If tn is a struct, S:
+        // forall($Heap; [ref,<x>name]x, this: struct, bx:ref, params : "types of params" :: 
+        //        { #I.M($Heap, Box(this,$bx)) }
+        //        IsHeap($Heap) && Box(this,$bx)==$bx && $typeof($bx) <: I
+        //        ==>
+        //        #S.M($Heap, this, params) == #I.M($Heap, Box(this,bx), params)
+        //       );
+        
+        // If tn is a class, C:
+        // forall($Heap; [ref,<x>name]x, this: ref, params : "types of params" :: 
+        //        this != null && $typeof(this) <: tn
+        //        ==>
+        //        #C.M($Heap, this, params) == #I.M($Heap, this, params)
+        //       );
+        sink.AddDeclaration(new Bpl.Axiom(NoToken, expr, comment), false);
+      }
+    }        
+
+    void AddAxiomToConnectPureMethodToSuperclassMethod(Cci.Method! method)
+      requires method.IsVirtual && !(method.DeclaringType is Cci.Struct);
+      requires method.DeclaringType != null;
+    {
+      Cci.Method superclassMethod = method.OverriddenMethod;
+      if (superclassMethod == null) {
+        // the method is the first-introduced virtual method, not an override
+        return;
+      }      
+      if (!(superclassMethod.IsPure || superclassMethod.IsConfined || superclassMethod.IsStateIndependent)){
+        // A method can declare itself as pure even if it overrides a non-pure
+        // base-class method. (That purity is then binding on any overrides, but that
+        // doesn't have anything to do with generating this axiom.)
+        return;
+        // It is good to notice
+        // when the base method isn't pure because it is often a signal that an out-of-band
+        // contract is missing for the superclass.
+        //Console.WriteLine("not pure: " + superclassMethod.FullName);
+      }
+      
+      string comment = "pure-method superclass connection (" + method.FullName + " --> " + superclassMethod.FullName + ")";
+     
+      assert !method.IsStatic;  // should follow from method.IsVirtual
+      assert InParameters.Length > 0;  // should follow from !method.IsStatic
+      Cci.TypeNode tn = method.DeclaringType;
+      Bpl.Expr thisExpr = Sink.IdentWithClean((!)InParameters[0]);
+      
+      Bpl.VariableSeq bvars = new Bpl.VariableSeq();
+      List<Bpl.Expr!> args = new List<Bpl.Expr!>(this.InParameters.Length+1);
+      Bpl.Variable hVar = Sink.BoundVar(Prelude.HeapName, sink.HeapType);
+      bvars.Add(hVar);
+      args.Add(sink.HeapExpr());
+      foreach (Bpl.Variable! p in this.InParameters) {
+        if (!IsSpecialParameter(p)) {
+          Bpl.Variable pVar = Sink.BoundVar((!)p.Name, p.TypedIdent.Type);
+          bvars.Add(pVar);
+          args.Add(Sink.IdentWithClean(pVar));
+        }
+      }
+      Bpl.Type returnType = sink.Convert(method.ReturnType);
+
+      string functionName = MethodSignature.GetFunctionForPureMethod(method, sink);
+      Bpl.Expr fn = sink.Function(functionName, returnType, args);
+      string superclassMethodUniqName = MethodSignature.GetFunctionForPureMethod(superclassMethod, sink);
+      Bpl.Expr superclassFn = sink.Function(superclassMethodUniqName, returnType, args);
+
+      // this != null && typeof(this) <: tn
+      Bpl.Expr ante = Bpl.Expr.Neq(thisExpr, sink.Null);
+      ante = Bpl.Expr.And(ante, Bpl.Expr.Subtype(
+                  sink.Function(Sink.BuiltinFunction.Typeof, thisExpr),
+                  sink.TypeNameExpression(tn)));
+
+      // forall($Heap; [ref,<x>name]x, this: ref, params : "types of params" :: 
+      //        this != null && $typeof(this) <: tn
+      //        ==>
+      //        #C.M($Heap, this, params) == #B.M($Heap, this, params)
+      //       );
+      Bpl.Expr expr = new Bpl.ForallExpr(NoToken, bvars, Bpl.Expr.Imp(ante, Bpl.Expr.Eq(fn, superclassFn)));
+      sink.AddDeclaration(new Bpl.Axiom(NoToken, expr, comment), false);
+    }        
+
+    /// <summary>
+    /// Emit a precondition that says Owner.None(param):
+    ///   requires param == null || param.owner.$ownerFrame == $PeerGroupPlaceholder;
+    /// where "param == null ||" is omitted if "param" is of a non-null type.
+    /// </summary>
+    void AddPreconditionForCaptured(Bpl.Expr! param, string! paramName, bool paramIsNonNull) {
+      bool lite = CommandLineOptions.Clo.CheckingLevel < 1;
+      Bpl.Expr nn;
+      if (paramIsNonNull) {
+        nn = null;
+      } else {
+        nn = Bpl.Expr.Eq(param, sink.Null);
+      }
+
+      Bpl.Expr pre = om.HasNoOwner(param, sink.HeapExpr()); 
+      Bpl.Requires reqNode = new Bpl.Requires(lite, nn == null ? pre : Bpl.Expr.Or(nn, pre));
+      reqNode.ErrorData = string.Format("Call to {0} requires captured parameter '{1}' to be un-owned", sink.errorHandler.GetMethodSignature(method, false, true), paramName);
+      this.Requires.Add(reqNode);
+    }
+    
+    void AddFrameConditions()
+    {
+      bool isConstructor = this.method is Cci.InstanceInitializer && this.method.DeclaringType is Cci.Class;
+
+      Bpl.ExprSeq! eSeq = GenerateObjectsFrameCondition(new Bpl.OldExpr(NoToken, sink.HeapExpr()));
+
+      Bpl.Expr freeCondition = null;
+      if (CommandLineOptions.Clo.MethodologySelection == CommandLineOptions.Methodology.VisibleState)
+        freeCondition = FreeFrameCondition(new Bpl.OldExpr(NoToken, sink.HeapExpr()));
+
+      Bpl.Expr[] eArr = (Bpl.Expr[]) eSeq.elems;
+      assert eArr != null;
+      Bpl.Expr e = eArr[0];
+      assert e != null;
+
+      bool freeFrameConditions = CommandLineOptions.Clo.LocalModifiesChecks ||
+                                 CommandLineOptions.Clo.CheckingLevel < 2;
+
+      Bpl.Ensures ensNode = new Ensures(freeFrameConditions, e, "frame condition");
+      ensNode.ErrorData = string.Format("Method {0}, unsatisfied frame condition", sink.errorHandler.GetMethodSignature(method, false, true));
+      // add enhanced error data for o, f
+      string extraInformation = "You modified the {1} field of object {0}.";
+      List<Bpl.Expr!> exprList = new List<Bpl.Expr!>();
+      Bpl.IdentifierExpr! o = new Bpl.IdentifierExpr(Bpl.Token.NoToken, "$o", sink.RefType);
+      exprList.Add(o);
+      Bpl.IdentifierExpr! f = new Bpl.IdentifierExpr(Bpl.Token.NoToken, "$f", sink.RefType); 
+      exprList.Add(f);
+      ensNode.ErrorDataEnhanced = new EEDTemplate(extraInformation, exprList);
+      this.Ensures.Add(ensNode);
+      
+      for (int i = 1; i < eArr.Length; i++) {
+        e = eArr[i];
+        assert e != null;
+        ensNode = new Ensures(freeFrameConditions, e, "frame condition");
+        ensNode.ErrorData = string.Format("Method {0}, unsatisfied frame condition", sink.errorHandler.GetMethodSignature(method, false, true));
+        // add enhanced error data for o, ind
+        extraInformation = "You modified index {1} of array {0}.";
+        exprList = new List<Bpl.Expr!>();
+        o = new Bpl.IdentifierExpr(Bpl.Token.NoToken, "$o", sink.RefType);
+        exprList.Add(o);
+        Bpl.IdentifierExpr! ind = new Bpl.IdentifierExpr(Bpl.Token.NoToken, "$i", sink.RefType);
+        exprList.Add(ind);
+        ensNode.ErrorDataEnhanced = new EEDTemplate(extraInformation, exprList);
+        this.Ensures.Add(ensNode);
+      }
+      
+      if (freeCondition != null) {
+        this.Ensures.Add(new Ensures(true, freeCondition));
+      }
+
+      // add Heap Succession info for use in the z3 model output
+      this.Ensures.Add(new Ensures(true, sink.Function(Sink.BuiltinFunction.HeapSucc, new Bpl.OldExpr(NoToken, sink.HeapExpr()), sink.HeapExpr())));
+      
+      if (CommandLineOptions.Clo.MethodologySelection == CommandLineOptions.Methodology.Boogie) {
+        this.Ensures.Add(new Ensures(true,
+          GenerateInvBitsFrameCondition(new OldExpr(Bpl.Token.NoToken, sink.HeapExpr()), isConstructor),
+          "inv/localinv change only in blocks"));
+      }
+
+      this.Ensures.Add(new Ensures(true, GenerateAllocationAndOwnershipStable(new OldExpr(Bpl.Token.NoToken, sink.HeapExpr()))));
+
+      if (CommandLineOptions.Clo.MethodologySelection == CommandLineOptions.Methodology.Boogie) {
+        AddSharingModeFrameCondition(isConstructor);
+      }
+    }
+    
+    void AddSharingModeFrameCondition(bool isConstructor)
+    {
+      // For now, we emit the following unsound frame condition
+      //   (forall $o: ref :: old($Heap[$o, $sharingMode]) == $Heap[$o, $sharingMode])
+      // or for constructors:
+      //   (forall $o: ref :: $o == this || old($Heap[$o, $sharingMode]) == $Heap[$o, $sharingMode])
+      // It says that no method ever changes the sharing mode of an object that the caller knows about.
+      // Eventually, we should make this sound by emitting a frame condition that says "unless the method
+      // requires that $o is unshared, the method does not change the sharing mode of $o". This is sound,
+      // since the only way that the method can change the sharing mode is by performing a "share" operation,
+      // and the share operation requires that the object is unshared.
+      Bpl.Variable! o = new Bpl.BoundVariable(Bpl.Token.NoToken, new Bpl.TypedIdent(Bpl.Token.NoToken, "$o", sink.RefType));
+      Bpl.Expr! body = om.SameSharingMode(o);
+      if (isConstructor) {
+        body = Bpl.Expr.Or(Bpl.Expr.Eq(Bpl.Expr.Ident(o), Bpl.Expr.Ident("this", sink.RefType)), body);
+      }
+      Bpl.Trigger tr = om.SharingTrigger(o);
+      this.Ensures.Add(
+        new Ensures(true, new Bpl.ForallExpr(Bpl.Token.NoToken, new Bpl.VariableSeq(o), tr, body)));
+    }
+    
+    internal Bpl.Expr! GenerateAllocationAndOwnershipStable(Bpl.Expr! prevHeap)
+    {
+      // (forall $o: ref :: prevHeap[$o, $allocated]) ==> $Heap[$o, $allocated]) 
+    
+      Bpl.BoundVariable! o = new Bpl.BoundVariable(Bpl.Token.NoToken, new Bpl.TypedIdent(Bpl.Token.NoToken, "$o", sink.RefType));
+      
+      Bpl.Expr isAllocated = this.sink.IsAllocatedOfRef(Sink.IdentWithClean(o));
+      Bpl.Expr monotonic =
+        new Bpl.ForallExpr(Bpl.Token.NoToken, new Bpl.VariableSeq(o),
+          new Bpl.Trigger(NoToken, true, new ExprSeq(isAllocated)),
+          Bpl.Expr.Imp(sink.IsAllocatedOfRef(Sink.IdentWithClean(o), prevHeap, true), isAllocated));
+
+      // (forall $ot: ref :: { Heap[$ot, $owner] }
+      //                     prevHeap[$ot, $allocated] && prevHeap[$ot, $ownerFrame] != $PeerGroupPlaceholder
+      //                     ==>  prevHeap[$ot, $owner] == Heap[$ot, $owner]);
+      o = new Bpl.BoundVariable(Bpl.Token.NoToken, new Bpl.TypedIdent(Bpl.Token.NoToken, "$ot", sink.RefType));
+      Bpl.Expr c0 = sink.IsAllocatedOfRef(Sink.IdentWithClean(o), prevHeap, true);
+      Bpl.Expr c1 = Bpl.Expr.Not(om.HasNoOwner(Sink.IdentWithClean(o), prevHeap));
+      Bpl.Expr d = om.OwnerIsUnchanged(Sink.IdentWithClean(o), prevHeap, sink.HeapExpr());
+      Bpl.Trigger tr = om.OwnerTrigger(Sink.IdentWithClean(o), sink.HeapExpr());
+      Bpl.Expr noOwnershipTransfer = new Bpl.ForallExpr(NoToken, new Bpl.VariableSeq(o), tr,
+        Bpl.Expr.Imp(Bpl.Expr.And(c0, c1), d));
+      
+      // prevHeap[$BeingConstructed, $NonNullFieldsAreInitialized] == $Heap[$BeingConstructed, $NonNullFieldsAreInitialized];
+      c0 = Bpl.Expr.Select(prevHeap, Sink.IdentWithClean(Prelude.BeingContructedName, sink.RefType), sink.Fields.NonNullFieldsAreInitialized);
+      c1 = Bpl.Expr.Select(sink.HeapExpr(), Sink.IdentWithClean(Prelude.BeingContructedName, sink.RefType), sink.Fields.NonNullFieldsAreInitialized);
+      Bpl.Expr nonNullFieldsStillInitialized = Bpl.Expr.Eq(c0, c1);
+
+      return Bpl.Expr.And(monotonic, Bpl.Expr.And(noOwnershipTransfer, nonNullFieldsStillInitialized));
+    }
+    
+    internal Bpl.Expr! GenerateInvBitsFrameCondition(Bpl.Expr! prevHeap, bool allowModifiesThisInv)
+    {
+      // Return the expression:
+      //   (forall $o: ref ::
+      //     { $Heap[$o, $inv] }
+      //     { $Heap[$o, $localinv] }
+      //       prevHeap[$o,$allocated]
+      //       && $o != this                            // if "allowModifiesThisInv"
+      //     ==>
+      //       prevHeap[$o, $inv] == $Heap[$o, $inv] && prevHeap[$o, $localinv] == $Heap[$o, $localinv])
+
+      Bpl.BoundVariable! oVar = new Bpl.BoundVariable(Bpl.Token.NoToken, new Bpl.TypedIdent(Bpl.Token.NoToken, "$o", sink.RefType));
+      Bpl.Expr o = Sink.IdentWithClean(oVar);
+
+      Bpl.Expr ante = sink.IsAllocatedOfRef(o, prevHeap, true);
+      if (allowModifiesThisInv) {
+        ante = Bpl.Expr.And(ante, Bpl.Expr.Neq(o, Bpl.Expr.Ident("this", sink.RefType)));
+      }
+      
+      Bpl.Expr consequent = om.ExposureIsUnchanged(o, prevHeap, sink.HeapExpr(Prelude.HeapName));
+      Bpl.Trigger tr = om.ExposureTrigger(o, sink.HeapExpr(Prelude.HeapName));
+      
+      return new Bpl.ForallExpr(NoToken, new Bpl.VariableSeq(oVar), tr, Bpl.Expr.Imp(ante, consequent));
+    }
+    
+    internal Bpl.Expr! GenerateOwnerChangeCondition(Bpl.Expr! preLoopHeap)
+    {
+      // (forall $o :: { $Heap[$o,$owner] }
+      //               $o != null && preLoopHeap[$o,$allocated]
+      //               ==> preLoopHeap[$o,$owner] == $Heap[$o,$owner]);
+      
+      Bpl.BoundVariable oVar = new Bpl.BoundVariable(NoToken, new Bpl.TypedIdent(NoToken, "$o", sink.RefType));
+      Bpl.Expr o = Sink.Ident(oVar);
+      Bpl.Expr currentHeap = sink.HeapExpr();
+      Bpl.Expr c = Bpl.Expr.And(Bpl.Expr.Neq(o, sink.Null), sink.IsAllocatedOfRef(o, preLoopHeap, true));
+
+      Bpl.Expr d = om.OwnerIsUnchanged(o, preLoopHeap, currentHeap);
+      Bpl.Expr body = Bpl.Expr.Imp(c, d);
+      Bpl.Trigger tr = om.OwnerTrigger(o, currentHeap);
+      return new Bpl.ForallExpr(NoToken, new VariableSeq(oVar), tr, body);
+    }
+
+    // ------------------------------------------------------------------------------------------
+
+    internal Bpl.Expr! FreeFrameCondition(Bpl.Expr! preHeap) {
+      Bpl.Expr ante = AssignmentToFieldIsForbidden(Sink.IdentWithClean(GenModifiesO),
+                                                   Sink.IdentWithClean(GenModifiesF),
+                                                   new Bpl.TypeVariableSeq (GenModifiesAlpha));
+
+      ante = Bpl.Expr.And(Bpl.Expr.Neq(Sink.IdentWithClean(GenModifiesO), sink.Null), ante);
+
+      // (forall<beta> $o, $f :: {$Heap[$o,$f]} $IsStaticField($f) ==> preHeap[$o,$f] == $Heap[$o,$f] || $f==staticField0 || $f==staticField1 || ...);
+      Bpl.TypeVariable beta = new Bpl.TypeVariable(Token.NoToken, "beta");
+      Bpl.BoundVariable ooVar = new Bpl.BoundVariable(Token.NoToken, new Bpl.TypedIdent(Token.NoToken, "$o", sink.RefType));
+      Bpl.Expr oo = Sink.Ident(ooVar);
+      Bpl.BoundVariable ffVar = new Bpl.BoundVariable(Token.NoToken, new Bpl.TypedIdent(Bpl.Token.NoToken, "$f", sink.FieldType(beta)));
+      Bpl.Expr ff = Sink.Ident(ffVar);
+        
+      ante = sink.Function(Sink.BuiltinFunction.IsStaticField, ff);
+      Bpl.Expr newHeapOF = Bpl.Expr.Select(sink.HeapExpr(), oo, ff);
+      Bpl.Expr oldHeapOF = Bpl.Expr.Select(preHeap, oo, ff);
+        
+      Bpl.Expr rhs = Bpl.Expr.Eq(oldHeapOF, newHeapOF);
+      foreach (Bpl.Expr staticFieldInModifiesClause in GenModifiesContrib.StaticFields) {
+        rhs = Bpl.Expr.Or(rhs, Bpl.Expr.Eq(ff, staticFieldInModifiesClause));
+      }
+      Bpl.Trigger tr = new Bpl.Trigger(Token.NoToken, true, new ExprSeq(newHeapOF));
+
+      return new Bpl.ForallExpr(Token.NoToken, new TypeVariableSeq(beta),
+                                new VariableSeq(ooVar, ffVar), null, tr, Bpl.Expr.Imp(ante, rhs));
+    }
+
+    // ------------------------------------------------------------------------------------------
+
+    public interface UnmodifiableLocationChecker {
+      Bpl.Expr! CheckFieldLocation(Bpl.Expr! obj, Bpl.Expr! field,
+                                   Bpl.TypeVariableSeq! unifiableTypeVars);
+      Bpl.Expr! CheckArrayLocation(Bpl.Expr! obj, Type! elType, Bpl.Expr! index,
+                                   Bpl.ExprSeq! triggers);
+    }
+    
+    // methodFrameCondition is true iff we want to compose the frame condition of a method as opposed to a loop 
+    public Bpl.ExprSeq! MapUnmodifiableLocations(UnmodifiableLocationChecker! checker,
+                                                 bool includeArrayLocations)
+    {
+      // (forall<alpha> $o: ref, $f: Field alpha ::
+      //    preHeap[$o, $f] == $Heap[$o, $f]                         ; $Heap[$o,$f] is preserved
+      //  <== $IncludeInMainFrameCondition($f)                       ; if $f is a non-special instance field
+      //   && $o != null                                             ; and $o is not null
+      //   && old($Heap[$o, $allocated])                             ; and $o was allocated
+      //   && old($Heap[$o, $writable])                              ; and $o was writable
+      //   && ($o != this || !(C <: DeclType($f)))                   ; for constructor of a class C only
+      //
+      //   && !(($f == $ownerRef || $f == $ownerFrame) &&            ; and $o.$f is not $o.owner where $o is a peer of a captured parameter c0,...
+      //        old($o.owner == c0.owner || ...))
+      //
+      //   ; additional conjuncts come from the translation of the modifies clause
+      //   && ...
+      //
+      // Note the difference between preHeap and old($Heap) above:  preHeap will refer to
+      // the heap at the beginning of the method or the heap at the beginning of the loop,
+      // depending on the context, whereas old($Heap) always refers to the heap at the
+      // beginning of the method.
+      
+      // If visible-state semantics is used, then freeCondition returns as a condition that says static fields are unchanged,
+      // unless explicitly listed in modifies clause:
+      //   (forall $o, $f :: {$Heap[$o,$f]} $IsStaticField($f) ==> preHeap[$o,$f] == $Heap[$o,$f] || $f==staticField0 || $f==staticField1 || ...);
+      // Otherwise, freeCondition returns as null.
+      
+      //********************************************************************************
+      //********************************************************************************
+      // NOTE!  The abstract interpretation recognizes this condition using the
+      // above syntactic for (that is, (forall $o:ref, $f:name :: ASSUMES_IN_CNF ==> H[$o,$f] == H'[$o,$f]))
+      //********************************************************************************
+      //********************************************************************************
+      
+      // If the modifies clause specifies particular indices of arrays that are modified, then
+      // also include:
+      // (forall $o: ref, $i: int ::
+      //    ArrayElementGet(preHeap[$o,$elements], $i) == ArrayElementGet($Heap[$o,$element], $i)
+      //    <==
+      //      $o != null
+      //      && old($Heap[$o, $allocated])
+      //      && old($Heap[$o, $writable])
+      //      && $typeof(o) <: ValueArray(T,r)      or IntArray(T,r) or RefArray(T,r) or NonNullRefArray(T,r)
+      //      && !old(($o == myArray && $i == myIndex) || ...)
+      //    )
+      
+      Bpl.TypeVariable alpha = GenModifiesAlpha;
+      Bpl.BoundVariable o = GenModifiesO;
+      Bpl.BoundVariable f = GenModifiesF;
+      Bpl.BoundVariable ind = GenModifiesInd;
+
+      Bpl.TypeVariableSeq! unifiableTypeVars = new Bpl.TypeVariableSeq (alpha);
+      Bpl.Expr ante = AssignmentToFieldIsForbidden(Sink.IdentWithClean(o),
+                                                   Sink.IdentWithClean(f),
+                                                   unifiableTypeVars);
+
+      ante = Bpl.Expr.And(Bpl.Expr.Neq(Sink.IdentWithClean(o), sink.Null), ante);
+
+      // Wrap the forall.
+      Bpl.Expr frame = new Bpl.ForallExpr(Token.NoToken, new Bpl.TypeVariableSeq(alpha), new Bpl.VariableSeq(o, f),
+        null,
+        new Bpl.Trigger(Bpl.Token.NoToken, true,
+          new Bpl.ExprSeq(Bpl.Expr.Select(sink.HeapExpr(), Sink.IdentWithClean(o), Sink.IdentWithClean(f)))),
+        Bpl.Expr.Imp(
+          ante,
+          checker.CheckFieldLocation(Sink.IdentWithClean(o), Sink.IdentWithClean(f),
+                                     unifiableTypeVars)
+        ));
+      
+      // Split the result into a sequence of expressions, instead of it being one big conjunction!
+      Bpl.Expr[] exprArr = new Bpl.Expr[5];
+      int exprArrCount = 0;
+      exprArr[exprArrCount] = frame;
+      exprArrCount++;
+      
+      Bpl.Expr aboutO = Bpl.Expr.And(Bpl.Expr.Neq(Sink.IdentWithClean(o), sink.Null),
+                                     AboutO(Sink.IdentWithClean(o)));
+
+      Bpl.Expr arrayElementsContrib = GenModifiesContrib.ArrayElementsModifiesContrib;
+      if (includeArrayLocations && arrayElementsContrib != null) {
+        Bpl.Expr! ante2 = Clone(Bpl.Expr.And(aboutO, arrayElementsContrib));
+
+        // Value arrays
+        exprArr[exprArrCount] =
+          globalArrayFrameCondition(ante2, o, ind, Sink.BuiltinFunction.ValueArray, Bpl.Type.Bool, checker);
+        exprArrCount++;
+
+        // Int arrays
+        exprArr[exprArrCount] =
+          globalArrayFrameCondition(ante2, o, ind, Sink.BuiltinFunction.IntArray, Bpl.Type.Int, checker);
+        exprArrCount++;
+
+        // Ref arrays
+        exprArr[exprArrCount] =
+          globalArrayFrameCondition(ante2, o, ind, Sink.BuiltinFunction.RefArray, sink.RefType, checker);
+        exprArrCount++;
+
+        // Non-null ref arrays
+        exprArr[exprArrCount] =
+          globalArrayFrameCondition(ante2, o, ind, Sink.BuiltinFunction.NonNullRefArray, sink.RefType, checker);
+        exprArrCount++;
+      }
+      
+      // Create an array of the precise size for the number of expressions encountered
+      // (which will either have length 1 or length 5)
+      Bpl.Expr[] eArr = new Bpl.Expr[exprArrCount];
+      for (int i = 0; i < exprArrCount; i++) {
+        eArr[i] = exprArr[i];
+      }
+      Bpl.ExprSeq eSeq = new Bpl.ExprSeq(eArr);
+      return eSeq;
+    }
+    
+    private Bpl.Expr! globalArrayFrameCondition(Bpl.Expr! ante,
+                                                Bpl.BoundVariable! o, Bpl.BoundVariable! ind,
+                                                Sink.BuiltinFunction arrayCtor, Type! elType,
+                                                UnmodifiableLocationChecker! checker) {
+        Bpl.BoundVariable! etype =
+          new Bpl.BoundVariable(Token.NoToken, new Bpl.TypedIdent(Bpl.Token.NoToken, "$T", sink.TypeType));
+        Bpl.BoundVariable! rank =
+          new Bpl.BoundVariable(Token.NoToken, new Bpl.TypedIdent(Bpl.Token.NoToken, "$r", Bpl.Type.Int));
+
+        Bpl.Expr typeConstraint = Bpl.Expr.Subtype(
+          sink.Function(Sink.BuiltinFunction.Typeof, Sink.IdentWithClean(o)),
+          sink.Function(arrayCtor, Sink.IdentWithClean(etype), Sink.IdentWithClean(rank)));
+
+        Bpl.ExprSeq! triggers = new Bpl.ExprSeq ();
+        Bpl.Expr! check = checker.CheckArrayLocation(Sink.IdentWithClean(o),
+                                                     elType,
+                                                     Sink.IdentWithClean(ind),
+                                                     triggers);
+
+        Trigger trigger = null;
+        if (triggers.Length > 0) {
+          triggers.Add(typeConstraint);
+          trigger = new Trigger(Bpl.Token.NoToken, true, triggers);
+        }
+
+        return new Bpl.ForallExpr(Bpl.Token.NoToken, new Bpl.VariableSeq(o, ind, etype, rank),
+                                  trigger, Bpl.Expr.Imp(Bpl.Expr.And(ante, typeConstraint), check));
+    }
+
+    // ------------------------------------------------------------------------------------------
+
+    // methodFrameCondition is true iff we want to compose the frame condition of a method as opposed to a loop 
+    internal Bpl.ExprSeq! GenerateObjectsFrameCondition(Bpl.Expr! preHeap)
+    {
+      GlobalFrameConditionChecker! checker =
+        new GlobalFrameConditionChecker(preHeap, this);
+      return MapUnmodifiableLocations(checker, true);
+    }
+
+    private class GlobalFrameConditionChecker : UnmodifiableLocationChecker {
+      private readonly Bpl.Expr! preHeap;
+      private readonly MethodSignature! methodSig;
+
+      public GlobalFrameConditionChecker(Bpl.Expr! preHeap,
+                                         MethodSignature! methodSig) {
+        this.preHeap = preHeap;
+        this.methodSig = methodSig;
+      }
+
+      public Bpl.Expr! CheckFieldLocation(Bpl.Expr! obj, Bpl.Expr! field,
+                                          Bpl.TypeVariableSeq! unifiableTypeVars) {
+        return Bpl.Expr.Eq(Bpl.Expr.Select(preHeap,
+                                           methodSig.Clone(obj),
+                                           methodSig.Clone(field)),
+                           Bpl.Expr.Select(methodSig.sink.HeapExpr(),
+                                           methodSig.Clone(obj),
+                                           methodSig.Clone(field)));
+      }
+
+      public Bpl.Expr! CheckArrayLocation(Bpl.Expr! obj, Type! elType,
+                                          Bpl.Expr! index, Bpl.ExprSeq! triggers) {
+        triggers.Truncate(0);
+        Bpl.Expr! postExpr = methodSig.sink.ArrayGet(methodSig.Clone(obj), elType,
+                                                   methodSig.Clone(index),
+                                                     methodSig.sink.HeapExpr());
+        triggers.Add(postExpr);
+        return Bpl.Expr.Eq(methodSig.sink.ArrayGet(methodSig.Clone(obj), elType,
+                                                   methodSig.Clone(index),
+                                                   preHeap),
+                           postExpr);
+      }
+    }
+
+    // ------------------------------------------------------------------------------------------
+
+    private Bpl.Expr! AboutO(Bpl.Expr! obj) {
+      Bpl.Expr res =
+        sink.IsAllocatedOfRef(Clone(obj), new OldExpr(Bpl.Token.NoToken, sink.HeapExpr()), true);
+      
+      // conjoin old($Heap[$o, $writable])
+      res = Bpl.Expr.And(res,
+        om.IsObjectWritable(Clone(obj), new OldExpr(Bpl.Token.NoToken, sink.HeapExpr())));
+
+      return res;
+    }
+    
+    // ------------------------------------------------------------------------------------------
+
+    private Bpl.Expr! Clone(Bpl.Expr! expr) {
+      return sink.Clone(expr);
+    }
+
+    // ------------------------------------------------------------------------------------------
+
+    // Construct a formula that characterises whether it is allowed to
+    // assign to the location. This is used for local modifies checks within
+    // the procedure implementation. It is not checked that obj is not null
+    // (we assume that this is done anyway by the surrounding code).
+    //
+    // The expressions obj and field are cloned each time they are used
+    // in the resulting expression, in order to avoid sharing and problems
+    // during resolution
+    internal Bpl.Expr! AssignmentToFieldIsForbidden(Bpl.Expr! obj, Bpl.Expr! field,
+                                                    Bpl.TypeVariableSeq! unifiableTypeVars) {
+      // $IncludeInMainFrameCondition($f)
+      Bpl.Expr aboutF =
+        sink.Function(Sink.BuiltinFunction.IncludeInMainFrameCondition, Clone(field));
+
+      Bpl.Expr! standardCondition = Bpl.Expr.And(aboutF, AboutO(obj));
+      
+      if (this.method is Cci.InstanceInitializer) {
+        Cci.Class cl = this.method.DeclaringType as Cci.Class;
+        if (cl != null && cl.IsGeneric) {
+          cl = (Cci.Class)cl.GetTemplateInstance(cl.DeclaringModule, null, cl.DeclaringType, cl.TemplateParameters);
+        }
+        if (cl != null) {
+          sink.AddType(cl);
+          Bpl.Expr thisDotStar = Bpl.Expr.Or(
+              Bpl.Expr.Neq(Clone(obj), Bpl.Expr.Ident("this", sink.RefType)),
+              Bpl.Expr.Not(Bpl.Expr.Subtype(
+                sink.TypeNameExpression(cl),
+                sink.Function(Sink.BuiltinFunction.DeclType, Clone(field))
+              )));
+          standardCondition = Bpl.Expr.And(standardCondition, thisDotStar);
+        }
+      }
+      
+      Bpl.Expr ante = standardCondition;
+
+      // Allow $ownerRef and $ownerFrame to be modified for peers of captured parameters
+      Bpl.Expr cap = null;
+      foreach (CapturedParameterInfo! cpi in capturedParameters) {
+        Bpl.Expr e = new Bpl.OldExpr(NoToken, Clone(om.EqualOwners(obj, cpi.p)));
+        if (cap == null) {
+          cap = e;
+        } else {
+          cap = Bpl.Expr.Or(cap, e);
+        }
+      }
+      if (cap != null) {
+        Bpl.Expr! ownerFieldCheck = om.IsOwnerField(Clone(field));
+
+        // ensure that no equations with incompatible types are produced
+        UnresolvedSubstituter simplifier =
+          new UnresolvedSubstituter(new Dictionary<string!, Bpl.Expr!> (), unifiableTypeVars);
+	    
+        cap = Bpl.Expr.And(simplifier.VisitExpr(ownerFieldCheck), cap);
+        ante = Bpl.Expr.And(ante, Bpl.Expr.Not(cap));
+      }
+      
+      Dictionary<string!, Bpl.Expr!>! mapping = new Dictionary<string!, Bpl.Expr!> ();
+      mapping.Add(GenModifiesO.Name, obj);
+      mapping.Add(GenModifiesF.Name, field);
+      UnresolvedSubstituter subst = new UnresolvedSubstituter(mapping, unifiableTypeVars);
+
+      return Bpl.Expr.And(ante,
+             Bpl.Expr.And(subst.VisitExpr(GenModifiesContrib.ModifiesContrib),
+                          subst.VisitExpr(GenModifiesContrib.ExposeContrib)));
+    }
+
+    public Bpl.Expr! AssignmentToFieldIsForbidden(Bpl.Expr! obj, Bpl.Expr! field) {
+      return AssignmentToFieldIsForbidden(obj, field, new Bpl.TypeVariableSeq ());
+    }
+
+    // ------------------------------------------------------------------------------------------
+
+    // The expressions obj and field are cloned each time they are used
+    // in the resulting expression, in order to avoid sharing and problems
+    // during resolution
+    public Bpl.Expr! AssignmentToArrayIsForbidden(Bpl.Expr! obj, Type! elType,
+                                                  Bpl.Expr[]! indices) {
+
+//    It seems that the whole type constraint is not necessary, because we have already
+//    "decided" to update $Heap[o, $elements???] ?
+//
+//        Bpl.Expr typeConstraint = Bpl.Expr.Subtype(
+//          sink.Function(Sink.BuiltinFunction.Typeof, Clone(obj)),
+//          sink.Function(Sink.BuiltinFunction.ValueArray, Clone(elType), Bpl.Expr.Literal(1)));
+      
+      Dictionary<string!, Bpl.Expr!>! mapping = new Dictionary<string!, Bpl.Expr!> ();
+      mapping.Add(GenModifiesO.Name, obj);
+      mapping.Add(GenModifiesF.Name, sink.Fields.Elements(elType));
+      mapping.Add(GenModifiesInd.Name, sink.ArrayIndex(obj, indices));
+      UnresolvedSubstituter subst = new UnresolvedSubstituter(mapping, new Bpl.TypeVariableSeq ());
+
+      Bpl.Expr! arrayElementsContrib = GenModifiesContrib.AllArrayElementsModifiesContrib;
+      return Bpl.Expr.And(AboutO(obj), subst.VisitExpr(arrayElementsContrib));
+    }
+
+    // ------------------------------------------------------------------------------------------
+
+    // Determine the modifies clause contribution
+    private readonly Bpl.TypeVariable! GenModifiesAlpha;
+    private readonly Bpl.BoundVariable! GenModifiesO;
+    private readonly Bpl.BoundVariable! GenModifiesF;
+    private readonly Bpl.BoundVariable! GenModifiesInd;
+      
+    private GenerateModifiesContribution GenModifiesContribAttr = null;
+    private GenerateModifiesContribution! GenModifiesContrib { get {
+      if (GenModifiesContribAttr == null)
+        GenModifiesContribAttr = 
+          new GenerateModifiesContribution(this,
+                                           Sink.IdentWithClean(GenModifiesO),
+                                           Sink.IdentWithClean(GenModifiesF),
+                                           Sink.IdentWithClean(GenModifiesInd),
+                                           Prelude.HeapName);
+      return GenModifiesContribAttr;
+    }}
+
+      
+    // ------------------------------------------------------------------------------------------
+
+    private class UnresolvedSubstituter : Duplicator {
+      private readonly Bpl.TypeVariableSeq! unifiableTypeVars;
+
+      private readonly IDictionary<string!, Bpl.Expr!>! mapping;
+      private bool insideOldExpr = false;
+
+      public UnresolvedSubstituter(IDictionary<string!, Bpl.Expr!>! mapping,
+                                   // during the substitution, it is checked whether
+                                   // equations can be eliminated because of incompatible
+                                   // types (to avoid type checking errors later on).
+                                   // the variables given here are considered as unifiable and
+                                   // passed to Type.Unify
+                                   Bpl.TypeVariableSeq! unifiableTypeVars) {
+        base();
+        this.mapping = mapping;
+        this.unifiableTypeVars = unifiableTypeVars;
+      }
+
+      public override Bpl.Expr! VisitIdentifierExpr(Bpl.IdentifierExpr! node)
+      {
+        Bpl.Expr res;
+        if (mapping.TryGetValue(node.Name, out res))
+          // we do not introduce the old-operation in this case,
+          // because we assume that only bound variables (which are
+          // unaffected by "old") are substituted using the visitor
+          return (!)res;
+        res = base.VisitIdentifierExpr(node);
+        if (insideOldExpr)
+          res = new Bpl.OldExpr(NoToken, res);
+        return res;
+      }
+
+      // we need special treatment for equations, because otherwise
+      // the type checker will complain about incomparable types
+      public override Bpl.Expr! VisitNAryExpr(NAryExpr! node)
+      {
+        Bpl.Expr! newExpr = base.VisitNAryExpr(node);
+        Bpl.NAryExpr newNode = newExpr as NAryExpr;
+        if (newNode == null)
+          return newExpr;
+
+        Bpl.BinaryOperator op = newNode.Fun as Bpl.BinaryOperator;
+        if (op != null) {
+          switch (op.Op) {
+          case Bpl.BinaryOperator.Opcode.Eq:
+            if (IncompatibleTypes(((!)newNode.Args[0]).ShallowType,
+                                  ((!)newNode.Args[1]).ShallowType))
+              return Bpl.Expr.False;
+            break;
+          case Bpl.BinaryOperator.Opcode.Neq:
+            if (IncompatibleTypes(((!)newNode.Args[0]).ShallowType,
+                                  ((!)newNode.Args[1]).ShallowType))
+              return Bpl.Expr.True;
+            break;
+          case Bpl.BinaryOperator.Opcode.And:
+            if (((!)newNode.Args[0]).Equals(Bpl.Expr.False) ||
+                ((!)newNode.Args[1]).Equals(Bpl.Expr.False))
+              return Bpl.Expr.False;
+            break;
+          case Bpl.BinaryOperator.Opcode.Or:
+            if (((!)newNode.Args[0]).Equals(Bpl.Expr.True) ||
+                ((!)newNode.Args[1]).Equals(Bpl.Expr.True))
+              return Bpl.Expr.True;
+            break;
+          }
+        }
+          
+        return newNode;
+      }
+
+      private bool IncompatibleTypes(Type! a, Type! b) {
+        return !a.Unify(b, unifiableTypeVars,
+                        new Dictionary<TypeVariable!, Type!> ());
+      }
+
+      // we also push down old-expressions as far as possible, to avoid
+      // injecting state-dependent expressions in old
+      public override Expr! VisitOldExpr(OldExpr! node)
+      {
+        bool previouslyInOld = insideOldExpr;
+        insideOldExpr = true;
+        Expr! e = (Expr!)this.Visit(node.Expr);
+        insideOldExpr = previouslyInOld;
+        return e;
+      }
+    }
+
+    // ------------------------------------------------------------------------------------------
+
+    internal void GenerateMethodPrelude (Cci.Method! method, MethodSignature! sig, Cci.CfgBlock! entry) 
+    {
+       
+        // Need to copy the in and out parameters because there cannot be any
+        // where clauses on formals in implementations.
+        Bpl.VariableSeq! InParameters = new Bpl.VariableSeq();
+        Bpl.VariableSeq! OutParameters = new Bpl.VariableSeq();
+        // Each formal is now a clone of the original
+        foreach(Variable! v in sig.InParameters){
+          Variable vprime = (Variable!) v.Clone();
+          vprime.TypedIdent = (TypedIdent!) vprime.TypedIdent.Clone();
+          vprime.TypedIdent.WhereExpr = null;
+          InParameters.Add(vprime);
+        }
+        foreach(Variable! v in sig.OutParameters){
+          Variable vprime = (Variable!) v.Clone();
+          vprime.TypedIdent = (TypedIdent!) vprime.TypedIdent.Clone();
+          vprime.TypedIdent.WhereExpr = null;
+          OutParameters.Add(vprime);
+        }
+        
+        assume sink.InstructionTranslator != null; // internal method so we can be careful to wire everything up before calling this
+        sink.InstructionTranslator.currentProcedure = new Bpl.Implementation(
+            NoToken,
+            Sink.UniqueProcedureName(method),
+            new Bpl.TypeVariableSeq(),
+            InParameters,
+            OutParameters,
+            new Bpl.VariableSeq(),
+            new List<Bpl.Block!>()
+            );
+        if (CommandLineOptions.Clo.UserWantsToTranslateRoutine(method, Sink.UniqueProcedureName(method)))
+        {
+            sink.toplevelDeclarations.Add(sink.InstructionTranslator.currentProcedure);
+            sink.implementationOrigins[sink.InstructionTranslator.currentProcedure] = method;
+        }
+          
+        Cci.IMutableSet localNames = new Cci.HashSet();
+
+        Hashtable/*<string!,Cci.Parameter!>*/ parametersByName = new Hashtable();
+        parametersByName["this"] = method.ThisParameter;
+        if (method.Parameters != null)
+        for (int i=0; i<method.Parameters.Count; i++)
+        {
+            Cci.Parameter! p = (Cci.Parameter! ) method.Parameters[i];
+            parametersByName[Sink.CleanUpName((!)p.Name.Name)] = p;
+        }
+        
+        this.currentParamMap = new Hashtable();
+
+        string firstBlockName = Sink.BlockName(entry, "block");
+
+        Bpl.Block! entryBlock = new Bpl.Block(
+            NoToken,
+            "entry",
+            new Bpl.CmdSeq(),
+            new Bpl.GotoCmd(NoToken, new Bpl.StringSeq(firstBlockName))
+            );
+        sink.AddBplBlock(entry, entryBlock);
+
+        Bpl.Formal thisParameter = null;
+        #region Introduce locals variables for in parameters and copy them in. Also add type-based assumptions for them.
+
+        bool isMethodOfStruct = method.DeclaringType is Cci.Struct;
+
+        foreach (Bpl.Formal! inParameter in sink.InstructionTranslator.currentProcedure.InParams)
+        {
+            if (IsSpecialParameter((!)inParameter))
+            {
+                // special added parameter
+                continue;
+            }
+            else if (((!)inParameter.Name).Equals("this") && ! isMethodOfStruct) 
+            {
+                thisParameter = inParameter;
+
+                // Unlike the other in parameters, we just use the name "this" rather
+                // than copying to a local variable. Here, we stick a local variable
+                // for this in the local variable map, so that "this" doesn't get 
+                // re-declared later.
+                Bpl.LocalVariable thisLocal = new Bpl.LocalVariable(NoToken, inParameter.TypedIdent);                
+                sink.InstructionTranslator.translatedLocals["this"] = thisLocal;
+                this.currentParamMap[method.ThisParameter] = thisLocal;
+            }
+            else
+            {
+                string! localName = inParameter.Name.Substring(0, inParameter.Name.IndexOf('$'));
+                Bpl.LocalVariable local = new Bpl.LocalVariable(NoToken, Sink.TypedIdent(localName, inParameter.TypedIdent.Type));
+                localNames.Add(localName);
+                sink.InstructionTranslator.AddLocal(local);
+
+                Bpl.Cmd copyCommand = Cmd.SimpleAssign(NoToken, Sink.Ident(local), Sink.Ident(inParameter.Name, inParameter.TypedIdent.Type));
+                entryBlock.Cmds.Add(copyCommand);
+
+                Cci.Parameter parameter = (Cci.Parameter!) parametersByName[localName];
+                this.currentParamMap[parameter] = local;
+                Cci.TypeNode parameterType = parameter.Type;
+                
+                // attach:  where $Is(local, Type) to declaration for reference types, and some similar property for other types
+                Cci.TypeNode realType = parameterType;
+                Cci.Reference r = realType as Cci.Reference;
+                if (r != null) {
+                  realType = r.ElementType;
+                }
+                Bpl.Type translatedType = this.sink.Convert(realType);
+                
+                local.TypedIdent.WhereExpr = Bpl.Expr.And(sink.TypeAssumption(localName, realType, translatedType), sink.IsAllocated(local.TypedIdent));
+                
+            }
+        }
+
+        #endregion
+        #region Introduce out parameter names as local variables (for copy-in/copy-out)
+        
+        // Note! There must be locals for BPL out params because while there can
+        // be where-clauses on procedure declarations, there cannot be on
+        // implementation declarations. So if there aren't local variables with
+        // where-clauses (the same ones that are on the corresponding formals in
+        // the procedure declaration), then any havocs on out params would lose
+        // the information contained in the where-clauses.
+
+        foreach (Bpl.Formal! outParameter in sink.InstructionTranslator.currentProcedure.OutParams)
+        {
+            if (((!)outParameter.Name).Equals(Prelude.ResultVariableName)) { continue; }
+
+            string! localName = outParameter.Name.Substring(0, outParameter.Name.IndexOf('$'));
+            assume localName.Length > 0;
+
+
+            Bpl.LocalVariable local = new Bpl.LocalVariable(
+                    NoToken, 
+                    Sink.TypedIdent(localName, outParameter.TypedIdent.Type));
+            Cci.TypeNode realType = ((Cci.Parameter!) parametersByName[localName]).Type;
+            Cci.Reference r = realType as Cci.Reference;
+            if (r != null) {
+              realType = r.ElementType;
+            }
+            Bpl.Type translatedType = this.sink.Convert(realType);
+            local.TypedIdent.WhereExpr = Bpl.Expr.And(sink.TypeAssumption(localName, realType, translatedType), sink.IsAllocated(local.TypedIdent));
+                    
+            if (!localNames.Contains(localName)){ // was also an in parameter
+              Cci.Parameter parameter = (Cci.Parameter!) parametersByName[localName];
+              this.currentParamMap[parameter] = local;
+              sink.InstructionTranslator.AddLocal(local);
+            }
+            assume sink.copyBackCommands != null;
+            sink.copyBackCommands.Add(sink.Assign(Sink.Ident(outParameter), Sink.Ident(local)));
+        }
+
+        #endregion
+        #region Record field assumptions
+
+        if (!isMethodOfStruct && method is Cci.InstanceInitializer)
+        {
+            Cci.TypeNode type = AdjustForGenerics((!)method.DeclaringType);
+            Bpl.Expr destExpr = Sink.IdentWithClean((!)thisParameter);
+            
+            Cci.MemberList members = type.Members;
+            for (int i=0, n = members == null ? 0 : members.Count; i<n; i++)
+            {
+                Cci.Field field = members[i] as Cci.Field;
+                if (field != null && ! field.IsStatic && field.CciKind == Cci.CciMemberKind.Regular && !Sink.IsNonNullType(field.Type) && !field.IsStrictReadonly)
+                {
+                    sink.AddField(field);
+                    Bpl.Expr fa = sink.FieldAccess(destExpr, field, Prelude.HeapName);
+                    Bpl.Type ty = sink.Convert(field.Type);
+                    if (ty.Equals(sink.StructType)) {
+                        sink.AddType(field.Type);
+                        Bpl.Expr z = sink.Function(Sink.BuiltinFunction.ZeroInit, fa, sink.TypeNameExpression(field.Type));
+                        entryBlock.Cmds.Add(Sink.Assume(z));
+                    } else {
+                        Bpl.Expr initialValue = sink.ZeroEquiv(ty);
+                        entryBlock.Cmds.Add(Sink.Assume(Bpl.Expr.Eq(fa, initialValue)));
+                    }
+                }
+            }
+        }
+        
+        #endregion
+    }
+    private Cci.TypeNode! AdjustForGenerics (Cci.TypeNode! type)
+    {
+      // This assumes we encounter template definitions only under Whidbey, not Everett
+      if (type.IsGeneric && type.TemplateParameters != null && (type.TemplateParameters).Count > 0)
+      {
+        type = (!)type.GetGenericTemplateInstance(type.DeclaringModule, type.ConsolidatedTemplateParameters);
+      }
+      return type;
+    }
+  }
+}

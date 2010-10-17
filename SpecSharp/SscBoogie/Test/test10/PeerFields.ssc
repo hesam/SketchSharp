@@ -1,0 +1,203 @@
+// This file tests peer-field connections, where peer fields are not mentioned in invariants
+
+using Microsoft.Contracts;
+
+class PeerFields {
+  [Peer] PeerFields p;
+  [Peer] int[]! a;
+  [Peer] object s;
+
+  public PeerFields(int x)
+    requires 0 <= x;
+  {
+    if (x < 10) {
+      p = new PeerFields(x+1);
+    }
+    a = new int[x];
+    base();
+  }
+
+  public void Ouch() {
+    additive expose (this) {
+      this.s = "hello";  // error: an object of an Immutable type cannot be assigned to a peer field (because immutable objects have no peers, our axiom sez)
+    }
+  }
+
+  public void M(int x)
+  {
+    if (x < 10) {
+      this.M(x+1);
+      this.N(x);
+      this.P(x);
+      if (this.p != null) {
+        this.p.M(x+1);
+        this.p.N(x);
+        this.p.P(x);
+      }
+    }
+  }
+
+  [NoDefaultContract]
+  public void N(int x)
+    requires this.IsConsistent;
+  {
+    if (x < 10 && this.p != null) {
+      this.p.N(x+1);  // error: this.p is not known to be consistent, as required by N
+    }
+  }
+
+  [Additive] public virtual void P(int x)
+  {
+    this.M(x);  // error: this is not (peer) consistent, as required by M
+  }
+
+  [NoDefaultContract]
+  public void Q(int x)
+    requires this.IsConsistent;
+  {
+    this.M(x);  // error: this is not known to be peer consistent, as is required by M
+  }
+
+  [NoDefaultContract]
+  public void R(int x)
+    requires this.IsConsistent;
+  {
+    if (this.p != null) {
+      this.p.M(x);  // error: this.p is not known to be peer consistent, as is required by M
+    }
+  }
+
+  public void S(int x)
+  {
+    if (this.p != null) {
+      this.p.M(x);
+      additive expose (this) {
+        this.p.M(x);  // error: this.p is not peer consistent, as is required by M
+      }
+    }
+  }
+
+  public void Assign0()
+  {
+    additive expose (this) {
+      this.p = new PeerFields(8);
+    }
+  }
+
+  public void Assign1([Captured] PeerFields p)
+  {
+    additive expose (this) {
+      this.p = p;
+    }
+  }
+
+  public void Assign2(PeerFields p)
+  {
+    additive expose (this) {
+      this.p = p;  // error: p may already be owned
+    }
+  }
+
+  [NoDefaultContract]
+  public void Assign3()
+  {
+    PeerFields p = new PeerFields(5);
+    additive expose (p) {
+      p.p = this;  // error: "this" might be committed
+    }
+  }
+
+  [NoDefaultContract]
+  public virtual void Assign4()
+  {
+    this.p = new PeerFields(2);  // error: "this" might be committed
+  }
+
+  [NoDefaultContract]
+  public virtual void Assign5()
+  {
+    this.p = null;  // error: even for a field not used in any invariant, the target
+                    // object must be known not to be committed
+  }
+}
+
+public class Parent {
+  [Rep] Child ch;  // oldest child
+
+  [Additive] public virtual void M() {
+    Child c = new Child(3);
+    additive expose (this) {
+      ch = c;
+    }
+  }
+
+  [Additive] public virtual void N()
+  {
+    if (ch != null) {
+      ch.M();  // error: ch is not peer consistent
+    }
+  }
+
+  [Additive] public virtual void P()
+  {
+    additive expose (this) {
+      if (ch != null) {
+        ch.M();
+        if (ch.sibling != null) {
+          ch.sibling.M();
+        }
+      }
+    }
+  }
+
+  [Additive] public virtual void Q()
+  {
+    if (ch != null) {
+      ch.M();  // error: ch is committed, which is not allowed by IsPeerConsistent, the precondition of Child.M
+    }
+  }
+
+  [Additive] public virtual void Assign0() {
+    Child c = new Child(10);
+    additive expose (c) {
+      c.sibling = this.ch;  // error: if this.ch is not null, then it is committed
+    }
+  }
+
+  [Additive] public virtual void Assign1() {
+    additive expose (this) {
+      Child c = new Child(10);
+      additive expose (c) {
+        c.sibling = this.ch;  // error:  peer-field assignments are (now) only willing to change the owner of the RHS
+      }
+    }
+  }
+
+  [Additive] public virtual void Assign2() {
+    additive expose (this) {
+      Child c = new Child(10);
+      additive expose (c) {
+        Owner.Assign(c, this, typeof(Parent));
+        c.sibling = this.ch;
+      }
+    }
+  }
+}
+
+public class Child {
+  [Peer] public Child sibling;  // reference to any younger siblings
+
+  public Child(int youngerSiblings) {
+    if (0 < youngerSiblings) {
+      sibling = new Child(youngerSiblings - 1);
+    }
+  }
+
+  public void M()
+    requires IsPeerConsistent;
+  {
+    if (sibling != null) {
+      sibling.M();
+    }
+  }
+}

@@ -1,0 +1,53 @@
+// This file (Chunker11-AdditiveExpose.ssc) shows two ways in which an "additive expose"
+// can go wrong, namely in a non-virtual method or in a virtual non-additive method.
+// Files Chunker11[abc].ssc show three ways to use an "additive expose".
+// The files Chunker{-AdditiveExpose,11a,11b,11c}.ssc are not longer part of the regular
+// demo.  Instead, after Chunker10.ssc, one goes to Chunker12.ssc.
+
+public class Chunker
+{
+  string! src;
+  public readonly int ChunkSize;
+  invariant 0 < ChunkSize;
+  int n;  // the number of characters returned so far
+  invariant 0 <= n && n <= src.Length;
+
+  public string! NextChunk_NonVirtual()
+    ensures result.Length == ChunkSize;
+  {
+    additive expose (this) {
+      string s;
+      if (n + ChunkSize <= src.Length) {
+        s = src.Substring(n, ChunkSize);
+      } else {
+        s = src.Substring(n);
+      }
+      n += ChunkSize;
+      return s;
+    }
+  }
+
+  public virtual string! NextChunk_Virtual()
+    ensures result.Length == ChunkSize;
+  {
+    additive expose (this) {  // error: object not exposable
+      string s;
+      if (n + ChunkSize <= src.Length) {
+        s = src.Substring(n, ChunkSize);
+      } else {
+        s = src.Substring(n);
+      }
+      n += ChunkSize;
+      return s;
+    }
+  }
+
+  public Chunker(string! source, int chunkSize)
+    requires 0 < chunkSize;
+  {
+    src = source;
+    ChunkSize = chunkSize;
+    n = 0;
+    base();
+  }
+}

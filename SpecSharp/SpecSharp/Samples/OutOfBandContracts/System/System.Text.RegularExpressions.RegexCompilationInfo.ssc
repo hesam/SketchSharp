@@ -1,0 +1,55 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Text.RegularExpressions
+{
+
+    public class RegexCompilationInfo
+    {
+
+        public bool IsPublic
+        {
+          get;
+          set;
+        }
+
+        public RegexOptions Options
+        {
+          get;
+          set;
+        }
+
+        public string! Pattern
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string! Namespace
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string! Name
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public RegexCompilationInfo (string pattern, RegexOptions options, string name, string fullnamespace, bool ispublic);
+    }
+}

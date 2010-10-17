@@ -1,0 +1,47 @@
+using System;
+
+public class Demo{
+  public static Uri FileNameToUri(string fileName){
+    return new Uri(fileName);
+  }
+  public static string UriToFileName(Uri uri){
+    if (uri.IsFile)
+      return uri.LocalPath;
+    else
+      throw new ArtifactException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Uri {0} is not a file Uri", uri));
+  }
+  public static void Main(){
+    string str = null;
+    Uri uri = Demo.FileNameToUri(str);
+    str = UriToFileName(uri);
+    uri = Demo.FileNameToUri(str);
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+public class ArtifactException : Exception{
+  public ArtifactException(string message) : base(message){}
+}

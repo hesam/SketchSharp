@@ -1,0 +1,266 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <ProductVersion>8.0.40903</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{55F21034-C308-4139-979D-2BF0AA569959}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <StartupObject>
+    </StartupObject>
+    <RootNamespace>Microsoft.VisualStudio.Shell</RootNamespace>
+    <NoStandardLibraries>false</NoStandardLibraries>
+    <AssemblyName>Microsoft.VisualStudio.Shell</AssemblyName>
+    <SccProjectName>//depot/xsharp/cci</SccProjectName>
+    <SccLocalPath>..</SccLocalPath>
+    <SccAuxPath>
+    </SccAuxPath>
+    <SccProvider>MSSCCI:Source Depot</SccProvider>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>false</Optimize>
+    <OutputPath>.\bin\Debug\</OutputPath>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+    <DefineConstants>INCLUDE_VSREFS;DEBUG;TRACE</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+    <IncrementalBuild>false</IncrementalBuild>
+    <NoWarn>1699</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>false</DebugSymbols>
+    <Optimize>true</Optimize>
+    <OutputPath>.\bin\Release\</OutputPath>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+    <DefineConstants>INCLUDE_VSREFS</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+    <IncrementalBuild>false</IncrementalBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.VisualStudio.Designer.Interfaces">
+      <HintPath>..\..\..\..\..\..\..\binaries.x86fre\bin\i386\Microsoft.VisualStudio.Designer.Interfaces.dll</HintPath>
+      <Name>Microsoft.VisualStudio.Designer.Interfaces</Name>
+      <FusionName>Microsoft.VisualStudio.Designer.Interfaces, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, ProcessorArchitecture=MSIL</FusionName>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.OLE.Interop">
+      <HintPath>..\..\..\..\..\..\..\binaries.x86fre\bin\i386\PrimaryInteropAssemblies\Microsoft.VisualStudio.OLE.Interop.dll</HintPath>
+      <Name>Microsoft.VisualStudio.OLE.Interop</Name>
+      <FusionName>Microsoft.VisualStudio.OLE.Interop, Version=7.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, ProcessorArchitecture=Neutral</FusionName>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Shell.Interop">
+      <HintPath>..\..\..\..\..\..\..\binaries.x86fre\bin\i386\PrimaryInteropAssemblies\Microsoft.VisualStudio.Shell.Interop.dll</HintPath>
+      <Name>Microsoft.VisualStudio.Shell.Interop</Name>
+      <FusionName>Microsoft.VisualStudio.Shell.Interop, Version=7.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, ProcessorArchitecture=Neutral</FusionName>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Shell.Interop.8.0">
+      <HintPath>..\..\..\..\..\..\..\binaries.x86fre\bin\i386\PrimaryInteropAssemblies\Microsoft.VisualStudio.Shell.Interop.8.0.dll</HintPath>
+      <Name>Microsoft.VisualStudio.Shell.Interop.8.0</Name>
+      <FusionName>Microsoft.VisualStudio.Shell.Interop.8.0, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, ProcessorArchitecture=Neutral</FusionName>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.TextManager.Interop, Version=7.1.31229.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+      <HintPath>..\..\..\..\..\..\..\binaries.x86chk\bin\i386\PrimaryInteropAssemblies\Microsoft.VisualStudio.TextManager.Interop.dll</HintPath>
+      <Name>Microsoft.VisualStudio.TextManager.Interop</Name>
+      <SpecificVersion>False</SpecificVersion>
+      <Aliases>global</Aliases>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.VSHelp, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+      <HintPath>..\..\Program Files\Common Files\Microsoft Shared\MSEnv\Microsoft.VisualStudio.VSHelp.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="System">
+      <HintPath>H:\WINDOWS\Microsoft.NET\Framework\v2.0.x86fre\System.dll</HintPath>
+      <Name>System</Name>
+    </Reference>
+    <Reference Include="System.Design">
+      <HintPath>H:\WINDOWS\Microsoft.NET\Framework\v2.0.x86fre\System.Design.dll</HintPath>
+      <Name>System.Design</Name>
+    </Reference>
+    <Reference Include="System.Drawing">
+      <HintPath>H:\WINDOWS\Microsoft.NET\Framework\v2.0.x86fre\System.Drawing.dll</HintPath>
+      <Name>System.Drawing</Name>
+    </Reference>
+    <Reference Include="System.Drawing.Design">
+      <HintPath>H:\WINDOWS\Microsoft.NET\Framework\v2.0.x86fre\System.Drawing.Design.dll</HintPath>
+      <Name>System.Drawing.Design</Name>
+    </Reference>
+    <Reference Include="System.Windows.Forms">
+      <HintPath>H:\WINDOWS\Microsoft.NET\Framework\v2.0.x86fre\System.Windows.Forms.dll</HintPath>
+      <Name>System.Windows.Forms</Name>
+    </Reference>
+    <Reference Include="System.XML">
+      <HintPath>H:\WINDOWS\Microsoft.NET\Framework\v2.0.x86fre\System.XML.dll</HintPath>
+      <Name>System.XML</Name>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\common\include\version.cs">
+      <Link>version.cs</Link>
+    </Compile>
+    <Compile Include="AssemblyEnumerationService.cs" />
+    <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="DefaultRegistryRootAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DialogPage.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="EventSinkCollection.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ExternDll.cs" />
+    <Compile Include="HelpService.cs" />
+    <Compile Include="IConfigureToolboxItem.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="InstalledProductRegistrationAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="IProfileManager.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="LogicalView.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="MenuCommandService.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="MsiComponentIdAttribute.cs" />
+    <Compile Include="MsiTokenAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="NativeMethods.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="OleMenuCommand.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="OleMenuCommandService.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Package.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Private\PackageRegistrationAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideAssemblyFilterAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideAutomationAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideEditorFactoryAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideKeyBindingTableAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideMenuResourceAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideObjectAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideOptionPageAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideProfileAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideProjectFactoryAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideServiceAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideToolboxFormatAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideToolboxItemConfigurationAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideToolboxItemsAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideToolboxPageAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideToolWindowAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProvideToolWindowVisibilityAttribute.cs" />
+    <Compile Include="ProvideViewAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="RegisterAutoLoadAttribute.cs" />
+    <Compile Include="RegisterEditorExtensionAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="RegisterEditorLogicalViewAttribute.cs" />
+    <Compile Include="RegisterExtenderAttribute.cs" />
+    <Compile Include="RegisterLanguageExtensionAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="RegisterLoadKeyAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="RegisterProjectItem.cs" />
+    <Compile Include="RegistrationAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Resources.cs" />
+    <Compile Include="SafeNativeMethods.cs" />
+    <Compile Include="SelectionContainer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServiceProvider.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ServiceProviderHierarchy.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Task.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TaskCategory.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TaskPriority.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TaskProvider.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ToolWindowPane.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="UnsafeNativeMethods.cs" />
+    <Compile Include="WindowPane.cs">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <AppDesigner Include="Properties\" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="ResourceStrings.resx" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSHARP.Targets" />
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>

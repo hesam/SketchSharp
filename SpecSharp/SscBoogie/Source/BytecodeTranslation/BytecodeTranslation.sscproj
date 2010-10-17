@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VisualStudioProject>
+  <XEN ProjectType="Local"
+     SchemaVersion="1.0"
+     Name="BytecodeTranslation"
+     ProjectGuid="4b727d4b-4a43-4b11-a47d-48a6cd8d4bc1"
+    >
+    <Build>
+      <Settings ApplicationIcon=""
+         AssemblyName="BytecodeTranslation"
+         OutputType="Library"
+         RootNamespace="BytecodeTranslation"
+         StartupObject=""
+         TargetPlatform="v2"
+         TargetPlatformLocation=""
+         ShadowedAssembly=""
+         StandardLibraryLocation=""
+        >
+        <Config Name="Debug"
+           AllowUnsafeBlocks="False"
+           BaseAddress="285212672"
+           CheckForOverflowUnderflow="False"
+           ConfigurationOverrideFile=""
+           DefineConstants="DEBUG;TRACE"
+           DocumentationFile=""
+           DebugSymbols="True"
+           FileAlignment="4096"
+           IncrementalBuild="True"
+           Optimize="False"
+           OutputPath="bin\Debug"
+           RegisterForComInterop="False"
+           RemoveIntegerChecks="false"
+           TreatWarningsAsErrors="False"
+           WarningLevel="4"
+           RunProgramVerifier="False"
+           ProgramVerifierCommandLineOptions=""
+           ReferenceTypesAreNonNullByDefault="False"
+           RunProgramVerifierWhileEditing="False"
+           AllowPointersToManagedStructures="False"
+           CheckContractAdmissibility="True"
+           CheckPurity="False"
+           />
+        <Config Name="Release"
+           AllowUnsafeBlocks="false"
+           BaseAddress="285212672"
+           CheckForOverflowUnderflow="false"
+           ConfigurationOverrideFile=""
+           DefineConstants="TRACE"
+           DocumentationFile=""
+           DebugSymbols="false"
+           FileAlignment="4096"
+           IncrementalBuild="false"
+           Optimize="true"
+           OutputPath="bin\release"
+           RegisterForComInterop="false"
+           RemoveIntegerChecks="false"
+           TreatWarningsAsErrors="True"
+           WarningLevel="4"
+           />
+      </Settings>
+      <References>
+        <Reference Name="Mscorlib.Contracts"
+             AssemblyName="Mscorlib.Contracts"
+             Private="false"
+             HintPath="..\..\Binaries\Mscorlib.Contracts.dll"
+             />
+        <Reference Name="Microsoft.SpecSharp"
+             AssemblyName="Microsoft.SpecSharp"
+             Private="false"
+             HintPath="..\..\Binaries\Microsoft.SpecSharp.dll"
+             />
+        <Reference Name="System"
+             AssemblyName="System"
+             Private="false"
+             />
+        <Reference Name="System.Compiler.Framework"
+             AssemblyName="System.Compiler.Framework"
+             Private="false"
+             HintPath="..\..\Binaries\System.Compiler.Framework.dll"
+             />
+        <Reference Name="System.Compiler"
+             AssemblyName="System.Compiler"
+             Private="false"
+             HintPath="..\..\Binaries\System.Compiler.dll"
+             />
+        <Reference Name="System.Compiler.Contracts"
+             AssemblyName="System.Compiler.Contracts"
+             Private="true"
+             HintPath="../../Binaries/System.Compiler.Contracts.dll"
+             />
+        <Reference Name="Basetypes"
+             AssemblyName="Basetypes"
+             Private="true"
+             HintPath="../../Binaries/Basetypes.dll"
+             />
+        <Reference Name="Core"
+             AssemblyName="Core"
+             Private="true"
+             HintPath="../../Binaries/Core.dll"
+             />
+        <Reference Name="Prelude"
+             Project="{C3F39495-FAB0-4594-BDCD-921D180B5C06}"
+             Private="true"
+             />
+      </References>
+    </Build>
+    <Files>
+      <Include>
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="CmdArgs.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="Translate.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="TypeAssignment.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="CilTranslator.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="..\version.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="StringBank.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="FrameConditions.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="MethodSignature.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="Quantifiers.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="OwnershipModel.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="StandardOwnershipModel.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="ExperimentalOwnershipModel.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="InstructionTranslator.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="Sink.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="ExpressionTranslator.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="InstructionTranslatorHelpers.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="PreTranslation.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="Translator.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="TrivialOwnershipModel.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="ParameterConditions.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="MethodRepository.ssc"
+                 />
+      </Include>
+    </Files>
+  </XEN>
+</VisualStudioProject>

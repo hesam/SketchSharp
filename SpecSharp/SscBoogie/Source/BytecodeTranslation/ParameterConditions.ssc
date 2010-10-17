@@ -1,0 +1,442 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+using System;
+using System.Collections.Generic;
+using Cci = System.Compiler;
+using Bpl = Microsoft.Boogie;
+using Microsoft.Contracts;
+
+namespace Microsoft.Boogie
+{  
+  abstract class ParameterConditions {
+    protected readonly string! methodSignatureFullName;
+    protected readonly bool methodIsPure;
+    public readonly bool methodIsVirtual;
+    protected readonly bool isVirtualSignature;
+    protected readonly RequiresSeq! oRequires;
+    protected readonly EnsuresSeq! oEnsures;
+    protected readonly Sink! sink;
+    
+    public ParameterConditions (string! methodSignatureFullName, bool methodIsPure, bool methodIsVirtual, bool isVirtualSignature,
+                                RequiresSeq! oRequires, EnsuresSeq! oEnsures,
+                                Sink! sink)
+      requires isVirtualSignature ==> methodIsVirtual;
+    {
+      this.methodSignatureFullName = methodSignatureFullName;
+      this.methodIsPure = methodIsPure;
+      this.methodIsVirtual = methodIsVirtual;
+      this.isVirtualSignature = isVirtualSignature;
+      this.oRequires = oRequires;
+      this.oEnsures = oEnsures;
+      this.sink = sink;
+    }
+    
+    public abstract void ParameterContribution (string! humanReadableName, Bpl.Expr! param, Cci.TypeNode! paramType, Bpl.Expr receiver,
+                                                bool isInParam, bool isReceiver,
+                                                bool noDefault, bool isAdditive, bool isInside, bool isDelayed, int pos, bool isInStruct)
+      requires isInside ==> isInParam && !(isReceiver && methodIsVirtual);
+    
+    /// <summary>
+    /// Called after ParameterContribution has been called for all parameters and return values of the method.
+    /// </summary>
+    public virtual void CollectiveContribution() {
+    }
+  }
+
+  // --------------------------------------------- BoogieParameterConditions ---------------------------------------------
+
+  class BoogieParameterConditions : ParameterConditions {
+    protected readonly OwnershipModel! om;
+    readonly bool lite;
+    
+    public BoogieParameterConditions (string! methodSignatureFullName, bool methodIsPure, bool methodIsVirtual, bool isVirtualSignature,
+                                      RequiresSeq! oRequires, EnsuresSeq! oEnsures,
+                                      Sink! sink,
+                                      OwnershipModel! om)
+      requires isVirtualSignature ==> methodIsVirtual;
+    {
+      base(methodSignatureFullName, methodIsPure, methodIsVirtual, isVirtualSignature, oRequires, oEnsures, sink);
+      this.om = om;
+      this.lite = CommandLineOptions.Clo.CheckingLevel < 1;
+    }
+    
+    /// <summary>
+    /// noDefault (applied either to the method or the parameter) means that no spec is generated.
+    ///
+    /// isInside means that peers are ignored, and that the parameter is (locally or classically, depending
+    /// on isAdditive) exposed for its static type.  isInside is allowed only for in-parameters, and is
+    /// allowed for a receiver only for non-virtual methods.
+    ///
+    /// isAdditive says to use classic exposition rather than local exposition.
+    ///
+    /// isInStruct is used only if pos >=0.
+    /// </summary>
+    public override void ParameterContribution (string! humanReadableName, Bpl.Expr! param, Cci.TypeNode! paramType, Bpl.Expr receiver,
+                                                bool isInParam, bool isReceiver,
+                                                bool noDefault, bool isAdditive, bool isInside, bool isDelayed, int pos, bool isInStruct)
+    {
+      if (noDefault) {
+        return;
+      }
+      if (isDelayed && isInParam) {
+        return;
+      }
+      bool isNotNull;
+      paramType = Sink.StripOptionalModifiers(paramType, out isNotNull);
+      if (isReceiver) {
+        isNotNull = true;
+      }
+      if (isInside) {
+        assert paramType is Cci.Class;
+      }
+
+      Bpl.Expr cond;
+      string descript;
+      Bpl.Expr cond2 = null;
+      string descript2 = null;
+      Bpl.Expr freePost = null;
+      string freePostDescript = null;
+      
+      MiningStrategy ms = null;
+      
+      if (pos >= 0) {
+        if (receiver != null) {
+          if (isInStruct) {
+            // param == null || param.owner == ElementProxyStruct(this,pos).owner || $IsImmutable($typeof(param))
+            cond = Expr.Or(om.EqualOwners(param, sink.Function(Sink.BuiltinFunction.ElementProxyStruct, receiver, Expr.Literal(pos))), sink.Function(Sink.BuiltinFunction.IsImmutable, sink.Function(Sink.BuiltinFunction.Typeof, param)));
+          } else {
+            // param == null || param.owner == ElementProxy(this,pos).owner || $IsImmutable($typeof(param))
+            cond = Expr.Or(om.EqualOwners(param, sink.Function(Sink.BuiltinFunction.ElementProxy, receiver, Expr.Literal(pos))), sink.Function(Sink.BuiltinFunction.IsImmutable, sink.Function(Sink.BuiltinFunction.Typeof, param)));
+          }
+        } else {
+          cond = Expr.True;
+        }
+        descript = "a peer of the expected elements of the generic object";
+      } else if (isInside) {
+        if (isAdditive) {
+          cond = om.IsAdditivelyExposed(param, paramType);
+          descript = "additively exposed for " + paramType.FullName;
+        } else {
+          cond = om.IsLocallyExposed(param, paramType);
+          descript = "exposed for " + paramType.FullName;
+        }
+        
+      } else if (isAdditive) {
+        if (isVirtualSignature) {
+          // [Additive] here means valid/consistent all the way
+          cond = om.IsConsistent(param, !methodIsPure, sink.HeapExpr());
+          descript = methodIsPure ? "valid" : "consistent";
+        } else {
+          // [Additive] here means valid to the current type
+          if (!methodIsPure) {
+            // for most methods, this means .inv has to equal the current type
+            cond = om.IsExposable(param, paramType, true, true);
+            descript = "additively exposable for " + paramType.FullName;
+          } else {
+            // ...but for pure methods, .inv can be any subtype of the current type,
+            // since the method is not allowed to expose the object, anyhow.
+            cond = om.IsExposable(param, paramType, false, false);
+            descript = "additively valid for " + paramType.FullName;
+          }
+        }
+        
+      } else if (methodIsPure) {
+        cond = om.IsPeerValid(param);
+        descript = "peer valid";
+        if (cond is Bpl.QuantifierExpr) {
+          Bpl.QuantifierExpr qe = (Bpl.QuantifierExpr) cond;
+          Bpl.VariableSeq! vs = qe.Dummies;
+          if (vs.Length == 1) {
+            object[] vsa = vs.elems;
+            if (vsa != null) {
+              object ido = vsa[0];
+              if (ido != null) {
+                Bpl.IdentifierExpr id = new Bpl.IdentifierExpr(Token.NoToken, ido.ToString(), sink.RefType);
+                List<Bpl.Expr!>! l = new List<Bpl.Expr!>();
+                l.Add(id);
+                ms = new EEDTemplate("The object {0} is not valid.", l);
+              }
+            }
+          }
+        }
+        if (isReceiver && isInParam && 3 <= CommandLineOptions.Clo.FCOStrength) {
+          // The code that follows this call may want to know that the result does not change as long as
+          // the cone doesn't change.  This reasoning involves $FirstConsistentOwner, about which only little
+          // is known.  Here, we fill in some details about $FirstConsistentOwner:
+          //   free ensures
+          //     this.owner != \bot ==>
+          //       (this.owner is consistent ==> this.FirstConsistentOwner == this.ownerRef) &&
+          //       (this.owner is not consistent ==> this.FirstConsistentOwner == this.ownerRef.FirstConsistentOwner);
+          // That is to say:
+          //   free ensures 
+          //     $Heap[this, $ownerFrame] != $PeerGroupPlaceholder ==>
+          //       ($Heap[$Heap[$Heap[this, $ownerRef], $ownerRef], $inv] <: $Heap[$Heap[this, $ownerRef], $ownerFrame] &&
+          //        $Heap[$Heap[$Heap[this, $ownerRef], $ownerRef], $localinv] != $BaseClass($Heap[$Heap[this, $ownerRef], $ownerFrame])
+          //        ==>
+          //        $Heap[this, $FirstConsistentOwner] == $Heap[this, $ownerRef])
+          //       &&
+          //       (!($Heap[$Heap[$Heap[this, $ownerRef], $ownerRef], $inv] <: $Heap[$Heap[this, $ownerRef], $ownerFrame] &&
+          //          $Heap[$Heap[$Heap[this, $ownerRef], $ownerRef], $localinv] != $BaseClass($Heap[$Heap[this, $ownerRef], $ownerFrame]))
+          //        ==>
+          //        $Heap[this, $FirstConsistentOwner] == $Heap[$Heap[this, $ownerRef], $FirstConsistentOwner]);
+          freePost = om.FCOInfo(param, sink.HeapExpr());
+          freePostDescript = "FCO info about pure receiver";
+        }
+      } else {
+        cond = om.IsPeerValid(param);
+        descript = "peer consistent";
+        if (cond is Bpl.QuantifierExpr) {
+          Bpl.QuantifierExpr qe = (Bpl.QuantifierExpr) cond;
+          Bpl.VariableSeq! vs = qe.Dummies;
+          if (vs.Length == 1) {
+            object[] vsa = vs.elems;
+            if (vsa != null) {
+              object ido = vsa[0];
+              if (ido != null) {
+                Bpl.IdentifierExpr id = new Bpl.IdentifierExpr(Token.NoToken, ido.ToString(), sink.RefType);
+                List<Bpl.Expr!>! l = new List<Bpl.Expr!>();
+                l.Add(id);
+                ms = new EEDTemplate("The object {0} is not valid.", l);
+              }
+            }
+          }
+        }
+        if (!methodIsPure) {
+          cond2 = om.NotHasValidOwner(param);
+          descript2 = "peer consistent (owner must not be valid)";
+        }
+      }
+      
+      if (!isNotNull) {
+        cond = Bpl.Expr.Or(Bpl.Expr.Eq(param, sink.Null), cond);
+        if (cond2 != null) {
+          cond2 = Bpl.Expr.Or(Bpl.Expr.Eq(param, sink.Null), cond2);
+        }
+      }
+      Add(cond, humanReadableName, isInParam, descript, ms);
+      if (cond2 != null && descript2 != null) {
+        Add(cond2, humanReadableName, isInParam, descript2, null);
+      }
+      assert freePost == null <==> freePostDescript == null;
+      if (freePost != null) {
+        Bpl.Ensures fp = new Bpl.Ensures(true, freePost, freePostDescript);
+        oEnsures.Add(fp);
+      }
+    }
+    
+    void Add(Bpl.Expr! e, string! humanReadableParamName, bool isInParam, string! conditionDescription, MiningStrategy ms) {
+      string comment = humanReadableParamName + " is " + conditionDescription;
+      if (methodIsPure) {
+        comment += " (pure method)";
+      }
+      if (isInParam) {
+        Bpl.Requires! n = new Bpl.Requires(lite, e, comment);
+        n.ErrorData = String.Format("The call to {0} requires {1} to be {2}",
+          methodSignatureFullName, humanReadableParamName, conditionDescription);
+        n.ErrorDataEnhanced = ms;
+        oRequires.Add(n);
+      } else {
+        Bpl.Ensures! n = new Bpl.Ensures(lite, e, comment);
+        n.ErrorData = String.Format("On exit from {0}, {1} must be {2}", methodSignatureFullName, humanReadableParamName, conditionDescription);
+        n.ErrorDataEnhanced = ms;
+        oEnsures.Add(n);
+      }
+    }
+  }
+
+  // --------------------------------------------- VisibleStateParameterConditions ---------------------------------------------
+
+  class VisibleStateParameterConditions : ParameterConditions {
+    Bpl.Expr! heap;
+    List<Bpl.Expr!>! exclusionsIn = new List<Bpl.Expr!>();
+    List<Bpl.Expr!>! exclusionsOut = new List<Bpl.Expr!>();
+    
+    public VisibleStateParameterConditions (string! methodSignatureFullName, bool methodIsPure, bool methodIsVirtual, bool isVirtualSignature,
+                                            RequiresSeq! oRequires, EnsuresSeq! oEnsures,
+                                            Sink! sink,
+                                            Bpl.Expr! heap)
+      requires isVirtualSignature ==> methodIsVirtual;
+    {
+      base(methodSignatureFullName, methodIsPure, methodIsVirtual, isVirtualSignature, oRequires, oEnsures, sink);
+      this.heap = heap;
+    }
+  
+    public override void ParameterContribution (string! humanReadableName, Bpl.Expr! param, Cci.TypeNode! paramType, Bpl.Expr receiver,
+                                                bool isInParam, bool isReceiver,
+                                                bool noDefault, bool isAdditive, bool isInside, bool isDelayed, int pos, bool isInStruct)
+    {
+      if (isInside) {
+        // we exclude the condition that invariants hold for this parameter; hence, we don't produce any
+        // condition here and we record the parameter for later use in CollectiveContribution
+        if (isInParam) {
+          exclusionsIn.Add(param);
+        } else {
+          exclusionsOut.Add(param);
+        }
+        return;
+      }
+      if (isDelayed && isInParam) {
+        return;
+      }
+      bool isNotNull;
+      paramType = Sink.StripOptionalModifiers(paramType, out isNotNull);
+      if (isReceiver) {
+        isNotNull = true;
+      }
+
+      // $Inv($Heap, param, type)
+      Bpl.Expr cond = sink.Function(Sink.BuiltinFunction.TheInvariant, heap, param, sink.TypeNameExpression(paramType));
+      List<Bpl.Expr!>! l = new List<Bpl.Expr!>();
+      l.Add(param);
+      MiningStrategy ms = new EEDTemplate("The invariant declared in class " + paramType.FullName + " does not hold for object {0}.", l);
+      
+      if (!isNotNull) {
+        cond = Bpl.Expr.Or(Bpl.Expr.Eq(param, sink.Null), cond);
+      }
+
+      string comment = "invariant for " + humanReadableName + " at type " + paramType.FullName;
+      if (isInParam) {
+        Bpl.Requires n = new Bpl.Requires(false, cond, comment);
+        n.ErrorData = String.Format("The call to {0} requires {1} to satisfy the invariant declared in {2}",
+          methodSignatureFullName, humanReadableName, paramType.FullName);
+        n.ErrorDataEnhanced = ms;
+        oRequires.Add(n);
+      } else {
+        Bpl.Ensures n = new Bpl.Ensures(false, cond, comment);
+        n.ErrorData = String.Format("On exit from {0}, {1} must satisfy the invariant declared in {2}",
+          methodSignatureFullName, humanReadableName, paramType.FullName);
+        n.ErrorDataEnhanced = ms;
+        oEnsures.Add(n);
+      }
+    }
+    
+    public override void CollectiveContribution() {
+      Bpl.BoundVariable oVar = new Bpl.BoundVariable(Token.NoToken, new Bpl.TypedIdent(Token.NoToken, "$o", sink.RefType));
+      Bpl.Expr o = Sink.Ident(oVar);
+      Bpl.BoundVariable tVar = new Bpl.BoundVariable(Token.NoToken, new Bpl.TypedIdent(Token.NoToken, "$CT", sink.TypeType));
+      Bpl.Expr t = Sink.Ident(tVar);
+      // $Inv($Heap, $o, $CT)
+      Bpl.Expr inv = sink.Function(Sink.BuiltinFunction.TheInvariant, heap, o, t);
+      // $typeof($o) <: $CT
+      Bpl.Expr typeRange = Bpl.Expr.Subtype(sink.Function(Sink.BuiltinFunction.Typeof, o), t);
+      
+      // free requires (forall $o, $CT :: { $Inv($Heap, $o, $CT) }
+      //   $o != null && $Heap[$o, $alloc] && $o \not\in { $BeingConstructed, inExclusion0, inExclusion1, ... } &&
+      //   $typeof($o) <: $CT &&
+      //   ==> $Inv($Heap, $o, $CT));
+      Bpl.Expr oRange = Bpl.Expr.And(Bpl.Expr.Neq(o, sink.Null), sink.IsAllocatedOfRef(o, heap, true));
+      Bpl.Expr oExclusions = Bpl.Expr.Neq(o, Sink.Ident(Prelude.BeingContructedName, sink.RefType));
+      foreach (Bpl.Expr excl in exclusionsIn) {
+        oExclusions = Bpl.Expr.And(oExclusions, Bpl.Expr.Neq(o, excl));
+      }
+      Bpl.Expr ante = Bpl.Expr.And(Bpl.Expr.And(oRange, oExclusions), typeRange);
+      Bpl.Trigger tr = new Bpl.Trigger(Token.NoToken, true, new ExprSeq(inv));
+      Bpl.Expr q = new Bpl.ForallExpr(Token.NoToken, new VariableSeq(oVar, tVar), tr, Bpl.Expr.Imp(ante, inv));
+      oRequires.Add(new Bpl.Requires(true, q, "all objects satisfy their invariants"));
+
+      // free ensures (forall $o, $CT ::
+      //   { $Inv($Heap, $o, $CT) }
+      //   $o != null && $Heap[$o, $alloc] && $o \not\in { $BeingConstructed, inExclusion0, ..., outExclusion0, ... } &&
+      //    $typeof($o) <: $CT &&
+      //   (!old($Heap)[$o, $alloc] || $Inv(old($Heap), $o, $CT))
+      //   ==> $Inv($Heap, $o, $CT));
+      foreach (Bpl.Expr excl in exclusionsOut) {
+        oExclusions = Bpl.Expr.And(oExclusions, Bpl.Expr.Neq(o, excl));
+      }
+      Bpl.Expr oldHeap = new Bpl.OldExpr(Token.NoToken, heap);;
+      Bpl.Expr oldInv = sink.Function(Sink.BuiltinFunction.TheInvariant, oldHeap, o, t);
+      Bpl.Expr cFree = Bpl.Expr.Or(sink.IsAllocatedOfRef(o, oldHeap, false), oldInv);
+      ante = Bpl.Expr.And(Bpl.Expr.And(Bpl.Expr.And(oRange, oExclusions), typeRange), cFree);
+      q = new Bpl.ForallExpr(Token.NoToken, new VariableSeq(oVar, tVar), tr, Bpl.Expr.Imp(ante, inv));
+      oEnsures.Add(new Bpl.Ensures(true, q));
+
+      // Define $InvExclusion for this method implementation:
+      // free requires (forall $o :: { $InvExclusion($o) } $InvExclusion($o) <==> o == inExclusion0 || inExclusion1 || ...);
+      oVar = new Bpl.BoundVariable(Token.NoToken, new Bpl.TypedIdent(Token.NoToken, "$o", sink.RefType));
+      o = Sink.Ident(oVar);
+      Bpl.Expr invExclO = sink.Function(Sink.BuiltinFunction.InvExclusion, o);
+      Bpl.Expr exclAll = Bpl.Expr.False;
+      foreach (Bpl.Expr excl in exclusionsIn) {
+        exclAll = Bpl.Expr.Or(exclAll, Bpl.Expr.Eq(o, excl));
+      }
+      tr = new Bpl.Trigger(Token.NoToken, true, new ExprSeq(invExclO));
+      q = new Bpl.ForallExpr(Token.NoToken, new VariableSeq(oVar), tr, Bpl.Expr.Iff(invExclO, exclAll));
+      oRequires.Add(new Bpl.Requires(true, q, "define $InvExclusion for this implementation"));
+
+      EEDTemplate! ede;
+      q = ObjectInvariantsAreMaintained(sink, heap, null, exclusionsIn, out ede);
+      Bpl.Ensures n = new Bpl.Ensures(false, q, "object invariants are maintained");
+      n.ErrorData = String.Format("On exit from {0}, all objects must satisfy their invariants", methodSignatureFullName);
+      n.ErrorDataEnhanced = ede;
+      oEnsures.Add(n);
+    }
+    
+    public static Bpl.Expr! ObjectInvariantsAreMaintained(Sink! sink, Bpl.Expr! heap, Bpl.Expr oldHeap, List<Bpl.Expr!> exclusionsIn, out EEDTemplate! ede)
+    {
+      // ensures (forall $o, $CT ::
+      //   { $Inv($Heap, $o, $CT) }
+      //   $o != null && $Heap[$o, $alloc] && $o \not\in { $BeingConstructed, inExclusion0, ..., outExclusion0, ... } &&
+      //    $typeof($o) <: $CT && $KnownClass($CT) &&
+      //   (!old($Heap)[$o, $alloc] ||
+      //    ($Inv(old($Heap), $o, $CT) && (exists<alpha> $f: Field alpha :: DeclType($f) == $CT && old($Heap)[$o,$f] != $Heap[$o,$f])))
+      //   ==> $Inv($Heap, $o, $CT));
+      Bpl.BoundVariable oVar = new Bpl.BoundVariable(Token.NoToken, new Bpl.TypedIdent(Token.NoToken, "$o", sink.RefType));
+      Bpl.Expr o = Sink.Ident(oVar);
+      Bpl.BoundVariable tVar = new Bpl.BoundVariable(Token.NoToken, new Bpl.TypedIdent(Token.NoToken, "$CT", sink.TypeType));
+      Bpl.Expr t = Sink.Ident(tVar);
+
+      // $Inv($Heap, $o, $CT)
+      Bpl.Expr inv = sink.Function(Sink.BuiltinFunction.TheInvariant, heap, o, t);
+      // $KnownClass($CT)
+      Bpl.Expr known = sink.Function(Sink.BuiltinFunction.KnownClass, t);
+      // $typeof($o) <: $CT
+      Bpl.Expr typeRange = Bpl.Expr.Subtype(sink.Function(Sink.BuiltinFunction.Typeof, o), t);
+
+      if (oldHeap == null) {
+        oldHeap = new Bpl.OldExpr(Token.NoToken, heap);
+      }
+      Bpl.Expr oldInv = sink.Function(Sink.BuiltinFunction.TheInvariant, oldHeap, o, t);
+
+      Bpl.Expr oRange = Bpl.Expr.And(Bpl.Expr.Neq(o, sink.Null), sink.IsAllocatedOfRef(o, heap, true));
+      Bpl.Expr oExclusions = Bpl.Expr.Neq(o, Sink.Ident(Prelude.BeingContructedName, sink.RefType));
+      if (exclusionsIn == null) {
+        // !$InvExclusion($o)
+        oExclusions = Bpl.Expr.And(oExclusions, Bpl.Expr.Not(sink.Function(Sink.BuiltinFunction.InvExclusion, o)));
+      } else {
+        // $o != inExclusion0 && $o != inExclusion1 && ...
+        foreach (Bpl.Expr excl in exclusionsIn) {
+          oExclusions = Bpl.Expr.And(oExclusions, Bpl.Expr.Neq(o, excl));
+        }
+      }
+
+      Bpl.TypeVariable alpha = new Bpl.TypeVariable(Token.NoToken, "alpha");
+      Bpl.BoundVariable fVar = new Bpl.BoundVariable(Token.NoToken, new Bpl.TypedIdent(Token.NoToken, "$f", sink.FieldType(alpha)));
+      Bpl.Expr f = Sink.Ident(fVar);
+      Bpl.Expr newHeapOF = Bpl.Expr.Select(sink.HeapExpr(), o, f);
+      Bpl.Expr qe = new Bpl.ExistsExpr(Token.NoToken, new TypeVariableSeq(alpha), new VariableSeq(fVar),
+        null,
+        new Bpl.Trigger(Token.NoToken, true, new ExprSeq(newHeapOF)),
+        Bpl.Expr.And(Bpl.Expr.And(
+          Bpl.Expr.Eq(sink.Function(Sink.BuiltinFunction.DeclType, f), t),
+          sink.Function(Sink.BuiltinFunction.IncludeInMainFrameCondition, f)),
+          Bpl.Expr.Neq(
+            Bpl.Expr.Select(new Bpl.OldExpr(Token.NoToken, sink.HeapExpr()), o, f),
+            Bpl.Expr.Select(sink.HeapExpr(), o, f)
+          )
+        ));
+      Bpl.Expr cChecked = Bpl.Expr.Or(sink.IsAllocatedOfRef(o, oldHeap, false), Bpl.Expr.And(oldInv, qe));
+      Bpl.Expr ante = Bpl.Expr.And(Bpl.Expr.And(Bpl.Expr.And(oRange, oExclusions), Bpl.Expr.And(typeRange, known)), cChecked);
+      Bpl.Trigger tr = new Bpl.Trigger(Token.NoToken, true, new ExprSeq(inv));
+      Bpl.Expr q = new Bpl.ForallExpr(Token.NoToken, new VariableSeq(oVar, tVar), tr, Bpl.Expr.Imp(ante, inv));
+
+      List<Bpl.Expr!>! l = new List<Bpl.Expr!>();
+      l.Add(t);
+      l.Add(o);
+      ede = new EEDTemplate("The invariant declared in class {0} does not hold for object {1}.", l);
+      return q;
+    }
+  }
+}

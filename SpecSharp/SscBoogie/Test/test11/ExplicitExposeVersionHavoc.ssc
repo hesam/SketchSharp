@@ -1,0 +1,56 @@
+// Tests explicit havocing of ExposeVersion at field updates where
+// field is not mentioned in invariants thus no expose-block is required
+// around the update
+ 
+using Microsoft.Contracts;
+
+class C {
+  public int x;
+
+  [Pure]
+  public int Foo() {
+    bool dummy;
+    return this.x; 
+  }
+
+  public void Unsound() 
+    modifies this.x;
+  {
+    assume Foo() == 5;
+    this.x = 6;
+    assert Foo() == 5; // error: explicit havocing makes sure we catch it
+  }
+
+}
+
+class A {
+  C! c = new C();
+
+  void Unsound()
+    requires c.IsConsistent || Owner.None(c);
+    modifies c.x;
+  {
+    assume c.Foo() == 5;
+    c.x = 6;  // assignment is allowed, since x does not appear in any invariant and (as implied by the precondition) c is not committed
+    assert c.Foo() == 5; // error: explicit havocing makes sure we catch it
+  }
+}
+
+class D {
+  int x;
+
+  invariant x >= 0;
+
+  [Pure]
+  int Foo() {
+    bool dummy;
+    return this.x; 
+  }
+
+  void Unsound() 
+    modifies this.x;
+  {
+    assume Foo() == 5;
+    this.x--;        // error: x is mentioned in invariant: expose is needed
+  }
+}

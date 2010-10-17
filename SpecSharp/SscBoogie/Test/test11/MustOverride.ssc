@@ -1,0 +1,60 @@
+using Microsoft.Contracts;
+
+namespace Ex1{
+  public class B{
+    public virtual int foo()
+      ensures result == 0;
+    {
+      return this.GetType() == typeof(B) ? 0 : 1;
+    }
+  }
+}
+
+namespace Ex2{
+  public class B{
+    [MustOverride]
+    public virtual int foo()
+      ensures result == 0;
+    {
+      return this.GetType() == typeof(B) ? 0 : 1;
+    }
+  }
+}
+
+namespace Ex3{
+  public class B{
+    [MustOverride]
+    public virtual int foo()
+      ensures result == 0;
+    {
+      return this.GetType() == typeof(B) ? 0 : 1;
+    }
+  }
+  public class C:B{
+    [MustOverride]
+    public override int foo()
+      ensures result == 0;
+    {
+      return this.GetType() == typeof(B) ? 0 : 1;
+    }
+  }
+}
+
+namespace Ex4{
+  public class B{
+    [MustOverride]
+    public virtual int foo()
+      ensures result == 0;
+    {
+      return this.GetType() == typeof(B) ? 0 : 1;
+    }
+  }
+  public class C:B{
+    [MustOverride]
+    public override int foo()
+      ensures result == 0;
+    {
+      return this.GetType() == typeof(C) ? 0 : 1;
+    }
+  }
+}

@@ -1,0 +1,276 @@
+using Microsoft.Contracts;
+
+public class AssignToNonInvariantField {
+  int x;
+  int y;
+  invariant 0 <= y;
+
+  public virtual void M()
+    modifies this.*;
+  {
+    expose (this) {
+      x++;
+      y++;
+    }
+  }
+
+  public virtual void N()
+    modifies this.*;
+  {
+    x++;  // no problem here
+    y++;  // fine, since the assignment maintains the invariant
+  }
+}
+
+class InternalClass {
+  public int X;
+
+  public void M()
+    modifies X;
+  {
+    X++;  // fine, since X is known not to be part of any invariant
+  }
+}
+
+public class T {
+  private int a;
+  internal int b;
+  internal protected int c0;
+  protected internal int c1;
+  protected int d;
+  public int e;
+
+  invariant SomeRelation(c0, c1, d, e);
+  [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+  static bool SomeRelation(int k0, int k1, int k2, int k3) {
+    bool dummy = true;
+    return dummy;
+  }
+
+  public T() {
+    assume SomeRelation(c0, c1, d, e);
+  }
+
+  public void Ma()
+    modifies this.*;
+  {
+    a++;  // fine, a is known not to be part of any invariant
+  }
+
+  public void Mb()
+    modifies this.*;
+  {
+    b++;  // fine, b is known not to be part of any invariant
+  }
+
+  public void Mc0()
+    modifies this.*;
+  {
+    c0++;  // error, this operation require the object to be exposed, because c0 may occur in some invariant
+  }
+
+  public void Mc1()
+    modifies this.*;
+  {
+    c1++;  // error, this operation require the object to be exposed, because c1 may occur in some invariant
+  }
+
+  public void Md()
+    modifies this.*;
+  {
+    d++;  // error, this operation require the object to be exposed, because d may occur in some invariant
+  }
+
+  public void Me()
+    modifies this.*;
+  {
+    e++;  // error, this operation require the object to be exposed, because e may occur in some invariant
+  }
+}
+
+public class RepClass {
+  internal int X;
+  internal int Y;  internal int YY;
+  invariant 0 <= Y && Y == YY;
+  internal int Z;
+
+  public void M()
+    modifies this.*;
+  {
+    X++;  // fine
+    Z++;  // fine (Z is used in an invariant, but not in the enclosinng class)
+  }
+
+  public virtual void P()
+    modifies this.*;
+  {
+    expose (this) {
+      X++;
+      Y++;  YY++;
+      Z++;
+    }
+  }
+}
+
+public class ClientClass {
+  [Rep] RepClass! r = new RepClass();
+
+  public void M0() {
+    this.r.X++;  // error, since X is known not to appear in any invariant, but this.r is committed
+  }
+
+  [NoDefaultContract]
+  public void M1() modifies r.X; {
+    this.r.X++;  // error, since X is known not to appear in any invariant, but this.r might be committed
+  }
+
+  public void M2() {
+    expose (this) {
+      this.r.X++;  // fine, since X is known not to appear in any invariant and this.r is consistent
+    }
+  }
+
+  public void M3() {
+    expose (this) {
+      expose (this.r) {
+        this.r.X++;  // fine, since (X is known not to appear in any invariant and) this.r is mutable
+      }
+    }
+  }
+
+  public virtual void BadUpdateOfY() {
+    this.r.Y++;  // error: since Y occurs in an invariant, this requires "this.r" to be non-committed (and then some)
+    this.r.YY++;
+  }
+
+  public virtual void AnotherBadUpdateOfY() {
+    expose (this) {
+      this.r.Y++;  // error: since Y occurs in an invariant, this requires "this.r" to be exposed (not just "this")
+      this.r.YY++;
+    }
+  }
+
+  public virtual void GoodUpdateOfY() {
+    expose (this) {
+      assume this.r.GetType() == typeof(RepClass);
+      expose (this.r) {
+        this.r.Y++;  // that's the way to do it!
+        this.r.YY++;
+        // By the way, note that no modifies clause is needed, since "this" is valid on entry, and thus
+        // "this.r" is committed on entry.
+      }
+    }
+  }
+}
+
+public class AnotherClient {
+  [Rep] RepClass! r = new RepClass();
+  invariant r.Z == 12;
+
+  [NotDelayed] public AnotherClient(int twe, int lve) {
+    r.Z = twe + lve;  // fine; Z occurs only in the invariant of the owner of its receiver
+    assume twe + lve == 12;  // only here do we assume the value of r.Z to be 12, so that
+                             // the assignment on the previous line does not pass for the
+                             // wrong reason
+  }
+
+  [NotDelayed] public AnotherClient(int q)
+    requires 12 <= q && 2 * q <= 24;
+  {
+    expose (r) {
+      r.Z = q;  // yeah, that's how to do it
+    }
+  }
+
+  public virtual void M(int twelve) {
+    expose (this) {
+      this.r.Z = twelve;  // fine
+      assume twelve == 12;
+    }
+  }
+
+  public virtual void P_Bad() {
+    RepClass newR = new RepClass();
+    expose (newR) {
+      newR.Z = 20;
+    }
+    this.r = newR;  // error: r is a rep field, so this operation requires "this" to be exposed
+  }
+
+  public virtual void P_AlsoBad(int twelve) {
+    RepClass newR = new RepClass();
+    expose (newR) {
+      newR.Z = twelve;
+    }
+    this.r = newR;  // error: r is a rep field, so this operation requires "this" to be exposed
+    assume twelve == 12;
+  }
+
+  public virtual void P_Good()
+    modifies this.*;
+  {
+    RepClass newR = new RepClass();
+    expose (newR) {
+      newR.Z = 12;
+    }
+    expose (this) {
+      this.r = newR;
+    }
+  }
+
+  public virtual void P_AlsoGood()
+    modifies this.*;
+  {
+    RepClass newR = new RepClass();
+    expose (this) {
+      expose (newR) {
+        newR.Z = 12;
+      }
+      this.r = newR;
+    }
+  }
+
+  public virtual void P_ViolatesInvariant()
+    modifies this.*;
+  {
+    RepClass newR = new RepClass();
+    expose (this) {
+      expose (newR) {
+        newR.Z = 20;
+      }
+      this.r = newR;
+    }  // error: invariant does not hold
+  }
+
+  public virtual void BadForAnotherReason()
+    modifies this.*;
+  {
+    RepClass newR = new RepClass();
+    expose (newR) {
+      expose (this) {
+        newR.Z = 12;
+        this.r = newR;
+      }  // error: "this.r" is not in the Valid state, it is Mutable
+    }
+  }
+
+  public virtual void UpdateTheRep_Bad(int twelve, int twelveAgain) {
+    expose (this) {
+      this.r = new RepClass();
+      this.r.Z = twelve;
+      assume twelve == 12;
+    }
+    this.r.Z = twelveAgain;  // error: since Z occurs in an invariant, "r" has to be non-committed
+    assume twelveAgain == 12;
+  }
+
+  public virtual void UpdateTheRep_Good(int twelve) {
+    expose (this) {
+      this.r = new RepClass();
+      expose (this.r) {
+        this.r.Z = twelve;
+        assume twelve == 12;
+      }
+    }
+  }
+}

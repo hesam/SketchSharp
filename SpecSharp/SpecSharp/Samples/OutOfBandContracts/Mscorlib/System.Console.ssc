@@ -1,0 +1,141 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System
+{
+
+    public class Console
+    {
+
+        public static System.IO.TextWriter! Error
+        {
+          [Pure][Reads(ReadsAttribute.Reads.Nothing)]  // the getter always returns the same result (this is the best way we have now to specify that)
+          get;
+            ensures result.IsPeerConsistent;
+        }
+
+        public static System.IO.TextReader! In
+        {
+          [Pure][Reads(ReadsAttribute.Reads.Nothing)]  // the getter always returns the same result (this is the best way we have now to specify that)
+          get;
+            ensures result.IsPeerConsistent;
+        }
+
+        public static System.IO.TextWriter! Out
+        {
+          [Pure][Reads(ReadsAttribute.Reads.Nothing)]  // the getter always returns the same result (this is the best way we have now to specify that)
+          get;
+            ensures result.IsPeerConsistent;
+        }
+
+        public static void Write (string value);
+
+        public static void Write (object value);
+
+        public static void Write (UInt64 value);
+
+        public static void Write (Int64 value);
+
+        public static void Write (UInt32 value);
+
+        public static void Write (int value);
+
+        public static void Write (Single value);
+
+        public static void Write (Decimal value);
+
+        public static void Write (double value);
+
+        public static void Write (Char[] buffer, int index, int count);
+
+        public static void Write (Char[] buffer);
+
+        public static void Write (Char value);
+
+        public static void Write (bool value);
+
+        public static void Write (string format, Object[] arg);
+
+        public static void Write (string format, object arg0, object arg1, object arg2, object arg3);
+
+        public static void Write (string format, object arg0, object arg1, object arg2);
+
+        public static void Write (string format, object arg0, object arg1);
+
+        public static void Write (string format, object arg0);
+
+        public static void WriteLine (string format, Object[] arg);
+
+        public static void WriteLine (string format, object arg0, object arg1, object arg2, object arg3);
+
+        public static void WriteLine (string format, object arg0, object arg1, object arg2);
+
+        public static void WriteLine (string format, object arg0, object arg1);
+
+        public static void WriteLine (string format, object arg0);
+
+        public static void WriteLine (string value);
+
+        public static void WriteLine (object value);
+
+        public static void WriteLine (UInt64 value);
+
+        public static void WriteLine (Int64 value);
+
+        public static void WriteLine (UInt32 value);
+
+        public static void WriteLine (int value);
+
+        public static void WriteLine (Single value);
+
+        public static void WriteLine (double value);
+
+        public static void WriteLine (Decimal value);
+
+        public static void WriteLine (Char[] buffer, int index, int count);
+
+        public static void WriteLine (Char[] buffer);
+
+        public static void WriteLine (Char value);
+
+        public static void WriteLine (bool value);
+
+        public static void WriteLine ();
+
+        public static string ReadLine ();
+
+        public static int Read ();
+
+        public static void SetError (System.IO.TextWriter! newError)
+            requires newError != null otherwise ArgumentNullException;
+
+        public static void SetOut (System.IO.TextWriter! newOut)
+            requires newOut != null otherwise ArgumentNullException;
+
+        public static void SetIn (System.IO.TextReader! newIn)
+            requires newIn != null otherwise ArgumentNullException;
+
+        public static System.IO.Stream OpenStandardOutput (int bufferSize);
+
+        public static System.IO.Stream OpenStandardOutput ();
+
+        public static System.IO.Stream OpenStandardInput (int bufferSize);
+
+        public static System.IO.Stream OpenStandardInput ();
+
+        public static System.IO.Stream OpenStandardError (int bufferSize);
+
+        public static System.IO.Stream OpenStandardError ();
+    }
+}

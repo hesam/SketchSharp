@@ -1,0 +1,42 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Runtime.InteropServices
+{
+
+    public class RegistrationServices
+    {
+
+        public RegistrationServices ();
+
+        public bool TypeRepresentsComType (Type type);
+
+        public bool TypeRequiresRegistration (Type type);
+
+        public Guid GetManagedCategoryGuid ();
+
+        public void RegisterTypeForComClients (Type! type, Guid g)
+            requires type != null otherwise ArgumentNullException;
+
+        public string GetProgIdForType (Type type);
+
+        public Type[] GetRegistrableTypesInAssembly (System.Reflection.Assembly! assembly)
+            requires assembly != null otherwise ArgumentNullException;
+
+        public bool UnregisterAssembly (System.Reflection.Assembly! assembly)
+            requires assembly != null otherwise ArgumentNullException;
+
+        public bool RegisterAssembly (System.Reflection.Assembly! assembly, AssemblyRegistrationFlags flags)
+            requires assembly != null otherwise ArgumentNullException;
+    }
+}

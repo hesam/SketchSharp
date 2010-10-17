@@ -1,0 +1,84 @@
+``/r:..\..\Samples\OutOfBandContracts\mscorlib\bin\mscorlib.contracts.dll
+class M {
+    public static void Main() {
+        string![] a = "foo".Split(' ');
+        Ignore(a);
+        System.Console.WriteLine("success");
+    }
+    public static void Ignore(object o) {}
+}
+`
+success
+`
+//
+// Check that we don't deep strip too much.
+//
+using System.Collections.Generic;
+using Microsoft.Contracts;
+
+class M : IEnumerable<string!> {
+
+    [Pure]
+    System.Collections.IEnumerator! System.Collections.IEnumerable.GetEnumerator() { return null; }
+
+    [Pure]
+    public IEnumerator<string!>! GetEnumerator() { return null; }
+
+    public static void Main() {
+        M m = new M();
+        IEnumerable<string!> i = m;
+        IEnumerator<string!> s = i.GetEnumerator();
+        if (s == null) {
+            System.Console.WriteLine("success");
+        }
+    }
+}
+`
+(10,93): warning CS2612: Null cannot be used where a non-null value is expected
+(13,59): warning CS2612: Null cannot be used where a non-null value is expected
+success
+`
+using System.Collections.Generic;
+
+public class C {
+
+    public static void Main() {
+
+        D<MyNode> d = new D<MyNode>();
+        d.ImmediatelyDominatedBy(new MyNode());
+        System.Console.WriteLine("success");
+    }
+}
+
+public class D<Node> {
+    public Dictionary<Node,List<Node>!>! ImmediateDominatorMap = new Dictionary<Node,List<Node>!>();
+
+    public List<Node>! ImmediatelyDominatedBy(Node! n) { 
+        List<Node>? dominees;
+        this.ImmediateDominatorMap.TryGetValue(n, out dominees);
+        return dominees == null ? new List<Node>() : dominees;
+    }
+
+}
+
+public class MyNode {
+}
+`
+success
+`
+// Make sure that we can strenghten the return type of a method that returns a type parameter
+public class B<T> where T : new() {
+  public virtual T M(){ return default(T); }
+}
+public class C<T>:B<T> where T : new() {
+  public override T! M(){ return new T(); }
+}
+public class M{
+  public static void Main(){
+    System.Console.WriteLine("success");
+  }
+}
+`
+(6,34): warning CS2613: Conversion to 'T!' fails if the value is null
+success
+`

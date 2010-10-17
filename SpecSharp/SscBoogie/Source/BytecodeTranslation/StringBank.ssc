@@ -1,0 +1,124 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+using System.Collections.Generic;
+using Microsoft.Contracts;
+using Cci = System.Compiler;
+
+namespace Microsoft.Boogie
+{
+  /// <summary>
+  /// This class generates identifier expressions to represent string literals.
+  ///
+  /// Each call to CreateLiteral returns an IdentifierExpr whose name is $stringLiteralN
+  /// for some integer N.
+  ///
+  /// The Get method returns the strings and their corresponding Constant's.
+  ///
+  /// It is possible to "undo" the definition of an identifier dished out by CreateLiteral.
+  /// This is done by calling RetireLiteral.  Method Get will return only the
+  /// identifiers that are active.
+  /// The retirement feature is used in our translation of asserts, assumes, and loop invariants,
+  /// which prematurely generate string literals that later are found to be used only to
+  /// carry seralized information.
+  /// </summary>
+  public class StringBank
+  {
+    readonly Sink! sink;
+    public StringBank([Delayed] Sink! sink) {
+      this.sink = sink;
+    }
+    
+    // "string2info" maps strings to the information about that string.  The information includes
+    // a usage count.  If the usage count is 0, then Get will ignore this string literal.
+    Dictionary<string!,StringInformation!>! string2info = new Dictionary<string!,StringInformation!>();
+    // "id2info" is a mapping from string IDs (natural numbers) to strings, such that for any n in range,
+    // $stringLiteral<n> is the name for the string strings[n].
+    [Rep][ElementsRep]
+    List<StringInformation!>! id2info = new List<StringInformation!>();
+    invariant forall{int i in (0 : id2info.Count); id2info[i].StringId == i};
+    
+    class StringInformation {
+      public readonly string! S;
+      public readonly int StringId;
+      public readonly IdentifierExpr! Ie;
+      public int UsageCount;
+      invariant 0 <= UsageCount;
+      public StringInformation(string! s, int id, IdentifierExpr! ie) {
+        S = s;
+        StringId = id;
+        Ie = ie;
+        UsageCount = 1;
+      }
+    }
+
+    public IdentifierExpr! CreateLiteral(string! s) {
+      StringInformation si;
+      if (string2info.TryGetValue(s, out si)) {
+        assert si != null;
+        si.UsageCount++;
+        return si.Ie;
+      } else {
+        int n = id2info.Count;  // the new string will be known as stringLiteral<n>
+        IdentifierExpr iExpr = Expr.Ident(LitName(n), sink.RefType);
+        si = new StringInformation(s, n, iExpr);
+        string2info.Add(s, si);
+        id2info.Add(si);
+        return iExpr;
+      }
+    }
+    
+    const string! Prefix = "$stringLiteral";
+    
+    string! LitName(int n) {
+      return Prefix + n;
+    }
+    
+    /// <summary>
+    /// Expression "e" is assumed to represent a string literal returned by CreateLiteral.
+    /// </summary>
+    StringInformation! IdExprToInfo(IdentifierExpr! e)
+    {
+      int n = int.Parse(e.Name.Substring(Prefix.Length));
+      assume 0 <= n && n < id2info.Count;  // precondition of IdExprToInfo
+      StringInformation si = id2info[n];
+      return si;
+    }
+    
+    /// <summary>
+    /// Expression "e" is assumed to represent an active string literal returned by CreateLiteral.
+    /// </summary>
+    public string! GetString(IdentifierExpr! e) {
+      StringInformation si = IdExprToInfo(e);
+      return si.S;
+    }
+
+    /// <summary>
+    /// Expression "e" is assumed to represent an active string literal returned by CreateLiteral, not all
+    /// of whose usages have been retired.
+    /// </summary>
+    public void RetireLiteral(IdentifierExpr! e) {
+      StringInformation si = IdExprToInfo(e);
+      assume si.UsageCount > 0;  // precondition of RetireLiteral
+      expose (si) {
+        si.UsageCount--;
+      }
+    }
+    
+    public void Get(out List<Constant!>! consts, out List<string!>! contents)
+      ensures consts.Count == contents.Count;
+    {
+      consts = new List<Constant!>();
+      contents = new List<string!>();
+      foreach (StringInformation! si in id2info) {
+        if (si.UsageCount > 0) {
+          Constant c = new Constant(Token.NoToken, new TypedIdent(Token.NoToken, LitName(si.StringId), sink.RefType));
+          consts.Add(c);
+          contents.Add(si.S);
+        }
+      }
+    }
+  }
+}

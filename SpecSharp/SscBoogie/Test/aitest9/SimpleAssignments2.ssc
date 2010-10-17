@@ -1,0 +1,13 @@
+// Test for the division by zero
+
+class SimpleAssignments2 
+{
+	public int DivisionByZero()
+	{
+		int zero = 0;
+		int x = 1/zero;	
+		
+		return x;
+	}
+
+}

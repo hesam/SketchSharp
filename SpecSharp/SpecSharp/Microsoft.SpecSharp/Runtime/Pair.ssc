@@ -1,0 +1,69 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+#define SpecSharp
+
+using System;
+using System.Diagnostics;
+using SC = System.Collections;
+#if CCINamespace
+using Microsoft.Cci;
+#else
+using System.Compiler;
+#endif
+using Microsoft.Contracts;
+using SCG = System.Collections.Generic;
+
+// "using" nothing (from the other collection classes)
+
+namespace Microsoft.SpecSharp.Collections{
+
+/// <summary>
+/// Pairs are 2-ary tuples, having fields First and Second. Pairs are immutable and have structural equality.
+/// </summary>
+public struct Pair<S,T>{
+  public readonly S First;
+  public readonly T Second;
+
+  // Constructors - - - - - - - - - - - - - - - - - - - - - - - - - -
+  /// <summary>
+  /// Initializes a new instance of a pair with the given arguments
+  /// </summary>
+  public Pair(S first, T second) { First = first; Second = second; }
+
+  /// <summary>
+  /// True, if value is a pair and is structurally equal to this, false otherwise [Time: see ==]
+  /// </summary>
+  public override bool Equals(Object value) {
+    return value is Pair<S,T> && this == (Pair<S,T>)value;
+  }
+
+  public override int GetHashCode() {
+    return (First == null ? 0 : First.GetHashCode()) ^ (Second == null ? 0 : Second.GetHashCode());
+  }
+
+  /// <summary>
+  /// Deep structural equality on Pairs
+  /// </summary>
+  public static bool operator ==(Pair<S,T> x, Pair<S,T> y) {
+    return Object.Equals(x.First,y.First) && Object.Equals(x.Second,y.Second);
+  }
+
+  /// <summary>
+  /// Deep structural inequality on Pairs
+  /// </summary>
+  public static bool operator !=(Pair<S,T> x, Pair<S,T> y) {
+    return !(x == y);
+  }
+  //ToString - - - -  - - - - - - - - - - - - - - - - - - - - - - - -
+  /// <summary>
+  /// Formats this pair as "(first, second}"
+  /// </summary>
+  public override string ToString() {
+    return String.Format("({0},{1})",First,Second);   
+  }
+}
+
+}

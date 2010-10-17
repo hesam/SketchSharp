@@ -1,0 +1,136 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Text.RegularExpressions
+{
+
+    public class Regex
+    {
+
+        public RegexOptions Options
+        {
+          get;
+        }
+
+        public bool RightToLeft
+        {
+          get;
+        }
+
+        public static void CompileToAssembly (RegexCompilationInfo[] regexinfos, System.Reflection.AssemblyName assemblyname, System.Reflection.Emit.CustomAttributeBuilder[] attributes, string resourceFile);
+
+        public static void CompileToAssembly (RegexCompilationInfo[] regexinfos, System.Reflection.AssemblyName assemblyname, System.Reflection.Emit.CustomAttributeBuilder[] attributes);
+
+        public static void CompileToAssembly (RegexCompilationInfo[] regexinfos, System.Reflection.AssemblyName assemblyname);
+
+        public String[] Split (string! input, int count, int startat)
+            requires input != null otherwise ArgumentNullException;
+
+        public String[] Split (string! input, int count)
+            requires input != null otherwise ArgumentNullException;
+
+        public String[] Split (string! input)
+            requires input != null otherwise ArgumentNullException;
+
+        public static String[] Split (string input, string pattern, RegexOptions options);
+
+        public static String[] Split (string input, string pattern);
+
+        public string Replace (string! input, MatchEvaluator evaluator, int count, int startat)
+            requires input != null otherwise ArgumentNullException;
+
+        public string Replace (string! input, MatchEvaluator evaluator, int count)
+            requires input != null otherwise ArgumentNullException;
+
+        public string Replace (string! input, MatchEvaluator evaluator)
+            requires input != null otherwise ArgumentNullException;
+
+        public static string Replace (string input, string pattern, MatchEvaluator evaluator, RegexOptions options);
+
+        public static string Replace (string input, string pattern, MatchEvaluator evaluator);
+
+        public string Replace (string! input, string! replacement, int count, int startat)
+            requires input != null otherwise ArgumentNullException;
+            requires replacement != null otherwise ArgumentNullException;
+
+        public string Replace (string! input, string replacement, int count)
+            requires input != null otherwise ArgumentNullException;
+
+        public string Replace (string! input, string replacement)
+            requires input != null otherwise ArgumentNullException;
+
+        public static string Replace (string input, string pattern, string replacement, RegexOptions options);
+
+        public static string Replace (string input, string pattern, string replacement);
+
+        public MatchCollection Matches (string! input, int startat)
+            requires input != null otherwise ArgumentNullException;
+
+        public MatchCollection Matches (string! input)
+            requires input != null otherwise ArgumentNullException;
+
+        public static MatchCollection Matches (string input, string pattern, RegexOptions options);
+
+        public static MatchCollection Matches (string input, string pattern);
+
+        public Match Match (string! input, int beginning, int length)
+            requires input != null otherwise ArgumentNullException;
+
+        public Match Match (string! input, int startat)
+            requires input != null otherwise ArgumentNullException;
+
+        public Match Match (string! input)
+            requires input != null otherwise ArgumentNullException;
+
+        public static Match Match (string input, string pattern, RegexOptions options);
+
+        public static Match Match (string input, string pattern);
+
+        public bool IsMatch (string! input, int startat)
+            requires input != null otherwise ArgumentNullException;
+
+        public bool IsMatch (string! input)
+            requires input != null otherwise ArgumentNullException;
+
+        public static bool IsMatch (string input, string pattern, RegexOptions options);
+
+        public static bool IsMatch (string input, string pattern);
+
+        public int GroupNumberFromName (string! name)
+            requires name != null otherwise ArgumentNullException;
+
+        public string GroupNameFromNumber (int i);
+
+        public Int32[] GetGroupNumbers ();
+
+        public String[] GetGroupNames ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public static string Unescape (string! str)
+            requires str != null otherwise ArgumentNullException;
+
+        public static string Escape (string! str)
+            requires str != null otherwise ArgumentNullException;
+
+        public Regex (string! pattern, RegexOptions options)
+            requires pattern != null otherwise ArgumentNullException;
+            requires (int)options >= 0 otherwise ArgumentOutOfRangeException;
+            requires (int)((int)options >> 10) == 0 otherwise ArgumentOutOfRangeException;
+            requires (int)((int)options & 256) == 0 || (int)((int)options & -780) == 0 otherwise ArgumentOutOfRangeException;
+
+        public Regex (string pattern);
+    }
+}

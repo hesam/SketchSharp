@@ -1,0 +1,9 @@
+using System;
+using Microsoft.Contracts;
+
+public class Program
+{
+  static void Main(string![]! args) {
+    Console.WriteLine("Spec# says hello!");
+  }
+}

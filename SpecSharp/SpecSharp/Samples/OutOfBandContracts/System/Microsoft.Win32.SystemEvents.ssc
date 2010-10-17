@@ -1,0 +1,75 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace Microsoft.Win32
+{
+
+    public class SystemEvents
+    {
+
+        public static void KillTimer (int timerId);
+
+        public static void InvokeOnEventsThread (Delegate method);
+
+        public static int CreateTimer (int interval)
+            requires interval > 0 otherwise ArgumentException;
+
+        public static void remove_UserPreferenceChanging (UserPreferenceChangingEventHandler value);
+
+        public static void add_UserPreferenceChanging (UserPreferenceChangingEventHandler value);
+
+        public static void remove_UserPreferenceChanged (UserPreferenceChangedEventHandler value);
+
+        public static void add_UserPreferenceChanged (UserPreferenceChangedEventHandler value);
+
+        public static void remove_TimerElapsed (TimerElapsedEventHandler value);
+
+        public static void add_TimerElapsed (TimerElapsedEventHandler value);
+
+        public static void remove_TimeChanged (EventHandler value);
+
+        public static void add_TimeChanged (EventHandler value);
+
+        public static void remove_SessionEnding (SessionEndingEventHandler value);
+
+        public static void add_SessionEnding (SessionEndingEventHandler value);
+
+        public static void remove_SessionEnded (SessionEndedEventHandler value);
+
+        public static void add_SessionEnded (SessionEndedEventHandler value);
+
+        public static void remove_PowerModeChanged (PowerModeChangedEventHandler value);
+
+        public static void add_PowerModeChanged (PowerModeChangedEventHandler value);
+
+        public static void remove_PaletteChanged (EventHandler value);
+
+        public static void add_PaletteChanged (EventHandler value);
+
+        public static void remove_LowMemory (EventHandler value);
+
+        public static void add_LowMemory (EventHandler value);
+
+        public static void remove_InstalledFontsChanged (EventHandler value);
+
+        public static void add_InstalledFontsChanged (EventHandler value);
+
+        public static void remove_EventsThreadShutdown (EventHandler value);
+
+        public static void add_EventsThreadShutdown (EventHandler value);
+
+        public static void remove_DisplaySettingsChanged (EventHandler value);
+
+        public static void add_DisplaySettingsChanged (EventHandler value);
+    }
+}

@@ -1,0 +1,230 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System
+{
+
+    public struct DateTime
+    {
+
+        public static DateTime Now
+        {
+          get;
+        }
+
+        public DayOfWeek DayOfWeek
+        {
+          get;
+        }
+
+        public int Second
+        {
+          get;
+        }
+
+        public static DateTime UtcNow
+        {
+          get;
+        }
+
+        public DateTime Date
+        {
+          get;
+        }
+
+        public int Hour
+        {
+          get;
+        }
+
+        public static DateTime Today
+        {
+          get;
+        }
+
+        public int Day
+        {
+          get;
+        }
+
+        public int Millisecond
+        {
+          get;
+        }
+
+        public int DayOfYear
+        {
+          get;
+        }
+
+        public int Year
+        {
+          get;
+        }
+
+        public int Minute
+        {
+          get;
+        }
+
+        public int Month
+        {
+          get;
+        }
+
+        public Int64 Ticks
+        {
+          get;
+        }
+
+        public TimeSpan TimeOfDay
+        {
+          get;
+        }
+
+        public TypeCode GetTypeCode ();
+
+        public String[] GetDateTimeFormats (Char format, IFormatProvider provider);
+
+        public String[] GetDateTimeFormats (Char format);
+
+        public String[] GetDateTimeFormats (IFormatProvider provider);
+
+        public String[] GetDateTimeFormats ();
+
+        public static bool operator >= (DateTime t1, DateTime t2);
+
+        public static bool operator > (DateTime t1, DateTime t2);
+
+        public static bool operator <= (DateTime t1, DateTime t2);
+
+        public static bool operator < (DateTime t1, DateTime t2);
+
+        public static bool operator != (DateTime d1, DateTime d2);
+
+        public static bool operator == (DateTime d1, DateTime d2);
+
+        public static TimeSpan operator - (DateTime d1, DateTime d2);
+
+        public static DateTime operator - (DateTime d, TimeSpan t);
+
+        public static DateTime operator + (DateTime d, TimeSpan t);
+
+        public DateTime ToUniversalTime ();
+
+        public string! ToString (string format, IFormatProvider provider);
+
+        public string! ToString (IFormatProvider provider);
+
+        public string! ToString (string format);
+
+        public string! ToString ();
+
+        public string! ToShortTimeString ();
+
+        public string! ToShortDateString ();
+
+        public string! ToLongTimeString ();
+
+        public string! ToLongDateString ();
+
+        public DateTime ToLocalTime ();
+
+        public Int64 ToFileTimeUtc ();
+
+        public Int64 ToFileTime ();
+
+        public double ToOADate ();
+
+        public DateTime Subtract (TimeSpan value);
+
+        public TimeSpan Subtract (DateTime value);
+
+        public static DateTime ParseExact (string s, String[] formats, IFormatProvider provider, System.Globalization.DateTimeStyles style);
+
+        public static DateTime ParseExact (string s, string format, IFormatProvider provider, System.Globalization.DateTimeStyles style);
+
+        public static DateTime ParseExact (string s, string format, IFormatProvider provider);
+
+        public static DateTime Parse (string s, IFormatProvider provider, System.Globalization.DateTimeStyles styles);
+
+        public static DateTime Parse (string s, IFormatProvider provider);
+
+        public static DateTime Parse (string s);
+
+        public static bool IsLeapYear (int year);
+
+        public int GetHashCode ();
+
+        public static DateTime FromOADate (double d);
+
+        public static DateTime FromFileTimeUtc (Int64 fileTime)
+            requires fileTime >= 0 otherwise ArgumentOutOfRangeException;
+
+        public static DateTime FromFileTime (Int64 fileTime);
+
+        public static bool Equals (DateTime t1, DateTime t2);
+
+        public bool Equals (object value);
+
+        public static int DaysInMonth (int year, int month)
+            requires month >= 1 otherwise ArgumentOutOfRangeException;
+            requires month <= 12 otherwise ArgumentOutOfRangeException;
+
+        public int CompareTo (object value);
+
+        public static int Compare (DateTime t1, DateTime t2);
+
+        public DateTime AddYears (int value);
+
+        public DateTime AddTicks (Int64 value);
+
+        public DateTime AddSeconds (double value);
+
+        public DateTime AddMonths (int months)
+            requires months >= -120000 otherwise ArgumentOutOfRangeException;
+            requires months <= 120000 otherwise ArgumentOutOfRangeException;
+
+        public DateTime AddMinutes (double value);
+
+        public DateTime AddMilliseconds (double value);
+
+        public DateTime AddHours (double value);
+
+        public DateTime AddDays (double value);
+
+        public DateTime Add (TimeSpan value);
+
+        public DateTime (int year, int month, int day, int hour, int minute, int second, int millisecond, System.Globalization.Calendar! calendar)
+            requires calendar != null otherwise ArgumentNullException;
+            requires millisecond >= 0 otherwise ArgumentOutOfRangeException;
+            requires millisecond < 1000 otherwise ArgumentOutOfRangeException;
+
+        public DateTime (int year, int month, int day, int hour, int minute, int second, int millisecond)
+            requires millisecond >= 0 otherwise ArgumentOutOfRangeException;
+            requires millisecond < 1000 otherwise ArgumentOutOfRangeException;
+
+        public DateTime (int year, int month, int day, int hour, int minute, int second, System.Globalization.Calendar! calendar)
+            requires calendar != null otherwise ArgumentNullException;
+
+        public DateTime (int year, int month, int day, int hour, int minute, int second);
+
+        public DateTime (int year, int month, int day, System.Globalization.Calendar calendar);
+
+        public DateTime (int year, int month, int day);
+
+        public DateTime (Int64 ticks)
+            requires ticks >= 0 otherwise ArgumentOutOfRangeException;
+            requires ticks <= 4097261567 otherwise ArgumentOutOfRangeException;
+    }
+}

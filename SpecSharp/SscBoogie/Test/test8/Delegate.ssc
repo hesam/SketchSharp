@@ -1,0 +1,66 @@
+using System.Threading;
+
+public delegate void MyDelegate(int x, object! o);
+
+public sealed class Delegate {
+  public void M(MyDelegate md) {
+    ((!)md)(5, this);  // error: cast to non-null may fail
+  }
+  public void N(MyDelegate! md) {
+    md(5, this);
+  }
+  public void P(MyDelegate md) {
+    if (md != null) {
+      md(5, this);
+    }
+  }
+
+  static void StaticDelegateTarget(int y, object! p) {}
+  void InstanceDelegateTarget(int y, object! p) {}
+
+  MyDelegate! mdField;
+
+  public Delegate()
+  {
+    this.mdField = new MyDelegate(StaticDelegateTarget);
+    base();
+  }
+  public Delegate(bool b)
+  {
+    this.mdField = new MyDelegate(InstanceDelegateTarget);
+    base();
+  }
+
+  public void CallIt(int z, string! s) {
+    expose (this) {
+      mdField(z, s);
+    }
+  }
+
+  public bool CheckTypes(MyDelegate md)
+    ensures result;
+  {
+    object o;
+    if (md != null) {
+      o = md;
+    } else {
+      o = this.mdField;
+    }
+    bool b = o is object;
+    b = b && o is System.Delegate;
+    b &= o is System.MulticastDelegate;
+    b = b & o is object;
+    return b;
+  }
+}
+
+// This class exists just to test the bytecode translator for making sure that the
+// abstract type reconstructed for delegates is indeed a MethodPointee because there
+// is a cast in the translator that will fail otherwise.
+public sealed class CWithInvariant{
+  invariant true;
+  public void Worker(){}
+  public void M(){
+    new Thread(new ThreadStart(new CWithInvariant().Worker));
+  }
+}

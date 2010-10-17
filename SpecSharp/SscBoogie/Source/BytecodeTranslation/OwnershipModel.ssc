@@ -1,0 +1,180 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+namespace Microsoft.Boogie
+{
+  using System.Collections.Generic;
+  using Microsoft.Contracts;
+  using Cci = System.Compiler;
+  using Bpl = Microsoft.Boogie;
+
+  public abstract class OwnershipModel {
+    protected Sink! sink;
+    
+    // just an abbreviation
+    protected static Bpl.IToken! NoToken = Bpl.Token.NoToken;
+    
+    protected OwnershipModel([Delayed] Sink! sink) {
+      this.sink = sink;
+    }
+    
+    ///<summary>
+    /// Returns an expression denoting whether the bottom (i.e. most derived) frame of the given object is writable, i.e. not committed.
+    /// That is, returns:  $Heap[target, $writable]
+    ///</summary>
+    internal Bpl.Expr! IsObjectWritable (Bpl.Expr! target)
+    {
+      return IsObjectWritable(target, sink.HeapExpr());
+    }
+    
+    abstract internal Bpl.Expr! IsObjectWritable (Bpl.Expr! target, Bpl.Expr! heap);
+    
+    
+    // Exposure:
+    
+    internal Bpl.Expr! IsExposable (Bpl.Expr! targetObject, Cci.TypeNode! targetType)
+    {
+      return IsExposable(targetObject, targetType, true, true);
+    }
+    
+    internal Bpl.Expr! IsExposable (Bpl.Expr! targetObject, Cci.TypeNode! targetType, bool mentionWritable)
+    {
+      return IsExposable(targetObject, targetType, mentionWritable, true);
+    }
+    
+    abstract internal Bpl.Expr! IsExposable (Bpl.Expr! targetObject, Cci.TypeNode! targetType, bool mentionWritable, bool exactType);
+    
+    abstract internal Bpl.Expr! IsLocalExposable (Bpl.Expr! targetObject, Cci.TypeNode! targetType, bool mentionWritable);
+    
+    internal Bpl.Expr! IsAdditivelyExposed (Bpl.Expr! target, Cci.TypeNode! frame)
+      requires !(frame is Cci.OptionalModifier);  // caller should strip modifiers before calling (which I then believe will ensure frame.BaseType != null)
+    {
+      return IsAdditivelyExposed(target, frame, sink.HeapExpr(Prelude.HeapName));
+    }
+      
+    public Bpl.Expr! IsAdditivelyExposed (Bpl.Expr! target, Cci.TypeNode! frame, Bpl.IdentifierExpr! heap)
+      requires !(frame is Cci.OptionalModifier);  // caller should strip modifiers before calling (which I then believe will ensure frame.BaseType != null)
+    {
+      sink.AddType(frame);
+      return IsAdditivelyExposed(target, sink.TypeNameExpression(frame), heap);
+    }
+    
+    abstract public Bpl.Expr! IsAdditivelyExposed (Bpl.Expr! target, Bpl.Expr! frame, Bpl.IdentifierExpr! heap) ;
+    
+    abstract public Bpl.Trigger IsAdditivelyExposedTrigger (Bpl.Expr! target, Cci.TypeNode! frame, Bpl.IdentifierExpr! heap);
+    
+    abstract internal Bpl.Expr! IsExposed (Bpl.Expr! target, Bpl.Expr! frame, Bpl.IdentifierExpr! heap);
+    
+    abstract internal Bpl.Expr! IsLocallyExposed (Bpl.Expr! targetObject, Cci.TypeNode! targetType)
+      requires !(targetType is Cci.OptionalModifier);  // caller should strip modifiers before calling (which I then believe will ensure targetType.BaseType != null)
+    
+    abstract public Bpl.Expr! IsLocallyExposed (Bpl.Expr! target, Cci.TypeNode! frame, Bpl.IdentifierExpr! heap);
+      requires frame.BaseType != null;
+    
+    abstract public Bpl.Trigger ExposureTrigger (Bpl.Expr! target, Bpl.IdentifierExpr! heap);
+    
+    abstract public Bpl.Expr! ExposureIsUnchanged (Bpl.Expr! target, Bpl.Expr! preHeap, Bpl.IdentifierExpr! postHeap);
+    
+    abstract public void LocallyPack (Bpl.Expr! target, Cci.TypeNode! frame, CmdSeq! blockCmds);
+    
+    abstract public void LocallyUnpack (Bpl.Expr! target, Cci.TypeNode! frame, CmdSeq! blockCmds);
+      requires frame.BaseType != null;
+    
+    abstract public void AdditivelyPack (Bpl.Expr! target, Cci.TypeNode! frame, CmdSeq! blockCmds);
+    
+    abstract public void AdditivelyUnpack (Bpl.Expr! target, Cci.TypeNode! frame, CmdSeq! blockCmds);
+      requires frame.BaseType != null;
+    
+    
+    
+    // Owner:
+    
+    abstract internal Bpl.Expr! IsConsistent (Bpl.Expr! targetObject, bool mentionWritable, Bpl.Expr! heap);
+    
+    internal Bpl.Expr! IsPeerConsistent (Bpl.Expr! targetObject, bool mentionWritable) {
+      Bpl.Expr e = IsPeerValid(targetObject);
+      if (mentionWritable) {
+        e = Bpl.Expr.And(NotHasValidOwner(targetObject), e);
+      }
+      return e;
+    }
+    
+    abstract internal Bpl.Expr! IsPeerValid (Bpl.Expr! targetObject);
+    
+    abstract internal Bpl.Expr! NotHasValidOwner (Bpl.Expr! targetObject);
+    
+    abstract internal Bpl.Expr! IsPrevalid (Bpl.Expr! targetObject, Cci.TypeNode! targetType)
+      requires targetType.BaseType != null;
+    
+    abstract internal Bpl.Expr! PeerGroupIsFullyValid (Bpl.Expr! owRef, Bpl.Expr! owFrame);
+    
+    abstract internal Bpl.Expr! IsValid (Bpl.Expr! targetObject, Cci.TypeNode! targetType);
+      requires targetType.BaseType != null;
+
+    virtual internal Bpl.Expr! FCOInfo (Bpl.Expr! targetObject, Bpl.Expr! heap)
+    {
+      return Bpl.Expr.True;
+    }
+    
+    /// <summary>
+    /// Returns the expression:  subject.owner == [ownerRef, ownerFrame]
+    /// </summary>
+    abstract public Bpl.Expr! OwnerIs (Bpl.Expr! subject, Bpl.Expr! ownerRef, Bpl.Expr! ownerFrame, Bpl.Expr! heap);
+    
+    /// <summary>
+    /// Return the expression:  a.owner == b.owner
+    /// </summary>
+    public Bpl.Expr! EqualOwners (Bpl.Expr! a, Bpl.Expr! b) 
+    {
+      return EqualOwners(a, b, sink.HeapExpr());
+    }
+    
+    /// <summary>
+    /// Return the expression:  a.owner == b.owner
+    /// </summary>
+    public Bpl.Expr! EqualOwners (Bpl.Expr! a, Bpl.Expr! b, Bpl.Expr! heap) 
+    {
+      return EqualOwners(a, b, heap, true);
+    }
+    
+    /// <summary>
+    /// Return the expression:  a.owner == b.owner
+    /// </summary>
+    abstract public Bpl.Expr! EqualOwners (Bpl.Expr! a, Bpl.Expr! b, Bpl.Expr! heap, bool equal); 
+
+    abstract public Bpl.Expr! IsFullyValid (Bpl.Expr! target);
+    
+    abstract public Bpl.Expr! OwnerIsUnchanged (Bpl.Expr! target, Bpl.Expr! preHeap, Bpl.Expr! postHeap);
+    
+    abstract public Bpl.Expr! UnownedPeerGroupSingleton (Bpl.Expr! target, Bpl.Expr! heap, bool afterAllocated);
+    
+    abstract public Bpl.Expr! HasNoOwner (Bpl.Expr! target, Bpl.Expr! heap) ;
+    
+    abstract public Bpl.Trigger OwnerTrigger (Bpl.Expr! target, Bpl.Expr! heap) ;
+
+    abstract public Bpl.Expr! IsOwnerField (Bpl.Expr! target) ;
+    
+    abstract public void SetSameOwner (Bpl.Expr! target, Bpl.Expr! peer, Bpl.CmdSeq! blockCmds) ;
+      
+    abstract public void SetOwner (Bpl.Expr! target, Bpl.Expr! owner, Bpl.Expr! frame, Bpl.CmdSeq! blockCmds) ;
+    
+    
+    
+    // Sharing:
+    
+    abstract public Bpl.Expr! SameSharingMode (Bpl.Variable! target);
+    
+    abstract public void Share (Bpl.Expr! target, Bpl.CmdSeq! blockCmds);
+    
+    abstract public Bpl.Trigger SharingTrigger (Bpl.Variable! target);
+    
+    abstract internal Bpl.Expr! IsUnshared (Bpl.Expr! targetObject);
+    
+    abstract internal Bpl.Expr! IsLockProtected (Bpl.Expr! targetObject);
+    
+    
+  }
+
+}

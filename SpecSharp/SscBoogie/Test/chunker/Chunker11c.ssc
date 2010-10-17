@@ -1,0 +1,34 @@
+// This file fixes the problem in Chunker11-AdditiveExpose.ssc by making the class non-public.
+
+class Chunker
+{
+  string! src;
+  int ChunkSize;
+  invariant 0 < ChunkSize;
+  int n;  // the number of characters returned so far
+  invariant 0 <= n && n <= src.Length;
+
+  public string! NextChunk()
+    ensures result.Length == ChunkSize;
+  {
+    additive expose (this) {
+      string s;
+      if (n + ChunkSize <= src.Length) {
+        s = src.Substring(n, ChunkSize);
+      } else {
+        s = src.Substring(n);
+      }
+      n += ChunkSize;
+      return s;
+    }
+  }
+
+  public Chunker(string! source, int chunkSize)
+    requires 0 < chunkSize;
+  {
+    src = source;
+    ChunkSize = chunkSize;
+    n = 0;
+    base();
+  }
+}

@@ -1,0 +1,22 @@
+// The Spec# compiler strips any non-null markings from the signature of Main (otherwise Spec#
+// executables would not be recognized as such by the CLR). But the signature really is supposed to be:
+//
+//   static void Main(string![]! args)
+//
+// This test makes sure that Boogie restores the non-null signatures
+
+
+using System;
+public class Program
+{
+  static void Main(string![]! args)
+  {
+    if (args.Length > 0){ // Okay only if args is recognized as a non-null array
+      string s = args[0]; 
+      int x = s.Length; // Okay only if args is recognized as an array of non-null strings
+    }
+    foreach (string s in args){
+      Console.WriteLine(s.Length); // Okay only if args is recognized as an array of non-null strings
+    }
+  }
+}

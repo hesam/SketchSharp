@@ -1,0 +1,29 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.ComponentModel
+{
+
+    public class CollectionConverter
+    {
+
+        public CollectionConverter ();
+
+        public bool GetPropertiesSupported (ITypeDescriptorContext context);
+
+        public PropertyDescriptorCollection GetProperties (ITypeDescriptorContext context, object value, Attribute[] attributes);
+
+        public object ConvertTo (ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type! destinationType)
+            requires destinationType != null otherwise ArgumentNullException;
+    }
+}

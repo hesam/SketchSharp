@@ -1,0 +1,61 @@
+using System.Collections.Generic;
+using Microsoft.Contracts;
+
+public sealed class Test
+{
+  private int x = 0;
+
+  public void Method()
+    modifies this.*;
+  {
+    additive expose (this)
+    {
+      for (int i = 0; i < 100; i++)
+      {
+        this.x = 0;
+      }
+    }
+  }
+}
+
+public class A {
+  [Rep] public B bb;
+
+  [Additive]
+  public virtual void M()
+    modifies this.bb;
+  {
+    additive expose (this) {
+      B b = new B();
+      this.bb = b;
+    }
+  }
+
+  [Additive]
+  public virtual void N0(int x)
+    modifies this.bb;
+  {
+    additive expose (this) {
+      B b = new B();
+      for (; x < 10; x++) {
+        this.bb = b;  
+      } // error: unfortunately, we won't allow a loop iteration to change the owner
+        // of something (more precisely, a non captured-parameter) that was allocated
+        // before the entry of the loop
+    }
+  }
+
+  [Additive]
+  public virtual void N1(int x)
+    modifies this.bb;
+  {
+    additive expose (this) {
+      for (; x < 10; x++) {
+        B b = new B();
+        this.bb = b;  // this one should be okay, though (since, here, "b" is allocated inside the loop)
+      }
+    }
+  }
+}
+
+public class B { }

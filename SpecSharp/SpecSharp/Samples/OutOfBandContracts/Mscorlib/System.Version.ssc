@@ -1,0 +1,98 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System
+{
+
+    [Immutable]
+    public class Version
+    {
+
+        public int Minor
+        {
+          get;
+        }
+
+        public int Major
+        {
+          get;
+        }
+
+        public int Revision
+        {
+          get;
+        }
+
+        public int Build
+        {
+          get;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool operator >= (Version v1, Version v2);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool operator > (Version v1, Version v2);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool operator <= (Version! v1, Version v2)
+            requires v1 != null otherwise ArgumentNullException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool operator < (Version! v1, Version v2)
+            requires v1 != null otherwise ArgumentNullException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool operator != (Version v1, Version v2);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool operator == (Version v1, Version v2);
+
+        public string ToString (int fieldCount)
+            requires fieldCount == 4 otherwise ArgumentException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public string! ToString ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object obj);
+
+        public int CompareTo (object version);
+
+        public object Clone ();
+
+        public Version ();
+
+        public Version (string! version)
+            requires version != null otherwise ArgumentNullException;
+
+        public Version (int major, int minor)
+            requires major >= 0 otherwise ArgumentOutOfRangeException;
+            requires minor >= 0 otherwise ArgumentOutOfRangeException;
+
+        public Version (int major, int minor, int build)
+            requires major >= 0 otherwise ArgumentOutOfRangeException;
+            requires minor >= 0 otherwise ArgumentOutOfRangeException;
+            requires build >= 0 otherwise ArgumentOutOfRangeException;
+
+        public Version (int major, int minor, int build, int revision)
+            requires major >= 0 otherwise ArgumentOutOfRangeException;
+            requires minor >= 0 otherwise ArgumentOutOfRangeException;
+            requires build >= 0 otherwise ArgumentOutOfRangeException;
+            requires revision >= 0 otherwise ArgumentOutOfRangeException;
+    }
+}

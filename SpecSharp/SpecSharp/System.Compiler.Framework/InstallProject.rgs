@@ -1,0 +1,90 @@
+HKCR
+{
+    ForceRemove .%ProjectFileExtension% = s '%LanguageName%.%ProjectFileExtension%'
+    {
+        val 'Content Type' = s 'text/plain'
+    }
+    ForceRemove '%LanguageName%.%ProjectFileExtension%' = s '%LanguageShortName% Project File'
+    {
+        DefaultIcon = s '%Win32ResourcesDllPath%,%ProjectFileIconId%'
+        ForceRemove shell
+        {
+            ForceRemove open
+            {
+                command = s '%DevEnvCommand%'
+            }
+        }
+    }
+}
+
+HKLM
+{
+ NoRemove Software 
+ { 
+  Microsoft 
+  { 
+   VisualStudio 
+   { 
+    %VsVersion% 
+    {             
+       NoRemove Projects
+      {
+          ForceRemove %ProjectFactoryGuid% = s '%LanguageName% Project'
+          {
+              val DefaultProjectExtension = s '%ProjectFileExtension%'
+              val DisplayProjectFileExtensions = s '%LanguageShortName% Projects (*.%ProjectFileExtension%);*.%ProjectFileExtension%'
+              val Package = s '%PackageGuid%'
+              val PossibleProjectExtensions = s '%ProjectFileExtension%'          
+              val ProjectTemplatesDir = s '%TemplatePath%Projects'
+              val ItemTemplatesDir = s '%TemplatePath%ProjectItems'
+              val DisplayName = s '#2'
+
+              ForceRemove Filters
+              {
+                  ForceRemove 1 = s '#3'
+                  {
+                      val SortPriority = d 1000
+                      val CommonOpenFilesFilter = d 0
+                      val CommonFindFilesFilter = d 0
+                      val NotAddExistingItemFilter = d 0
+                  }
+              }
+              
+              ForceRemove AddItemTemplates
+              {
+                  ForceRemove TemplateDirs
+                  {                   
+                      ForceRemove %PackageGuid%
+                      {
+                          ForceRemove 1 = s '%LanguageShortName% Project Items'
+                          {
+                              val TemplatesDir = s '%TemplatePath%ProjectItems'
+                              val SortPriority = d 100                
+                          }
+                      }
+                  }
+              }
+          }
+      }
+      NoRemove NewProjectTemplates
+      {               
+          NoRemove TemplateDirs
+          {
+              ForceRemove %ProjectFactoryGuid%
+              {
+                  ForceRemove 1 = s '%LanguageShortName% Projects'
+                  {
+                      val NewProjectDialogOnly = d 0                          
+                      val TemplatesDir = s '%TemplatePath%Projects'
+                      val SortPriority = d 41
+                  }
+              }
+          }
+      }
+
+      
+    } 
+   }
+  } 
+ }
+}

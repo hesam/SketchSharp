@@ -1,0 +1,76 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.IO
+{
+
+    public class BinaryWriter
+    {
+
+        public Stream BaseStream
+        {
+          get;
+        }
+
+        public void Write (string! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public void Write (Single value);
+
+        public void Write (UInt64 value);
+
+        public void Write (Int64 value);
+
+        public void Write (UInt32 value);
+
+        public void Write (int value);
+
+        public void Write (UInt16 value);
+
+        public void Write (Int16 value);
+
+        public void Write (Decimal value);
+
+        public void Write (double value);
+
+        public void Write (Char[] chars, int index, int count);
+
+        public void Write (Char[]! chars)
+            requires chars != null otherwise ArgumentNullException;
+
+        public void Write (Char ch);
+
+        public void Write (Byte[] buffer, int index, int count);
+
+        public void Write (Byte[]! buffer)
+            requires buffer != null otherwise ArgumentNullException;
+
+        public void Write (SByte value);
+
+        public void Write (byte value);
+
+        public void Write (bool value);
+
+        public Int64 Seek (int offset, SeekOrigin origin);
+
+        public void Flush ();
+
+        public void Close ();
+
+        public BinaryWriter (Stream! output, System.Text.Encoding! encoding)
+            requires output != null otherwise ArgumentNullException;
+            requires encoding != null otherwise ArgumentNullException;
+
+        public BinaryWriter (Stream output);
+    }
+}

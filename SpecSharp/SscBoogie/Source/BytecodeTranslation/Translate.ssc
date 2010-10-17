@@ -1,0 +1,58 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+namespace Microsoft.Boogie
+{
+  using System;
+  using System.Text;
+  using System.Diagnostics;
+  using System.Collections;
+  using System.Collections.Generic;
+  using Microsoft.Contracts;
+  using Cci = System.Compiler;
+  using Bpl = Microsoft.Boogie;
+
+
+  /// <summary>
+  /// TranslatedProgram represents a triple (program,translator,errorHandler), where "program" has
+  /// been obtained "translator" and where "errorHandler" can be used to report errors on this program.
+  /// </summary>
+  public sealed class TranslatedProgram
+  {
+    Bpl.Program! program;
+    Translator! translator;
+    Cci.ErrorHandler! errorHandler;
+    
+    internal TranslatedProgram(Bpl.Program! program, Translator! translator, Cci.ErrorHandler! errorHandler)
+    {
+      this.program = program;
+      this.translator = translator;
+      this.errorHandler = errorHandler;
+      // base();
+    }
+    
+    public Bpl.Program! Program
+    {
+      get
+      {
+        return program;
+      }
+    }
+    
+    public Cci.Method! GetMethodFromImplementation(Bpl.Implementation! implementation)
+    {
+      return translator.GetMethodFromImplementation(implementation);
+    }
+    
+    public void HandleError(Cci.Node! offendingNode, string! message) {
+      errorHandler.HandleError(offendingNode, Cci.Error.GenericWarning, message);
+    }
+    
+    public IDictionary<String!,Cci.CfgBlock!>! GetBlockNameToSourceNodeMap()
+    {
+      return translator.sink.blockNameToSourceNodeMap;
+    }
+  }
+}

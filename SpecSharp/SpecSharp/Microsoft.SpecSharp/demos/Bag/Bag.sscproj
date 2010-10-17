@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VisualStudioProject>
+  <XEN ProjectType="Local"
+     SchemaVersion="1.0"
+     Name="Bag"
+     ProjectGuid="06acdbb6-2419-496f-b48f-4426e5016c54"
+    >
+    <Build>
+      <Settings ApplicationIcon=""
+         AssemblyName="Bag"
+         OutputType="Library"
+         RootNamespace="Bag"
+         StartupObject=""
+         StandardLibraryLocation=""
+         TargetPlatform=""
+         TargetPlatformLocation=""
+        >
+        <Config Name="Debug"
+           AllowUnsafeBlocks="False"
+           BaseAddress="285212672"
+           CheckForOverflowUnderflow="False"
+           ConfigurationOverrideFile=""
+           DefineConstants="DEBUG;TRACE"
+           DocumentationFile=""
+           DebugSymbols="True"
+           FileAlignment="4096"
+           IncrementalBuild="True"
+           Optimize="False"
+           OutputPath="bin\debug"
+           RegisterForComInterop="False"
+           RemoveIntegerChecks="false"
+           TreatWarningsAsErrors="False"
+           WarningLevel="4"
+           RunProgramVerifier="True"
+           />
+        <Config Name="Release"
+           AllowUnsafeBlocks="false"
+           BaseAddress="285212672"
+           CheckForOverflowUnderflow="false"
+           ConfigurationOverrideFile=""
+           DefineConstants="TRACE"
+           DocumentationFile=""
+           DebugSymbols="false"
+           FileAlignment="4096"
+           IncrementalBuild="false"
+           Optimize="true"
+           OutputPath="bin\release"
+           RegisterForComInterop="false"
+           RemoveIntegerChecks="false"
+           TreatWarningsAsErrors="false"
+           WarningLevel="4"
+           />
+      </Settings>
+      <References>
+        <Reference Name="System"
+             AssemblyName="System"
+             Private="false"
+             />
+        <Reference Name="System.Data"
+             AssemblyName="System.Data"
+             Private="false"
+             />
+        <Reference Name="System.Xml"
+             AssemblyName="System.Xml"
+             Private="false"
+             />
+        <Reference Name="BoogiePlugin"
+             AssemblyName="BoogiePlugin"
+             Private="true"
+             HintPath="..\..\LastKnownGood\BoogiePlugin.dll"
+             />
+      </References>
+    </Build>
+    <Files>
+      <Include>
+        <File RelPath="Class1.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+      </Include>
+    </Files>
+  </XEN>
+</VisualStudioProject>

@@ -1,0 +1,57 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{07C4E3D1-6B67-4060-8A92-940DB82041ED}") = "SscBoogie", "SscBoogie\SscBoogie.sscproj", "{653640D6-84AD-43DD-86A3-92C33748ED20}"
+	ProjectSection(ProjectDependencies) = postProject
+		{EA527319-2786-4B45-9EDE-803F76390191} = {EA527319-2786-4B45-9EDE-803F76390191}
+		{4B727D4B-4A43-4B11-A47D-48A6CD8D4BC1} = {4B727D4B-4A43-4B11-A47D-48A6CD8D4BC1}
+		{18A0EBA3-DEDA-4F25-B21F-B86055719249} = {18A0EBA3-DEDA-4F25-B21F-B86055719249}
+	EndProjectSection
+EndProject
+Project("{07C4E3D1-6B67-4060-8A92-940DB82041ED}") = "DriverHelper", "DriverHelper\DriverHelper.sscproj", "{18A0EBA3-DEDA-4F25-B21F-B86055719249}"
+EndProject
+Project("{07C4E3D1-6B67-4060-8A92-940DB82041ED}") = "BytecodeTranslation", "BytecodeTranslation\BytecodeTranslation.sscproj", "{4B727D4B-4A43-4B11-A47D-48A6CD8D4BC1}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C3F39495-FAB0-4594-BDCD-921D180B5C06} = {C3F39495-FAB0-4594-BDCD-921D180B5C06}
+	EndProjectSection
+EndProject
+Project("{07C4E3D1-6B67-4060-8A92-940DB82041ED}") = "CompilerPlugin", "CompilerPlugin\CompilerPlugin.sscproj", "{EA527319-2786-4B45-9EDE-803F76390191}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4B727D4B-4A43-4B11-A47D-48A6CD8D4BC1} = {4B727D4B-4A43-4B11-A47D-48A6CD8D4BC1}
+		{C3F39495-FAB0-4594-BDCD-921D180B5C06} = {C3F39495-FAB0-4594-BDCD-921D180B5C06}
+		{18A0EBA3-DEDA-4F25-B21F-B86055719249} = {18A0EBA3-DEDA-4F25-B21F-B86055719249}
+	EndProjectSection
+EndProject
+Project("{07C4E3D1-6B67-4060-8A92-940DB82041ED}") = "Prelude", "Prelude\Prelude.sscproj", "{C3F39495-FAB0-4594-BDCD-921D180B5C06}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|.NET = Debug|.NET
+		Release|.NET = Release|.NET
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{653640D6-84AD-43DD-86A3-92C33748ED20}.Debug|.NET.ActiveCfg = Debug|.NET
+		{653640D6-84AD-43DD-86A3-92C33748ED20}.Debug|.NET.Build.0 = Debug|.NET
+		{653640D6-84AD-43DD-86A3-92C33748ED20}.Release|.NET.ActiveCfg = Release|.NET
+		{653640D6-84AD-43DD-86A3-92C33748ED20}.Release|.NET.Build.0 = Release|.NET
+		{18A0EBA3-DEDA-4F25-B21F-B86055719249}.Debug|.NET.ActiveCfg = Debug|.NET
+		{18A0EBA3-DEDA-4F25-B21F-B86055719249}.Debug|.NET.Build.0 = Debug|.NET
+		{18A0EBA3-DEDA-4F25-B21F-B86055719249}.Release|.NET.ActiveCfg = Release|.NET
+		{18A0EBA3-DEDA-4F25-B21F-B86055719249}.Release|.NET.Build.0 = Release|.NET
+		{4B727D4B-4A43-4B11-A47D-48A6CD8D4BC1}.Debug|.NET.ActiveCfg = Debug|.NET
+		{4B727D4B-4A43-4B11-A47D-48A6CD8D4BC1}.Debug|.NET.Build.0 = Debug|.NET
+		{4B727D4B-4A43-4B11-A47D-48A6CD8D4BC1}.Release|.NET.ActiveCfg = Release|.NET
+		{4B727D4B-4A43-4B11-A47D-48A6CD8D4BC1}.Release|.NET.Build.0 = Release|.NET
+		{EA527319-2786-4B45-9EDE-803F76390191}.Debug|.NET.ActiveCfg = Debug|.NET
+		{EA527319-2786-4B45-9EDE-803F76390191}.Debug|.NET.Build.0 = Debug|.NET
+		{EA527319-2786-4B45-9EDE-803F76390191}.Release|.NET.ActiveCfg = Release|.NET
+		{EA527319-2786-4B45-9EDE-803F76390191}.Release|.NET.Build.0 = Release|.NET
+		{C3F39495-FAB0-4594-BDCD-921D180B5C06}.Debug|.NET.ActiveCfg = Debug|.NET
+		{C3F39495-FAB0-4594-BDCD-921D180B5C06}.Debug|.NET.Build.0 = Debug|.NET
+		{C3F39495-FAB0-4594-BDCD-921D180B5C06}.Release|.NET.ActiveCfg = Release|.NET
+		{C3F39495-FAB0-4594-BDCD-921D180B5C06}.Release|.NET.Build.0 = Release|.NET
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

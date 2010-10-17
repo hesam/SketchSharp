@@ -1,0 +1,75 @@
+public sealed class Client {
+  public static void Main() {
+    try {
+      MyClass o = new MyClass();
+      P(o);
+      Q(o, false, true);
+      Q(o, true, false);
+    } catch (Microsoft.Contracts.RequiresException) {
+      System.Console.WriteLine("Precondition violation!");
+    }
+  }
+
+  static void P(MyClass! o)
+    modifies o.*;
+  {
+    System.Console.WriteLine("P: start");
+
+    System.Console.WriteLine("calling: M 12 true true");
+    o.M(12, true, true);
+
+    System.Console.WriteLine("calling: M 13 true true");
+    o.M(13, true, true);
+
+    System.Console.WriteLine("P: done");
+  }
+
+  static void Q(MyClass! o, bool aa, bool bb)
+    modifies o.*;
+  {
+    System.Console.WriteLine("Q: start");
+
+    System.Console.WriteLine("calling: M 75 {0} {1}", aa, bb);
+    o.M(75, aa, bb);  // precondition violation
+
+    System.Console.WriteLine("Q: done");
+  }
+
+  public static void R(MyClass! o, bool bb)
+    modifies o.*;
+  {
+    System.Console.WriteLine("R: start");
+
+    System.Console.WriteLine("calling: M 12 true true");
+    o.M(12, true, true);
+
+    System.Console.WriteLine("calling: M 13 true true");
+    o.M(13, true, true);
+
+    if (bb) {
+      R0(o);
+    } else {
+      R1(o);
+    }
+
+    System.Console.WriteLine("R: done");
+  }
+
+  static void R0(MyClass! o) {
+    System.Console.WriteLine("calling: M 11 true false");
+    o.M(11, true, false);  // precondition violation
+  }
+
+  static void R1(MyClass! o) {
+    System.Console.WriteLine("calling: M 12 false true");
+    o.M(12, false, true);  // precondition violation
+  }
+
+  public static void S(MyClass! o, Client! cl) {
+    o.M(13, true, true);
+    o.M(12, false, true);  // precondition violation
+    cl.DD();
+  }
+
+  public void DD() {}
+}

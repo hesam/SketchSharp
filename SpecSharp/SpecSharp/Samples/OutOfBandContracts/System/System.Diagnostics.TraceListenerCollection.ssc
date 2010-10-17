@@ -1,0 +1,57 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Diagnostics
+{
+
+    public class TraceListenerCollection
+    {
+
+        public TraceListener this [int i]
+        {
+          get;
+          set;
+        }
+
+        public int Count
+        {
+          get;
+        }
+
+        public void RemoveAt (int index);
+
+        public void Remove (string name);
+
+        public void Remove (TraceListener listener);
+
+        public void Insert (int index, TraceListener listener);
+
+        public int IndexOf (TraceListener listener);
+
+        public System.Collections.IEnumerator GetEnumerator ();
+
+        public void CopyTo (TraceListener[] listeners, int index);
+
+        public bool Contains (TraceListener listener);
+
+        public void Clear ();
+
+        public void AddRange (TraceListenerCollection! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public void AddRange (TraceListener[]! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public int Add (TraceListener listener);
+    }
+}

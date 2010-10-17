@@ -1,0 +1,173 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System
+{
+
+    public struct Char
+    {
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static double GetNumericValue (string! s, int index)
+            requires s != null otherwise ArgumentNullException;
+            requires index < s.Length otherwise ArgumentOutOfRangeException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static double GetNumericValue (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static System.Globalization.UnicodeCategory GetUnicodeCategory (string! s, int index)
+            requires s != null otherwise ArgumentNullException;
+            requires index < s.Length otherwise ArgumentOutOfRangeException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static System.Globalization.UnicodeCategory GetUnicodeCategory (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsWhiteSpace (string! s, int index)
+            requires s != null otherwise ArgumentNullException;
+            requires index < s.Length otherwise ArgumentOutOfRangeException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsUpper (string! s, int index)
+            requires s != null otherwise ArgumentNullException;
+            requires index < s.Length otherwise ArgumentOutOfRangeException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsSymbol (string! s, int index)
+            requires s != null otherwise ArgumentNullException;
+            requires index < s.Length otherwise ArgumentOutOfRangeException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsSymbol (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsSurrogate (string! s, int index)
+            requires s != null otherwise ArgumentNullException;
+            requires index < s.Length otherwise ArgumentOutOfRangeException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsSurrogate (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsSeparator (string! s, int index)
+            requires s != null otherwise ArgumentNullException;
+            requires index < s.Length otherwise ArgumentOutOfRangeException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsSeparator (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsPunctuation (string! s, int index)
+            requires s != null otherwise ArgumentNullException;
+            requires index < s.Length otherwise ArgumentOutOfRangeException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsNumber (string! s, int index)
+            requires s != null otherwise ArgumentNullException;
+            requires index < s.Length otherwise ArgumentOutOfRangeException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsNumber (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsLower (string! s, int index)
+            requires s != null otherwise ArgumentNullException;
+            requires index < s.Length otherwise ArgumentOutOfRangeException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsLetterOrDigit (string! s, int index)
+            requires s != null otherwise ArgumentNullException;
+            requires index < s.Length otherwise ArgumentOutOfRangeException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsLetter (string! s, int index)
+            requires s != null otherwise ArgumentNullException;
+            requires index < s.Length otherwise ArgumentOutOfRangeException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsDigit (string! s, int index)
+            requires s != null otherwise ArgumentNullException;
+            requires index < s.Length otherwise ArgumentOutOfRangeException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsControl (string! s, int index)
+            requires s != null otherwise ArgumentNullException;
+            requires index < s.Length otherwise ArgumentOutOfRangeException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsControl (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public TypeCode GetTypeCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Char ToLower (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Char ToLower (Char c, System.Globalization.CultureInfo! culture)
+            requires culture != null otherwise ArgumentNullException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Char ToUpper (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Char ToUpper (Char c, System.Globalization.CultureInfo! culture)
+            requires culture != null otherwise ArgumentNullException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsLetterOrDigit (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsPunctuation (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsLower (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsUpper (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsWhiteSpace (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsLetter (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool IsDigit (Char c);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Char Parse (string! s)
+            requires s != null otherwise ArgumentNullException;
+            requires s.Length == 1 otherwise FormatException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static string! ToString (Char arg0);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public string! ToString (IFormatProvider provider);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public string! ToString ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public int CompareTo (object value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object obj);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public int GetHashCode ();
+    }
+}

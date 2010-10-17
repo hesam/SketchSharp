@@ -1,0 +1,54 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Runtime.Remoting
+{
+
+    public class WellKnownServiceTypeEntry
+    {
+
+        public string ObjectUri
+        {
+          get;
+        }
+
+        public Type ObjectType
+        {
+          get;
+        }
+
+        public System.Runtime.Remoting.Contexts.IContextAttribute[] ContextAttributes
+        {
+          get;
+          set;
+        }
+
+        public WellKnownObjectMode Mode
+        {
+          get;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public WellKnownServiceTypeEntry (Type! type, string! objectUri, WellKnownObjectMode mode)
+            requires type != null otherwise ArgumentNullException;
+            requires objectUri != null otherwise ArgumentNullException;
+
+        public WellKnownServiceTypeEntry (string! typeName, string! assemblyName, string! objectUri, WellKnownObjectMode mode)
+            requires typeName != null otherwise ArgumentNullException;
+            requires assemblyName != null otherwise ArgumentNullException;
+            requires objectUri != null otherwise ArgumentNullException;
+    }
+}

@@ -1,0 +1,31 @@
+// use /vc:local
+
+class SimpleAssignment4
+{
+	public void Rigoletto(int Input)
+	{
+		int x;
+		int y;
+
+		if(Input < 223)
+			x = -10;
+		else
+			x = 20;
+
+		y = x;
+
+		if(y <= 0) {
+			// here y = [-10, 0] but also x = [-10, 0]
+			y = -x;
+			// here y = [0, 10]  and x = [-10,0]			
+		}
+		// here y = [0,20] U [0,10] = [0,20] and x = [-10, 20]
+
+		assert 0 <= y && y <= 20;		// The assertion fails to be verified
+	}
+
+	public SimpleAssignment4()
+	{
+		base();
+	}
+}

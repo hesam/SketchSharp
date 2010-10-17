@@ -1,0 +1,41 @@
+public class F { }
+
+public sealed class AssertFalseTest
+{
+  public F Field0;
+
+  void Test0()
+  {
+    assert false;
+  }
+
+  void Test1()
+  {
+    expose (this)
+    {
+      assert false;
+    }
+  }
+
+  void Test2()
+  {
+    expose (this)
+    {
+      for (int i = 0; i < 10; i++) { }
+      assert false;
+    }
+  }
+
+  void Test3()
+  {
+    expose (this)
+    {
+      for (int i = 0; i < 10; i++)
+      {
+        this.Field0 = new F();
+      }
+
+      assert false;
+    }
+  }
+}

@@ -1,0 +1,197 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <ProductVersion>8.0.40607</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{B174D491-C1DB-45C7-BE8D-030ED30FB0E5}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <StartupObject>
+    </StartupObject>
+    <RootNamespace>
+    </RootNamespace>
+    <NoStandardLibraries>false</NoStandardLibraries>
+    <AssemblyName>Microsoft.VisualStudio.Package.LanguageService</AssemblyName>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <DelaySign>true</DelaySign>
+    <SccProjectName>//depot/xsharp/cci</SccProjectName>
+    <SccLocalPath>..</SccLocalPath>
+    <SccAuxPath>
+    </SccAuxPath>
+    <SccProvider>MSSCCI:Source Depot</SccProvider>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>false</Optimize>
+    <OutputPath>.\bin\Debug\</OutputPath>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+    <DefineConstants>DEBUG;TRACE;XMLTRACE</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+    <IncrementalBuild>false</IncrementalBuild>
+    <NoWarn>1699</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>false</DebugSymbols>
+    <Optimize>true</Optimize>
+    <OutputPath>.\bin\Release\</OutputPath>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+    <DefineConstants>TRACE</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+    <IncrementalBuild>false</IncrementalBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.MSXML, Version=8.0.1100.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\..\..\..\..\binaries.x86chk\bin\i386\PrimaryInteropAssemblies\Microsoft.MSXML.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Designer.Interfaces">
+      <HintPath>..\..\..\..\..\..\..\binaries.x86fre\bin\i386\Microsoft.VisualStudio.Designer.Interfaces.dll</HintPath>
+      <Name>Microsoft.VisualStudio.Designer.Interfaces</Name>
+      <FusionName>Microsoft.VisualStudio.Designer.Interfaces, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, ProcessorArchitecture=Neutral</FusionName>
+      <SpecificVersion>True</SpecificVersion>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.OLE.Interop">
+      <HintPath>..\..\..\..\..\..\..\binaries.x86chk\bin\i386\PrimaryInteropAssemblies\Microsoft.VisualStudio.OLE.Interop.dll</HintPath>
+      <Name>Microsoft.VisualStudio.OLE.Interop</Name>
+      <FusionName>Microsoft.VisualStudio.OLE.Interop, Version=7.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, ProcessorArchitecture=Neutral</FusionName>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Shell.Interop">
+      <HintPath>..\..\..\..\..\..\..\binaries.x86chk\bin\i386\PrimaryInteropAssemblies\Microsoft.VisualStudio.Shell.Interop.dll</HintPath>
+      <Name>Microsoft.VisualStudio.Shell.Interop</Name>
+      <FusionName>Microsoft.VisualStudio.Shell.Interop, Version=7.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, ProcessorArchitecture=Neutral</FusionName>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Shell.Interop.8.0">
+      <HintPath>..\..\..\..\..\..\..\binaries.x86chk\bin\i386\PrimaryInteropAssemblies\Microsoft.VisualStudio.Shell.Interop.8.0.dll</HintPath>
+      <Name>Microsoft.VisualStudio.Shell.Interop.8.0</Name>
+      <FusionName>Microsoft.VisualStudio.Shell.Interop.8.0, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, ProcessorArchitecture=Neutral</FusionName>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.TextManager.Interop">
+      <HintPath>..\..\..\..\..\..\..\binaries.x86chk\bin\i386\PrimaryInteropAssemblies\Microsoft.VisualStudio.TextManager.Interop.dll</HintPath>
+      <Name>Microsoft.VisualStudio.TextManager.Interop</Name>
+      <FusionName>Microsoft.VisualStudio.TextManager.Interop, Version=7.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, ProcessorArchitecture=Neutral</FusionName>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.TextManager.Interop.8.0">
+      <HintPath>..\..\..\..\..\..\..\binaries.x86chk\bin\i386\PrimaryInteropAssemblies\Microsoft.VisualStudio.TextManager.Interop.8.0.dll</HintPath>
+      <Name>Microsoft.VisualStudio.TextManager.Interop.8.0</Name>
+      <FusionName>Microsoft.VisualStudio.TextManager.Interop.8.0, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, ProcessorArchitecture=MSIL</FusionName>
+      <SpecificVersion>True</SpecificVersion>
+    </Reference>
+    <Reference Include="System">
+      <HintPath>H:\WINDOWS\Microsoft.NET\Framework\v2.0.x86fre\System.dll</HintPath>
+      <Name>System</Name>
+    </Reference>
+    <Reference Include="System.Data">
+      <HintPath>H:\WINDOWS\Microsoft.NET\Framework\v2.0.x86fre\System.Data.dll</HintPath>
+      <Name>System.Data</Name>
+    </Reference>
+    <Reference Include="System.Drawing">
+      <HintPath>H:\WINDOWS\Microsoft.NET\Framework\v2.0.x86fre\System.Drawing.dll</HintPath>
+      <Name>System.Drawing</Name>
+    </Reference>
+    <Reference Include="System.Windows.Forms">
+      <HintPath>H:\WINDOWS\Microsoft.NET\Framework\v2.0.x86fre\System.Windows.Forms.dll</HintPath>
+      <Name>System.Windows.Forms</Name>
+    </Reference>
+    <Reference Include="System.XML">
+      <HintPath>H:\WINDOWS\Microsoft.NET\Framework\v2.0.x86fre\System.XML.dll</HintPath>
+      <Name>System.XML</Name>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CodeWindowManager.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Colorizer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="EditorFactory.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="EditorView.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="LanguageService.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Preferences.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Scanner.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Source.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DocumentTask.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tracing.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ViewFilter.cs">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Microsoft.VisualStudio.Package.LanguageService.resx">
+      <Generator>ResXCodeGenerator</Generator>
+      <LastGenOutput>Microsoft.VisualStudio.Package.LanguageService.cs</LastGenOutput>
+      <CustomToolNamespace>Microsoft.VisualStudio.Package</CustomToolNamespace>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\completionset.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\common\include\version.cs">
+      <Link>version.cs</Link>
+    </Compile>
+    <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="DocumentProperties.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ExpansionProvider.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Microsoft.VisualStudio.Package.LanguageService.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Microsoft.VisualStudio.Package.LanguageService.resx</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Utilities.cs">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.VisualStudio.Package.Project\Microsoft.VisualStudio.Package.Project.csproj">
+      <Project>{CD205517-FB65-44A0-87C2-8CF3E5E73953}</Project>
+      <Package>{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</Package>
+      <Name>Microsoft.VisualStudio.Package.Project</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Microsoft.VisualStudio.Shell\Microsoft.VisualStudio.Shell.csproj">
+      <Project>{55F21034-C308-4139-979D-2BF0AA569959}</Project>
+      <Package>{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</Package>
+      <Name>Microsoft.VisualStudio.Shell</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <AppDesigner Include="Project\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Project\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSHARP.Targets" />
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>

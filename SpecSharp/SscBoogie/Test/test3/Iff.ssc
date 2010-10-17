@@ -1,0 +1,49 @@
+class Iff {
+  bool M(bool x, bool y)
+    requires x <==> y;
+    ensures result;
+  {
+    return x <==> y;
+  }
+
+  bool P(bool x, bool y)
+    // semantically, each of the following three lines are the same, since boolean equality
+    // is associative
+    ensures result == (x <==> y);
+    ensures (result == x) <==> y;
+    ensures result == x <==> y;  // same as previous line
+  {
+    bool b = x <==> y;
+    b = b <==> x;
+    assert b == y;
+    b = b == b <==> b != y;
+    assert !b;
+    b = !b ? x ==> y : y <==> x;
+    b = b && (y ==> x);
+    assert b == x == y;
+    return x <==> y <==> b <==> y <==> x;
+  }
+
+  bool Q(bool x, bool y)
+    ensures result <==> x == y;
+  {
+    bool b = x <==> y;
+    b = b <==> x;
+    assert b == y;
+    b = b == b <==> b != y;
+    assert !b;
+    b = !b ? x ==> b : y <==> x;
+    b = b || y;
+    b = b && (y ==> x);
+    assert b == x == y;
+    return x <==> y <==> b <==> y <==> x;
+  }
+
+  bool R(bool x, bool y)
+    ensures result <==> x == y;
+  {
+    bool b = (y ==> x) && (x ==> y);
+    assert b == x == y;
+    return x <==> y <==> b;  // error
+  }
+}

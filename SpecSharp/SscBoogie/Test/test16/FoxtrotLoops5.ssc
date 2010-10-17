@@ -1,0 +1,21 @@
+// These tests are designed for /loopUnroll:5
+
+public class C {
+  void ManyIter0(int[]! a)
+    requires 2 <= a.Length;
+    requires a[0] != 7 && a[1] != 7;
+  {
+    for (int i = 0; i < a.Length; i++) {
+      assert a[i] != 7;  // error: on iteration 2
+    }
+  }
+
+  void ManyIter1(int[]! a)
+    requires 2 <= a.Length;
+    requires a[0] != 7 && a[1] != 7;
+  {
+    foreach (int x in a) {
+      assert x != 7;  // error: on iteration 2
+    }
+  }
+}

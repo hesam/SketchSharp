@@ -1,0 +1,79 @@
+using Microsoft.Contracts;
+
+public class Assumptions {
+  [Rep] internal T! f;
+  [Rep] T! g;
+
+  public Assumptions() {
+    T t = new T();
+    f = t;
+    g = t;
+    base();
+  }
+
+  public Assumptions(bool b) {
+    f = new T();
+    g = new T();
+    base();
+  }
+
+  [Additive] public virtual void Swap(bool b)
+    modifies this.*;
+  {
+    additive expose (this) {
+      // Because of the free assumptions about rep fields, we know the owners
+      // are correct for these assignments.
+      T t = b ? new T() : f;
+      f = g;
+      g = t;
+    }
+  }
+}
+
+public class Sub : Assumptions {
+  [Rep] internal T! h = new T();
+
+  [Additive] public virtual void M()
+    modifies this.*;
+  {
+    additive expose (this) {
+      h = f;  // error: the owner class frame is wrong
+    }
+  }
+
+  [Additive] public virtual void N()
+    modifies this.*;
+  {
+    additive expose (this) {
+      additive expose((Assumptions)this) {
+        f = h;  // error: the owner class frame is wrong
+      }
+    }
+  }
+
+  [Additive] public virtual void P()
+    modifies this.*;
+  {
+    additive expose (this) {
+      additive expose((Assumptions)this) {
+        T t = new T();
+        f = t;
+        h = t;  // error: incorrect owner
+      }
+    }
+  }
+
+  [Additive] public virtual void Q()
+    modifies this.*;
+  {
+    additive expose (this) {
+      additive expose((Assumptions)this) {
+        T t = new T();
+        h = t;
+        f = t;  // error: incorrect owner
+      }
+    }
+  }
+}
+
+public class T { }

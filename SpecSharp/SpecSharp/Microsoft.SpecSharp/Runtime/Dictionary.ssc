@@ -1,0 +1,275 @@
+// ==++==
+// 
+//   Copyright (c) Microsoft Corporation.  All rights reserved.
+// 
+// ==--==
+/*============================================================
+**
+** Class:  Dictionary
+**
+** Purpose: Generic hash table implementation
+**
+** 
+===========================================================*/
+namespace System.Collections.Generic {
+
+    using System;
+    using SC = System.Collections;
+    using System.Diagnostics;    
+    using System.Runtime.Serialization;
+    using System.Security.Permissions;
+    using System.Text;    
+
+    public class KeyNotFoundException : SystemException {
+      public KeyNotFoundException() {}
+      public KeyNotFoundException(string s) : base(s) {}
+      public KeyNotFoundException(string s, Exception inner) : base(s,inner) {}
+      public KeyNotFoundException(SerializationInfo info, StreamingContext context) : base(info,context) {}
+    }
+
+    // A KeyValuePair holds a key and a value from a dictionary.
+    // It is returned by IDictionaryEnumerator::GetEntry().
+    [Serializable()]    
+
+    public struct KeyValuePair<TKey, TValue> {
+        private TKey key;
+        private TValue value;
+
+        public KeyValuePair(TKey key, TValue value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        public TKey Key {
+          get { return key; }
+        }
+
+        public TValue Value {
+            get { return value; }
+        }
+
+        public override string ToString() {
+            StringBuilder s = new StringBuilder();
+            s.Append('[');
+            TKey tk = Key;
+            if( tk != null) {
+                s.Append(tk.ToString());
+            }
+            s.Append(", ");
+            TValue tv = Value;
+            if( tv != null) {
+               s.Append(tv.ToString());
+            }
+            s.Append(']');
+            return s.ToString();
+        }
+    }
+
+    // An IDictionary is a possibly unordered set of key-value pairs.
+    // Keys can be any non-null object.  Values can be any object.
+    // You can look up a value in an IDictionary via the default indexed
+    // property, Items.  
+
+    public interface IDictionary<TKey, TValue>
+      :
+        ICollection<KeyValuePair<TKey, TValue>>,
+        IEnumerable<KeyValuePair<TKey, TValue>>,
+        IEnumerable
+    {
+        void Add(TKey key, TValue value);
+        bool ContainsKey(TKey key);
+        bool Remove(TKey key);
+        bool TryGetValue(TKey key, out TValue value);
+        TValue this[TKey key] {
+            get;
+            set;
+        }
+        ICollection<TKey> Keys {
+            get;
+        }
+        ICollection<TValue> Values {
+            get;
+        }
+    }
+
+//    [DebuggerTypeProxy(typeof(Mscorlib_DictionaryDebugView<,>))]
+//    [DebuggerDisplay("Count = {Count}")]
+    [Serializable()]    
+    [System.Runtime.InteropServices.ComVisible(false)]
+    public class Dictionary<TKey,TValue>
+      : IDictionary<TKey,TValue>,
+        ICollection<KeyValuePair<TKey,TValue>>,
+        IEnumerable<KeyValuePair<TKey,TValue>>,
+        SC.IDictionary,
+        SC.ICollection,
+        SC.IEnumerable
+        //System.Runtime.Serialization.ISerializable,
+        //System.Runtime.Serialization.IDeSerializationCallback,
+        {
+    
+        private SC.Hashtable! impl;
+
+        public Dictionary() { impl = new SC.Hashtable(); }
+        public Dictionary(int capacity) { impl = new SC.Hashtable(capacity); }
+        
+        #region Delete when Everett LKG > 5030
+        public bool IsSynchronized {get { return false; } }
+        public object SyncRoot {get { return this; } }
+        #endregion
+        
+       
+        public int Count {
+            get { return impl.Count; }
+        }
+
+        public ICollection<TKey> Keys {
+            get {
+                return (ICollection<TKey>)impl.Keys;
+            }
+        }
+
+        public ICollection<TValue> Values {
+            get {
+                return (ICollection<TValue>)impl.Values;
+            }
+        }
+
+        public TValue this[TKey key] {
+            get {
+                return (TValue)impl[(!)key];
+            }
+            set {
+                impl[(!)key] = value;
+            }
+        }
+
+        public void Add(TKey key, TValue value) {
+            impl.Add((!)key,value);
+        }
+        public void Add(KeyValuePair<TKey, TValue> p){
+          impl.Add((!)p.Key,p.Value);
+        }
+        bool ICollection<KeyValuePair<TKey, TValue>>.Contains(KeyValuePair<TKey, TValue> keyValuePair) {
+            return impl.Contains(keyValuePair);
+        }
+        bool ICollection<KeyValuePair<TKey, TValue>>.Remove(KeyValuePair<TKey, TValue> keyValuePair) {
+          impl.Remove(keyValuePair);
+          return true; // BUGBUG!!
+        }
+        public void Clear() {
+            impl.Clear();
+        }
+
+        public bool ContainsKey(TKey key) {
+            return impl.ContainsKey((!)key);
+        }
+
+        public bool ContainsValue(TValue value) {
+            return impl.ContainsValue(value);
+        }
+
+/*
+        public void CopyTo(KeyValuePair<TKey,TValue>[] array, int index) {
+            impl.CopyTo(array, index);
+        }
+*/        
+        void ICollection<KeyValuePair<TKey,TValue>>.CopyTo(KeyValuePair<TKey,TValue>[] array, int index) {
+            impl.CopyTo((!)array, index);
+        }
+        
+        void SC.ICollection.CopyTo(Array array, int index) {
+          impl.CopyTo(array,index);
+        }
+
+
+        IEnumerator<KeyValuePair<TKey, TValue>>! IEnumerable<KeyValuePair<TKey, TValue>>.GetEnumerator() {
+            return (IEnumerator<KeyValuePair<TKey, TValue>>)impl.GetEnumerator();
+        }        
+
+
+        public bool Remove(TKey key) {
+          impl.Remove((!)key);
+          return true;
+        }
+
+        public bool TryGetValue(TKey key, out TValue value) {
+          if (impl.ContainsKey((!)key)){
+              value = (TValue)impl[key];
+              return true;
+          }else{
+              value = default(TValue);
+              return false;
+          }
+        }
+/*
+        bool ICollection<KeyValuePair<TKey,TValue>>.IsReadOnly {
+            get { return impl.IsReadOnly; }
+        }
+*/
+
+
+        /*
+        public void CopyTo(Array array, int index) {
+          impl.CopyTo(array,index);
+        }
+        */
+
+        IEnumerator IEnumerable.GetEnumerator() {
+            return impl.GetEnumerator();
+        }
+    
+        bool ICollection.IsSynchronized {
+            get { return impl.IsSynchronized; }
+        }
+
+        object ICollection.SyncRoot { 
+            get { 
+                return impl.SyncRoot;
+            }
+        }
+
+        bool IDictionary.IsFixedSize {
+            get { return impl.IsFixedSize; }
+        }
+
+        bool IDictionary.IsReadOnly {
+            get { return impl.IsReadOnly; }
+        }
+        bool ICollection<KeyValuePair<TKey,TValue>>.IsReadOnly{
+            get { return impl.IsReadOnly; }
+        }
+
+        ICollection IDictionary.Keys {
+            get { return (ICollection)impl.Keys; }
+        }
+    
+        ICollection IDictionary.Values {
+            get { return (ICollection)impl.Values; }
+        }
+    
+        object IDictionary.this[object key] {
+            get { 
+                return impl[(!)key];
+            }
+            set {                
+                impl[(!)key] = value; 
+            }
+        }
+    
+        void IDictionary.Add(object key, object value) {            
+            impl.Add((!)key,value);
+        }
+    
+        bool IDictionary.Contains(object key) {            
+            return impl.Contains(key);
+        }
+    
+        IDictionaryEnumerator IDictionary.GetEnumerator() {
+            return impl.GetEnumerator();
+        }
+    
+        void IDictionary.Remove(object key) {            
+            impl.Remove((!)key);
+        }
+      }
+}

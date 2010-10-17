@@ -1,0 +1,218 @@
+using Microsoft.Contracts;
+
+public interface Iface {}
+
+public class C : Iface{ 
+  private System.Object! o = new System.Object();
+  private string! s = "tjolahopp";
+  private int[] arr = new int[3];
+  private int x;
+  invariant 0 <= x;
+
+  public void M0() 
+  {
+    additive expose (this){ // Error: Object might not be exposable 
+      x++;
+    }
+  }
+
+  public void M1() 
+  {
+    expose (this) {
+      x++;
+    }
+  }
+
+  public void M2() 
+  {
+    expose (this) {
+      x--; 
+    } // Error: Object invariant possibly does not hold: invariant 0 <= x
+  }
+
+  public void M3() 
+  {
+    expose ((System.Object)this){ // Error: Local expose is not allowed at System.Object
+      x++;
+    }
+  } 
+
+//  public void M4() 
+//  {
+//    expose ((Iface)this) { // Error: Local expose is not allowed at an interface
+//      x++;
+//    }
+//  }
+
+  public void M5()
+  { 
+    expose(s) {  // Error: strings are not allowed to be locally exposed
+      s = "rustilustan";
+    }
+  }
+
+  public void M6() 
+  requires IsExposable;
+  {
+    additive expose (this) {
+      expose (this){ // Error: Object might not be locally exposable (already exposed)
+        x++;
+      }
+    }
+  }
+
+  public void M7() 
+  {
+    expose (this) {
+      additive expose (this) { // Error: Object might not be exposable (already locally exposed)
+        x++;
+      }
+    }
+  }
+}
+
+public class S {
+  [Additive] public int x; 
+  [Additive] protected int z;
+  [Additive] public int w;
+ 
+  invariant 0 <= x && 0 <= z && 0 <= w;
+
+  [Additive]
+  public virtual void V0() 
+  {
+    additive expose (this) {
+      x++;
+    }
+  }
+
+  [Additive]
+  public virtual void V1() 
+  {
+    additive expose (this) {
+      x++;
+    }
+  }
+
+  [Additive]
+  public virtual void V2() 
+  {
+    expose (this) {
+      x++;
+    }
+  }
+
+  [Additive]
+  public virtual void V3() 
+  {
+    expose (this) {
+      x++;
+    }
+  }
+}
+
+public class T : S {
+  [Additive(false)] protected int y;
+  invariant 0 <= y && y <= x; 
+  // Note: Since (S.)x is declared to be [Additive(false)], 
+  // x is not allowed to be mentioned in this invariant. 
+  // When additve is properly implemented there should be a check for this.
+
+  [Additive]
+  public override void V0() 
+  { 
+    additive expose (this) {
+      base.V0();
+    }
+  }
+
+  [Additive]
+  public override void V1() 
+  { 
+
+    expose (this) {
+      base.V1(); // Error: The target object of the call to S.V1() is required to be exposable
+    }
+  }   
+
+  [Additive]
+  public override void V2() 
+  { 
+
+    additive expose (this) {
+      base.V2();
+    }
+  }
+
+  [Additive]
+  public override void V3() 
+  { 
+
+    expose (this) {
+      base.V3(); // Error: The target object of the call to S.V3() is required to be exposable
+    }
+  }
+
+  public void M0() {
+    expose ((S)this) {
+      y++; // Error: Target object of field assignment might not be sufficiently exposed
+    }
+  }
+
+  public void M1() {
+    expose ((S)this) {
+      x++;
+    }
+  }
+  public void M2() {
+    expose ((S)this) {
+      z++;  // Error: Target object of field assignment might not be sufficiently exposed
+    }
+  }
+}
+
+public class U : T {
+  private int u;
+  invariant 0 <= u;
+
+  public void N0() 
+  requires IsExposable;
+  {
+    additive expose (this) {
+      u++;
+      expose ((S)this) {  
+        u++; 
+        x++;
+      }
+    }
+  }
+ 
+}
+
+public class D{
+  T! t = new T();
+ 
+  void M0() 
+  requires t.IsPeerConsistent; 
+  {
+    expose((S)t) {
+      t.x++;
+    }
+  }
+
+  void M1() 
+  requires t.IsPeerConsistent; 
+  {
+    expose((S)t) {
+      t.w++; // Error: Target object of field assignment might not be sufficiently exposed
+    }
+  }
+
+  void M2() 
+  requires t.IsExposable; 
+  {
+    additive expose(t) { 
+      t.x++; // Error: Target object of field assignment might not be sufficiently exposed
+    }
+  }
+}

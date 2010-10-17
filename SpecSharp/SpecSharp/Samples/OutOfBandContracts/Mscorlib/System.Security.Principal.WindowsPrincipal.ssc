@@ -1,0 +1,34 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security.Principal
+{
+
+    public class WindowsPrincipal
+    {
+
+        public IIdentity Identity
+        {
+          get;
+        }
+
+        public bool IsInRole (WindowsBuiltInRole role);
+
+        public bool IsInRole (int rid);
+
+        public bool IsInRole (string role);
+
+        public WindowsPrincipal (WindowsIdentity! ntIdentity)
+            requires ntIdentity != null otherwise ArgumentNullException;
+    }
+}

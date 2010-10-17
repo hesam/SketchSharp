@@ -1,0 +1,56 @@
+// These tests are designed for /loopUnroll:1
+
+public class C {
+  int Sum(int[]! a) {
+    int s = 0;
+    for (int i = 1; i <= a.Length; i++) {
+      s += a[i];  // error: i==1 when a.Length==1
+    }
+    return s;
+  }
+
+  int SumWontFindError(int[]! a)
+    requires 5 <= a.Length;
+  {
+    int s = 0;
+    for (int i = 1; i <= a.Length; i++) {
+      s += a[i];  // won't find a[a.Length] access error
+    }
+    assert false;  // won't even find this error
+  }
+
+  int InvariantFails0(int[]! a) {
+    int s = 0;
+    for (int i = 0; i < a.Length; i++)
+      invariant 0 <= s && s < 100;  // error: when checking invariant after 1 loop iteration
+    {
+      if (0 <= a[i] && a[i] <= 100) {
+        s += a[i];
+      }
+    }
+    return s;
+  }
+
+  int InvariantFails1(int[]! a) {
+    int s = 0;
+    for (int i = 0; i < a.Length; i++)
+      invariant 0 <= s && s < 100;  // error: when checking invariant after 1 loop iteration
+    {
+      assume 0 <= a[i] && a[i] <= 100;
+      s += a[i];
+    }
+    return s;
+  }
+
+  int InvariantFailureGoesUnnoticed(int[]! a) {
+    int s = 0;
+    for (int i = 0; i < a.Length; i++)
+      invariant 0 <= s && s < 100;  // no invariant failure occurs until 2 whole iterations have been executed
+    {
+      if (0 <= a[i] && a[i] <= 50) {
+        s += a[i];
+      }
+    }
+    return s;
+  }
+}

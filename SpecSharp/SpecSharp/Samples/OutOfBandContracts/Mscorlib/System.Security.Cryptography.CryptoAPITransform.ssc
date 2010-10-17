@@ -1,0 +1,62 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security.Cryptography
+{
+
+    public class CryptoAPITransform
+    {
+
+        public int InputBlockSize
+        {
+          get;
+        }
+
+        public int KeyHandle
+        {
+          get;
+        }
+
+        public bool CanTransformMultipleBlocks
+        {
+          get;
+        }
+
+        public int OutputBlockSize
+        {
+          get;
+        }
+
+        public bool CanReuseTransform
+        {
+          get;
+        }
+
+        public Byte[] TransformFinalBlock (Byte[]! inputBuffer, int inputOffset, int inputCount)
+            requires inputBuffer != null otherwise ArgumentNullException;
+            requires inputOffset >= 0 otherwise ArgumentOutOfRangeException;
+            requires inputCount >= 0 otherwise ArgumentException;
+            requires inputCount <= inputBuffer.Length otherwise ArgumentException;
+            requires (inputBuffer.Length - inputCount) >= inputOffset otherwise ArgumentException;
+
+        public int TransformBlock (Byte[]! inputBuffer, int inputOffset, int inputCount, Byte[]! outputBuffer, int outputOffset)
+            requires inputBuffer != null otherwise ArgumentNullException;
+            requires outputBuffer != null otherwise ArgumentNullException;
+            requires inputOffset >= 0 otherwise ArgumentOutOfRangeException;
+            requires inputCount > 0 otherwise ArgumentException;
+            requires inputCount <= inputBuffer.Length otherwise ArgumentException;
+            requires (inputBuffer.Length - inputCount) >= inputOffset otherwise ArgumentException;
+
+        public void Clear ();
+    }
+}

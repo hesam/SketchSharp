@@ -1,0 +1,573 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+namespace Microsoft.Boogie
+{
+    using System;
+    using Microsoft.SpecSharp;
+    using Microsoft.SpecSharp.Collections;
+    using Microsoft.Contracts;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.IO;
+    using Cci = System.Compiler;
+    using VC;
+
+    public class BoogiePlugin : IPlugin{
+        public Cci.Visitor CreateVisitor(SpecSharpCompilation ssCompilation, TypeSystem typeSystem){
+            if (ssCompilation == null || typeSystem == null) throw new ArgumentNullException();
+            assume typeSystem.ErrorHandler != null;  //PM: seems like ErrorHandler is not a non-null field
+            return new BoogiePluginVisitor(ssCompilation, typeSystem);
+        }
+    }
+    
+    class BoogiePLErrorNode : Cci.ErrorNode
+    {
+        public string! Message;
+        
+        public BoogiePLErrorNode(Cci.Document! document, int line, int column, string! message)
+          : base((int) Cci.Error.GenericWarning, message)
+        {
+            this.Message = message;
+            if (line < 1) { line = 1; column = 0; }
+            if (column < 0) column = 0;
+            this.SourceContext = new Cci.SourceContext(document, line, column + 1, line, column + 1);
+            //PM: Put this base call at the end to avoid problem with expose. Base constructor does not assign to SourceContext
+            // base((int) Cci.Error.GenericWarning, message);
+        }
+        
+        public override int Severity { get { return 1; } }
+        public override string! GetMessage (System.Globalization.CultureInfo culture) { return Message; }
+    }
+    
+    class SpecSharpErrorSink : IErrorSink
+    {
+        public Cci.ErrorNodeList! Errors;
+        public Cci.Document! document;
+        
+        [Microsoft.Contracts.Pure]
+        public SpecSharpErrorSink (Cci.ErrorNodeList! errors, Cci.Document! document)
+        {
+            this.Errors = errors;
+            this.document = document;
+            // base();
+        }
+        
+        public void Error(IToken! tok, string! msg)
+        {
+            Errors.Add(new BoogiePLErrorNode(document, tok.line, tok.col, msg));
+        }
+    }
+
+    public class BoogiePluginVisitor : Cci.StandardCheckingVisitor
+    {
+        SpecSharpCompilation! ssCompilation;
+        
+        invariant this.ErrorHandler != null;
+        
+        public Cci.ErrorHandler! MyErrorHandler { 
+          [Pure][Reads(ReadsAttribute.Reads.Owned)][Rep]
+          get
+            ensures result.Errors != null; 
+          { 
+            assert this.ErrorHandler != null;
+            assume this.ErrorHandler.Errors != null;
+            return this.ErrorHandler; 
+          }
+        }
+    
+        [Microsoft.Contracts.NotDelayed]
+        public BoogiePluginVisitor (SpecSharpCompilation! ssCompilation, Cci.TypeSystem! typeSystem)
+          requires typeSystem.ErrorHandler != null;
+        {
+            // NOTE: We store away the compiler here, since its analyzer property is not yet set. Grab the analyzer later.
+            this.ssCompilation = ssCompilation;
+            base(typeSystem.ErrorHandler); // due to call to non-delayed base ctor
+#if ROB_DEBUG_STOP            
+            System.Diagnostics.Debugger.Break ();
+#endif
+       }
+        
+        bool HasShowMeAttribute (Cci.Method method)
+        {
+            if (method == null) return false;
+            Cci.AttributeList attributes = method.Attributes;
+            if (attributes == null) return false;
+            for (int i=0; i<attributes.Count; i++)
+            {
+                Cci.AttributeNode attr = attributes[i];
+                if (attr == null) continue;
+                Cci.MemberBinding mb = attr.Constructor as Cci.MemberBinding;
+                if (mb == null) continue;
+                Cci.Method ctor = mb.BoundMember as Cci.Method;
+                if (ctor == null) continue;
+                //PM: DeclaringType is not non-null. It yields null if the method is a member of a namespace
+                assume ctor.DeclaringType != null; 
+                //PM: Name is not non-null. Some constructors of Member do not initialize it
+                assume ctor.DeclaringType.Name != null;
+                if (Equals(ctor.DeclaringType.Name.Name, "ShowMeAttribute")) 
+                    return true;
+            }
+            return false;
+        }
+        
+        public override Cci.Method VisitMethod (Cci.Method method)
+        {
+            if (method == null) { return method; }
+            
+            Cci.Analyzer analyzer = this.ssCompilation.Analyzer;
+            if (analyzer == null)
+            {
+                // We're not ready yet.
+                return method;
+            }
+            if (System.Compiler.ErrorNode.GetCountAtSeverity(this.MyErrorHandler.Errors, 0, 0) > 0) // if the compiler found errors...
+            {
+                // No ASTs with holes in them for us...
+                return method;
+            }
+            
+            TranslatedProgram! program = CilTranslator.TranslateAstToBoogie(method, analyzer, (!) this.MyErrorHandler);
+            return (Cci.Method) VerifyBplProgram(program, method, new Cci.CompilerSite());
+        }
+        
+        public override Cci.CompilationUnit VisitCompilationUnit (Cci.CompilationUnit unit)
+        {
+            if (unit == null) { return unit; }
+   
+            Cci.Analyzer analyzer = this.ssCompilation.Analyzer;
+            if (analyzer == null)
+            {
+                // We're not ready yet.
+                return unit;
+            }
+            if (System.Compiler.ErrorNode.GetCountAtSeverity(this.MyErrorHandler.Errors, 0, 0) > 0) // if the compiler found errors...
+            {
+                // No ASTs with holes in them for us...
+                return unit;
+            }
+                        
+            SpecSharpCompilerOptions xoptions = unit.Compilation == null ? null : unit.Compilation.CompilerParameters as SpecSharpCompilerOptions;
+            if (xoptions != null){
+              if (xoptions.ProgramVerifierCommandLineOptions != null && xoptions.ProgramVerifierCommandLineOptions.Count > 0){
+                int n = xoptions.ProgramVerifierCommandLineOptions.Count;
+                // copy only non-null options
+                int m = 0;
+                foreach(string s in xoptions.ProgramVerifierCommandLineOptions)
+                  //PM: We should have the following loop invariant. However, we cannot verify it because,
+                  //PM: due to a bug in Boogie, we do not get the modifies contribution of the MoveNext
+                  //PM: method (which is defined in a struct).
+                  //PM: invariant 0 <= m && xoptions.ProgramVerifierCommandLineOptions != null;
+                  invariant 0 <= m;
+                {
+                  if (s != null) {
+                    m++;
+                  }
+                }
+                //PM: The following assumption can be deleted as soon as we have the right loop invariant above
+                assume xoptions.ProgramVerifierCommandLineOptions != null;
+                string[]! argsFromSpecSharp = new string[m];
+                int i = 0; int j = 0;
+                while(i < n) invariant 0 <= i && 0 <= j && j <= argsFromSpecSharp.Length && xoptions.ProgramVerifierCommandLineOptions != null; 
+                { // copy only non-null options
+                  if (xoptions.ProgramVerifierCommandLineOptions[i] != null){
+                    //PM: We need this assumption because we cannot prove the correspondance between this loop
+                    //PM: and the previous loop. We would like to express that argsFromSpecSharp.Length (and m)
+                    //PM: is the number of non-null elements in xoptions.ProgramVerifierCommandLineOptions.
+                    assume j < argsFromSpecSharp.Length;
+                    argsFromSpecSharp[j] = (!)xoptions.ProgramVerifierCommandLineOptions[i];
+                    j++;
+                  }
+                  i++;
+                }
+                //CommandLineOptions.Clo is access by several threads. To avoid problems with the runtime checking of the Boogie methodology,
+                //we create a new CLO object here. This will make sure that the current thread has the accessibility data for that object.
+                //Thus, we do not have to use the share and acquire commands Bart implemented.
+                //The new object will be populated below.
+                CommandLineOptions.Clo = new CommandLineOptions();
+                CommandLineOptions.Clo.InputFileExtension = ".ssc";
+                if(CommandLineOptions.Clo.Parse(argsFromSpecSharp) % 2 == 0) { // not well-formed
+                  return unit;
+                }
+              }
+            }
+            
+            TranslatedProgram program = CilTranslator.TranslateAstToBoogie(unit, analyzer, (!) this.MyErrorHandler);
+            if (program == null) {
+              return unit;
+            }
+            return (Cci.CompilationUnit) VerifyBplProgram(program, unit, new Cci.CompilerSite());
+        }
+        
+        public override Cci.Compilation VisitCompilation (Cci.Compilation compilation)
+        {        
+            if (compilation == null) { return compilation; }
+            
+            if (compilation.TargetModule == null) // REVIEW: Should an error be issued in this case?
+              return compilation;
+            
+            Cci.Module! module = compilation.TargetModule;
+            
+            Cci.Analyzer analyzer = this.ssCompilation.Analyzer;
+            if (analyzer == null)
+            {
+                // We're not ready yet.
+                return compilation;
+            }
+            if (System.Compiler.ErrorNode.GetCountAtSeverity(this.MyErrorHandler.Errors, 0, 0) > 0) // if the compiler found errors...
+            {
+                // No ASTs with holes in them for us...
+                return compilation;
+            }
+            
+            Cci.CompilerSite site = null;
+            Cci.CompilerOptions options = compilation.CompilerParameters as Cci.CompilerOptions;
+            if (options != null){
+                site = options.Site;
+            }
+            if (site == null)
+                site = new Cci.CompilerSite();
+            
+			//PM: According to Herman, this method will currently be called with SpecSharpCompilerOptions.
+			//PM: If this assumption is valid (and stable), this method could be simplified quite a bit
+			//PM: because some of the checks are trivially true.
+            assume options is SpecSharpCompilerOptions;  
+            SpecSharpCompilerOptions xoptions = options as SpecSharpCompilerOptions;
+            if (xoptions != null && xoptions.ProgramVerifierCommandLineOptions != null && xoptions.ProgramVerifierCommandLineOptions.Count > 0){
+              int n = xoptions.ProgramVerifierCommandLineOptions.Count;
+              // copy only non-null options
+              int m = 0;
+              foreach(string s in xoptions.ProgramVerifierCommandLineOptions) invariant 0 <= m; 
+                if (s != null)
+                  m++;
+              string[]! argsFromSpecSharp = new string[m];
+              int i = 0; int j = 0; 
+              while(i < n){ 
+                if (xoptions.ProgramVerifierCommandLineOptions[i] != null){
+                  argsFromSpecSharp[j] = (!)xoptions.ProgramVerifierCommandLineOptions[i];
+                  j++;
+                }
+                i++;
+              }
+              NonNullType.AssertInitialized(argsFromSpecSharp); 
+              CommandLineOptions.Clo = new CommandLineOptions();
+              CommandLineOptions.Clo.InputFileExtension = ".ssc";
+              if(CommandLineOptions.Clo.Parse(argsFromSpecSharp) % 2 == 0) { // not well-formed
+                site.OutputMessage(CommandLineOptions.Clo.ToolNameSpecSharp + ": Something wrong with verifier options. Exiting...\r\n");
+                return compilation;
+              }
+                
+            } else {
+              // we must still call the CommandLineOptions constructor, or else some global won't be properly initialized
+              CommandLineOptions.Clo = new CommandLineOptions();
+              CommandLineOptions.Clo.InputFileExtension = ".ssc";
+              if(CommandLineOptions.Clo.Parse(new string![0]) % 2 == 0) { // not well-formed
+                site.OutputMessage(CommandLineOptions.Clo.ToolNameSpecSharp + ": Something wrong with verifier options. Exiting...\r\n");
+                return compilation;
+              }
+            }
+            
+            if (options != null && options.DisableGuardedClassesChecks) 
+              CommandLineOptions.Clo.CheckingLevel = 0;
+
+            site.OutputMessage(CommandLineOptions.Clo.ToolNameSpecSharp + ": Creating BoogiePL program\r\n");
+            SplitConjunctsInContracts sc = new SplitConjunctsInContracts();
+            sc.Visit(module);
+            TranslatedProgram! program = CilTranslator.TranslateCilToBoogie(module, false, analyzer, (!) this.MyErrorHandler);
+            return (Cci.Compilation) VerifyBplProgram(program, compilation, site);
+        }
+        
+        private Cci.Node! VerifyBplProgram(TranslatedProgram! program, Cci.Node! programNode, Cci.CompilerSite! site)
+          requires !(programNode is Cci.Compilation) || ((Cci.Compilation)programNode).CompilerParameters is SpecSharpCompilerOptions;
+          ensures result == programNode;  
+        {
+            Cci.Compilation compilation = programNode as Cci.Compilation;
+            IErrorSink errorSink = null;
+       
+            if (compilation != null)
+            {
+                SpecSharpCompilerOptions options = (SpecSharpCompilerOptions) compilation.CompilerParameters;
+                string path = (options == null) ? null : options.OutputPath;
+                path = (path == null) ? "" : path;
+                string assemName = (options == null) ? "foo" : options.OutputAssembly;
+                CommandLineOptions.Clo.FileName = (!)assemName;
+                CommandLineOptions.Clo.Environment += " " + CommandLineOptions.Clo.FileName;
+                string bplFilePath = CommandLineOptions.Clo.PrintFile;
+                if (bplFilePath != null && bplFilePath.Length > 0){
+                  bplFilePath = Path.Combine(path,bplFilePath);
+                  site.OutputMessage(CommandLineOptions.Clo.ToolNameSpecSharp + ": Writing BoogiePL program\r\n");
+                  StringWriter writer = new StringWriter();
+                  using (TokenTextWriter w = new TokenTextWriter(bplFilePath, writer))
+                  {
+                      w.WriteLine("// " + CommandLineOptions.Clo.Version);
+                      w.WriteLine("// " + CommandLineOptions.Clo.Environment);
+                      w.WriteLine();
+                      program.Program.Emit(w);
+                  }
+                  Cci.Document! document = new Cci.Document();
+                  document.Name = bplFilePath;
+                  document.LineNumber = 1;
+                  string text = writer.ToString();
+                  document.Text = new Cci.DocumentText(text);
+                  using (StreamWriter w = new StreamWriter(bplFilePath))
+                  {
+                      w.Write(text);
+                  }
+                  errorSink = new SpecSharpErrorSink((!)(this.MyErrorHandler.Errors), document);
+                  string uri = "file:///" + Path.GetFullPath(bplFilePath).Replace(" ", "%20");
+                  site.OutputMessage(string.Format("{0}: BoogiePL program written to {1}\r\n", CommandLineOptions.ToolNameSpecSharp, uri));
+                }
+            }
+
+            site.OutputMessage(CommandLineOptions.Clo.ToolNameSpecSharp + ": Checking BoogiePL program\r\n");
+            
+            int errorCount = program.Program.Resolve(errorSink);
+            
+            if (errorCount != 0) 
+            {
+                this.HandleError(programNode, Cci.Error.GenericWarning,
+                    String.Format("internal error: {0} name resolution errors detected", errorCount));
+                return programNode;
+            }
+
+            errorCount = program.Program.Typecheck(errorSink);
+            
+            if (errorCount != 0) 
+            {
+                this.HandleError(programNode, Cci.Error.GenericWarning,
+                    String.Format("internal error: {0} typechecking errors detected", errorCount));
+                return programNode;
+            }
+            
+            // Run the abstract interpretation
+            Microsoft.Boogie.AbstractInterpretation.AbstractInterpretation.RunAbstractInterpretation(program.Program);
+            if (CommandLineOptions.Clo.PrintInstrumented) {
+              program.Program.Emit(new TokenTextWriter(Console.Out));
+            }
+                                    
+            ConditionGeneration vcgen = null;
+            try
+            {
+                // I don't think you typically want the simplify.exe I/O log for the plugin scenario, since it probably gets huge.
+                // Maybe not typically, but sometimes I do.
+                string logFilePath = CommandLineOptions.Clo.SimplifyLogFilePath;
+                if (CommandLineOptions.Clo.vcVariety == CommandLineOptions.VCVariety.Doomed)
+                {
+                  vcgen = new DCGen(program.Program, logFilePath, CommandLineOptions.Clo.SimplifyLogFileAppend);
+                } else
+                {
+                  vcgen = new VCGen(program.Program, logFilePath, CommandLineOptions.Clo.SimplifyLogFileAppend);
+                }         
+
+            }
+            catch (TypeInitializationException e)
+            {
+                ProverException pe = e.InnerException as ProverException;
+                if (pe != null)
+                {
+                    this.HandleError(programNode, Cci.Error.GenericWarning, 
+                        String.Format("Program Verifier: Fatal Error: {0}", pe.Message));
+                    return programNode;
+                }
+                else
+                    throw;
+            }
+            catch (ProverException e)
+            {
+                this.HandleError(programNode, Cci.Error.GenericWarning, 
+                    String.Format("Program Verifier: Fatal Error: {0}", e.Message));
+                return programNode;
+            }
+            assert vcgen != null;
+            
+            int implCount = 0;
+            foreach (Declaration a in program.Program.TopLevelDeclarations) {
+              if (a is Implementation) {
+                implCount++;
+              }
+            }
+
+            int implCounter = 1;
+            foreach (Declaration a in program.Program.TopLevelDeclarations)
+            {
+                if ( a is Implementation )
+                {
+                    Implementation! impl = (Implementation) a;
+                    
+                    if (site.ShouldCancel)
+                      return programNode;
+                    
+                    Cci.Method method = null;
+                    try {
+                      method = program.GetMethodFromImplementation(impl);                    
+                      string methodName = method.FullName;
+                      string implName = impl.Name;
+                      site.OutputMessage(string.Format("{0}: Verifying method {1} of {2}: {3} (implementation {4})... ", CommandLineOptions.ToolNameSpecSharp, implCounter, implCount, methodName, implName));
+                    
+                      if (HasShowMeAttribute(method))
+                      {
+                          string message = "";
+                          System.IO.StringWriter w = new System.IO.StringWriter();
+                          using (TokenTextWriter writer = new TokenTextWriter(w))
+                          {
+                              impl.Emit(writer, 0);
+                              message = w.ToString();
+                          }
+                          this.HandleError(method, Cci.Error.GenericWarning, message);
+                      }
+                    } catch (NullException) {  // Not all Boogie implementations correspond directly to a method in the program.
+                                                 // An example are modelfield consistency checks.
+                      site.OutputMessage(string.Format("{0}: Verifying internal method {1}", CommandLineOptions.ToolNameSpecSharp, impl.Name));
+                    }
+                    
+                    VCGen.Outcome outcome;
+                    List<Counterexample!>? errors;
+                    try
+                    {
+                        outcome = vcgen.VerifyImplementation(impl, program.Program, out errors);
+                    }
+                    catch (VCGenException e)
+                    {
+                        this.HandleError(program.GetMethodFromImplementation(impl).Name, Cci.Error.GenericWarning, String.Format("{0}  Encountered in implementation {1}.", e.Message, impl.Name));
+                        continue;
+                    }
+                    catch (UnexpectedProverOutputException)
+                    {
+                        site.OutputMessage(string.Format("\r\n                          SKIPPING implementation {0} ({1}) because of internal error!\r\n", implCounter, impl.Name));
+                        continue;
+                    }
+                    catch (StackOverflowException)
+                    {
+                        this.HandleError(program.GetMethodFromImplementation(impl).Name, Cci.Error.GenericWarning, "Verification of this method failed because it is too large. Try splitting the method up.");
+                        continue;
+                    }
+                    
+                    implCounter++;
+                    
+                    int implErrorCount;
+                    switch (outcome) {
+                      case VCGen.Outcome.Correct:
+                        implErrorCount = 0;
+                        break;
+                      case VCGen.Outcome.TimedOut:
+                        implErrorCount = 1;
+                        this.HandleError(program.GetMethodFromImplementation(impl).Name, Cci.Error.GenericWarning, "Verification of this method failed because the theorem prover exceeded the time limit.");
+                        break;
+                      case VCGen.Outcome.OutOfMemory:
+                        implErrorCount = 1;
+                        this.HandleError(program.GetMethodFromImplementation(impl).Name, Cci.Error.GenericWarning, "Verification of this method failed because the theorem prover exceeded the memory limit.");
+                        break;
+                      case VCGen.Outcome.Inconclusive:
+                        implErrorCount = 1;
+                        this.HandleError(program.GetMethodFromImplementation(impl).Name, Cci.Error.GenericWarning, "Verification of this method inconclusive.");
+                        break;
+                      case VCGen.Outcome.Errors:
+                        assert errors != null;  // guaranteed by postcondition of VerifyImplementation
+                        implErrorCount = errors.Count;
+                        break;
+                      default:
+                        assert false;  // unexpected outcome
+                    }
+                    site.OutputMessage(string.Format("{0} error(s) found\r\n", implErrorCount));
+                    if (outcome == VCGen.Outcome.Errors) 
+                    {
+                      assert errors != null;
+                      ErrorReporting h = new ErrorReporting();
+                      h.errorReportingWithTrace(program, errors, impl);
+                    }
+                }
+            }
+
+            vcgen.Close();    
+            site.OutputMessage(CommandLineOptions.Clo.ToolNameSpecSharp + ": Finished\r\n\r\n");
+            
+            return programNode;
+        }
+        
+        Cci.Node! ImprovePreconditionNode (Cci.Node! node, Cci.Node! req)
+        {
+            FindAllNodes callFinder = new FindAllNodes(Cci.NodeType.MethodCall);
+            callFinder.Visit(node);
+            Cci.MethodCall call = callFinder.FirstFound as Cci.MethodCall;
+            if (call == null) return node;
+
+			assume call.Callee != null;  //PM: The callee field in MethodCall cannot be declared non-null; 
+			assume call.Callee is Cci.MemberBinding;
+            Cci.Method method = ((Cci.MemberBinding)call.Callee).BoundMember as Cci.Method;
+            if (method == null) return node;
+            
+            FindAllNodes paramFinder = new FindAllNodes(Cci.NodeType.Parameter);
+            paramFinder.Visit(req);
+            if (paramFinder.Found.Count > 1) return node;
+            Cci.Parameter param = paramFinder.FirstFound  as Cci.Parameter;
+            if (param == null) return node;
+            
+            int actualIndex = 0;
+            assume method.Parameters != null;  //PM: runtime check since Parameters obviously can return null
+            for (int i=0; i<method.Parameters.Count; i++) invariant method.Parameters != null; 
+            {
+                if (method.Parameters[i] == param) { actualIndex = i; break; }
+            }
+            Cci.ExpressionList operands = call.Operands;
+            if (operands == null) return node;
+            if (actualIndex >= operands.Count) return node;
+            assume call.Operands[actualIndex] != null;   
+            return (!) call.Operands[actualIndex];
+        }
+        
+    } // BoogiePlugin
+    
+
+    class FindAllNodes : Cci.StandardVisitor
+    {
+        Cci.NodeType typeToFind;
+        Cci.HashSet! found = new Cci.HashSet();
+        
+        public FindAllNodes (Cci.NodeType nodeType) { this.typeToFind = nodeType; }
+        
+        public Cci.ISet! Found { get { return this.found; } }
+        
+        public object FirstFound 
+        {
+            get
+            {
+                if (this.found.Count == 0) return null;
+                IEnumerator en = this.found.GetEnumerator();
+                bool atLeastOneThere = en.MoveNext();
+                assume atLeastOneThere;
+                return en.Current;
+            }
+        }
+
+        public override Cci.Node Visit (Cci.Node node) 
+        {
+          if (node == null) return null;
+          if (node.NodeType == this.typeToFind) this.found.Add(node);
+          expose(this) {  //PM: Visit requires IsExposable
+            return base.Visit(node);
+          }
+        }
+        
+        public override Cci.Expression VisitMemberBinding (Cci.MemberBinding memberBinding)
+        {
+          if (memberBinding == null) return null;
+          Cci.ParameterField param = memberBinding.BoundMember as Cci.ParameterField;
+          // This is a bit of a cheat since we know the client code.
+          if (param != null) this.Visit(param.Parameter);
+          expose(this) {  //PM: VisitMemberBinding requires IsExposable
+            return base.VisitMemberBinding(memberBinding);
+          }
+        }
+    }
+
+
+    public class ShowMeAttribute : System.Attribute
+    {
+        public ShowMeAttribute () { }
+    }    
+    
+    
+}

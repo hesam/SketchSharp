@@ -1,0 +1,42 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Runtime.Remoting
+{
+
+    public class ActivatedServiceTypeEntry
+    {
+
+        public Type ObjectType
+        {
+          get;
+        }
+
+        public System.Runtime.Remoting.Contexts.IContextAttribute[] ContextAttributes
+        {
+          get;
+          set;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public ActivatedServiceTypeEntry (Type! type)
+            requires type != null otherwise ArgumentNullException;
+
+        public ActivatedServiceTypeEntry (string! typeName, string! assemblyName)
+            requires typeName != null otherwise ArgumentNullException;
+            requires assemblyName != null otherwise ArgumentNullException;
+    }
+}

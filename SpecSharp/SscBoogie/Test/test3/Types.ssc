@@ -1,0 +1,264 @@
+public sealed class Types {
+  public static void Main() {}
+
+  public void M0(B! b, bool maybe) {
+    assert b is B;
+    assert b is A;
+    assert b is object;
+    assert b is J;
+    object o = b;
+    assert o == b;
+    if (maybe) {
+      assert !(o is string);
+    } else {
+      bool isString = o is string;
+      assert !isString;
+    }
+  }
+
+  void Px0(object t) {
+    assume t is Types;  // "is" in contract
+    assert t != null;
+  }
+
+  void Px1(object t) {
+    if (t is Types) {  // "is" in code
+      assert t != null;
+    }
+  }
+
+  void Px2(object t) {
+    bool b = t is Types;
+    if (b) {
+      assert t != null;
+    }
+  }
+
+  public void M1(B b) {
+    if (b is C) {
+      assert b != null;
+      C c = (C)b;
+      assert b == c;
+    }
+  }
+
+  public void M2(B b) {
+    C c = b as C;
+    if (c != null) {
+      assert b is C;
+      assert b == c;
+    }
+  }
+
+  public void M3(B b) {
+    if (!(b is B)) {
+      assert b == null;
+    } else {
+      B! bb = (B)b;
+      assert bb == b;
+    }
+  }
+
+  public void M4(object o) {
+    assert o is D == o is D!;
+    assert o as A == o as A!;
+    assert o as C as C == o as C;
+  }
+
+  public void N0(C c, D d) {
+    // "c" and "d" are of incomparable types, so the only way they could be equal is if they are both null
+    object cc = c;
+    object dd = d;
+    assert cc == c && dd == d;
+    if (c != null) {
+      assert cc != dd;
+    } else if (d != null) {
+      assert cc != dd;
+    }
+  }
+
+  public void N1(C c, D d) {
+    assert (object)c != (object)d;  // error:  they could both be null
+  }
+
+  public void P0(K! k) {
+    assert k is J;
+    assert k is object;
+    object ok = k;
+    assert !(ok is F);  // k is not an F, because F is sealed
+    assert !(ok is int[]);  // likewise, k is not an int[], because all interfaces implemented by int[] are known
+  }
+
+  public void P1(K! k) {
+    object ok = k;  // work around a current compiler bug;
+    assert !(ok is A);  // error:  it might be an A
+  }
+
+  public void P2(K! k) {
+    assert !(k is L);  // error:  it might be an L
+  }
+
+  public void P3(K! k) {
+    object ok = k;  // work around a current compiler bug;
+    assert !(ok is System.Array);  // error:  since System.Array is not sealed, Boogie thinks it may have subtypes that implement K
+  }
+
+  public void P4(object[]! aObject, int[]! aInt, A[]! aA, J[]! aJ, B[]! aB) {
+    object o, p;
+    o = aInt;  p = aObject;
+    assert o != p;
+    assert (object)aInt != (object)aObject;
+    assert (object)aInt != aObject;
+    assert aInt != (object)aObject;
+    assert (object)aInt == (object)aInt;
+
+    assert (object)aInt != (object)aJ;
+    assert (object)aInt != (object)aA;
+    assert (object)aInt != (object)aB;
+
+    o = aB;
+    assert o is A[]!;
+    assert o is J[]!;
+    assert o is object[]!;
+    assert o is object[];
+  }
+
+  public void P5(object[]! aObject, int[]! aInt, A[]! aA, J[]! aJ, B[]! aB) {
+    assert (object)aA != (object)aJ;  // error:  an A[] may be a J[]
+  }
+
+  public void P6(object[]! aObject, int[]! aInt, A[]! aA, J[]! aJ, B[]! aB) {
+    assert (object)aB != (object)aJ;  // error:  a B[] may be a J[]
+  }
+
+  public void P7(object[]! aObject, int[]! aInt, A[]! aA, J[]! aJ, B[]! aB) {
+    assert (object)aB != (object)aA;  // error:  a B[] may be an A[]
+  }
+
+  public void P8(object[]! aObject, int[]! aInt, A[]! aA, J[]! aJ, B[]! aB) {
+    assert (object)aObject != (object)aJ;  // error:  an object[] may be a J[]
+  }
+
+  public void P9(object[]! aObject, int[]! aInt, A[]! aA, J[]! aJ, B[]! aB) {
+    assert (object)aObject != (object)aB;  // error:  an object[] may be a B[]
+  }
+
+  public void P10(J[]! a, B[]! b, F[]! f) {
+    object o = a;
+    assert !(o is F[]);
+    o = b;
+    assert !(o is F[]);
+    assert (object)a != (object)f;
+    assert (object)b != (object)f;
+  }
+
+  [Microsoft.Contracts.NoDefaultContract]
+  public void Q(T t, T tn)
+    requires this.IsExposable;
+    requires t == null || t.IsPeerConsistent;
+    requires tn == null || tn.IsConsistent;
+    requires tn != t;
+    modifies t.*;
+  {
+    if (t != null) {
+      assert t.x as D == t.x;
+      assert t.y is D;
+      assert t.y is D!;
+      if (t.next is T) {
+        assert t.next != null;
+        assert t.next is object!;
+        assert t.next.y is D;
+        T n = t.next.next;
+        assert n == null || n.x is D || n.x == null;
+      }
+      assert T.g == null || T.g is C;
+    }
+
+    // modify the heap
+    if (t != null) {
+      assume t.IsExposable;
+      expose (t) { t.next = tn; }
+    }
+
+    // ... then check the same properties again
+    if (t != null) {
+      assert t.x as D == t.x;
+      assert t.y is D;
+      assert t.y is D!;
+      if (t.next is T) {
+        assert t.next != null;
+        assert t.next is object!;
+        assert t.next.y is D;
+        T n = t.next.next;
+        assert n == null || n.x is D || n.x == null;
+      }
+      assert T.g == null || T.g is C;
+    }
+
+    // make a call, which modifies the heap
+    if (t != null) {
+      t.M();
+    }
+
+    // ... then check the same properties one more time
+    if (t != null) {
+      assert t.x as D == t.x;
+      assert t.y is D;
+      assert t.y is D!;
+      if (t.next is T) {
+        assert t.next != null;
+        assert t.next is object!;
+        assert t.next.y is D;
+        T n = t.next.next;
+        assert n == null || n.x is D || n.x == null;
+      }
+      assert T.g == null || T.g is C;
+    }
+  }
+}
+
+public class A {}
+public interface J {}
+public class B : A, J {}
+public class C : B {}
+public class D : A {}
+public sealed class F : A {}
+
+public interface K : J {}
+public interface L {}
+
+public class T {
+  public D x;
+  public D! y;
+  public T next;
+
+  public static C g;
+
+  public T(D! d)
+  {
+    this.y = d;
+    base();
+  }
+
+  public void M() {}
+}
+
+public class MoreTypes {
+  void M(object t) {
+    assume t is MoreTypes;
+    assert t != null;
+  }
+
+  void N(object t) {
+    if (t is MoreTypes) {
+      assert t != null;
+    }
+  }
+
+  void P(object t) {
+    bool b = t is MoreTypes;
+    if (b) {
+      assert t != null;
+    }
+  }
+}

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="9.00"
+	Name="SpecSharpRegistration"
+	ProjectGUID="{031BDB48-5A25-4D7F-96BA-3B24EC3A7A44}"
+	Keyword="MakeFileProj"
+	TargetFrameworkVersion="131072"
+	>
+	<Platforms>
+		<Platform
+			Name="Win32"
+		/>
+	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="Debug"
+			IntermediateDirectory="Debug"
+			ConfigurationType="0"
+			>
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="nmake  /f makefile8 Build=Debug"
+				ReBuildCommandLine="nmake /all /f makefile8 Build=Debug"
+				CleanCommandLine="Clean8.cmd"
+				Output=""
+				PreprocessorDefinitions=""
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="Release"
+			IntermediateDirectory="Release"
+			ConfigurationType="0"
+			>
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="nmake  /f makefile8 Build=Release"
+				ReBuildCommandLine="nmake  /f makefile8 /all Build=Release"
+				CleanCommandLine="clean.cmd"
+				Output=""
+				PreprocessorDefinitions=""
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
+		</Configuration>
+		<Configuration
+			Name="DebugCommandLine|Win32"
+			OutputDirectory="Debug"
+			IntermediateDirectory="Debug"
+			ConfigurationType="0"
+			>
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="nmake  /f makefile8 Build=Debug"
+				ReBuildCommandLine="nmake  /f makefile8 /all Build=Debug"
+				CleanCommandLine="Clean.cmd"
+				Output=""
+				PreprocessorDefinitions=""
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
+		</Configuration>
+	</Configurations>
+	<References>
+	</References>
+	<Files>
+		<File
+			RelativePath=".\clean8.cmd"
+			>
+		</File>
+		<File
+			RelativePath=".\cleanreg.js"
+			>
+		</File>
+		<File
+			RelativePath=".\CopyBits.cmd"
+			>
+		</File>
+		<File
+			RelativePath=".\GacInstall.cmd"
+			>
+		</File>
+		<File
+			RelativePath=".\GacRegInstall.cmd"
+			>
+		</File>
+		<File
+			RelativePath=".\makefile8"
+			>
+		</File>
+		<File
+			RelativePath=".\RegInstall.cmd"
+			>
+		</File>
+		<File
+			RelativePath=".\Register.cmd"
+			>
+		</File>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>

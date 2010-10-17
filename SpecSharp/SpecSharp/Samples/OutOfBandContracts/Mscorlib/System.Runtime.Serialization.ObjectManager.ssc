@@ -1,0 +1,56 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Runtime.Serialization
+{
+
+    public class ObjectManager
+    {
+
+        public void RaiseDeserializationEvent ();
+
+        public void RecordArrayElementFixup (Int64 arrayToBeFixed, Int32[]! indices, Int64 objectRequired)
+            requires arrayToBeFixed > 0 otherwise ArgumentOutOfRangeException;
+            requires objectRequired > 0 otherwise ArgumentOutOfRangeException;
+            requires indices != null otherwise ArgumentNullException;
+
+        public void RecordArrayElementFixup (Int64 arrayToBeFixed, int index, Int64 objectRequired);
+
+        public void RecordDelayedFixup (Int64 objectToBeFixed, string! memberName, Int64 objectRequired)
+            requires objectToBeFixed > 0 otherwise ArgumentOutOfRangeException;
+            requires objectRequired > 0 otherwise ArgumentOutOfRangeException;
+            requires memberName != null otherwise ArgumentNullException;
+
+        public void RecordFixup (Int64 objectToBeFixed, System.Reflection.MemberInfo! member, Int64 objectRequired)
+            requires objectToBeFixed > 0 otherwise ArgumentOutOfRangeException;
+            requires objectRequired > 0 otherwise ArgumentOutOfRangeException;
+            requires member != null otherwise ArgumentNullException;
+
+        public void DoFixups ();
+
+        public void RegisterObject (object! obj, Int64 objectID, SerializationInfo info, Int64 idOfContainingObj, System.Reflection.MemberInfo member, Int32[] arrayIndex)
+            requires obj != null otherwise ArgumentNullException;
+            requires objectID > 0 otherwise ArgumentOutOfRangeException;
+
+        public void RegisterObject (object obj, Int64 objectID, SerializationInfo info, Int64 idOfContainingObj, System.Reflection.MemberInfo member);
+
+        public void RegisterObject (object obj, Int64 objectID, SerializationInfo info);
+
+        public void RegisterObject (object obj, Int64 objectID);
+
+        public object GetObject (Int64 objectID)
+            requires objectID > 0 otherwise ArgumentOutOfRangeException;
+
+        public ObjectManager (ISurrogateSelector selector, StreamingContext context);
+    }
+}

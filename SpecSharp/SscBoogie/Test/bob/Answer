@@ -1,0 +1,63 @@
+
+-------------------- Change769.ssc --------------------
+
+-------------------- Change773.ssc --------------------
+Change773.ssc(5,14): warning CS0219: The variable 'b' is assigned but its value is never used
+Change773.ssc(6,13): warning CS0219: The variable 'i' is assigned but its value is never used
+Change773.ssc(6,20): warning CS2663: Array index possibly above upper bound
+Change773.ssc(5,18): warning CS2663:     (trace position)
+Change773.ssc(15,13): warning CS0219: The variable 'i' is assigned but its value is never used
+
+-------------------- Change774.ssc --------------------
+
+-------------------- Change775.ssc --------------------
+
+-------------------- Bug163.ssc --------------------
+
+-------------------- IntToString.ssc --------------------
+
+-------------------- StaticField.ssc --------------------
+StaticField.ssc(14,9): warning CS2663: Assertion might not hold: x == 7
+
+-------------------- IndexerInExpr.ssc --------------------
+
+-------------------- Literals.ssc --------------------
+
+-------------------- loopinv0-nonnull\loopinv0-nonnull --------------------
+Error: Method TestEnumerable.Test1(F! other), unsatisfied postcondition: field != null
+loopinv0-nonnull.ssc(69,5): Related information:     (trace position)
+
+Spec# program verifier finished with 3 verified, 1 error
+
+-------------------- AbsInt.dll --------------------
+
+Spec# program verifier finished with 0 verified, 0 errors
+
+-------------------- AIFramework.dll --------------------
+Error: This statement was ignored because ldflda instructions whose source is a pointer are not yet supported.
+Error: This statement was ignored because ldflda instructions whose source is a pointer are not yet supported.
+Error: This statement was ignored because ldflda instructions whose source is a pointer are not yet supported.
+Error: This statement was ignored because ldflda instructions whose source is a pointer are not yet supported.
+Error: This statement was ignored because ldflda instructions whose source is a pointer are not yet supported.
+
+Spec# program verifier finished with 0 verified, 5 errors
+
+-------------------- BoogiePlugin.dll --------------------
+
+Spec# program verifier finished with 0 verified, 0 errors
+
+-------------------- BytecodeTranslation.dll --------------------
+
+Spec# program verifier finished with 0 verified, 0 errors
+
+-------------------- VCGeneration.dll --------------------
+
+Spec# program verifier finished with 0 verified, 0 errors
+
+-------------------- Core.dll --------------------
+
+Spec# program verifier finished with 0 verified, 0 errors
+
+-------------------- DriverHelper.dll --------------------
+
+Spec# program verifier finished with 0 verified, 0 errors

@@ -1,0 +1,13 @@
+struct S
+{
+    public int i;
+}
+
+class Test1
+{
+    S s;
+
+    Test1()
+    {
+    }
+}

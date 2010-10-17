@@ -1,0 +1,715 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+using Microsoft.Contracts;
+
+namespace Microsoft.Boogie
+{
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using Cci = System.Compiler;
+    using Bpl = Microsoft.Boogie;
+
+    public class CilTranslator 
+    {
+
+        internal struct Switches
+        {
+            public static string LimitToMethod = null;
+            public static void SetLimitToMethod (string value) { LimitToMethod = value; }
+
+            public static bool DoThisMethod (Cci.Method! method)
+            {
+                return LimitToMethod == null ||
+                    ((!)method.FullName).IndexOf(LimitToMethod) >= 0;
+            }
+
+            public static string OutputFile = null;
+            public static void SetOutputFile (string value) { OutputFile = value; }
+
+            internal static Cci.Module AssemblyBeingTranslated = null;
+
+            public static bool IsExternalProcedure (Cci.Method! method)
+            {
+                if (LimitToMethod != null)
+                {
+                    return ! DoThisMethod(method); // prototype all methods we're not traslating
+                }
+                else
+                {
+                    // we're doing a whole assembly, so prototype methods from other assemblies
+                    return ((!)method.DeclaringType).DeclaringModule != AssemblyBeingTranslated;
+                }
+            }
+        } // Switches
+
+
+
+        private static string[] ParseCommandLine (string[]! commandLineArguments)
+        {
+            CommandLineArguments argumentParser = new CommandLineArguments();
+
+            argumentParser.AddStringSwitch(
+                "output",
+                new CommandLineArguments.StringArgument(Switches.SetOutputFile),
+                "<filename>",
+                "direct output to given file"
+                );
+
+            argumentParser.AddStringSwitch(
+                "only",
+                new CommandLineArguments.StringArgument(Switches.SetLimitToMethod),
+                "<method name>",
+                "translate only the named method"
+                );
+
+            bool errors = false;
+            string[]! filenames = argumentParser.Parse(commandLineArguments, out errors, Console.Error);
+            if (errors || filenames.Length == 0)
+            {
+                Console.WriteLine("usage: {0} [switches] <assembly> ...",
+                    ((!)Environment.GetCommandLineArgs())[0]);
+                Console.WriteLine();
+                Console.WriteLine("switches:");
+                argumentParser.Display(Console.Out);
+                return null;
+            }
+
+            return filenames;
+        }
+
+
+        private static string OutputFileName (string! inputFileName)
+        {
+            return System.IO.Path.GetFileNameWithoutExtension(inputFileName) + ".bpl";
+        }
+        
+        public static TranslatedProgram! TranslateAstToBoogie (Cci.Method! method, Cci.Analyzer analyzer, Cci.ErrorHandler! errorHandler)
+        {
+            SplitConjunctsInContracts sc = new SplitConjunctsInContracts();
+            sc.Visit(method);
+            // BOGUS:  The following line should pass in a PreTranslationVisitor in order to get more meaningful verification results
+            Translator! translator = new Translator(errorHandler, analyzer, null);
+            TranslationVisitor! visitor = new TranslationVisitor(translator);
+            visitor.Visit(method);
+            
+            return new TranslatedProgram(translator.Program, translator, errorHandler);
+        }
+        
+        public static TranslatedProgram TranslateAstToBoogie (Cci.CompilationUnit! unit, Cci.Analyzer analyzer, Cci.ErrorHandler! errorHandler)
+        {
+          if (unit.Compilation == null || unit.Compilation.TargetModule == null) {
+            return null;
+          }
+          
+          SplitConjunctsInContracts sc = new SplitConjunctsInContracts();
+          sc.Visit(unit);
+
+          PreTranslationVisitor ptv = new PreTranslationVisitor(unit.Compilation.TargetModule);
+          ptv.Visit(unit);
+          if (unit is Cci.CompilationUnitSnippet){
+            // Need to visit any other compilation unit snippets in the same
+            // compilation unit too! (Because the PreTranslationVisitor is
+            // gathering global information across the whole assembly. REVIEW:
+            // Is this too costly?)
+            if (unit.Compilation != null && unit.Compilation.CompilationUnits != null){
+              foreach (Cci.CompilationUnitSnippet snip in unit.Compilation.CompilationUnits){
+                if (snip != unit){
+                  ptv.Visit(snip);
+                }
+              }
+            }
+          }
+
+          Translator! translator = new Translator(errorHandler, analyzer, ptv);
+          TranslationVisitor! visitor = new TranslationVisitor(translator);
+          visitor.Visit(unit);
+            
+          return new TranslatedProgram(translator.Program, translator, errorHandler);
+        }
+        
+        public static TranslatedProgram! TranslateCilToBoogie (Cci.Module! module, bool needsDeserialization, Cci.Analyzer analyzer, Cci.ErrorHandler! errorHandler)
+        {
+            Switches.AssemblyBeingTranslated = module;
+            try{
+
+                if (needsDeserialization)
+                {
+                    Cci.IContractDeserializer cd = new Omni.Parser.ContractDeserializer(module);
+                    cd.ErrorList = errorHandler.Errors;
+                    Cci.ContractDeserializerContainer.ContractDeserializer = cd;
+
+                }
+            
+            #region CIL-specific processing: NOT to be used from the Plugin
+            #endregion
+
+                PreTranslationVisitor ptv = new PreTranslationVisitor();
+                ptv.Visit(module);
+    #if KRML_DEBUG
+                ptv.DebugPrint();
+    #endif
+
+                Translator! translator = new Translator(errorHandler, analyzer, ptv);
+                TranslationVisitor! visitor = new TranslationVisitor(translator);
+                visitor.Visit(module);
+                
+                return new TranslatedProgram(translator.Program, translator, errorHandler);
+            }finally{
+                Switches.AssemblyBeingTranslated = null;
+            }
+        }
+        
+        public static Bpl.Program! TranslateCilToBoogie (string! filename, Cci.ErrorHandler! errorHandler)
+        {
+            return TranslateCilToBoogie(filename, null, errorHandler).Program;
+        }
+        
+        public static TranslatedProgram! TranslateCilToBoogie (string! filename, List<string!> contractAssemblies, Cci.ErrorHandler! errorHandler)
+        {
+            Hashtable assemblyCache = new Hashtable();
+            Cci.AssemblyNode runtimeAssembly = (!)Cci.SystemTypes.SystemCompilerRuntimeAssembly;
+            assemblyCache[(!)runtimeAssembly.StrongName] = runtimeAssembly;
+
+            using (Cci.AssemblyNode module = Cci.AssemblyNode.GetAssembly(filename, assemblyCache, true, true, false))
+            {
+                if (module == null)
+                {
+                    Console.WriteLine("*** cannot open {0}", filename);
+                    throw new Exception(string.Format("*** cannot open {0}", filename));
+                }
+
+                Hashtable assems = new Hashtable();
+                
+                if (contractAssemblies != null)
+                {
+                    for (int i = 0; i < contractAssemblies.Count; i++)
+                    {
+                        string name = contractAssemblies[i];
+                        Cci.AssemblyNode node = Cci.AssemblyNode.GetAssembly(name, assemblyCache, true, true, false);
+                        if (node == null)
+                        {
+                            Console.WriteLine("*** cannot open contract assembly {0}", name);
+                            continue;
+                        }
+                        assems.Add(((!)node.Name).ToLower(System.Globalization.CultureInfo.InvariantCulture), node);
+                    }
+                }
+                
+                Cci.AssemblyNode contractForModule = (Cci.AssemblyNode) assems[(module.Name + ".Contracts").ToLower(System.Globalization.CultureInfo.InvariantCulture)];
+                if (contractForModule != null){
+                  module.ContractAssembly = contractForModule;
+                }
+                
+                Cci.AssemblyReferenceList aRefList = module.AssemblyReferences;
+                if (aRefList != null)
+                {
+                    string! codebase = (!) ((!)typeof(Cci.Compiler).Assembly).CodeBase;                    
+                    codebase = codebase.Replace("#", "%23");
+                    Uri codebaseUri = new Uri(codebase);
+                    for (int i = 0; i < aRefList.Count; i++)
+                    {
+                        Cci.AssemblyReference! aRef = (!)aRefList[i];
+
+                        string contractsName = aRef.Name + ".Contracts";
+                        Cci.AssemblyNode contracts = (Cci.AssemblyNode) assems[contractsName.ToLower(System.Globalization.CultureInfo.InvariantCulture)];
+                        if (contracts != null)
+                        {
+                            ((!)aRef.Assembly).ContractAssembly = contracts;
+                        }
+                        else
+                        {
+                            Uri contractUri = new Uri(codebaseUri, contractsName + ".dll");
+                            string contractPath = (!)contractUri.LocalPath;
+                            if (!System.IO.File.Exists(contractPath))
+                              continue;
+                            Cci.AssemblyNode contractAssembly = Cci.AssemblyNode.GetAssembly(contractPath, assemblyCache, true, true, false);
+                            ((!)aRef.Assembly).ContractAssembly = contractAssembly;
+                        }
+                    }
+                }
+
+                return TranslateCilToBoogie(module, true, null, errorHandler);
+            }
+            
+        }
+        
+        
+        internal class TranslationVisitor : Cci.StandardVisitor
+        {
+            Translator! translator;
+            public TranslationVisitor (Translator! translator) { this.translator = translator; }
+
+            public static bool Matches(Cci.AssemblyNode! assembly, Cci.AssemblyReference! aRef)
+            {
+                return aRef.Matches(assembly.Name, assembly.Version, assembly.Culture, assembly.PublicKeyToken);
+            }
+            
+            class TypeRef
+            {
+                public Cci.AssemblyReference ARef;
+                public string FullName;
+                public Cci.TypeNode Type;
+                
+                        public TypeRef(Cci.TypeNode type) 
+                        {
+                              this.Type = type;
+                }
+                public TypeRef(string! typeSpec)
+                {
+                    int comma = typeSpec.IndexOf(',');
+                    this(typeSpec.Substring(comma + 1), typeSpec.Substring(0, comma));
+                }
+                
+                public TypeRef(string assemblySpec, string fullName)
+                {
+                    this.ARef = new Cci.AssemblyReference(assemblySpec);
+                    this.FullName = fullName;
+                }
+                
+                public bool Matches(Cci.TypeNode! typeNode)
+                {
+                    if (Type != null)
+                        return Type == typeNode;
+                    return FullName == typeNode.FullName && TranslationVisitor.Matches((!)((!)typeNode.DeclaringModule).ContainingAssembly, (!)ARef);                    
+                }
+            }
+            
+            static string! RuntimeSpec = "System.Compiler.Runtime, PublicKeyToken=736440c9b414ea16";
+            static string! SkipVerificationAttributeSpec = "Microsoft.Contracts.SkipVerificationAttribute," + RuntimeSpec;
+            static string! VerifyAttributeSpec = "Microsoft.Contracts.VerifyAttribute," + RuntimeSpec;
+            
+            static Cci.AttributeNode GetAttribute(Cci.Member! member, TypeRef! typeRef){
+              Cci.AttributeList attrs = member.Attributes;
+              if (attrs == null) return null;
+              return GetAttribute(attrs,typeRef);
+            }
+            static Cci.AttributeNode GetAttribute(Cci.Module! module, TypeRef! typeRef){
+              Cci.AttributeList attrs = module.Attributes;
+              if (attrs == null) return null;
+              return GetAttribute(attrs,typeRef);
+            }
+            static Cci.AttributeNode GetAttribute(Cci.AttributeList! attrs, TypeRef! typeRef)
+            {
+                for (int i = 0; i < attrs.Count; i++)
+                {
+                    Cci.AttributeNode attr = attrs[i];
+                    if (attr != null)
+                    {
+                        Cci.TypeNode type = attr.Type;
+                        if (type != null && typeRef.Matches(type))
+                            return attr;
+                    }
+                }
+                return null;
+            }
+            
+            static bool HasAttribute(Cci.Member! member, TypeRef! typeRef)
+            {
+                return GetAttribute(member, typeRef) != null;
+            }
+            
+            static bool BlockContainsCtor(Cci.Block block, Cci.InstanceInitializer ctor){
+              if (block == null) return false;
+              for (int i = 0, n = block.Statements == null ? 0 : block.Statements.Count; i < n; i++){
+                Cci.Statement s = block.Statements[i];
+                if (s == null) continue;
+                Cci.Block b = s as Cci.Block;
+                if (b != null){
+                  if (BlockContainsCtor(b, ctor))
+                    return true;
+                  else
+                    continue;
+                }
+                Cci.AssignmentStatement assgn = s as Cci.AssignmentStatement;
+                if (assgn == null) continue;
+                Cci.Construct c = assgn.Source as Cci.Construct;
+                if (c == null) continue;
+                Cci.MemberBinding mb = c.Constructor as Cci.MemberBinding;
+                if (mb == null) continue;
+                Cci.InstanceInitializer m = mb.BoundMember as Cci.InstanceInitializer;
+                if (m == null) continue;
+                if (m == ctor) return true;
+              }
+              return false;
+            }
+            
+            // FIXME: Once SkipVerification is deleted from System.Compiler.Runtime, get rid of it here.
+            internal static bool ShouldVerify (Cci.Method! method)
+            {
+              TypeRef tr1 = new TypeRef(Cci.SystemTypes.VerifyAttribute);              
+              TypeRef tr2 = new TypeRef(SkipVerificationAttributeSpec);
+              
+              if (false){ // See BUG 252
+                // If the method is in a compiler-generated closure class, then verify it
+                // only if the method from which it was generated should be verified.
+                // There is no way for the user to mark the methods in a closure class
+                // so we have to go by what is indicated for the method that caused it to
+                // be generated.
+                if (method.DeclaringType != null){
+                  Cci.TypeNode closureClass = method.DeclaringType;
+                  if (closureClass.Name.Name.StartsWith("closure:")){ // BUGBUG: make this a more robust check
+                    // search all methods in declaringType's declaring type to find the method
+                    // that calls the closure class's ctor.
+                    Cci.TypeNode outerclass = closureClass.DeclaringType;
+                    if (outerclass != null && outerclass.Members != null){
+                      Cci.MemberList ms = closureClass.GetConstructors();
+                      assert ms != null && ms.Count == 1;
+                      Cci.InstanceInitializer ctor = ms[0] as Cci.InstanceInitializer;
+                      for (int i = 0, n = outerclass.Members.Count; i < n; i++){
+                        Cci.Method m = outerclass.Members[i] as Cci.Method;
+                        if (m == null) continue;
+                        if (BlockContainsCtor(m.Body,ctor)){
+                          method = m; // use this to check instead of the argument to this method
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              
+              // Search for the [Verify(b)] or [SkipVerification(b)] attribute.
+              // Stop as soon as it is found.
+              // Search in the order: method, declaring type, declaring module
+              Cci.AttributeNode a = GetAttribute(method, tr1);
+              if (a == null) a = GetAttribute(method,tr2);
+              if (a == null){
+                // check to see if it is a property getter or setter and the property
+                // is marked
+                if (method.IsPropertyGetter || method.IsPropertySetter){
+                  Cci.Property p = method.DeclaringMember as Cci.Property;
+                  if (p != null){
+                    a = GetAttribute(p, tr1);
+                    if (a == null) a = GetAttribute(p,tr2);
+                  }
+                }
+              }
+              if (a == null){
+                // search nested types from most nested "upwards"
+                Cci.TypeNode t = method.DeclaringType;
+                while (a == null && t != null){
+                  a = GetAttribute(t, tr1);
+                  if (a == null) a = GetAttribute(t,tr2);
+                  t = t.DeclaringType;
+                }
+              }
+              if (a == null && method.DeclaringType != null && method.DeclaringType.DeclaringModule != null){
+                a = GetAttribute(method.DeclaringType.DeclaringModule, tr1);
+                if (a == null) a = GetAttribute(method.DeclaringType.DeclaringModule,tr2);
+              }
+
+              // default is "true", so if no argument was given,
+              // i.e., [Verify] or [SkipVerification]
+              // then the Expressions will be empty. So start b out as true.
+              bool b = true; 
+              if (a != null && a.Expressions != null && a.Expressions.Count > 0){
+                Cci.Literal l = (Cci.Literal) a.Expressions[0];
+                if (l != null && l.Type == Cci.SystemTypes.Boolean)
+                  b = (bool)(!)l.Value;
+              }
+              if (a != null){
+                // [Verify] and [SkipVerification] have opposite meanings
+                Cci.TypeNode t = a.Type;
+                if (t != null)
+                  return (tr1.Matches(t)) ? b : !b;
+                else
+                  return !CommandLineOptions.Clo.NoVerifyByDefault;
+              }else{
+                return !CommandLineOptions.Clo.NoVerifyByDefault;
+              }
+            }
+            
+            public override Cci.TypeNode VisitTypeNode (Cci.TypeNode type)
+            {
+                if (type == null) { return null; }
+                translator.sink.AddType(type);
+                return base.VisitTypeNode(type);
+            }
+            
+            public override Cci.Method VisitMethod (Cci.Method method)
+            {
+                if (method == null) { return null; }
+
+                // Ignore methodology methods.
+                if (method.CciKind != Cci.CciMemberKind.Regular)
+                    return method;
+
+                if (!ShouldVerify(method))
+                    return method;
+                    
+                // base.VisitMethod(method);   (Rethink lack of recursion in C#2.0)
+                if ( method.IsAbstract ||
+                     method.DeclaringType is Cci.DelegateNode ) // Methods of a delegate class are magic, so just emit a procedure.
+                {
+                    translator.sink.currentMethod = method;
+                    translator.sink.AddProcedure(method);
+                    return method;
+                }
+
+                if (CommandLineOptions.Clo.RunningBoogieFromCommandLine) {
+                  TryTranslate(method);
+                } else {
+                  try {
+                    TryTranslate(method);
+                  } catch (Exception e){
+                    string msg = "Exception occurred during translation of method '" + method.FullName + "'. Reason: " + e.Message;
+                    translator.ErrorHandler.HandleError(method,Cci.Error.GenericWarning, msg); 
+                    translator.sink.RemoveProcedure(method);
+                  }
+                }
+#if COMMAND_LINE_CHECKER
+                method.Body = null; // don't need body any more, so collect it
+#endif                
+                return method;
+            }
+            
+            void TryTranslate(Cci.Method! method) {
+              try{
+                translator.Translate(method);
+              }catch (NotImplementedException e){
+                string msg = "Can't translate method '" + method.FullName + "'. Reason: " + e.Message;
+                translator.ErrorHandler.HandleError(method,Cci.Error.GenericWarning, msg); 
+                translator.sink.RemoveProcedure(method);
+              }
+            }
+        } // class TranslationVisitor
+
+
+        public static void Main (string[]! commandLineArguments)
+        {
+            string[] filenames = ParseCommandLine(commandLineArguments);
+            if (filenames == null || Switches.OutputFile == null)
+                return;
+
+            TokenTextWriter writer = new TokenTextWriter(Switches.OutputFile);
+            
+            foreach (string filename in filenames)
+            {
+                Cci.ErrorNodeList errors = new Cci.ErrorNodeList();
+                Cci.ErrorHandler errorHandler = new Microsoft.SpecSharp.ErrorHandler(errors);
+                Bpl.Program! program = TranslateCilToBoogie((!)filename, errorHandler);
+                int errorCount = 0;
+                for (int i = 0; i < errors.Count; i++)
+                {
+                    Cci.ErrorNode error = errors[i];
+                    if (error != null)
+                    {
+                        Console.WriteLine(error.GetMessage(System.Threading.Thread.CurrentThread.CurrentUICulture));
+                        if (error.Severity == 0)
+                            errorCount++;
+                    }
+                }
+                if (errorCount == 0) {
+                    program.Emit(writer);
+                }
+            }
+            
+            writer.Close();
+        }
+
+    } // CilTranslator
+
+
+    public interface IAssemblyInformation {
+      /// <summary>
+      /// Returns "false" if "field" is known not to be constrained by any object invariant or
+      /// ownership relation.
+      /// Returns "true" if "field" is a rep or peer field, "field" appears in an invariant, or
+      /// if there is not enough information to determine whether or not "field" appears in an
+      /// invariant.
+      /// </summary>
+      bool MayBeInvariantConstrained(Cci.Field! field);
+      
+      /// <summary>
+      /// Returns some information about "field", in particular provides a way to get the (class,inv-sub-expr)
+      /// pairs associated with "field".
+      /// </summary>
+      IFieldInfo GetFieldInfo(Cci.Field! field);
+      
+      /// <summary>
+      /// If all of the subtypes of "ty" are known (i.e., "ty" is sealed or internal or
+      /// all of the constructors of "ty" are private or internal), then
+      /// return a list of all of its direct subtypes.  If this information is not known,
+      /// return null.
+      /// </summary>
+      List<Cci.TypeNode!>? GetAllSubtypes(Cci.TypeNode! ty);
+    }
+    
+    public interface IFieldInfo {
+      [Pure] int VisibilityUseCount { get; }
+      Cci.ModelfieldContractList! DependentMfCs { get; } //A list of the modelfieldcontracts that have a satisifies clause in which field occurs.
+      
+      void GetVisibilityUse(int i, out Cci.TypeNode! cl, out Cci.Expression! e, out Cci.Quantifier[]! enclosingQuantifiers);      
+        requires 0 <= i && i < VisibilityUseCount;
+    }
+    
+    /// <summary>
+    /// This class is meant to copy the functionality that splits contracts into their
+    /// top-level conjuncts which happens when serializing contracts. It is done in
+    /// these two places so as to not affect code generation nor the tooltips that
+    /// use the source context of the contracts.
+    /// </summary>
+    public class SplitConjunctsInContracts: Cci.StandardVisitor{
+      static Cci.ExpressionList! SplitConjuncts(Cci.Expression e) {
+        Cci.ExpressionList el = new Cci.ExpressionList();
+        SplitConjuncts(e, el);
+        return el;
+      }
+      static void SplitConjuncts(Cci.Expression e, Cci.ExpressionList! el) {
+        if (e == null) return;
+        Cci.BinaryExpression be = e as Cci.BinaryExpression;
+        if (be == null) { el.Add(e); return; }
+        if (be.NodeType != Cci.NodeType.LogicalAnd) { el.Add(e); return; }
+        SplitConjuncts(be.Operand1, el);
+        SplitConjuncts(be.Operand2, el);
+      }
+      public override Cci.RequiresList VisitRequiresList(Cci.RequiresList Requires) {
+        if (Requires == null) return null;
+        Cci.RequiresList newList = new Cci.RequiresList(Requires.Count);
+        for (int i = 0, n = Requires.Count; i < n; i++) {
+          Cci.Requires r = Requires[i];
+          if (r == null || r.Inherited) {
+            continue;
+          }
+          Cci.ExpressionList el = SplitConjuncts(r.Condition);
+          Cci.RequiresOtherwise ro = r as Cci.RequiresOtherwise;
+          for (int j = 0, m = el.Count; j < m; j++) {
+            Cci.Expression e = el[j];
+            assert e != null;
+            Cci.Requires r_prime;
+            if (ro == null){
+              r_prime = new Cci.RequiresPlain(e);
+            }else{
+              r_prime = new Cci.RequiresOtherwise(e,ro.ThrowException);
+            }
+            r_prime.SourceContext = e.SourceContext;
+            newList.Add(r_prime);
+          }
+        }
+        return newList;
+      }
+      public override Cci.EnsuresList VisitEnsuresList(Cci.EnsuresList Ensures) {
+        if (Ensures == null) return null;
+        Cci.EnsuresList newList = new Cci.EnsuresList(Ensures.Count);
+        for (int i = 0, n = Ensures.Count; i < n; i++) {
+          Cci.Ensures post = Ensures[i];
+          if (post == null || post.Inherited) {
+            continue;
+          }
+          Cci.ExpressionList el = SplitConjuncts(post.PostCondition);
+          Cci.EnsuresExceptional ee = post as Cci.EnsuresExceptional;
+          for (int j = 0, m = el.Count; j < m; j++) {
+            Cci.Expression e = el[j];
+            assert e != null;
+            Cci.Ensures post_prime;
+            if (ee == null){
+              post_prime = new Cci.EnsuresNormal(e);
+            }else{
+              Cci.EnsuresExceptional ee_prime = new Cci.EnsuresExceptional(e);
+              ee_prime.Type = ee.Type;
+              ee_prime.Variable = ee.Variable;
+              post_prime = ee_prime;
+            }
+            post_prime.SourceContext = e.SourceContext;
+            newList.Add(post_prime);
+          }
+        }
+        return newList;
+      }
+      public override Cci.InvariantList VisitInvariantList(Cci.InvariantList invariants){
+        if (invariants == null) return null;
+        Cci.InvariantList newList = new Cci.InvariantList(invariants.Count);
+        for (int i = 0, n = invariants.Count; i < n; i++){
+          Cci.Invariant inv = invariants[i];
+          if (inv == null) continue;
+          Cci.ExpressionList el = SplitConjuncts(inv.Condition);
+          for (int j = 0, m = el.Count; j < m; j++) {
+            Cci.Expression e = el[j];
+            assert e != null;
+            Cci.Invariant i_prime = new Cci.Invariant(inv.DeclaringType, inv.Attributes, inv.Name);
+            i_prime.Condition = el[j];
+            i_prime.SourceContext = e.SourceContext;
+            newList.Add(i_prime);
+          }
+        }
+        return newList;
+      }
+    }
+
+  public class LookForFieldVisitor : Cci.StandardVisitor{
+    Cci.Field! f;
+    
+    public bool FoundFieldDependence = false;
+    public LookForFieldVisitor(Cci.Field! f) {
+      this.f = f;
+    }
+    
+    List<Cci.Member!> currentlyVisited;  // used to prevent infinite recursion
+    private bool Push(Cci.Member! mb)
+      ensures result ==> currentlyVisited != null && currentlyVisited.Count > 0;
+    {
+      if (currentlyVisited == null) {
+        currentlyVisited = new List<Cci.Member!>();
+      }
+      if (currentlyVisited.Contains(mb)) {
+        return false;
+      } else {
+        currentlyVisited.Add(mb);
+        return true;
+      }
+    }
+    private void Pop()
+      requires currentlyVisited != null && currentlyVisited.Count > 0;
+    {
+      currentlyVisited.RemoveAt(currentlyVisited.Count - 1);
+    }
+    
+    public override Cci.Expression VisitMemberBinding(Cci.MemberBinding binding)
+    {
+      if (binding == null) return null;
+      Cci.Field field = binding.BoundMember as Cci.Field;
+      
+      if (field != null) {
+        if (field == f) {
+          FoundFieldDependence = true;
+        } else if (Sink.IsModelField(field)) {
+          // TODO:  Here, it would be appropriate to:
+          //   Push(field); foreach (Expression e in field.SatisfiesClauses) { VisitExpression(e); } Pop();
+          // However, the satisfies clauses of model fields are not readily available.  We'd have to collect
+          // these during, perhaps, the pre-translation phase.  For now, we just conservatively assume the
+          // field may be mentioned among the satisfies clauses.
+          FoundFieldDependence = true;
+        }
+      }
+      return base.VisitMemberBinding(binding);
+    }
+
+    public override Cci.Expression VisitMethodCall(Cci.MethodCall call)
+    {
+      if (call == null) return null;
+      Cci.MemberBinding callee = call.Callee as Cci.MemberBinding;
+      if (callee != null) {
+        Cci.Method method = callee.BoundMember as Cci.Method;
+        if (method != null) {
+
+          if (method.Contract != null && method.Contract.Ensures != null) {  // only postconditions matter, since preconditions only determine if the call is admissible
+            if (Push(method)) {
+              foreach (Cci.Ensures ens in method.Contract.Ensures) {
+                if (ens != null) {
+                  VisitExpression(ens.PostCondition);
+                }
+              }
+              Pop();
+            }
+          }
+        }
+      }
+
+      return base.VisitMethodCall(call);
+    }
+  }   
+}

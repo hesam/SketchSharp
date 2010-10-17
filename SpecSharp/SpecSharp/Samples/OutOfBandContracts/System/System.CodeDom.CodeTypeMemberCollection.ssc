@@ -1,0 +1,50 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.CodeDom
+{
+
+    public class CodeTypeMemberCollection
+    {
+
+        public CodeTypeMember this [int index]
+        {
+          get;
+          set;
+        }
+
+        public void Remove (CodeTypeMember value);
+
+        public void Insert (int index, CodeTypeMember value);
+
+        public int IndexOf (CodeTypeMember value);
+
+        public void CopyTo (CodeTypeMember[] array, int index);
+
+        public bool Contains (CodeTypeMember value);
+
+        public void AddRange (CodeTypeMemberCollection! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public void AddRange (CodeTypeMember[]! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public int Add (CodeTypeMember value);
+
+        public CodeTypeMemberCollection (CodeTypeMember[] value);
+
+        public CodeTypeMemberCollection (CodeTypeMemberCollection value);
+
+        public CodeTypeMemberCollection ();
+    }
+}

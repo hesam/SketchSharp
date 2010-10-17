@@ -1,0 +1,10 @@
+
+-------------------- ManualRange1.ssc --------------------
+
+Spec# program verifier finished with 10 verified, 0 errors
+
+-------------------- ManualRange2.ssc --------------------
+ManualRange2.ssc(162,20): Error: After loop iteration: Loop invariant might not hold: forall{int i in (0:values.Count); values[i] == (a | i)}
+ManualRange2.ssc(165,10): Related information:     (trace position)
+
+Spec# program verifier finished with 10 verified, 1 error

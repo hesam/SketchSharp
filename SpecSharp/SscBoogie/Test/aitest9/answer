@@ -1,0 +1,65 @@
+ 
+-------------------- SimpleAssignments0.dll -------------------- 
+
+Spec# program verifier finished with 2 verified, 0 errors
+ 
+-------------------- SimpleAssignments1.dll -------------------- 
+
+Spec# program verifier finished with 2 verified, 0 errors
+ 
+-------------------- SimpleAssignments2.dll -------------------- 
+SimpleAssignments2.ssc(8,7): Error: division by zero
+
+Spec# program verifier finished with 1 verified, 1 error
+ 
+-------------------- SimpleAssignments3.dll -------------------- 
+
+Spec# program verifier finished with 2 verified, 0 errors
+ 
+-------------------- SimpleAssignments4.dll -------------------- 
+SimpleAssignments4.ssc(24,3): Error: Assertion might not hold: 0 <= y
+SimpleAssignments4.ssc(29,3): Error: Possible null dereference
+
+Spec# program verifier finished with 0 verified, 2 errors
+ 
+-------------------- SimpleWhile0.dll -------------------- 
+
+Spec# program verifier finished with 2 verified, 0 errors
+ 
+-------------------- SimpleWhile1.dll -------------------- 
+SimpleWhile1.ssc(15,3): Error: Assertion might not hold: counter >= -12
+
+Spec# program verifier finished with 1 verified, 1 error
+ 
+-------------------- SimpleWhile2.dll -------------------- 
+
+Spec# program verifier finished with 2 verified, 0 errors
+ 
+-------------------- SimpleWhile3.dll -------------------- 
+SimpleWhile3.ssc(15,3): Error: Assertion might not hold: count < 0
+
+Spec# program verifier finished with 1 verified, 1 error
+ 
+-------------------- SimpleWhile4.dll -------------------- 
+SimpleWhile4.ssc(19,3): Error: Assertion might not hold: count < 0
+SimpleWhile4.ssc(10,4): Related information:     (trace position)
+
+Spec# program verifier finished with 1 verified, 1 error
+ 
+-------------------- SimpleWhile5.dll -------------------- 
+SimpleWhile5.ssc(18,3): Error: Assertion might not hold: returnValue >= 1
+Error: Method SimpleWhile5.NegativeWrong(int X, int Y, int K), unsatisfied postcondition: result < 0
+SimpleWhile5.ssc(66,7): Related information:     (trace position)
+SimpleWhile5.ssc(69,7): Related information:     (trace position)
+SimpleWhile5.ssc(73,3): Related information:     (trace position)
+
+Spec# program verifier finished with 4 verified, 2 errors
+ 
+-------------------- Recursion0.dll -------------------- 
+Recursion0.ssc(34,5): Error: Assertion might not hold: x >= 0
+
+Spec# program verifier finished with 3 verified, 1 error
+ 
+-------------------- ForLoop0.dll -------------------- 
+
+Spec# program verifier finished with 2 verified, 0 errors

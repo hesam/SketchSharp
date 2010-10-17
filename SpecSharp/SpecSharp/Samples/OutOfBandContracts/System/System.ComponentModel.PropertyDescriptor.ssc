@@ -1,0 +1,85 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.ComponentModel
+{
+
+    public class PropertyDescriptor
+    {
+
+        public bool IsReadOnly
+        {
+          get;
+        }
+
+        public TypeConverter Converter
+        {
+          get;
+        }
+
+        public bool IsLocalizable
+        {
+          get;
+        }
+
+        public DesignerSerializationVisibility SerializationVisibility
+        {
+          get;
+        }
+
+        public Type PropertyType
+        {
+          get;
+        }
+
+        public Type ComponentType
+        {
+          get;
+        }
+
+        public bool ShouldSerializeValue (object arg0);
+
+        public void SetValue (object arg0, object arg1);
+
+        public void ResetValue (object arg0);
+
+        public void RemoveValueChanged (object! component, EventHandler! handler)
+            requires component != null otherwise ArgumentNullException;
+            requires handler != null otherwise ArgumentNullException;
+
+        public object GetValue (object arg0);
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        public object GetEditor (Type editorBaseType);
+
+        public PropertyDescriptorCollection GetChildProperties (object instance, Attribute[] filter);
+
+        public PropertyDescriptorCollection GetChildProperties (object instance);
+
+        public PropertyDescriptorCollection GetChildProperties (Attribute[] filter);
+
+        public PropertyDescriptorCollection GetChildProperties ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object obj);
+
+        public bool CanResetValue (object arg0);
+
+        public void AddValueChanged (object! component, EventHandler! handler)
+            requires component != null otherwise ArgumentNullException;
+            requires handler != null otherwise ArgumentNullException;
+    }
+}

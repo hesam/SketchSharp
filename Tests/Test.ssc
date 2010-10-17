@@ -1,0 +1,269 @@
+using Microsoft.Contracts;
+
+class Test {
+    
+    // fields
+    public int fa;
+    public int fb;
+    public int[] fc;
+  
+    //methods
+    void f0(int[]! somearr)
+	requires fa == fb;
+        ensures fa == fb;
+    {
+	fa -= 5;
+	fb = fb + ?!;
+    }
+
+    void f1(int t, int[]! a)
+	ensures fa == t + a.Length;
+    {
+	fa = ?!(fa, t, a.Length);
+    }
+
+    void f2()
+	ensures fa == old(fa) + 1;
+    {
+	fa = fa + ?!;
+    }
+
+    void f3()
+	requires fc != null;
+        ensures fa == fc.Length;
+    {
+	fa = fc.Length + ?!;
+    }
+
+    void f4(Test! other, int[]! somearr)
+        ensures fa == other.fa;
+    {
+	fa = other.fa + ?!;
+    }
+
+    static int bool0()
+        ensures result == 5;
+    {
+        if (?!)            
+            return 3;
+        return 5;
+    }
+
+    static bool bool1(int x, int y)
+        ensures result == x > y;
+    {
+        return ?!(x, y);
+    }
+
+    static int m0()
+        ensures result > -20;
+        ensures result < -10;
+    {
+        return ?!;
+    }
+
+    static int m1(int a)
+        requires a > 5;
+        ensures result > 7;
+    {        
+        return a + ?!;
+    }
+
+    static int add(int a)
+        ensures result == a + 2;
+    {
+        int res = ?!(a);
+        return res + ?!;
+    }
+
+    static int mul(int a)
+        ensures result == a * 3;
+    {        
+        return ?!(a);
+    }
+
+    static int sum(int a, int b)
+        ensures result == a + b;
+    {
+        int res = ?!(a, b); // some linear fn of a and b
+        return res;
+    }
+
+    static int assert0(int i)
+        ensures result == i + 1;
+    {
+        int j = i;
+        assert j == i;
+        return j + ?!;
+    }
+
+    static int abs1(int x)
+        ensures (x >= 0 ==> result == x) && 
+                (x < 0  ==> result == -x);
+    {
+        return (x < ?!) ? ?!(x) : ?!(x);
+    }
+
+    static int abs2(int x)
+        ensures (x >= 0 ==> result == x) && 
+                (x < 0  ==> result == -x);
+    {
+        int res = x;
+        if (x < ?!)
+            res = ?!(res, x);
+
+        return res;
+    }
+
+    static int min1(int a, int b)
+       ensures (a <= b ==> result == a) && 
+               (b < a  ==> result == b);
+    {
+       return ?!(a, b) ? ?!(a, b) : ?!(a, b);
+    }
+
+    static int min2(int a, int b)
+        ensures (a <= b ==> result == a) && 
+                (b < a  ==> result == b);
+    {
+        int res = ?!(a, b);
+        if (res > b)
+            res = ?!(a, b);
+        return res;
+    }
+
+    static int a0(int[] a)
+        ensures a == null ==> result == -1;
+        ensures a != null ==> result == a.Length;
+        requires a != null ==> a.Length < 5;    
+    {
+        return a == null ? ?! : a.Length * ?!;
+    }
+
+    static int a1(int[]! a)
+        ensures result == a.Length * 2;
+    {
+        return a.Length * ?!;
+    }
+
+    static int a2(int[]! a) 
+        requires a.Length > 1;
+        ensures result == a[0] + a[1];
+    {
+        return ?!(a[0], a[1]);
+    }
+
+    static int a3(int[]! a, int i) 
+        ensures result == a.Length + i;
+    {
+        int res = a.Length * ?!;
+        return res + ?! * i + ?!;
+    }
+
+    static void a4(int[]! a) 
+        requires a.Length > 2;
+        requires a[0] == 3;
+        requires a[1] == 2 * a[0];
+        modifies a[0];
+        ensures a[0] == 7;
+    {
+        a[0] = a[1] + ?!;
+    }
+
+    static int aAbs(int[]! a)
+        requires a.Length > 0;
+        ensures (a[0] >= 0 ==> result == a[0]) && 
+                (a[0] < 0  ==> result == -a[0]);
+    {
+        return (a[0] < ?!) ? ?!(a[0]) : ?!(a[0]);            
+    }
+
+    static void a5(int[]! a) 
+        requires a.Length > 1;
+        requires a[0] != 42;
+        modifies a[0];
+        ensures a[0] == 42;
+    {
+        a[?!] = 42;
+    }
+
+    static void a6(int[]! a, int idx) 
+        requires a.Length > 0;
+        requires idx >= 0;
+        requires idx < a.Length;
+        requires a[idx] != 42;
+        modifies a[idx];
+        ensures a[idx] == 42;
+    {
+        a[idx + ?!] = 42;
+    }
+
+    static void a7(int[]! a) 
+        requires a.Length > 2;
+        modifies a[*];
+        ensures a[0] == 42;
+        ensures a[1] == -42;
+    {
+        a[?!] = 42;
+        a[?!] = -42;
+    }
+
+    static void a8(int[]! a, int []! b) 
+        requires a != b;
+        requires a.Length > 0;
+        requires a.Length == b.Length;
+        requires forall {int i in (0 : a.Length); a[i] == b[i]};
+        modifies a[0], b[0];
+        ensures forall {int i in (0 : a.Length); a[i] == b[i]};
+    {
+        a[0] = 42;
+        b[?!] = ?!;
+    }
+
+    static void aSet(int[]! a, int idx, int val) 
+        requires a.Length > 0;
+        requires idx >= 0;
+        requires idx < a.Length;
+        requires a[idx] != val;
+        modifies a[idx];
+        ensures a[idx] == val;
+    {
+        a[?!(idx, val)] = ?!(idx, val);
+    }
+
+    static bool aEq(int[]! a, int[]! b) 
+        ensures result == (a.Length == b.Length);
+    {
+        return a.Length + ?! == b.Length;
+    }
+
+
+    static int inline1()
+        ensures result == 43;
+    {
+        int j = inline2();
+        j = j + inline2();
+        j = j - ?!;
+        return j;
+    }
+
+    [Inline]
+    static int inline2()
+    {
+        return ?!;
+    }
+
+    /*
+
+    */
+
+    /*
+    DOES NOT WORK YET:
+
+    static void m2() { int i = ?!; }
+
+    */
+
+    public static void Main(string[] args) { }
+
+}

@@ -1,0 +1,262 @@
+using System;
+using Microsoft.Contracts;
+
+class A {
+  public int value;
+  public int f;
+  
+  public int Value {
+    get { bool dummy; return value; } // complicating so that axiom over #A.get_Value does not use witness
+    set 
+      modifies this.value;
+    { expose(this) {this.value = value;} }
+  }
+
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public int getValue(int p) {
+    bool dummy; return value;         // complicating so that axiom over #A.get_Value does not use witness
+  } 
+
+  public void setValue(int p) 
+    modifies this.value;
+  {
+    value = p;
+  } 
+
+  void FieldUpdateWithMethodQuery(A! o)
+    requires o.getValue(4) == 5;
+    ensures o.getValue(4)  == 5; // error: o.value was updated
+    modifies o.*;                // need o.* as expose-version changed too
+  { 
+    expose(o) { o.value = 0; }
+  }
+
+  void FieldUpdateWithGetterQuery(A! o)
+    requires o.Value == 5;
+    ensures o.Value  == 5;       // error: o.value was updated
+    modifies o.*;                // need o.* as expose-version changed too
+  { 
+    expose(o) { o.value = 0; }
+  }
+
+  void FieldUpdateOnOtherWithMethodQuery(A! o, A! oo)
+    requires o.getValue(4) == 5;
+    requires o != oo;
+    ensures o.getValue(4)  == 5; // fails w/o exposeVersion
+    modifies o.*, oo.*;          // need o.* as expose-version changed too
+  { 
+    expose(oo) { oo.value = 0; }
+  }
+
+  void FieldUpdateOnOtherWithGetterQuery(A! o, A! oo)
+    requires o.Value == 5;
+    requires o != oo;
+    ensures o.Value  == 5; // fails w/o exposeVersion 
+    modifies o.*, oo.*;
+  { 
+    expose(oo) { oo.value = 0; }
+  }
+
+  void FieldUpdateOnOtherWithMethodQueryWithDifferentParam(A! o, A! oo)
+    requires o.getValue(4) == 5;
+    requires o != oo;
+    ensures o.getValue(5)  == 5;  // error: different parameter is given thus exposeVersion does not work
+    modifies o.*, oo.*;
+  { 
+    expose(oo) { oo.value = 0; }
+  }
+
+  void MethodCallWithMethodQuery()
+    requires getValue(4) == 5;
+    ensures getValue(4)  == 5;  // error: self.value was updated
+    modifies this.value;
+  { 
+    this.setValue(0);
+  }
+
+  void MethodCallWithGetterQuery()
+    requires Value == 5;
+    ensures Value  == 5;  // error: self.value was updated
+    modifies this.value;
+  { 
+    this.setValue(0);
+  }
+
+  void MethodCallOnOtherWithMethodQuery(A! o)
+    requires getValue(4) == 5;
+    requires o != this;
+    ensures getValue(4)  == 5; // fails w/o exposeVersion
+    modifies o.*;
+  { 
+    o.setValue(0);
+  }
+
+  void MethodCallOnOtherWithGetterQuery(A! o)
+    requires Value == 5;
+    requires o != this;
+    ensures Value  == 5;       // fails w/o exposeVersion
+    modifies o.*;
+  { 
+    o.setValue(0);
+  }
+
+  void FieldUpdateOnOtherFieldWithMethodQuery()
+    requires getValue(4) == 5;
+    ensures getValue(4)  == 5; // error: only this.f was updated but exposeVersion is not enough to establish postcondition
+    modifies this.f;
+  { 
+    expose(this) { this.f = 10; }   
+  }
+
+  void FieldUpdateOnOtherFieldWithGetterQuery()
+    requires Value == 5;
+    ensures Value  == 5;  // error: only this.f was updated but exposeVersion is not enough to establish postcondition
+    modifies this.f;
+  { 
+    expose(this) { this.f = 10; }
+  }
+
+  [Pure]
+  int DummyPure(int p, int q) { return p + q; }
+
+  void PureCall(A! o)
+    requires Value == 5;
+    ensures Value  == 5;
+  { 
+    DummyPure(value, f);
+    o.DummyPure(o.value, o.f);
+  }
+}
+
+class S { 
+  public bool b; 
+}
+
+class T {
+  S s;
+  int value;
+  bool b;
+
+  int Value {
+    get{ bool dummy; return value;}
+    set 
+      modifies this.value;
+    { this.value = value;} 
+  }
+
+  void m() 
+    requires s != null; 
+    requires s.IsExposable;
+    modifies s.b;
+  {
+    assume Value == 5;
+    expose(s) {
+      s.b = false;   
+    }
+    assert Value == 5;
+  }
+
+  void n() 
+    requires s != null; 
+    modifies this.b;
+  {
+    assume Value == 5;
+    expose(this) {
+      this.b = false;
+    }  
+    assert Value == 5; // error: self was updated
+  }
+}
+
+class C {
+  public int x;
+
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public int foo() 
+    ensures this != null; // dummy to get rid of useful axiom over #C.foo
+    ensures result == this.x;
+  {
+    return x;
+  }
+}
+
+class D {
+  public int x;
+  [Rep] public C c;
+
+  void bar() 
+    requires c != null;
+    requires this.c.foo() == 5;
+    ensures  this.c.foo() == 5;  // fails w/o exposeVersion
+    modifies this.x;
+  { 
+     expose(this) {
+       this.x++;
+     }
+  }
+}
+
+class QClient {
+  int f;
+  Q! q = new Q();
+  QClient! qclient = new QClient();
+
+  void bar() 
+    requires q.IsConsistent && Owner.None(qclient);
+    modifies q.f, this.f, qclient.f;
+  {
+    assume q.blah(qclient) == 5;
+    q.f = 10;  // fine, since precondition implies q is not committed
+    this.f = 10;
+    qclient.f = 10;  // fine, since precondition implies that qclient is not committed
+    assert q.blah(qclient) == 5; // provable since it is StateIndependent
+  }
+}
+
+class Q {
+  public int f;
+  [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+  public int blah(QClient qclient) {
+    int i;
+    i = 5;
+    return i;
+  }
+}
+
+class X {
+  public int value;
+  public int f;
+  public X a;  
+
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public int getValue(int p) {
+    bool dummy; return value;  // complicating so that axiom over #X.get_Value does not use witness
+  } 
+
+
+  void ObjectCreationWithMethodQuery(X! o)
+    requires o.getValue(4) == 5;
+    requires this != o;
+    ensures o.getValue(4)  == 5;
+    modifies this.a;
+  { 
+    new X();
+  }
+
+  void FieldUpdateByObjectCreationWithMethodQuery(X! o)
+    requires o.getValue(4) == 5;
+    requires this != o;
+    ensures o.getValue(4)  == 5;
+    modifies this.a;
+  { 
+    this.a = new X();
+  }
+
+  void FieldUpdateByObjectCreationWithMethodQueryFails(X! o)
+    requires o.getValue(4) == 5;
+    ensures o.getValue(4)  == 5;  // error: o might be self thus exposeVersion changed
+    modifies this.a;
+  { 
+    this.a = new X();  
+  }
+}

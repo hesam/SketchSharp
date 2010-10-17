@@ -1,0 +1,85 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace Microsoft.Win32
+{
+
+    public class RegistryKey
+    {
+
+        public int ValueCount
+        {
+          get;
+        }
+
+        public int SubKeyCount
+        {
+          get;
+        }
+
+        public string Name
+        {
+          get;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public void SetValue (string name, object! value)
+            requires value != null otherwise ArgumentNullException;
+            requires name == null || name.Length < 255 otherwise ArgumentException;
+
+        public object GetValue (string name);
+
+        public object GetValue (string name, object defaultValue);
+
+        public String[] GetValueNames ();
+
+        public String[] GetSubKeyNames ();
+
+        public RegistryKey OpenSubKey (string name);
+
+        public RegistryKey OpenSubKey (string! name, bool writable)
+            requires name != null otherwise ArgumentNullException;
+            requires name.Length < 255 otherwise ArgumentException;
+
+        public static RegistryKey OpenRemoteBaseKey (RegistryHive hKey, string! machineName)
+            requires machineName != null otherwise ArgumentNullException;
+            requires ((int)hKey & -16) == -2147483648 otherwise ArgumentException;
+
+        public void DeleteValue (string! name, bool throwOnMissingValue)
+            requires name != null otherwise ArgumentNullException;
+            requires throwOnMissingValue == false otherwise ArgumentException;
+
+        public void DeleteValue (string name);
+
+        public void DeleteSubKeyTree (string! subkey)
+            requires subkey != null otherwise ArgumentNullException;
+
+        public void DeleteSubKey (string! subkey, bool throwOnMissingSubKey)
+            requires subkey != null otherwise ArgumentNullException;
+            requires throwOnMissingSubKey == false otherwise ArgumentException;
+            requires throwOnMissingSubKey == false otherwise ArgumentException;
+
+        public void DeleteSubKey (string subkey);
+
+        public RegistryKey CreateSubKey (string! subkey)
+            requires subkey != null otherwise ArgumentNullException;
+            requires subkey.Length < 255 otherwise ArgumentException;
+
+        public void Flush ();
+
+        public void Close ();
+    }
+}

@@ -1,0 +1,83 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Security
+{
+
+    public class SecurityElement
+    {
+
+        public System.Collections.Hashtable Attributes
+        {
+          get;
+          set;
+        }
+
+        public System.Collections.ArrayList Children
+        {
+          get;
+          set;
+        }
+
+        public string! Tag
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string Text
+        {
+          get;
+          set;
+        }
+
+        public string SearchForTextOfTag (string! tag)
+            requires tag != null otherwise ArgumentNullException;
+
+        public SecurityElement SearchForChildByTag (string! tag)
+            requires tag != null otherwise ArgumentNullException;
+
+        public string Attribute (string! name)
+            requires name != null otherwise ArgumentNullException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public static string Escape (string str);
+
+        public static bool IsValidAttributeValue (string value);
+
+        public static bool IsValidAttributeName (string name);
+
+        public static bool IsValidText (string text);
+
+        public static bool IsValidTag (string tag);
+
+        public bool Equal (SecurityElement other);
+
+        public void AddChild (SecurityElement! child)
+            requires child != null otherwise ArgumentNullException;
+
+        public void AddAttribute (string! name, string! value)
+            requires name != null otherwise ArgumentNullException;
+            requires value != null otherwise ArgumentNullException;
+
+        public SecurityElement (string! tag, string text)
+            requires tag != null otherwise ArgumentNullException;
+
+        public SecurityElement (string! tag)
+            requires tag != null otherwise ArgumentNullException;
+    }
+}

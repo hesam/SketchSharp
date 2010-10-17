@@ -1,0 +1,50 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.CodeDom
+{
+
+    public class CodeNamespaceCollection
+    {
+
+        public CodeNamespace this [int index]
+        {
+          get;
+          set;
+        }
+
+        public void Remove (CodeNamespace value);
+
+        public void Insert (int index, CodeNamespace value);
+
+        public int IndexOf (CodeNamespace value);
+
+        public void CopyTo (CodeNamespace[] array, int index);
+
+        public bool Contains (CodeNamespace value);
+
+        public void AddRange (CodeNamespaceCollection! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public void AddRange (CodeNamespace[]! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public int Add (CodeNamespace value);
+
+        public CodeNamespaceCollection (CodeNamespace[] value);
+
+        public CodeNamespaceCollection (CodeNamespaceCollection value);
+
+        public CodeNamespaceCollection ();
+    }
+}

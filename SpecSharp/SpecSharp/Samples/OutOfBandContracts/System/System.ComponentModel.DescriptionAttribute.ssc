@@ -1,0 +1,78 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.ComponentModel {
+  // Summary:
+  //     Specifies a description for a property or event.
+  [AttributeUsage(AttributeTargets.All)]
+  public class DescriptionAttribute : Attribute {
+    // Summary:
+    //     Specifies the default value for the System.ComponentModel.DescriptionAttribute,
+    //     which is an empty string (""). This static field is read-only.
+    public static readonly DescriptionAttribute Default;
+
+    // Summary:
+    //     Initializes a new instance of the System.ComponentModel.DescriptionAttribute
+    //     class with no parameters.
+    public DescriptionAttribute ();
+    //
+    // Summary:
+    //     Initializes a new instance of the System.ComponentModel.DescriptionAttribute
+    //     class with a description.
+    //
+    // Parameters:
+    //   description:
+    //     The description text.
+    public DescriptionAttribute (string description);
+
+    // Summary:
+    //     Gets the description stored in this attribute.
+    //
+    // Returns:
+    //     The description stored in this attribute.
+    public virtual string Description { get; }
+    //
+    // Summary:
+    //     Gets or sets the string stored as the description.
+    //
+    // Returns:
+    //     The string stored as the description. The default value is an empty string
+    //     ("").
+    protected string DescriptionValue { get; set; }
+
+    // Summary:
+    //     Returns whether the value of the given object is equal to the current System.ComponentModel.DescriptionAttribute.
+    //
+    // Parameters:
+    //   obj:
+    //     The object to test the value equality of.
+    //
+    // Returns:
+    //     true if the value of the given object is equal to that of the current; otherwise,
+    //     false.
+    [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+    public override bool Equals (object obj);
+    [Pure][Reads(ReadsAttribute.Reads.Owned)]
+    public override int GetHashCode ();
+    //
+    // Summary:
+    //     Returns a value indicating whether this is the default System.ComponentModel.DescriptionAttribute
+    //     instance.
+    //
+    // Returns:
+    //     true, if this is the default System.ComponentModel.DescriptionAttribute instance;
+    //     otherwise, false.
+    public override bool IsDefaultAttribute ();
+  }
+}

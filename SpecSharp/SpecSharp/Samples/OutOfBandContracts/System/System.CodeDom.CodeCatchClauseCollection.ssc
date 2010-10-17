@@ -1,0 +1,50 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.CodeDom
+{
+
+    public class CodeCatchClauseCollection
+    {
+
+        public CodeCatchClause this [int index]
+        {
+          get;
+          set;
+        }
+
+        public void Remove (CodeCatchClause value);
+
+        public void Insert (int index, CodeCatchClause value);
+
+        public int IndexOf (CodeCatchClause value);
+
+        public void CopyTo (CodeCatchClause[] array, int index);
+
+        public bool Contains (CodeCatchClause value);
+
+        public void AddRange (CodeCatchClauseCollection! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public void AddRange (CodeCatchClause[]! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public int Add (CodeCatchClause value);
+
+        public CodeCatchClauseCollection (CodeCatchClause[] value);
+
+        public CodeCatchClauseCollection (CodeCatchClauseCollection value);
+
+        public CodeCatchClauseCollection ();
+    }
+}

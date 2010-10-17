@@ -1,0 +1,46 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.IO
+{
+
+    public class Path
+    {
+
+        public static string! Combine (string! path1, string! path2)
+            requires path1 != null otherwise ArgumentNullException;
+            requires path2 != null otherwise ArgumentNullException;
+
+        public static bool IsPathRooted (string! path);
+
+        public static bool HasExtension (string! path);
+
+        public static string! GetTempFileName ();
+
+        public static string! GetTempPath ();
+
+        public static string !GetPathRoot (string! path);
+
+        public static string! GetFileNameWithoutExtension (string! path);
+
+        public static string! GetFileName (string! path);
+
+        public static string! GetFullPath (string! path);
+
+        public static string! GetExtension (string! path);
+
+        public static string! GetDirectoryName (string! path);
+
+        public static string! ChangeExtension (string! path, string! extension);
+    }
+}

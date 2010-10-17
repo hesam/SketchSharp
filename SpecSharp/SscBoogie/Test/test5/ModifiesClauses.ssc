@@ -1,0 +1,134 @@
+using Microsoft.Contracts;
+
+public class F
+{
+  public int Field0 = 0;
+}
+
+public class C
+{
+  public int Field0 = 0;
+  public int Field1 = 0;
+
+  [Additive]
+  public virtual void Method0()
+    modifies this.Field0;
+  {
+    additive expose (this) { Field0 = 42; }
+  }
+
+  public void Method1(int[]! arr)
+    requires arr.Length > 0;
+    modifies arr[*];
+  {
+    arr[0] = 0;
+  }
+
+  public static void Method2([Additive] C! c)
+    modifies c.*;
+  {
+  }
+
+  public virtual void Method3()
+    modifies this.*;
+  {
+  }
+}
+
+public class D : C
+{
+  public int Field2 = 0;
+}
+
+public class ModifiesClauses
+{
+  public void Test0(C! c)
+    requires c.Field1 == 0;
+    modifies c.*;
+  {
+    c.Method0();
+    assert c.Field1 == 0;  // should pass
+  }
+
+  public void Test1(C! c)
+    requires c.Field0 == 0;
+    modifies c.*;
+  {
+    c.Method0();
+    assert c.Field0 == 0;  // error
+  }
+
+  public void Test2(C! c)
+    requires c.Field0 == 0;
+    modifies c.*;
+  {
+    int[]! arr = new int[1];
+    arr[0] = 42;
+    assert arr[0] == 42;  // should pass
+    c.Method1(arr);
+    assert c.Field0 == 0;  // should pass
+    assert arr[0] == 42;  // error
+  }
+
+  public void Test3([Additive] D! d)
+    requires d.Field2 == 0;
+    modifies d.*;
+  {
+    additive expose (d) { C.Method2(d); }
+    assert d.Field2 == 0;  // should pass, because Method2 only modifies fields in class C (and C's superclasses)
+  }
+
+  public void Test4(D! d)
+    requires d.Field2 == 0;
+    modifies d.*;
+  {
+    d.Method3();
+    assert d.Field2 == 0;  // error
+  }
+}
+
+public class CDE {
+  public int x;
+  // There was once a problem with checking this modifies clause.
+  public void M()
+    modifies this.x;
+  {
+    expose (this) {
+      x = 120;
+      P();
+    }
+  }
+
+  public virtual void N()
+    modifies this.x;
+  {
+    expose (this) {
+      x = 120;
+      P();
+    }
+  }
+
+  [Additive]
+  public virtual void Ame()
+    modifies this.x;
+  {
+    expose (this) {
+      x = 120;
+      P();
+    }
+  }
+
+  [Additive]
+  public virtual void Ama()
+    modifies this.x;
+  {
+    additive expose (this) {
+      x = 120;
+      P();
+    }
+  }
+
+  public static void P()
+  {
+  }
+}

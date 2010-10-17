@@ -1,0 +1,185 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+namespace Microsoft.Boogie
+{
+  using System.Collections.Generic;
+  using Microsoft.Contracts;
+  using Cci = System.Compiler;
+  using Bpl = Microsoft.Boogie;
+
+  public class TrivialOwnershipModel : OwnershipModel {
+  
+    public TrivialOwnershipModel([Delayed] Sink! sink) {
+      base(sink);
+    }
+    
+    override internal Bpl.Expr! IsObjectWritable (Bpl.Expr! target, Bpl.Expr! heap)
+    {
+      return Bpl.Expr.True;
+    }
+    
+    override internal Bpl.Expr! IsExposable (Bpl.Expr! targetObject, Cci.TypeNode! targetType, bool mentionWritable, bool exactType)
+    {
+      return Bpl.Expr.True;
+    }
+    
+    override internal Bpl.Expr! IsLocalExposable (Bpl.Expr! targetObject, Cci.TypeNode! targetType, bool mentionWritable)
+    {
+      return Bpl.Expr.True;
+    }
+    
+    override internal Bpl.Expr! IsLocallyExposed (Bpl.Expr! targetObject, Cci.TypeNode! targetType)
+    {
+      return Bpl.Expr.True;
+    }
+    
+    override internal Bpl.Expr! IsExposed (Bpl.Expr! target, Bpl.Expr! frame, Bpl.IdentifierExpr! heap) {
+      return Bpl.Expr.True;
+    }
+    
+    override public Bpl.Expr! IsAdditivelyExposed (Bpl.Expr! target, Bpl.Expr! frame, Bpl.IdentifierExpr! heap) {
+      return Bpl.Expr.True;
+    }
+    
+    override public Bpl.Expr! IsLocallyExposed (Bpl.Expr! target, Cci.TypeNode! frame, Bpl.IdentifierExpr! heap) {
+      return Bpl.Expr.True;
+    }
+    
+    override public Bpl.Trigger IsAdditivelyExposedTrigger (Bpl.Expr! target, Cci.TypeNode! frame, Bpl.IdentifierExpr! heap) {
+      return null;
+    }
+    
+    override public Bpl.Trigger ExposureTrigger (Bpl.Expr! target, Bpl.IdentifierExpr! heap) {
+      return null;
+    }
+    
+    override public Bpl.Expr! ExposureIsUnchanged (Bpl.Expr! target, Bpl.Expr! prevHeapExpr, Bpl.IdentifierExpr! postHeap) {
+      return Bpl.Expr.True;
+    }
+        
+    override public void LocallyPack (Bpl.Expr! target, Cci.TypeNode! frame, CmdSeq! blockCmds) {
+    }
+    
+    override public void LocallyUnpack (Bpl.Expr! target, Cci.TypeNode! frame, CmdSeq! blockCmds) {
+    }
+    
+    override public void AdditivelyPack (Bpl.Expr! target, Cci.TypeNode! frame, CmdSeq! blockCmds) {
+    }
+    
+    override public void AdditivelyUnpack (Bpl.Expr! target, Cci.TypeNode! frame, CmdSeq! blockCmds) {
+    }
+    
+    
+    
+    //*****************************************************
+    // Owner:
+    //*****************************************************
+    
+    override internal Bpl.Expr! IsConsistent (Bpl.Expr! targetObject, bool mentionWritable, Bpl.Expr! heap)
+    {
+      return Bpl.Expr.True;
+    }
+        
+    override internal Bpl.Expr! IsPeerValid (Bpl.Expr! targetObject)
+    {
+      return Bpl.Expr.True;
+    }
+    
+    override internal Bpl.Expr! NotHasValidOwner (Bpl.Expr! targetObject) {
+      return Bpl.Expr.True;
+    }
+    
+    override internal Bpl.Expr! IsPrevalid (Bpl.Expr! targetObject, Cci.TypeNode! targetType)
+    {
+      return Bpl.Expr.True;
+    }
+    
+    override internal Bpl.Expr! PeerGroupIsFullyValid (Bpl.Expr! owRef, Bpl.Expr! owFrame) {
+      return Bpl.Expr.True;
+    }
+    
+    override internal Bpl.Expr! IsValid (Bpl.Expr! targetObject, Cci.TypeNode! targetType)
+    {
+      return Bpl.Expr.True;
+    }
+    
+    protected Bpl.Expr! OwnerRef (Bpl.Expr! ownedObject, Bpl.Expr! heap)
+    {
+      return Bpl.Expr.Select(heap, ownedObject, sink.Fields.OwnerRef);
+    }
+    
+    protected Bpl.Expr! OwnerClassFrame (Bpl.Expr! ownedObject, Bpl.Expr! heap)
+    {
+      return Bpl.Expr.Select(heap, ownedObject, sink.Fields.OwnerClassFrame);
+    }
+    
+    override public Bpl.Expr! OwnerIs (Bpl.Expr! subject, Bpl.Expr! ownerRef, Bpl.Expr! ownerFrame, Bpl.Expr! heap)
+    {
+      return Bpl.Expr.True;
+    }
+    
+    override public Bpl.Expr! EqualOwners (Bpl.Expr! a, Bpl.Expr! b, Bpl.Expr! heap, bool equal) {
+      return Bpl.Expr.True;
+    }
+
+    override public Bpl.Expr! IsFullyValid (Bpl.Expr! target) {
+      return Bpl.Expr.True;
+    }
+    
+    override public Bpl.Expr! OwnerIsUnchanged (Bpl.Expr! target, Bpl.Expr! preHeap, Bpl.Expr! heap) {
+      return Bpl.Expr.True;
+    }
+    
+    override public Bpl.Expr! UnownedPeerGroupSingleton (Bpl.Expr! target, Bpl.Expr! heap, bool afterAllocated) {
+      return Bpl.Expr.True;
+    }
+    
+    override public Bpl.Expr! HasNoOwner (Bpl.Expr! target, Bpl.Expr! heap) {
+      return Bpl.Expr.True;
+    }
+    
+    override public Bpl.Trigger OwnerTrigger (Bpl.Expr! target, Bpl.Expr! heap) {
+      return null;
+    }
+    
+    override public Bpl.Expr! IsOwnerField (Bpl.Expr! target) {
+      return Bpl.Expr.False;
+    }
+    
+    override public void SetSameOwner (Bpl.Expr! target, Bpl.Expr! peer, Bpl.CmdSeq! blockCmds) {
+    }
+       
+    override public void SetOwner (Bpl.Expr! target, Bpl.Expr! owner, Bpl.Expr! frame, Bpl.CmdSeq! blockCmds) {
+    }
+    
+    
+    
+    //*****************************************************
+    // Sharing:
+    //*****************************************************
+    
+    override internal Bpl.Expr! IsUnshared (Bpl.Expr! targetObject)
+    {
+      return Bpl.Expr.True;
+    }
+
+    override internal Bpl.Expr! IsLockProtected (Bpl.Expr! targetObject)
+    {
+      return Bpl.Expr.True;
+    }
+
+    override public Bpl.Expr! SameSharingMode (Bpl.Variable! target) {
+      return Bpl.Expr.True;
+    }
+    
+    override public void Share (Bpl.Expr! target, Bpl.CmdSeq! blockCmds) {
+    }
+    
+    override public Bpl.Trigger SharingTrigger (Bpl.Variable! target) {
+      return null;
+    }
+  }
+}

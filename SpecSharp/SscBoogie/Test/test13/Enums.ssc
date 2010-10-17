@@ -1,0 +1,105 @@
+// enum tests
+
+public enum MyEnum { A, B, C, D = 12, E, F, G = 6, H, I = 100 }
+public enum Positive { X = 1, Y, Z }  // but 0 is still allowed in every enum
+public enum EmptyEnum { }  // this enum still includes 0
+public enum FratHouse { I, Felta = -26, Thi }
+
+[System.Flags]
+public enum MyFlagsEnum { A, B, C }  // Flags enum's are treated just like int's
+
+
+public class MyClass<MyGenericT> {
+  int x;
+  MyEnum xyz;
+
+  public static bool RealSimple(MyEnum e) {
+    MyEnum e0 = e;
+    return e0 == MyEnum.D;
+  }
+
+  public static void MyMethod<MyGenericU>(MyClass<MyGenericU> c, MyGenericU u, MyEnum e) modifies c.*; {
+    if (c != null) {
+      c.x = 12;
+      c.xyz = e;
+    }
+  }
+
+  public static void MyMethod(MyEnum e, int k, int choice) {
+    MyEnum e0 = e;
+    e0++;  // possibly an error
+
+    MyFlagsEnum fe = MyFlagsEnum.B;
+    fe += 2;  // no problem
+
+    MyEnum[] aa = new MyEnum[100];
+    Change(aa);
+    e0 = aa[15];
+    assert 0 <= e0 && e0 <= MyEnum.I;
+    aa[14] = e0 + 2;  // error
+
+    if (choice % 2 == 0) {
+      e0 = (MyEnum)k;  // error
+    } else {
+      k = (int)(MyEnum)k;  // okay (seems like a cast error, but the casts disappear in the IL)
+    }
+    if (choice % 3 == 0) {
+      k = (int)(e + 1);  // okay (seems like an error, but the cast disappears in the IL)
+    } else {
+      k = ((int)e) + 1;  // allowed
+    }
+  }
+
+  public static void MyOtherMethod() {
+    Positive p = Positive.X;
+    p = 0;  // fine
+    p = Positive.Y;
+    p++;  // also fine
+    p++;  // error
+  }
+
+  public static void Change(MyEnum[]! aa)
+    modifies aa[*];
+  {
+  }
+
+  public static bool P()
+    ensures result;
+  {
+    int[] a0 = { 100, 101, 102 };
+    MyEnum[] a1 = { MyEnum.B, 0, MyEnum.C + 1 /*error*/, MyEnum.H };
+    assert forall{int i in (0: 3); a0[i] - 100 == i};
+    return a1[1] == 0;
+  }
+
+  public static void PCopy(int[]! a0, MyEnum[]! a1, bool b)
+    requires 3 <= a0.Length && 3 <= a1.Length;  modifies a1[*];
+  {
+    if (b) {
+      // The following line IS an error, but the precondition of Array.Copy in
+      // our out-of-band contracts is not strong enough to catch the error.
+      System.Array.Copy(a0, 0, a1, 0, 3);
+    } else {
+      object o = a0;  // Including this line causes Boogie to crash!
+      a1 = (MyEnum[])o;  // error
+    }
+  }
+
+  public static object Q(object o) {
+    MyEnum[] a = (MyEnum[])o;  // type cast error
+    return a;
+  }
+
+  // The following method shows the purpose for bothering about ranges of enum values in the first place
+  public void ExhaustiveCases(FratHouse fh) {
+    switch (fh) {
+    case FratHouse.I:
+    case FratHouse.Felta:
+      break;
+    case FratHouse.Thi:
+      break;
+    default:
+      assert false;  // won't ever get here
+    }
+  }
+}

@@ -1,0 +1,37 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Collections
+{
+
+    public class CaseInsensitiveComparer
+    {
+
+        public static CaseInsensitiveComparer Default
+        {
+          get;
+        }
+
+        public static CaseInsensitiveComparer DefaultInvariant
+        {
+          get;
+        }
+
+        public int Compare (object a, object b);
+
+        public CaseInsensitiveComparer (System.Globalization.CultureInfo! culture)
+            requires culture != null otherwise ArgumentNullException;
+
+        public CaseInsensitiveComparer ();
+    }
+}

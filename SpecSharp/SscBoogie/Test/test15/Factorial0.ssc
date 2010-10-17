@@ -1,0 +1,21 @@
+class X {
+  int Factorial (int N)
+    requires 0 <= N;
+    ensures result == product{int k in (1..N); k};
+  {
+    int f = 0; // ERROR
+    for (int i = 1; i <= N; i++)
+      invariant i <= N+1;
+      invariant f == product{int k in (1:i); k};
+    {
+      f *= i;
+    }
+    return f;
+  }
+}
+
+//current error: 
+// factorial0.ssc(9,17): Error: Initially: Loop invariant might not hold: f == product{int k in (1:i); k}
+
+//better:
+// concrete example, f == 0 and product{...} is not 0 but 1 initially

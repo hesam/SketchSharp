@@ -1,0 +1,137 @@
+using System;
+
+public class Demo{
+  public static Uri! FileNameToUri(string! fileName)
+    ensures result.IsFile;
+  {
+    Uri result = new Uri(fileName);
+    assume result.IsFile;
+    return result;
+  }
+  public static string! UriToFileName(Uri! uri)
+    requires uri.IsFile;
+  {
+    return uri.LocalPath;
+  }  
+  public static void Main(){
+    string str = "abc";
+    Uri uri = Demo.FileNameToUri(str);
+    str = UriToFileName(uri);
+    uri = Demo.FileNameToUri(str);
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* post demo
+
+public class Demo{
+  public static Uri! FileNameToUri(string! fileName)
+    ensures result.IsFile;
+  {
+    //TODO: need a precondition stating that the file name is valid
+    Uri result = new Uri(fileName);
+    assume result.IsFile;
+    return result;
+  }
+  public static string! UriToFileName(Uri! uri)
+    requires uri.IsFile;
+  {
+    return uri.LocalPath;
+  }  
+  public static void Main(){
+    string str = "abc";
+    Uri uri = Demo.FileNameToUri(str);
+    str = UriToFileName(uri);
+    uri = Demo.FileNameToUri(str);
+  }
+}
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+namespace System{
+
+public class Uri{
+  ///<summary>Initializes a new instances of the System.Uri class with the specified URI.</summary>
+  public Uri(string! fileName){
+  }
+  ///<summary>Gets a value indicating if the the System.Uri is a file URI.</summary>
+  public readonly bool IsFile = true;/*{
+    [System.Compiler.Contracts.Pure]
+    get{
+      return true;
+    }
+  }*/
+  ///<summary>Gets a local operating-system representation of a file name.</summary>
+  public string! LocalPath{
+    get{
+      write(this){
+        return "";
+      }
+    }
+  }
+}
+
+}
+

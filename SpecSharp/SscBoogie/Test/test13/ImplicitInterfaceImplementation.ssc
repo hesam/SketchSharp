@@ -1,0 +1,40 @@
+public interface J {
+  int P { // property so the getter will be, by default, pure
+    get;
+      ensures result <= 100;
+  }
+}
+public class C : J {
+  public int P {
+    get
+      ensures result == 3;
+    { return 3; }
+  }
+}
+public struct S : J {
+  public int P {
+    get
+      ensures result == 3;
+    { return 3; }
+  }
+}
+class Test{
+  void test0(){ // test for class
+    C c = new C();
+    int x = c.P;
+    assert x == 3;
+    J j = c;
+    int y = j.P;
+    assert y == 3;
+  }
+  void test1(){ // test for struct
+    S s = new S();
+    int x = s.P;
+    assert x == 3;
+    J j = s;
+    int y = j.P;
+    assert y == 3;
+  }
+}
+
+

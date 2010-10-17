@@ -1,0 +1,21 @@
+using System;
+using System.Collections.Generic;
+
+public class ChangeReportingCollection<ElementType> {
+  protected List<ElementType/*!*/> elementsList;
+
+  protected virtual List<ElementType/*!*/>/*!*/ Elements {
+    get {
+      return this.elementsList;
+    }
+  }
+}
+ 
+public sealed class JustInTimeChangeReportingCollection<ElementType> : ChangeReportingCollection<ElementType> {
+ 
+  protected override List<ElementType/*!*/>/*!*/ Elements {
+    get {
+      return this.elementsList;  // This line once detected a problem in the translation
+    }
+  }
+}

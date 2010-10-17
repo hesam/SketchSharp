@@ -1,0 +1,82 @@
+using System;
+using Microsoft.SpecSharp;
+using Microsoft.Contracts;
+
+public class Search
+{
+  public static bool ContainsZero_WithExplicitInvariant(int[]! a)
+  {
+    for(int i=0; i < a.Length; i++)
+      invariant 0 <= i;
+    {
+      if (a[i] == 0)
+      {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public static bool ContainsZero_WithoutExplicitInvariant(int[]! a)
+  {
+    for(int i=0; i < a.Length; i++)
+    {
+      if (a[i] == 0) // error, unless loop invariant inference is turned on
+      {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public static int Inc(int i)
+    requires 0 <= i;
+    ensures 0 <= result;
+  {
+    return checked(i + 1);
+  }
+
+  // It would also be interesting to test a version of this method without
+  // the explicit loop invariant.
+  public static bool ContainsZero_IncMethod(int[]! a)
+  {
+    for(int i=0; i < a.Length; i = Inc(i))
+      invariant 0 <= i;
+      invariant a.IsConsistent;
+    {
+      if (a[i] == 0)
+      {
+        return true;
+      }
+    }
+    return false;
+  }
+
+
+  public static void Reverse_Mul(int[]! a)
+    modifies a[*];
+  {
+    for(int i=0; 2*i < a.Length; i++)
+      invariant a.IsConsistent;
+      invariant 0 <= i;
+    {
+      int temp = a[a.Length-1-i];
+      a[a.Length-1-i] = a[i];
+      a[i] = temp;
+    }
+  }
+
+  public static void Reverse_Div(int[]! a)
+    modifies a[*];
+  {
+    for(int i=0; i < a.Length/2; i++)
+      invariant a.IsConsistent;
+      invariant 0 <= i;
+    {
+      int temp = a[a.Length-1-i];
+      a[a.Length-1-i] = a[i];
+      a[i] = temp;
+    }
+  }
+
+}

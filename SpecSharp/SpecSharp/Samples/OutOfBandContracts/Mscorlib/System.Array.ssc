@@ -1,0 +1,459 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+using Microsoft.SpecSharp.Collections;
+
+namespace System
+{
+
+    public class Array
+    {
+
+        public int Rank
+        {
+          [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+          get;
+        }
+
+        public bool IsReadOnly
+        {
+          [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+          get;
+        }
+
+        public object SyncRoot
+        {
+          get;
+        }
+
+        public bool IsSynchronized
+        {
+          [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+          get;
+        }
+
+        public bool IsFixedSize
+        {
+          [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+          get;
+        }
+
+        public int Length
+        {
+          [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+          get;
+            ensures 0 <= result && result <= int.MaxValue;
+        }
+
+        public long LongLength
+        {
+          [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+          get;
+            ensures 0 <= result && result <= long.MaxValue;
+        }
+
+        public void Initialize ();
+
+        public static void Sort (Array! keys, Array items, int index, int length, System.Collections.IComparer comparer)
+            requires keys != null otherwise ArgumentNullException;
+            requires keys.Rank == 1 otherwise RankException;
+            requires items == null || items.Rank == 1 otherwise RankException;
+            requires items == null || keys.GetLowerBound(0) == items.GetLowerBound(0) otherwise ArgumentException;
+            requires index >= keys.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires length >= 0 otherwise ArgumentOutOfRangeException;
+            requires keys.GetLowerBound(0) + index + length <= keys.Length otherwise ArgumentException;
+            requires items == null || index + length <= items.Length otherwise ArgumentException;
+
+        public static void Sort (Array array, int index, int length, System.Collections.IComparer comparer)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+            requires index >= array.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires length >= 0 otherwise ArgumentOutOfRangeException;
+            requires array.GetLowerBound(0) + index + length <= array.Length otherwise ArgumentException;
+
+        public static void Sort (Array! keys, Array items, System.Collections.IComparer comparer)
+            requires keys != null otherwise ArgumentNullException;
+            requires keys.Rank == 1 otherwise RankException;
+            requires items == null || items.Rank == 1 otherwise RankException;
+            requires items == null || keys.GetLowerBound(0) == items.GetLowerBound(0) otherwise ArgumentException;
+
+        public static void Sort (Array! array, System.Collections.IComparer comparer)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+
+        public static void Sort (Array keys, Array items, int index, int length)
+            requires keys != null otherwise ArgumentNullException;
+            requires keys.Rank == 1 otherwise RankException;
+            requires items == null || items.Rank == 1 otherwise RankException;
+            requires items == null || keys.GetLowerBound(0) == items.GetLowerBound(0) otherwise ArgumentException;
+            requires index >= keys.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires length >= 0 otherwise ArgumentOutOfRangeException;
+            requires keys.GetLowerBound(0) + index + length <= keys.Length otherwise ArgumentException;
+            requires items == null || index + length <= items.Length otherwise ArgumentException;
+
+        public static void Sort (Array array, int index, int length)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+            requires index >= array.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires length >= 0 otherwise ArgumentOutOfRangeException;
+            requires array.GetLowerBound(0) + index + length <= array.Length otherwise ArgumentException;
+
+        public static void Sort (Array! keys, Array items)
+            requires keys != null otherwise ArgumentNullException;
+            requires keys.Rank == 1 otherwise RankException;
+            requires items == null || items.Rank == 1 otherwise RankException;
+            requires items == null || keys.GetLowerBound(0) == items.GetLowerBound(0) otherwise ArgumentException;
+
+        public static void Sort (Array! array)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+
+        public static void Reverse (Array! array, int index, int length)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+            requires length >= 0 otherwise ArgumentOutOfRangeException;
+            requires index >= array.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires array.GetLowerBound(0) + index + length <= array.Length otherwise ArgumentException;
+
+        public static void Reverse (Array! array)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+
+        public static int LastIndexOf (Array! array, object value, int startIndex, int count)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+            requires count <= startIndex - array.GetLowerBound(0) + 1 otherwise ArgumentOutOfRangeException;
+            requires startIndex >= array.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires startIndex < array.Length + array.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            ensures result == array.GetLowerBound(0)-1 || (startIndex+1 - count <= result && result <= startIndex);
+
+        public static int LastIndexOf (Array! array, object value, int startIndex)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+            requires startIndex >= array.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires startIndex < array.Length + array.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            ensures array.GetLowerBound(0)-1 <= result && result <= startIndex;
+
+        public static int LastIndexOf (Array! array, object value)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+            ensures array.GetLowerBound(0)-1 <= result && result <= array.GetUpperBound(0);
+
+        public static int IndexOf (Array! array, object value, int startIndex, int count)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+            requires startIndex >= array.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires startIndex <= array.GetLowerBound(0) + array.Length otherwise ArgumentOutOfRangeException;
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+            requires startIndex + count <= array.GetLowerBound(0) + array.Length otherwise ArgumentOutOfRangeException;
+            ensures result == array.GetLowerBound(0)-1 || (startIndex <= result && result < startIndex + count);
+
+        public static int IndexOf (Array! array, object value, int startIndex)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+            requires startIndex >= array.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires startIndex <= array.GetLowerBound(0) + array.Length otherwise ArgumentOutOfRangeException;
+            ensures result == array.GetLowerBound(0)-1 || (startIndex <= result && result <= array.GetUpperBound(0));
+
+        public static int IndexOf (Array! array, object value)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+            ensures array.GetLowerBound(0)-1 <= result && result <= array.GetUpperBound(0);
+
+        [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+        public System.Collections.IEnumerator! GetEnumerator ();
+            ensures result.IsNew;
+
+        public void CopyTo (Array! array, long index)
+            requires array != null otherwise ArgumentNullException;
+            requires array.GetLowerBound(0) <= index otherwise ArgumentOutOfRangeException;
+            requires this.Rank == 1 otherwise ArgumentException;
+            requires array.Rank == 1 otherwise ArgumentException;
+            requires this.Length <= array.GetUpperBound(0) + 1 - index otherwise ArgumentException;
+            modifies this.0, array.*;
+
+        public void CopyTo (Array! array, int index)
+            requires array != null otherwise ArgumentNullException;
+            requires array.GetLowerBound(0) <= index otherwise ArgumentOutOfRangeException;
+            requires this.Rank == 1 otherwise ArgumentException;
+            requires array.Rank == 1 otherwise ArgumentException;
+            requires this.Length <= array.GetUpperBound(0) + 1 - index otherwise ArgumentException;
+            modifies this.0, array.*;
+
+        public static int BinarySearch (Array! array, int index, int length, object value, System.Collections.IComparer comparer)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+            requires index >= array.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires length >= 0 otherwise ArgumentOutOfRangeException;
+            requires length <= array.Length - index otherwise ArgumentException;
+            ensures result == array.GetLowerBound(0)-1 || (index <= result && result < index + length);
+
+        public static int BinarySearch (Array! array, object value, System.Collections.IComparer comparer)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+            ensures array.GetLowerBound(0)-1 <= result && result <= array.GetUpperBound(0);
+
+        public static int BinarySearch (Array array, int index, int length, object value)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+            requires index >= array.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires length >= 0 otherwise ArgumentOutOfRangeException;
+            requires length <= array.Length - index otherwise ArgumentException;
+            ensures result == array.GetLowerBound(0)-1 || (index <= result && result < index + length);
+
+        public static int BinarySearch (Array! array, object value)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+            ensures array.GetLowerBound(0)-1 <= result && result <= array.GetUpperBound(0);
+
+        [Pure]
+        public object! Clone ()
+            ensures result.GetType() == this.GetType();
+            ensures Owner.New(result);
+
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public int GetLowerBound (int arg0);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public int GetUpperBound (int arg0);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public long GetLongLength (int dimension);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public int GetLength (int arg0);
+
+        public void SetValue (object value, long[] indices);
+
+        public void SetValue (object value, long index1, long index2, long index3)
+            requires index1 <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires index1 >= -2147483648 otherwise ArgumentOutOfRangeException;
+            requires index2 <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires index2 >= -2147483648 otherwise ArgumentOutOfRangeException;
+            requires index3 <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires index3 >= -2147483648 otherwise ArgumentOutOfRangeException;
+            requires this.Rank == 3 otherwise ArgumentException;
+            requires index1 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index1 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+            requires index2 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index2 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+            requires index3 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index3 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+
+        public void SetValue (object value, long index1, long index2)
+            requires index1 <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires index1 >= -2147483648 otherwise ArgumentOutOfRangeException;
+            requires index2 <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires index2 >= -2147483648 otherwise ArgumentOutOfRangeException;
+            requires this.Rank == 2 otherwise ArgumentException;
+            requires index1 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index1 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+            requires index2 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index2 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+
+        public void SetValue (object value, long index)
+            requires index <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires index >= -2147483648 otherwise ArgumentOutOfRangeException;
+            requires this.Rank == 1 otherwise ArgumentException;
+            requires index >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+
+        public void SetValue (object value, int[]! indices)
+            requires indices != null otherwise ArgumentNullException;
+            //requires Forall { int i in indices; this.GetLowerBound(i) <= indices[i] && indices[i] <= this.GetUpperBound(i) } otherwise IndexOutOfRangeException;
+
+        public void SetValue (object value, int index1, int index2, int index3)
+            requires this.Rank == 3 otherwise ArgumentException;
+            requires index1 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index1 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+            requires index2 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index2 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+            requires index3 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index3 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+
+        public void SetValue (object value, int index1, int index2)
+            requires this.Rank == 2 otherwise ArgumentException;
+            requires index1 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index1 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+            requires index2 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index2 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+
+        public void SetValue (object value, int index)
+            requires this.Rank == 1 otherwise ArgumentException;
+            requires index >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+
+        public object GetValue (long[] indices);
+
+        public object GetValue (long index1, long index2, long index3)
+            requires index1 <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires index1 >= -2147483648 otherwise ArgumentOutOfRangeException;
+            requires index2 <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires index2 >= -2147483648 otherwise ArgumentOutOfRangeException;
+            requires index3 <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires index3 >= -2147483648 otherwise ArgumentOutOfRangeException;
+            requires this.Rank == 3 otherwise ArgumentException;
+            requires index1 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index1 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+            requires index2 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index2 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+            requires index3 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index3 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+
+        public object GetValue (long index1, long index2)
+            requires index1 <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires index1 >= -2147483648 otherwise ArgumentOutOfRangeException;
+            requires index2 <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires index2 >= -2147483648 otherwise ArgumentOutOfRangeException;
+            requires this.Rank == 2 otherwise ArgumentException;
+            requires index1 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index1 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+            requires index2 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index2 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+
+        public object GetValue (long index)
+            requires index <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires index >= -2147483648 otherwise ArgumentOutOfRangeException;
+            requires this.Rank == 1 otherwise ArgumentException;
+            requires index >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+
+        public object GetValue (int index1, int index2, int index3)
+            requires this.Rank == 3 otherwise ArgumentException;
+            requires index1 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index1 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+            requires index2 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index2 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+            requires index3 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index3 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+
+        public object GetValue (int index1, int index2)
+            requires this.Rank == 2 otherwise ArgumentException;
+            requires index1 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index1 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+            requires index2 >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index2 <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+
+        public object GetValue (int index)
+            requires this.Rank == 1 otherwise ArgumentException;
+            requires index >= this.GetLowerBound(0) otherwise IndexOutOfRangeException;
+            requires index <= this.GetUpperBound(0) otherwise IndexOutOfRangeException;
+
+
+        public object GetValue (int[]! indices)
+            requires indices != null otherwise ArgumentNullException;
+
+        public static void Clear (Array! array, int index, int length)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise RankException;
+            requires index >= array.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires length >= 0 otherwise ArgumentOutOfRangeException;
+            requires array.Length - (index + array.GetLowerBound(0)) >= length otherwise ArgumentException;
+
+        public static void Copy (Array sourceArray, long sourceIndex, Array destinationArray, long destinationIndex, long length)
+            requires sourceArray != null otherwise ArgumentNullException;
+            requires destinationArray != null otherwise ArgumentNullException;
+            requires sourceArray.Rank == destinationArray.Rank otherwise RankException;
+            requires sourceIndex >= sourceArray.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires destinationIndex >= destinationArray.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires length >= 0 otherwise ArgumentOutOfRangeException;
+            requires sourceIndex + length <= sourceArray.GetLowerBound(0) + sourceArray.Length otherwise ArgumentException;
+            requires destinationIndex + length <= destinationArray.GetLowerBound(0) + destinationArray.Length otherwise ArgumentException;
+            requires sourceIndex <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires sourceIndex >= -2147483648 otherwise ArgumentOutOfRangeException;
+            requires destinationIndex <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires destinationIndex >= -2147483648 otherwise ArgumentOutOfRangeException;
+            requires length <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires length >= -2147483648 otherwise ArgumentOutOfRangeException;
+            modifies destinationArray.*;
+
+        public static void Copy (Array sourceArray, Array destinationArray, long length)
+            requires sourceArray != null otherwise ArgumentNullException;
+            requires destinationArray != null otherwise ArgumentNullException;
+            requires sourceArray.Rank == destinationArray.Rank otherwise RankException;
+            requires sourceArray.Rank == destinationArray.Rank otherwise RankException;
+            requires length >= 0 otherwise ArgumentOutOfRangeException;
+            requires length <= sourceArray.GetLowerBound(0) + sourceArray.Length otherwise ArgumentException;
+            requires length <= destinationArray.GetLowerBound(0) + destinationArray.Length otherwise ArgumentException;
+            requires length <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires length >= -2147483648 otherwise ArgumentOutOfRangeException;
+            modifies destinationArray.*;
+
+        public static void Copy (Array! sourceArray, int sourceIndex, Array! destinationArray, int destinationIndex, int length)
+            requires sourceArray != null otherwise ArgumentNullException;
+            requires destinationArray != null otherwise ArgumentNullException;
+            requires sourceArray.Rank == destinationArray.Rank otherwise RankException;
+            requires sourceIndex >= sourceArray.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires destinationIndex >= destinationArray.GetLowerBound(0) otherwise ArgumentOutOfRangeException;
+            requires length >= 0 otherwise ArgumentOutOfRangeException;
+            requires sourceIndex + length <= sourceArray.GetLowerBound(0) + sourceArray.Length otherwise ArgumentException;
+            requires destinationIndex + length <= destinationArray.GetLowerBound(0) + destinationArray.Length otherwise ArgumentException;
+            modifies destinationArray.*;
+
+        public static void Copy (Array! sourceArray, Array! destinationArray, int length)
+            requires sourceArray != null otherwise ArgumentNullException;
+            requires destinationArray != null otherwise ArgumentNullException;
+            requires sourceArray.Rank == destinationArray.Rank otherwise RankException;
+            requires sourceArray.Rank == destinationArray.Rank otherwise RankException;
+            requires length >= 0 otherwise ArgumentOutOfRangeException;
+            requires length <= sourceArray.GetLowerBound(0) + sourceArray.Length otherwise ArgumentException;
+            requires length <= destinationArray.GetLowerBound(0) + destinationArray.Length otherwise ArgumentException;
+            modifies destinationArray.*;
+
+        public static Array! CreateInstance (Type! elementType, int[]! lengths, int[]! lowerBounds)
+            requires elementType != null otherwise ArgumentNullException;
+            requires lengths != null otherwise ArgumentNullException;
+            requires lowerBounds != null otherwise ArgumentNullException;
+            requires lengths.Length == lowerBounds.Length otherwise ArgumentException;
+            requires lengths.Length != 0 otherwise ArgumentException;
+
+        public static Array! CreateInstance (Type! elementType, long[]! lengths)
+            requires elementType != null otherwise ArgumentNullException;
+            requires lengths != null otherwise ArgumentNullException;
+            requires lengths.Length > 0 otherwise ArgumentException;
+            // requires Forall { int i in lengths; lengths[i] >= 0; } otherwise ArgumentOutOfRangeException;
+            ensures result.Rank == lengths.Length;
+            // ensures Forall { int i in lengths; result.GetLength(i) == length[i]; }
+
+        public static Array! CreateInstance (Type! elementType, int[]! lengths)
+            requires elementType != null otherwise ArgumentNullException;
+            requires lengths != null otherwise ArgumentNullException;
+            requires lengths.Length > 0 otherwise ArgumentException;
+            // requires Forall { int i in lengths; lengths[i] >= 0; } otherwise ArgumentOutOfRangeException;
+            ensures result.Rank == lengths.Length;
+            // ensures Forall { int i in lengths; result.GetLength(i) == length[i]; }
+
+        public static Array! CreateInstance (Type! elementType, int length1, int length2, int length3)
+            requires elementType != null otherwise ArgumentNullException;
+            requires length1 >= 0 otherwise ArgumentOutOfRangeException;
+            requires length2 >= 0 otherwise ArgumentOutOfRangeException;
+            requires length3 >= 0 otherwise ArgumentOutOfRangeException;
+            ensures result.Rank == 3;
+            ensures result.GetLength(0) == length1 && result.GetLength(1) == length2 && result.GetLength(2) == length3;
+
+        public static Array! CreateInstance (Type! elementType, int length1, int length2)
+            requires elementType != null otherwise ArgumentNullException;
+            requires length1 >= 0 otherwise ArgumentOutOfRangeException;
+            requires length2 >= 0 otherwise ArgumentOutOfRangeException;
+            ensures result.Rank == 2;
+            ensures result.GetLength(0) == length1 && result.GetLength(1) == length2;
+
+        public static Array! CreateInstance (Type! elementType, int length)
+            requires elementType != null otherwise ArgumentNullException;
+            requires length >= 0 otherwise ArgumentOutOfRangeException;
+            ensures result.Rank == 1;
+            ensures result.GetLength(0) == length;
+    }
+}

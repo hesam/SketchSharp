@@ -1,0 +1,65 @@
+namespace Play
+{
+    using System;
+    using System.IO;
+
+
+    /*
+        This class takes advantage of the contracts for mscorlib.dll that come with the Spec# compiler.
+        With these contracts included, the Spec# compiler knows a lot more about Mscorlib.
+        You get improved type signatures for common methods, which includes nonnull types (!)
+        for those parameters and return values that cannot be null.
+        To see these improved signatures, use Studio's Quick Info feature by using the menu
+        Edit/Intellisense/Quick Info (Ctrl-K, Ctrl-I) or by hovering over some of the method calls below.
+        The contracts also include various requires specifications.
+        
+        The code that follows is a contrived use of various common methods in Mscorlib.
+        The three red squigglies represent legitimate problems that should be fixed.
+        There are also many comments in the code that ask you to inspect the
+        contracts on the library calls to figure out why the code is okay and there
+        is no red squiggly.
+    */
+
+    public class Program
+    {
+        static void Main (string[]! commandLineArgs)
+        {
+            if (commandLineArgs.Length != 1) return;
+            
+            string home = Environment.GetEnvironmentVariable("HOME");
+            // Can 'home' be null? What does the contract for GetEnvironmentVariable say?
+            
+            string path = commandLineArgs[0];
+            // Can path be null?
+            // If you're sure that the shell will never launch your program with a null 
+            // command-line argument, comment in the next line. Otherwise you 
+            // can make the program quit.
+#if NICE_SHELL
+            assume path != null;
+#else
+            if (path == null) return;
+#endif
+            
+            string temp = Path.GetTempPath();
+            // Can temp be null? What's the contract for GetTempPath say?
+            
+            path = path.Replace(home, temp); // Is this call okay?
+            // Can path be null here? If so, can the StreamWriter constructor handle it?
+            
+            using (StreamWriter writer = new StreamWriter(path))
+            {
+                string line;
+                while ((line = Console.In.ReadLine()) != null) // can Console.In be null?
+                {
+                    string[] parts = line.Split(' ');
+                    if (parts.Length < 2) return; // Could parts be null? If so, taking the Length will crash.
+
+                    // What do we know about the array elements? Could they be null?
+                    int padAmount = Int32.Parse(parts[0]);
+                    writer.WriteLine(parts[1].PadLeft(padAmount));
+                }
+            }
+        }
+    }
+
+}

@@ -1,0 +1,46 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Net
+{
+
+    public class Dns
+    {
+
+        public static IPHostEntry EndResolve (IAsyncResult! asyncResult)
+            requires asyncResult != null otherwise ArgumentNullException;
+
+        public static IAsyncResult BeginResolve (string! hostName, AsyncCallback requestCallback, object stateObject)
+            requires hostName != null otherwise ArgumentNullException;
+
+        public static IPHostEntry EndGetHostByName (IAsyncResult! asyncResult)
+            requires asyncResult != null otherwise ArgumentNullException;
+
+        public static IAsyncResult BeginGetHostByName (string! hostName, AsyncCallback requestCallback, object stateObject)
+            requires hostName != null otherwise ArgumentNullException;
+
+        public static IPHostEntry Resolve (string hostName);
+
+        public static string GetHostName ();
+
+        public static IPHostEntry GetHostByAddress (IPAddress! address)
+            requires address != null otherwise ArgumentNullException;
+
+        public static IPHostEntry GetHostByAddress (string! address)
+            requires address != null otherwise ArgumentNullException;
+
+        public static IPHostEntry GetHostByName (string! hostName)
+            requires hostName != null otherwise ArgumentNullException;
+            requires hostName.Length <= 126 otherwise ArgumentOutOfRangeException;
+    }
+}

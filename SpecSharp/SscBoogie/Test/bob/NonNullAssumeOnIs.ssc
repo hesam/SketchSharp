@@ -1,0 +1,22 @@
+class P
+{
+}
+
+class C : P
+{
+  public int Val = 3;
+}
+
+class Test
+{
+  public int Method(P p)
+  {
+    if (p is C)
+    {
+      C c = (C) p;
+      return c.Val;
+    }
+
+    return 0;
+  }
+}

@@ -1,0 +1,20 @@
+1. Open Precondition.sln
+2. Double-click on main.ssc in the Solution View or else the source code will *not* be visible!!
+3. This demo starts with the after state of the NonNullTypes demo and changing the code in UriToFileName so that the requirement that the argument has the "IsFile" property true is lifted into a precondition. This goes along with the philosophy of making it possible for clients to avoid exceptions by meeting the expectations of the code. Note the ability to avoid having to name the exception and localize it.
+4. Build the solution. (It should build with no warnings and no errors.) Currently, the static verification (Boogie) is run as a post-compilation process. We are in the middle of integrating it into the compiler so it will also produce red squigglies.
+5. Run Boogie. (Has to be added to External Tools and has to be per project because of deficiencies in the Spec# project system.)
+6. You should get an error on line 15 that a precondition is not satisfied. (The next line in the output shows the precondition that is violated.) Double-click on each line in turn to go to the corresponding source line. The problem is that the local variable uri was given its value by calling FileNameToUri and it does not guarantee that its result will have that field set to true.
+7. Add a postcondition to FileNameToUri. "ensures result.IsFile;" goes between the close paren in the argument list and the open curly that opens the method body. Pause on the "." and wait for the Intellisense so you can pick "IsFile". Explain that "result" is a special keyword in postconditions which represents the return value of a method.
+8. Rebuild. (It should build with no warnings and no errors.)
+9. Run Boogie again.
+10. Boogie will complain that the method is not guaranteed to validate its postcondition. Either it needs to be a postcondition of the Uri constructor (with some kind of matching precondition about the conditions on the string that are needed in order to guarantee the property is true on the returned Uri) or else part of the method body. Show the documentation about what constitutes a valid filename:
+
+ms-help://MS.VSCC.2003/MS.MSDNQTR.2003FEB.1033/cpref/html/frlrfsystemuriclassctortopic1.htm
+
+It is not trivial. So for now change the method body to be:
+
+    Uri result = new Uri(fileName);
+    assume result.IsFile;
+    return result;
+
+11. This means that Boogie will just assume it is true, so its verification is relative to these assumptions. The runtime checks them just the same as assertions so you don't make bad assumptions.

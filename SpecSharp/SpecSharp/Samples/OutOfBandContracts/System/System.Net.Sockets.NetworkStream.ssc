@@ -1,0 +1,105 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Net.Sockets
+{
+
+    public class NetworkStream
+    {
+
+        public Int64 Position
+        {
+          get;
+          set;
+        }
+
+        public bool CanWrite
+        {
+          get;
+        }
+
+        public bool CanRead
+        {
+          get;
+        }
+
+        public bool CanSeek
+        {
+          get;
+        }
+
+        public Int64 Length
+        {
+          get;
+        }
+
+        public bool DataAvailable
+        {
+          get;
+        }
+
+        public void SetLength (Int64 value);
+
+        public void Flush ();
+
+        public void EndWrite (IAsyncResult! asyncResult)
+            requires asyncResult != null otherwise ArgumentNullException;
+
+        public IAsyncResult BeginWrite (Byte[]! buffer, int offset, int size, AsyncCallback callback, object state)
+            requires buffer != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires offset <= buffer.Length otherwise ArgumentOutOfRangeException;
+            requires size >= 0 otherwise ArgumentOutOfRangeException;
+            requires size <= (buffer.Length - offset) otherwise ArgumentOutOfRangeException;
+
+        public int EndRead (IAsyncResult! asyncResult)
+            requires asyncResult != null otherwise ArgumentNullException;
+
+        public IAsyncResult BeginRead (Byte[]! buffer, int offset, int size, AsyncCallback callback, object state)
+            requires buffer != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires offset <= buffer.Length otherwise ArgumentOutOfRangeException;
+            requires size >= 0 otherwise ArgumentOutOfRangeException;
+            requires size <= (buffer.Length - offset) otherwise ArgumentOutOfRangeException;
+
+        public void Close ();
+
+        public void Write (Byte[]! buffer, int offset, int size)
+            requires buffer != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires offset <= buffer.Length otherwise ArgumentOutOfRangeException;
+            requires size >= 0 otherwise ArgumentOutOfRangeException;
+            requires size <= (buffer.Length - offset) otherwise ArgumentOutOfRangeException;
+
+        public int Read (Byte[]! buffer, int offset, int size)
+            requires buffer != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires offset <= buffer.Length otherwise ArgumentOutOfRangeException;
+            requires size >= 0 otherwise ArgumentOutOfRangeException;
+            requires size <= (buffer.Length - offset) otherwise ArgumentOutOfRangeException;
+
+        public Int64 Seek (Int64 offset, System.IO.SeekOrigin origin);
+
+        public NetworkStream (Socket! socket, System.IO.FileAccess access, bool ownsSocket)
+            requires socket != null otherwise ArgumentNullException;
+
+        public NetworkStream (Socket! socket, System.IO.FileAccess access)
+            requires socket != null otherwise ArgumentNullException;
+
+        public NetworkStream (Socket! socket, bool ownsSocket)
+            requires socket != null otherwise ArgumentNullException;
+
+        public NetworkStream (Socket! socket)
+            requires socket != null otherwise ArgumentNullException;
+    }
+}

@@ -1,0 +1,17 @@
+class Test
+{
+  static void Foo(int x)
+    requires 0 <= x;
+  {
+    x++;
+    assert 1 <= x;
+  }
+
+  static void Bar(int x)
+    requires 0 <= x;
+  {
+    x--;
+    assert 0 <= x;
+  }
+}
+    

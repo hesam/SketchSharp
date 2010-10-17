@@ -1,0 +1,34 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Security.Permissions
+{
+
+    public class StrongNamePublicKeyBlob
+    {
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object obj);
+
+        public StrongNamePublicKeyBlob (Byte[]! publicKey)
+            requires publicKey != null otherwise ArgumentNullException;
+            requires publicKey.Length != 0 otherwise ArgumentException;
+    }
+}

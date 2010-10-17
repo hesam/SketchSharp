@@ -1,0 +1,81 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Net
+{
+
+    public class IPAddress
+    {
+        public static IPAddress! Any;
+
+        public Int64 ScopeId
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+            requires value <= -1 otherwise ArgumentOutOfRangeException;
+        }
+
+        public Int64 Address
+        {
+          get;
+          set;
+        }
+
+        public System.Net.Sockets.AddressFamily AddressFamily
+        {
+          get;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object comparand);
+
+        public static bool IsLoopback (IPAddress address);
+
+        public static Int16 NetworkToHostOrder (Int16 network);
+
+        public static int NetworkToHostOrder (int network);
+
+        public static Int64 NetworkToHostOrder (Int64 network);
+
+        public static Int16 HostToNetworkOrder (Int16 host);
+
+        public static int HostToNetworkOrder (int host);
+
+        public static Int64 HostToNetworkOrder (Int64 host);
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public Byte[] GetAddressBytes ();
+
+        public static IPAddress Parse (string! ipString)
+            requires ipString != null otherwise ArgumentNullException;
+
+        public IPAddress (Byte[] address);
+
+        public IPAddress (Byte[]! address, Int64 scopeid)
+            requires address != null otherwise ArgumentNullException;
+            requires address.Length == 16 otherwise ArgumentException;
+            requires scopeid >= 0 otherwise ArgumentOutOfRangeException;
+            requires scopeid <= -1 otherwise ArgumentOutOfRangeException;
+
+        public IPAddress (Int64 newAddress)
+            requires newAddress >= 0 otherwise ArgumentOutOfRangeException;
+            requires newAddress <= -1 otherwise ArgumentOutOfRangeException;
+    }
+}

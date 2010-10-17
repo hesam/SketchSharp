@@ -1,0 +1,36 @@
+class C {
+  int x;
+  int y;
+
+  void M()
+    modifies y;
+  {
+    expose(this) {
+      x++;
+      y++;
+    }
+  }
+
+  C next;
+  
+  public void Once()
+    modifies this.*, this.next.*;
+  {
+  }
+
+  public void Twice()
+    modifies this.*, this.next.*;
+  {
+    Once();
+    Once();
+  }
+}
+
+//current error message: 
+// Error: Method C.M(), unsatisfied frame condition
+
+//better message:
+// modifies clause violated, assignment to this.x in line 9
+
+//template: This method modified o.f ! 
+//[o, f come from the model]

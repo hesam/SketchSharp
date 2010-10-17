@@ -1,0 +1,84 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Collections.Specialized
+{
+
+    public class ListDictionary
+    {
+
+        public object this [object! key]
+        {
+          get
+            requires key != null otherwise ArgumentNullException;
+          set
+            requires key != null otherwise ArgumentNullException;
+        }
+
+        public int Count
+        {
+          get;
+        }
+
+        public System.Collections.ICollection Values
+        { [ElementCollection] 
+          get;
+        }
+
+        public object SyncRoot
+        {
+          get;
+        }
+
+        public bool IsSynchronized
+        {
+          get;
+        }
+
+        public bool IsFixedSize
+        {
+          get;
+        }
+
+        public System.Collections.ICollection Keys
+        { [ElementCollection] 
+          get;
+        }
+
+        public bool IsReadOnly
+        {
+          get;
+        }
+
+        public void Remove (object! key)
+            requires key != null otherwise ArgumentNullException;
+
+        public System.Collections.IDictionaryEnumerator GetEnumerator ();
+
+        public void CopyTo (Array! array, int index)
+            requires array != null otherwise ArgumentNullException;
+            requires index >= 0 otherwise ArgumentOutOfRangeException;
+
+        public bool Contains (object! key)
+            requires key != null otherwise ArgumentNullException;
+
+        public void Clear ();
+
+        public void Add (object! key, object value)
+            requires key != null otherwise ArgumentNullException;
+
+        public ListDictionary (System.Collections.IComparer comparer);
+
+        public ListDictionary ();
+    }
+}

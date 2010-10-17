@@ -1,0 +1,36 @@
+using System.Collections.Generic;
+
+static class Tools
+{
+   public static IEnumerable<int> Range(int a, int b)
+      requires a <= b;
+      invariant values.Count <= b - a;
+      invariant forall{int i in (0:values.Count); values[i] == a + i};
+      ensures values.Count == b - a;
+   {
+      for (int x = a; x < b; x++)
+         invariant x == a + values.Count;
+         invariant values.Count <= b - a;
+         invariant forall{int i in (0:values.Count); values[i] == a + i};
+      {
+         yield return x;
+      }
+   }
+}
+
+static class Test
+{
+   static void Main()
+   {
+      int sum = 0;
+      foreach (int x in Tools.Range(1, 3))
+         elements_seen values;
+         invariant values.Count == 0 ==> sum == 0;
+         invariant values.Count == 1 ==> sum == 1;
+         invariant values.Count == 2 ==> sum == 3;
+      {
+         sum += x;
+      }
+      assert sum == 3;
+   }
+}

@@ -1,0 +1,90 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Reflection
+{
+
+    public class Module
+    {
+
+        public string FullyQualifiedName
+        {
+          get;
+        }
+
+        public string Name
+        {
+          get;
+        }
+
+        public string ScopeName
+        {
+          get;
+        }
+
+        public Assembly Assembly
+        {
+          get;
+        }
+
+        public bool IsResource ();
+
+        public bool IsDefined (Type! attributeType, bool inherit)
+            requires attributeType != null otherwise ArgumentNullException;
+
+        public Object[] GetCustomAttributes (Type! attributeType, bool inherit)
+            requires attributeType != null otherwise ArgumentNullException;
+
+        public Object[] GetCustomAttributes (bool inherit);
+
+        public void GetObjectData (System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context)
+            requires info != null otherwise ArgumentNullException;
+
+        public FieldInfo GetField (string! name, BindingFlags bindingAttr)
+            requires name != null otherwise ArgumentNullException;
+
+        public FieldInfo GetField (string! name)
+            requires name != null otherwise ArgumentNullException;
+
+        public FieldInfo[] GetFields ();
+
+        public MethodInfo GetMethod (string! name)
+            requires name != null otherwise ArgumentNullException;
+
+        public MethodInfo GetMethod (string! name, Type[]! types)
+            requires name != null otherwise ArgumentNullException;
+            requires types != null otherwise ArgumentNullException;
+
+        public MethodInfo GetMethod (string! name, BindingFlags bindingAttr, Binder binder, CallingConventions callConvention, Type[]! types, ParameterModifier[] modifiers)
+            requires name != null otherwise ArgumentNullException;
+            requires types != null otherwise ArgumentNullException;
+
+        public MethodInfo[] GetMethods ();
+
+        public System.Security.Cryptography.X509Certificates.X509Certificate GetSignerCertificate ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string! ToString ();
+
+        public Type[] GetTypes ();
+
+        public Type[] FindTypes (TypeFilter filter, object filterCriteria);
+
+        public Type GetType (string className, bool throwOnError, bool ignoreCase);
+
+        public Type GetType (string className);
+
+        public Type GetType (string className, bool ignoreCase);
+    }
+}

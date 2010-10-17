@@ -1,0 +1,31 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security.Cryptography
+{
+
+    public class DSASignatureFormatter
+    {
+
+        public Byte[] CreateSignature (Byte[]! rgbHash)
+            requires rgbHash != null otherwise ArgumentNullException;
+
+        public void SetHashAlgorithm (string strName);
+
+        public void SetKey (AsymmetricAlgorithm key);
+
+        public DSASignatureFormatter (AsymmetricAlgorithm key);
+
+        public DSASignatureFormatter ();
+    }
+}

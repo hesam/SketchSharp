@@ -1,0 +1,11 @@
+public class Test
+{
+  private void Other() { }
+  public void Method()
+  {
+    while (true)
+    {
+      Other();
+    }
+  }
+}

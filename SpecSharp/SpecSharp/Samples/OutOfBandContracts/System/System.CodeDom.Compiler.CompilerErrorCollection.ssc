@@ -1,0 +1,60 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.CodeDom.Compiler
+{
+
+    public class CompilerErrorCollection
+    {
+
+        public CompilerError this [int index]
+        {
+          get;
+          set;
+        }
+
+        public bool HasErrors
+        {
+          get;
+        }
+
+        public bool HasWarnings
+        {
+          get;
+        }
+
+        public void Remove (CompilerError value);
+
+        public void Insert (int index, CompilerError value);
+
+        public int IndexOf (CompilerError value);
+
+        public void CopyTo (CompilerError[] array, int index);
+
+        public bool Contains (CompilerError value);
+
+        public void AddRange (CompilerErrorCollection! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public void AddRange (CompilerError[]! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public int Add (CompilerError value);
+
+        public CompilerErrorCollection (CompilerError[] value);
+
+        public CompilerErrorCollection (CompilerErrorCollection value);
+
+        public CompilerErrorCollection ();
+    }
+}

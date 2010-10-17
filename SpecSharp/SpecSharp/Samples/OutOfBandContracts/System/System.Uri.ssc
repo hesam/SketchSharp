@@ -1,0 +1,164 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System
+{
+
+    public class Uri
+    {
+
+        public bool UserEscaped
+        {
+          get;
+        }
+
+        public String[] Segments
+        {
+          get;
+        }
+
+        public bool IsUnc
+        {
+          get;
+        }
+
+        public string Authority
+        {
+          get;
+        }
+
+        public bool IsDefaultPort
+        {
+          get;
+        }
+
+        public string AbsoluteUri
+        {
+          get;
+        }
+
+        public string AbsolutePath
+        {
+          get;
+        }
+
+        public UriHostNameType HostNameType
+        {
+          get;
+        }
+
+        public string PathAndQuery
+        {
+          get;
+        }
+
+        public bool IsFile
+        {
+          [Pure]
+          get;
+        }
+
+        public bool IsLoopback
+        {
+          get;
+        }
+
+        public int Port
+        {
+          get;
+        }
+
+        public string UserInfo
+        {
+          get;
+        }
+
+        public string Fragment
+        {
+          get;
+        }
+
+        public string Query
+        {
+          get;
+        }
+
+        public string! LocalPath
+        {
+          get;
+        }
+
+        public string Scheme
+        {
+          get;
+        }
+
+        public string Host
+        {
+          get;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public string MakeRelative (Uri toUri);
+
+        public static bool IsHexEncoding (string pattern, int index);
+
+        public static bool IsHexDigit (Char character);
+
+        public static Char HexUnescape (string pattern, ref int index);
+
+        public static string HexEscape (Char character)
+            requires character <= 255 otherwise ArgumentOutOfRangeException;
+
+        public string GetLeftPart (UriPartial part);
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        public static int FromHex (Char digit)
+            requires digit >= 97 otherwise ArgumentException;
+            requires digit <= 102 otherwise ArgumentException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object comparand);
+
+        public static bool CheckSchemeName (string schemeName);
+
+        public static UriHostNameType CheckHostName (string name);
+
+        public Uri (Uri! baseUri, string! relativeUri, bool dontEscape)
+          // NOTE: Documentation says "uriString", but that probably is a type for "baseUri"
+          requires baseUri != null otherwise ArgumentNullException;
+          // NOTE: Documentation does not say relativeUri should be non-null
+          // and in v1.1, it actually has a null dereference error because
+          // the implementation doesn't check it!
+          requires relativeUri != null otherwise ArgumentNullException;
+
+        public Uri (Uri! baseUri, string! relativeUri)
+          // NOTE: Documentation says "uriString", but that probably is a type for "baseUri"
+          requires baseUri != null otherwise ArgumentNullException;
+          // NOTE: Documentation does not say relativeUri should be non-null
+          // and in v1.1, it actually has a null dereference error because
+          // the implementation doesn't check it!
+          requires relativeUri != null otherwise ArgumentNullException;
+
+        public Uri (string! uriString, bool dontEscape)
+            requires uriString != null otherwise ArgumentNullException;
+
+        public Uri (string! uriString)
+            requires uriString != null otherwise ArgumentNullException;
+    }
+}

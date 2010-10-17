@@ -1,0 +1,167 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+namespace Microsoft.Boogie 
+{
+  using System;
+  using System.IO;
+  using System.Collections;
+  using System.Collections.Generic;
+  using PureCollections;
+  using Microsoft.Boogie;
+  using Microsoft.Boogie.AbstractInterpretation;
+  using System.Diagnostics;
+  using VC;
+  using Cci = System.Compiler;
+  using AI = Microsoft.AbstractInterpretationFramework;
+
+  public class ErrorReporting {
+    public void errorReportingWithTrace(TranslatedProgram! translatedProgram, 
+                      System.Collections.Generic.List<Microsoft.Boogie.Counterexample!> errors,
+                      Implementation! impl) {
+      if (errors != null){
+        foreach (Counterexample! error in errors)
+        {   
+          string! trace = "";
+          List<Cci.Node!> relatedPositionNodesList = new List<Cci.Node!>();
+          if (CommandLineOptions.Clo.ErrorTrace > 0) {
+            List<Cci.CfgBlock!>! l = new List<Cci.CfgBlock!>();
+            bool lastBlockHasSourceLocation = false;
+            foreach (Block! b in error.Trace) {
+              lastBlockHasSourceLocation = false;
+              string blockLabel = b.Label;
+              if (blockLabel == null) {
+                // No output as no useful information for the programmer can be given.
+              } else {
+                IDictionary<String!,Cci.CfgBlock!>! map = translatedProgram.GetBlockNameToSourceNodeMap();
+                if (!map.ContainsKey(blockLabel)) {
+                  // No output as the current block can not be mapped back to an interesting
+                  // block in the source code
+                } else {
+                  l.Add(map[blockLabel]);
+                  lastBlockHasSourceLocation = true;
+                }
+              }
+            }
+            if (!lastBlockHasSourceLocation) {
+              l.Add(new Cci.CfgBlock(null));
+            }
+            if (l.Count != 0) {
+              int i = ComputeNonDominatingPathElements(l[0], 1, l);
+              while (i < l.Count - 1) {
+                // print out the current node
+                Cci.Node blockNode = l[i].BeginSourceContext();
+                if (blockNode != null && blockNode.SourceContext.Document != null) {
+                  relatedPositionNodesList.Add(blockNode);
+                }
+                // compute the next node to be printed
+                i = ComputeNonDominatingPathElements(l[i], i+1, l);
+              }
+            }
+          }
+          
+          foreach (string! info in error.relatedInformation) {
+            trace += "\r\n       " + info;
+          }
+          
+          
+          if (error is CallCounterexample)
+          {
+              CallCounterexample! error_ = (CallCounterexample!) error;
+              Cci.Node offendingNode = (Cci.Node!) error_.FailingCall.ErrorData;
+              string msg = (string!)error_.FailingRequires.ErrorData;
+              msg += trace;
+              translatedProgram.HandleError(offendingNode, msg);
+              foreach (Cci.Node! relPosNode in relatedPositionNodesList) {
+                translatedProgram.HandleError(relPosNode, "    (trace position)");
+              }
+              if (CommandLineOptions.Clo.XmlSink != null) {
+                CommandLineOptions.Clo.XmlSink.WriteError(msg, offendingNode, error.Trace);
+              }
+          }
+          else if (error is ReturnCounterexample)
+          {
+              ReturnCounterexample! error_ = (ReturnCounterexample!) error;
+              string msg = (string!)error_.FailingEnsures.ErrorData;
+              if (impl.Name.Contains("Boogie.ContractConsistencyCheck.")) {
+                msg = msg.Replace("Boogie.ContractConsistencyCheck.", "");
+                msg = "Could not establish consistency of pure method contract. " + msg;                
+              }
+              msg += trace;              
+              Cci.Node offendingNode = (!)translatedProgram.GetMethodFromImplementation(impl).Name;                                          
+              translatedProgram.HandleError(offendingNode, msg);
+              foreach (Cci.Node! relPosNode in relatedPositionNodesList) {
+                translatedProgram.HandleError(relPosNode, "    (trace position)");
+              }
+              if (CommandLineOptions.Clo.XmlSink != null) {
+                CommandLineOptions.Clo.XmlSink.WriteError(msg, offendingNode, error.Trace);
+              }
+          }
+          else // (error is AssertCounterExample)
+          {                    
+              AssertCounterexample! error_ = (AssertCounterexample!) error;
+              assume error_.FailingAssert.ErrorData is Translator.ErrorPair;
+              Translator.ErrorPair! ep = (Translator.ErrorPair)error_.FailingAssert.ErrorData;
+              string reason = ep.reason;
+              if (impl.Name.Contains("Boogie.ContractConsistencyCheck.")) {
+                string pureMethodName = (!)translatedProgram.GetMethodFromImplementation(impl).FullName;
+                pureMethodName = pureMethodName.Replace("Boogie.ContractConsistencyCheck.", "");
+                reason = "Could not establish consistency of pure method contract " + pureMethodName + ". " + reason;              
+              }                                          
+              if (error_.FailingAssert is LoopInvMaintainedAssertCmd) {
+                // give maintenance failure as reason
+                reason = "After loop iteration: " + reason;
+              }
+              else if (ep.reason.StartsWith("Loop invariant ") /*&& error_.FailingAssert is LoopInitAssertCmd*/){
+                // give initial failure as reason
+                reason = "Initially: " + reason;
+              }
+              reason = reason + trace;
+              translatedProgram.HandleError(ep.offendingNode, reason);
+              foreach (Cci.Node! relPosNode in relatedPositionNodesList) {
+                translatedProgram.HandleError(relPosNode, "    (trace position)");
+              }
+              if (CommandLineOptions.Clo.XmlSink != null) {
+                CommandLineOptions.Clo.XmlSink.WriteError(reason, ep.offendingNode, error.Trace);
+              }
+             
+          }
+        }
+      } 
+    }
+    
+    static int ComputeNonDominatingPathElements(Cci.CfgBlock! b, int j, List<Cci.CfgBlock!>! l)
+    {  
+      // for debugging purposes bypass this filtering method and just handle every element of the list
+      if (CommandLineOptions.Clo.ErrorTrace == 2) {
+        return j;
+      }
+      if (j == l.Count) {
+        return j;
+      }
+      // this CfgBlock occurs twice in the list, jump over duplicate
+      if (b == l[j]) {
+        return ComputeNonDominatingPathElements(b, j+1, l);
+      }
+      IEnumerator! successorEnum = Translator.NonContractSuccessors(b).GetEnumerator();
+      int succCount = 0; 
+      Cci.CfgBlock first = null;
+      while (successorEnum.MoveNext()) {
+        if (first == null) {
+          first = (Cci.CfgBlock) successorEnum.Current;
+        }
+        succCount++;
+      }
+      if (succCount == 1 && first == l[j]) {
+        return ComputeNonDominatingPathElements(l[j], j+1, l);
+      } else if (succCount > 1) {
+        return j;
+      } else {// b has 1 successor && that successor is not l[j]
+        return ComputeNonDominatingPathElements(l[j], j, l);
+      }
+    }
+    
+  }
+}

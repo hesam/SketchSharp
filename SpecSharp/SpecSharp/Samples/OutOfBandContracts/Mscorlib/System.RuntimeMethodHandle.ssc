@@ -1,0 +1,30 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System
+{
+
+    public struct RuntimeMethodHandle
+    {
+
+        public int Value
+        {
+          get;
+        }
+
+        public void GetObjectData (System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context)
+            requires info != null otherwise ArgumentNullException;
+
+        public int GetFunctionPointer ();
+    }
+}

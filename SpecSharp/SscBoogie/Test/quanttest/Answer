@@ -1,0 +1,9 @@
+
+-------------------- quant0 --------------------
+quant0.ssc(35,9): Error: Assertion might not hold: forall{int i in (0: args.Length); args[i] != null}
+
+Spec# program verifier finished with 6 verified, 1 error
+
+-------------------- quant1 --------------------
+
+Spec# program verifier finished with 3 verified, 0 errors

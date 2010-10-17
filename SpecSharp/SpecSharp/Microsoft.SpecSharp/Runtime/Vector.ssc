@@ -1,0 +1,297 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+#define SpecSharp
+
+using System;
+using System.Diagnostics;
+#if CCINamespace
+using Microsoft.Cci;
+#else
+using System.Compiler;
+#endif
+using Microsoft.Contracts;
+using System.Collections.Generic;
+
+// "using" nothing (from the other collection classes)
+
+namespace Microsoft.SpecSharp.Collections{
+
+/// <summary>
+/// Vectors contain indexable elements. They are similar to ArrayLists, but immutable.
+/// Vector can only grow at one end. They are implemented via arrays which double in size, when the array is full. 
+/// (Adding to the end is constant time)
+/// </summary>
+
+public struct Vector<T>:IEnumerable<T>{
+
+  internal class Vec{
+    private T?[]! elems ;
+    private int count;
+    internal Vec():this(4){}
+    internal Vec(int size){
+      elems = new T?[size];
+      count = 0;
+      base();
+    }
+    internal int Count{ 
+      get { return count;}
+    }
+    internal T! this[int index]{
+      get{ return (!)this.elems[index];}
+      set{ this.elems[index] = value;}
+    }
+    internal Vec! Clone() {
+      Vec vec = new Vec();
+      vec.count = this.count;
+      vec.elems = (T?[]!)elems.Clone();
+      return vec;
+    }
+    internal int Add(T! o) {
+      int n = (count == 0? 0 : this.elems.Length);
+      int i = this.count++;
+      if (i == n){
+        int m = n*2; if (m < 4) m = 4;
+        T?[] newElems = new T?[m];
+        for (int j = 0; j < n; j++) newElems[j] = elems[j];
+          elems = newElems;
+      }
+      elems[i] = o;
+      return this.count;
+    }
+  }
+
+
+  Vec vec;
+  int count;
+  //     public Vector(object o){
+  //       elems = new object[1];
+  //       elems[0]=o;     
+  //       count = 1;        
+  //     }
+  //     public Vector(SC.IEnumerable os){
+  //       elems = new object[4]; 
+  //       count = 0;
+  //       foreach(object o in os)
+  //         Add(o);        
+  //     } 
+
+  /// <summary>
+  /// Gets or sets the element at the specified index. Get constant time, Set linear time.
+  /// </summary>
+  public T! this[int index]{
+    get
+      requires index >= 0 && index < Length;
+    { 
+      assert vec != null; // Length > 0 ==> vec != null
+      return vec[index];
+    }
+    set
+      requires index >= 0 && index < Length;
+    {
+      if (vec == null) vec = new Vec();
+      if (index==count){
+        this.Add(value);
+      }else{
+        vec = vec.Clone();
+        vec[index] = value;
+      }
+    }
+  }
+
+  /// <summary>
+  /// Gets the number of elements actually contained in the Vector.
+  /// </summary>
+  public int Length{[Pure]get{return this.count;}}
+  /// <summary>
+  /// Gets the number of elements actually contained in the Vector.
+  /// </summary>
+    
+  public int Count{get{return this.count;}}
+
+  /// <summary>
+  /// Adds an object to the end of the Vector (constant time if count is smaller than the vectors capacity, linear time otherwise).
+  /// </summary>
+  public int Add(T! o){
+    if (vec == null) vec = new Vec();
+    if (count != vec.Count) vec = vec.Clone();
+    count++;
+    return vec.Add(o);  
+  }
+
+  /// <summary>
+  /// True if the Vector contains the object, False otherwise (linear time)
+  /// </summary>
+  public bool Contains(T o){
+    if (vec == null) return false;
+    for(int i = 0; i< count; i++)
+    if(Object.Equals(o,vec[i]))
+      return true;
+    return false;
+  }
+  /// <summary>
+  /// Returns the zero-based index of the first occurrence of the given object in the Vector, -1 if it doesn't occur (linear time).
+  /// </summary>
+  public int IndexOf(T o) {
+    if (vec == null) return -1;
+    for(int i = 0; i< count; i++)
+      if(Object.Equals(o,vec[i]))
+        return i;
+    return -1;
+  }
+  /// <summary>
+  /// Returns the zero-based index of the last occurrence of the given object in the Vector, -1 if it doesn't occur (linear time).
+  /// </summary>
+  public int LastIndexOf(T o){
+    if (vec == null) return -1;
+    for(int i = count-1; i>=0; i--)
+      if(Object.Equals(o,vec[i]))
+        return i;
+    return -1;
+  }
+    
+  /// <summary>
+  /// ...
+  /// </summary>
+  public static Vector<T> operator + (Vector<T> s, Vector<T> t){
+    Vector<T> r= s;
+    for(int i = 0; i< t.count; i++)
+      r.Add(t[i]);
+    return r;
+  }
+  /// <summary>
+  /// Removes the first occurrence of a specific object from the vector
+  /// </summary>
+  public void Remove(T value){
+    Vec vec = new Vec(this.count);
+    int count=0;
+    int i = 0;
+    Vec thisVec = this.vec;
+    for(; i < this.count; i++){
+      assert thisVec != null;
+      if (!Object.Equals(thisVec[i],value)) {
+        vec[i]=this.vec[i];
+        count++;
+      }else
+        break;
+    }
+    i++;
+    for(; i < this.count; i++){
+      assert thisVec != null;
+      vec[i-1]=thisVec[i];
+      count++;
+    }
+    this.count = count;
+    this.vec = vec;
+  }
+  // Comparison - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  //  public static bool operator < (Vector s, Vector t){
+  //    return s.count < t.count && IsPrefix(s,t);          
+  //  }
+  //  public static bool operator <= (Vector s, Vector t){
+  //    return s.count <= t.count && IsPrefix(s,t);
+  //  }
+  //  public static bool operator > (Vector s, Vector t){ 
+  //    return t < s;
+  //  }
+  //  public static bool operator >= (Vector s, Vector t){ 
+  //    return t <= s;
+  //  }
+
+  // IEnumerator - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    
+  /// <summary>
+  /// Returns an enumerator that can iterate through the vector
+  /// </summary>
+  [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+  IEnumerator<T>! IEnumerable<T>.GetEnumerator() { 
+    return new VectorEnumerator(this, this.count);
+  }
+  
+  [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+  System.Collections.IEnumerator! System.Collections.IEnumerable.GetEnumerator(){
+    return new VectorEnumerator(this, this.count);
+  }
+  public struct VectorEnumerator: IEnumerator<T>{
+    Vector<T> vector;
+    int index;
+    int length;
+    bool ok;
+    public VectorEnumerator(Vector<T> vector, int length) { 
+      this.vector = vector; this.index = 0; this.ok = false; this.length = 0;
+    }
+    public bool MoveNext(){
+      if (!ok) ok = true;  else index++; return index <length;
+    }
+    public T Current{ 
+      get {if (vector.vec == null) throw new InvalidOperationException(); return vector.vec[index];}
+    }
+    object System.Collections.IEnumerator.Current{ 
+      [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+      get { return ((IEnumerator<T>)this).Current; }
+    }
+    public void Reset(){
+      index = 0; ok = false;
+    }
+    public void Dispose(){
+    }
+  }
+  /// <summary>
+  /// True, if value is a vector and has the same elements in the same order, false otherwise
+  /// </summary>
+  public override bool Equals(Object value) {
+    return value is Vector<T> && this == (Vector<T>)value;
+  }
+
+  /// <summary>
+  /// Returns the hashcode derived from the hashcode of its elements
+  /// </summary>
+  public override int GetHashCode() {
+    if (vec == null){ vec = new Vec(); count = 0; }
+    int h = 0;
+    for(int i = 0; i<count; i++){
+      h ^= vec[i].GetHashCode();
+    }
+    return h;
+  }
+
+  /// <summary>
+  /// Equality: True, if both vectors have same elements in the same order, false otherwise
+  /// </summary>
+  public static bool operator ==(Vector<T> x, Vector<T> y) {
+    return (x.Length == y.Length) && IsPrefix(x,y);
+  }
+  public static bool IsPrefix (Vector<T> s, Vector<T> t){
+    for(int i = 0; i< s.count; i++)
+      if(!Object.Equals(s[i],t[i]))
+        return false;
+    return true;
+  }
+
+  /// <summary>
+  /// Inequality: True, if both vectors do not have the same elements in the same order, false otherwise
+  /// </summary>
+  public static bool operator !=(Vector<T> x, Vector<T> y) {
+    return !(x == y);
+  }
+
+  //ToString - - - -  - - - - - - - - - - - - - - - - - - - - - - - -
+  /// <summary>
+  /// Returns the Vector formatted in the form "Vector{value_1, ..., value_n}" 
+  /// </summary>
+  public override string ToString() {
+      String s = "Vector{";
+      for(int i = 0; i < count-1; i++){
+        assert vec != null;
+        s+= vec[i] + ", ";
+      }
+      if (count >0){
+        assert vec != null;
+        s+= vec[this.count-1].ToString();
+      }
+      return s+"}";   
+  }
+}
+}

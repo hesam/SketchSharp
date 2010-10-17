@@ -1,0 +1,87 @@
+using System;
+
+public class BoxedInt {
+  public static void M(int x)
+    requires x == 6;
+  {
+    object o = x;
+    int y = (int)o;
+    assert y == 6;
+  }
+
+  public static void N(int x)
+  {
+    object o = x;
+    int y = (int)o;
+    assert y == 6;  // error: no reason to think the answer will be 6
+  }
+
+  public static int P(double x)
+  {
+    object o = x;
+    return (int)o;  // error: unboxing into wrong type
+  }
+
+  public static int Q(object o)
+    requires o is int;
+  {
+    return (int)o;
+  }
+
+  public static int R(int x)
+  {
+    object o = x;
+    assert o is int;  // serialized
+    assert o is object;
+    return (int)o;
+  }
+
+  public static int S(int x)
+  {
+    object o = x;
+    bool b = o is int;  // code
+    assert b;
+    assert o is object;
+    return (int)o;
+  }
+
+  public static void T(int x)
+  {
+    bool b;
+
+    assert x is int;  // warning: "is" expression always true
+    b = x is int;  // warning: "is" expression always true
+    assert b;
+
+    assert !(x is short);  // warning: "is" expression always false
+    b = x is short;  // warning: "is" expression always false
+    assert !b;
+
+    assert x is object;  // warning: "is" expression always true
+    b = x is object;  // warning: "is" expression always true
+    assert b;
+
+    assert !(x is string);  // warning: "is" expression always false
+    b = x is string;  // warning: "is" expression always false
+    assert !b;
+  }
+
+  public static void Main() {
+    try { M(6); Console.WriteLine("M(6) succeeded"); }
+        catch (Exception e) { Console.WriteLine("M(6) failed: {0}", e.Message); }
+    try { N(6); Console.WriteLine("N(6) succeeded"); }
+        catch (Exception e) { Console.WriteLine("N(6) failed: {0}", e.Message); }
+    try { N(7); Console.WriteLine("N(7) succeeded"); }
+        catch (Exception e) { Console.WriteLine("N(7) failed: {0}", e.Message); }
+    try { P(0.3); Console.WriteLine("P(0.3) succeeded"); }
+        catch (Exception e) { Console.WriteLine("P(0.3) failed: {0}", e.Message); }
+    try { Q(5); Console.WriteLine("Q(5) succeeded"); }
+        catch (Exception e) { Console.WriteLine("Q(5) failed: {0}", e.Message); }
+    try { R(7); Console.WriteLine("R(7) succeeded"); }
+        catch (Exception e) { Console.WriteLine("R(7) failed: {0}", e.Message); }
+    try { S(7); Console.WriteLine("S(7) succeeded"); }
+        catch (Exception e) { Console.WriteLine("S(7) failed: {0}", e.Message); }
+    try { T(18); Console.WriteLine("T(18) succeeded"); }
+        catch (Exception e) { Console.WriteLine("T(18) failed: {0}", e.Message); }
+  }
+}

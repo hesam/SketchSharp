@@ -1,0 +1,40 @@
+// This is a test of "where" clauses. The issue is that without the generation
+// of where clauses by the bytecode translation, the knowledge about the type
+// of local variables is lost when a loop causes those locals to be havoc-ed.
+
+class C{
+  public void foo(){
+    string x = null; // bytecode translation should declare x as "ref where $Is(x, string)"
+    while(false){if (x == null) x = "abc"; } // loop will havoc x
+    if (x != null){
+      assert x is object; // knowledge that should be retained through a havoc
+      assert x is string; // knowledge that should be retained through a havoc
+    }
+  }
+}
+
+// Same test, but for parameters
+class D{
+  public string foo(string x, ref string y, out string z){
+    z = "abc";
+    while(false){
+      if (x == null) x = "abc";
+      if (y == null) y = "abc";
+      if (z == null) z = "abc";
+    }
+    if (x != null){
+      assert x is object; // knowledge that should be retained through a havoc
+      assert x is string; // knowledge that should be retained through a havoc
+    }
+    if (y != null){
+      assert y is object; // knowledge that should be retained through a havoc
+      assert y is string; // knowledge that should be retained through a havoc
+    }
+    if (z != null){
+      assert z is object; // knowledge that should be retained through a havoc
+      assert z is string; // knowledge that should be retained through a havoc
+    }
+    z = x;
+    return x;
+  }
+}

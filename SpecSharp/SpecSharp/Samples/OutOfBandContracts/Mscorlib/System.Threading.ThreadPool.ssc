@@ -1,0 +1,56 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Threading
+{
+
+    public class ThreadPool
+    {
+
+        public static bool BindHandle (int osHandle);
+
+        public static bool UnsafeQueueUserWorkItem (WaitCallback callBack, object state);
+
+        public static bool QueueUserWorkItem (WaitCallback callBack);
+
+        public static bool QueueUserWorkItem (WaitCallback callBack, object state);
+
+        public static RegisteredWaitHandle UnsafeRegisterWaitForSingleObject (WaitHandle waitObject, WaitOrTimerCallback callBack, object state, TimeSpan timeout, bool executeOnlyOnce);
+
+        public static RegisteredWaitHandle RegisterWaitForSingleObject (WaitHandle waitObject, WaitOrTimerCallback callBack, object state, TimeSpan timeout, bool executeOnlyOnce);
+
+        public static RegisteredWaitHandle UnsafeRegisterWaitForSingleObject (WaitHandle waitObject, WaitOrTimerCallback callBack, object state, Int64 millisecondsTimeOutInterval, bool executeOnlyOnce)
+            requires millisecondsTimeOutInterval >= -1 otherwise ArgumentOutOfRangeException;
+
+        public static RegisteredWaitHandle RegisterWaitForSingleObject (WaitHandle waitObject, WaitOrTimerCallback callBack, object state, Int64 millisecondsTimeOutInterval, bool executeOnlyOnce)
+            requires millisecondsTimeOutInterval >= -1 otherwise ArgumentOutOfRangeException;
+
+        public static RegisteredWaitHandle UnsafeRegisterWaitForSingleObject (WaitHandle waitObject, WaitOrTimerCallback callBack, object state, int millisecondsTimeOutInterval, bool executeOnlyOnce)
+            requires millisecondsTimeOutInterval >= -1 otherwise ArgumentOutOfRangeException;
+
+        public static RegisteredWaitHandle RegisterWaitForSingleObject (WaitHandle waitObject, WaitOrTimerCallback callBack, object state, int millisecondsTimeOutInterval, bool executeOnlyOnce)
+            requires millisecondsTimeOutInterval >= -1 otherwise ArgumentOutOfRangeException;
+
+        public static RegisteredWaitHandle UnsafeRegisterWaitForSingleObject (WaitHandle waitObject, WaitOrTimerCallback callBack, object state, UInt32 millisecondsTimeOutInterval, bool executeOnlyOnce);
+
+        public static RegisteredWaitHandle RegisterWaitForSingleObject (WaitHandle waitObject, WaitOrTimerCallback callBack, object state, UInt32 millisecondsTimeOutInterval, bool executeOnlyOnce);
+
+        public static void GetAvailableThreads (ref int workerThreads, ref int completionPortThreads);
+
+        public static void GetMinThreads (ref int workerThreads, ref int completionPortThreads);
+
+        public static bool SetMinThreads (int workerThreads, int completionPortThreads);
+
+        public static void GetMaxThreads (ref int workerThreads, ref int completionPortThreads);
+    }
+}

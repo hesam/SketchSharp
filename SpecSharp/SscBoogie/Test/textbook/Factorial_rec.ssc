@@ -1,0 +1,51 @@
+
+/* Calculates n!
+   Rosemary Monahan
+   March 7th 2007
+*/
+//verifies
+
+/* Note: If I change the postcondition to 
+ensures result == ((n == 0) ? 1 : recursiveFac(n - 1) * n);
+an unsatisfied postcondition occurs unless I change the return statement to
+return recursiveFac(n - 1) * n;  
+
+We need a commutativity axiom for *.
+Add an assume as follows: assume recursiveFac(n - 1)*n == n*recursiveFac(n - 1);
+*/
+
+/* Ronald,  August 27th, 2007
+With the new purity axiom, Simplify doesn't like result == ((n == 0) ? 1 : recursiveFac(n - 1) * n); as a postcondition anymore.
+Therefore, the postcondition has been changed to the equivalent version below.
+*/
+
+
+
+using System;
+using Microsoft.Contracts;
+
+public class Factorial
+{
+  public static void Main()
+  {
+    for(int i = 0; i < 10; i++)
+    {
+      Console.WriteLine("Factorial.{0} = {1}",i,recursiveFac(i));
+    }
+    
+    Console.Read();
+  }
+
+
+  [Pure] static int recursiveFac(int n)
+  ensures (n == 0 ==> result == 1) && (n != 0 ==> result == n * recursiveFac(n - 1));
+  {
+    if (n == 0)
+    { 	return 1;
+    }
+    else
+    {	assume recursiveFac(n - 1)*n == n*recursiveFac(n - 1);
+      return  recursiveFac(n - 1)*n ;  
+    }
+  }
+}

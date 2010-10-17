@@ -1,0 +1,31 @@
+public class Operators {
+  public bool M(int x, int y, bool c, object[]! a)
+    requires -x < +x;
+    requires c <==> x < y;
+    requires (x | y) == 0 | c;
+    requires (x & y) == 0 & c;
+    requires (x ^ y) == x ^ c;
+    requires x << y == 6 ==> x >> y == 8;
+    requires !(a.Length == 12);
+//    requires ~x == y;
+  {
+    bool b;
+    b = -x < +x;
+    b = c <==> x < y;
+    b = (x | y) == 0 | c;
+    b = (x & y) == 0 & c;
+    b = (x ^ y) == x
+        //   ^ c
+        ;
+//    int t = ~x;
+    b = x << y == 6 ==> x >> y == 8;
+    b = !(a.Length == 12);
+    return b;
+  }
+
+  bool P(bool b, bool c) {
+    return b
+           //   ^ c
+           ;
+  }
+}

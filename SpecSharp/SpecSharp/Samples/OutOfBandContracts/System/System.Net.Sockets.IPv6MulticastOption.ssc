@@ -1,0 +1,43 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Net.Sockets
+{
+
+    public class IPv6MulticastOption
+    {
+
+        public System.Net.IPAddress! Group
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public Int64 InterfaceIndex
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+            requires value <= -1 otherwise ArgumentOutOfRangeException;
+        }
+
+        public IPv6MulticastOption (System.Net.IPAddress! group)
+            requires group != null otherwise ArgumentNullException;
+
+        public IPv6MulticastOption (System.Net.IPAddress! group, Int64 ifindex)
+            requires group != null otherwise ArgumentNullException;
+            requires ifindex >= 0 otherwise ArgumentOutOfRangeException;
+            requires ifindex <= -1 otherwise ArgumentOutOfRangeException;
+    }
+}

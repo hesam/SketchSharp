@@ -1,0 +1,62 @@
+using Microsoft.Contracts;
+
+public class Ref {
+  public virtual void M(int x, ref int y, out int z)
+    requires 0 <= x && 0 <= y;
+    ensures old(x) == x;  // trivial, since old is identity on in parameters
+    ensures old(y) < y;
+//    ensures old(z) == z;  // trivial, since old is identity on out parameters
+    ensures z == 20;
+  {
+    x++;
+    y++;
+    z = 20;
+  }
+
+  [NoDefaultContract]
+  public void P()
+    requires this.IsConsistent;
+  {
+    int a, b, c;
+    a = 5;
+    b = 10;
+    M(a, ref b, out c);
+    assert a == 5;
+    assert b > 10;
+    assert c == 20;
+  }
+
+  [NoDefaultContract]
+  public void Q()
+    requires this.IsConsistent;
+  {
+    int a, b, c;
+    a = 5;
+    b = 10;
+    M(a, ref b, out c);
+    assert b == 10;  // error
+  }
+
+  public int R()
+//    ensures old(result) == result;  // trivial, since old is identity on "result"
+  {
+    return 0;
+  }
+}
+
+public class RefSubGood : Ref {
+  public override void M(int x, ref int y, out int z)
+  {
+    x++;
+    z = 20;
+    y++;
+  }
+}
+
+public class RefSubBad : Ref {
+  public override void M(int x, ref int y, out int z)
+  {
+    z = 20;
+    // error:  no update to y, so postcondition about y being incremented does not hold
+  }
+}

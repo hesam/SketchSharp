@@ -1,0 +1,78 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.IO
+{
+
+    public class BufferedStream
+    {
+
+        public bool CanWrite
+        {
+          get;
+        }
+
+        public Int64 Position
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+        }
+
+        public bool CanSeek
+        {
+          get;
+        }
+
+        public Int64 Length
+        {
+          get;
+        }
+
+        public bool CanRead
+        {
+          get;
+        }
+
+        public void SetLength (Int64 value)
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+
+        public Int64 Seek (Int64 offset, SeekOrigin origin);
+
+        public void WriteByte (byte value);
+
+        public void Write (Byte[]! array, int offset, int count)
+            requires array != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+            requires (array.Length - offset) >= count otherwise ArgumentException;
+
+        public int ReadByte ();
+
+        public int Read (Byte[]! array, int offset, int count)
+            requires array != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+            requires (array.Length - offset) >= count otherwise ArgumentException;
+
+        public void Flush ();
+
+        public void Close ();
+
+        public BufferedStream (Stream! stream, int bufferSize)
+            requires stream != null otherwise ArgumentNullException;
+            requires bufferSize > 0 otherwise ArgumentOutOfRangeException;
+
+        public BufferedStream (Stream stream);
+    }
+}

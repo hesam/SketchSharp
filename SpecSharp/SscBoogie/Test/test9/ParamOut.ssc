@@ -1,0 +1,23 @@
+using System;
+using Microsoft.Contracts;
+
+public interface MyInterface<TKey, TValue>{
+  bool TryGetValue(TKey key, out TValue val);
+    ensures result ==> val != null;
+}
+ 
+public class Test{
+  public static void Main(){}
+  
+  public void foo(MyInterface<object, string>! bar)
+    modifies bar.*, Console.Out.*;
+  {
+    string s;
+    object o = new object();
+    Owner.AssignSame(o, Owner.ElementProxy(bar, 0));  
+    if (!bar.TryGetValue(o, out s)) {
+      s = "def";
+    }
+    Console.WriteLine(((!)s).Length);
+  }
+}

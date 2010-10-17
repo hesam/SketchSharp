@@ -1,0 +1,37 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System
+{
+    public class Object
+    {
+      public object! Clone()
+            ensures result.GetType().Equals(this.GetType());
+                  
+      [Pure][Reads(ReadsAttribute.Reads.Nothing)][ResultNotNewlyAllocated]
+      public Type! GetType ();
+      protected object! MemberwiseClone()
+        ensures result.GetType() == (object)this.GetType();
+      [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+      public bool Equals(Object obj);
+      [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+      public static bool Equals(Object objA, Object objB);
+      [Pure][Reads(ReadsAttribute.Reads.Owned)]
+      public int GetHashCode();
+      [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+      public static bool ReferenceEquals(object objA, object objB);
+      [Pure][Reads(ReadsAttribute.Reads.Owned)]
+      public string! ToString ();
+    }
+}

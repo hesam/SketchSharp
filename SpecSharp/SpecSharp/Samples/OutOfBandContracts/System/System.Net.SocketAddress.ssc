@@ -1,0 +1,53 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Net
+{
+
+    public class SocketAddress
+    {
+
+        public System.Net.Sockets.AddressFamily Family
+        {
+          get;
+        }
+
+        public int Size
+        {
+          get;
+        }
+
+        public byte this [int offset]
+        {
+          get
+            requires offset >= 0 otherwise IndexOutOfRangeException;
+          set
+            requires offset >= 0 otherwise IndexOutOfRangeException;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object comparand);
+
+        public SocketAddress (System.Net.Sockets.AddressFamily family, int size)
+            requires size >= 2 otherwise ArgumentOutOfRangeException;
+
+        public SocketAddress (System.Net.Sockets.AddressFamily family);
+    }
+}

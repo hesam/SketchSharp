@@ -1,0 +1,84 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security.Cryptography
+{
+
+    public class HashAlgorithm
+    {
+
+        public int HashSize
+        {
+          get;
+        }
+
+        public int InputBlockSize
+        {
+          get;
+        }
+
+        public bool CanTransformMultipleBlocks
+        {
+          get;
+        }
+
+        public Byte[] Hash
+        {
+          get;
+        }
+
+        public int OutputBlockSize
+        {
+          get;
+        }
+
+        public bool CanReuseTransform
+        {
+          get;
+        }
+
+        public void Initialize ();
+
+        public void Clear ();
+
+        public Byte[] TransformFinalBlock (Byte[]! inputBuffer, int inputOffset, int inputCount)
+            requires inputBuffer != null otherwise ArgumentNullException;
+            requires inputOffset >= 0 otherwise ArgumentOutOfRangeException;
+            requires inputCount >= 0 otherwise ArgumentException;
+            requires inputCount <= inputBuffer.Length otherwise ArgumentException;
+            requires (inputBuffer.Length - inputCount) >= inputOffset otherwise ArgumentException;
+
+        public int TransformBlock (Byte[]! inputBuffer, int inputOffset, int inputCount, Byte[] outputBuffer, int outputOffset)
+            requires inputBuffer != null otherwise ArgumentNullException;
+            requires inputOffset >= 0 otherwise ArgumentOutOfRangeException;
+            requires inputCount >= 0 otherwise ArgumentException;
+            requires inputCount <= inputBuffer.Length otherwise ArgumentException;
+            requires (inputBuffer.Length - inputCount) >= inputOffset otherwise ArgumentException;
+
+        public Byte[] ComputeHash (Byte[]! buffer, int offset, int count)
+            requires buffer != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires count >= 0 otherwise ArgumentException;
+            requires count <= buffer.Length otherwise ArgumentException;
+            requires (buffer.Length - count) >= offset otherwise ArgumentException;
+
+        public Byte[]! ComputeHash (Byte[]! buffer)
+            requires buffer != null otherwise ArgumentNullException;
+
+        public Byte[]! ComputeHash (System.IO.Stream! inputStream);
+
+        public static HashAlgorithm! Create (string! hashName);
+
+        public static HashAlgorithm Create ();
+    }
+}

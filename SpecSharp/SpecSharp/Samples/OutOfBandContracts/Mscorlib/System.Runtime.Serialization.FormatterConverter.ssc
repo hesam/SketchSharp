@@ -1,0 +1,73 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Runtime.Serialization
+{
+
+    public class FormatterConverter
+    {
+
+        public string ToString (object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public DateTime ToDateTime (object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public Decimal ToDecimal (object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public double ToDouble (object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public Single ToSingle (object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public UInt64 ToUInt64 (object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public Int64 ToInt64 (object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public UInt32 ToUInt32 (object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public int ToInt32 (object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public UInt16 ToUInt16 (object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public Int16 ToInt16 (object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public byte ToByte (object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public SByte ToSByte (object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public Char ToChar (object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public bool ToBoolean (object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public object Convert (object! value, TypeCode typeCode)
+            requires value != null otherwise ArgumentNullException;
+
+        public object Convert (object! value, Type type)
+            requires value != null otherwise ArgumentNullException;
+
+        public FormatterConverter ();
+    }
+}

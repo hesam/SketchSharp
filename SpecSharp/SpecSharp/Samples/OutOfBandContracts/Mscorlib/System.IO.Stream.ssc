@@ -1,0 +1,72 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.IO
+{
+
+    public class Stream
+    {
+
+        public Int64 Position
+        {
+          get;
+          set;
+        }
+
+        public bool CanWrite
+        {
+          get;
+        }
+
+        public bool CanSeek
+        {
+          get;
+        }
+
+        public Int64 Length
+        {
+          get;
+        }
+
+        public bool CanRead
+        {
+          get;
+        }
+
+        public void WriteByte (byte value);
+
+        public void Write (Byte[]! arg0, int arg1, int arg2);
+
+        public int ReadByte ();
+
+        public int Read (Byte[]! arg0, int arg1, int arg2);
+
+        public void SetLength (Int64 arg0);
+
+        public Int64 Seek (Int64 arg0, SeekOrigin arg1);
+
+        public void EndWrite (IAsyncResult! asyncResult)
+            requires asyncResult != null otherwise ArgumentNullException;
+
+        public IAsyncResult BeginWrite (Byte[]! buffer, int offset, int count, AsyncCallback! callback, object state);
+
+        public int EndRead (IAsyncResult! asyncResult)
+            requires asyncResult != null otherwise ArgumentNullException;
+
+        public IAsyncResult BeginRead (Byte[]! buffer, int offset, int count, AsyncCallback! callback, object state);
+
+        public void Flush ();
+
+        public void Close ();
+    }
+}

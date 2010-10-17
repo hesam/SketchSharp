@@ -1,0 +1,2310 @@
+`/debug+ /d:defassign
+// No violation.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N f;
+    [Microsoft.Contracts.NotDelayed] public N(N p){
+      N a,b;
+      b=f;
+      a=b;
+      sf=a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+No Violation
+`
+`/debug+ /d:defassign
+// uninitialized variables used in assignment.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N f;
+    public N(N p){
+      N a;
+      f=a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(10,9): error CS0165: Use of unassigned local variable 'a'
+`
+`/debug+ /d:defassign
+// uninitialized variables used in assignment.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N f;
+    [Microsoft.Contracts.NotDelayed] public N(N p){
+      N a;
+      a=f;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(10,7): warning CS0219: The variable 'a' is assigned but its value is never used
+No Violation
+`
+`/debug+ /d:defassign
+// uninitialized variable used in condition
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N f;
+    public N(N p){
+      N a;
+      if(p!=a)
+        f=null;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(10,13): error CS0165: Use of unassigned local variable 'a'
+`
+`/debug+ /d:defassign
+// paths of condition.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N f;
+    public N(N p){
+      N a;
+      if(p!=null)
+        a=null;
+      else
+        a=p;
+      f=a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+No Violation
+`
+`/debug+ /d:defassign
+// paths of condition.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N f;
+    public N(N p){
+      N a;
+      if(p!=null)
+        a=p;
+      f=a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(12,9): error CS0165: Use of unassigned local variable 'a'
+`
+`/debug+ /d:defassign
+// paths of condition.
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N f;
+    public N(N p){
+      N a;
+      try{
+        Exception t;
+        throw t;
+      }catch(Exception e){
+      }
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(12,15): error CS0165: Use of unassigned local variable 't'
+(13,24): warning CS0219: The variable 'e' is assigned but its value is never used
+(12,9): warning CS2638: Using possibly null pointer to throw
+`
+`/debug+ /d:defassign
+// Exception
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N f;
+    public N(N p){
+      N a;
+      try{
+        if(p==null)
+          throw new SystemException();
+        a=p;
+      }catch(Exception e){
+        a=p;
+      }
+      f=a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(14,24): warning CS0219: The variable 'e' is assigned but its value is never used
+No Violation
+`
+`/debug+ /d:defassign 
+// Exception
+using System;
+using Microsoft.Contracts;
+namespace test{
+  public class N{
+    static N sf;
+    N f;
+    public N(N p){
+      N a;
+      try{
+        if(p==null)
+          throw new SystemException();
+        a=p;
+      }catch(Exception e){
+      }
+      f=a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(16,9): error CS0165: Use of unassigned local variable 'a'
+(14,24): warning CS0219: The variable 'e' is assigned but its value is never used
+`
+`/debug+ /d:defassign 
+// Exception
+using System;
+using System.IO;
+namespace test{
+  public class N{
+    static N sf;
+    N f;
+    public N(N p){
+      N a;
+      try{
+        throw new IOException();
+      }catch(FileNotFoundException e){
+        a=p;
+      }catch(IOException e){
+        a=p;
+      }catch(Exception e){
+      }
+      f=a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(18,9): error CS0165: Use of unassigned local variable 'a'
+(12,36): warning CS0219: The variable 'e' is assigned but its value is never used
+(14,26): warning CS0219: The variable 'e' is assigned but its value is never used
+(16,24): warning CS0219: The variable 'e' is assigned but its value is never used
+`
+`/debug+ /d:defassign 
+// Exception
+using System;
+using Microsoft.Contracts;
+using System.IO;
+namespace test{
+  public class N{
+    static N sf;
+    N f;
+    public N(N p){
+      N a;
+      try{
+        throw new IOException();
+      }catch(FileNotFoundException e){
+      }catch(IOException e){
+        a=p;
+      }catch(Exception e){
+        a=p;
+      }
+      f=a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(19,9): error CS0165: Use of unassigned local variable 'a'
+(13,36): warning CS0219: The variable 'e' is assigned but its value is never used
+(14,26): warning CS0219: The variable 'e' is assigned but its value is never used
+(16,24): warning CS0219: The variable 'e' is assigned but its value is never used
+`
+`/debug+ /d:defassign 
+// Exception
+using System;
+using Microsoft.Contracts;
+using System.IO;
+namespace test{
+  public class N{
+    static N sf;
+    N f;
+    public N(N p){
+      N a;
+      try{
+        throw new IOException();
+      }catch(FileNotFoundException e){
+        a=p;
+      }catch(IOException e){
+      }catch(Exception e){
+        a=p;
+      }
+      f=a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(19,9): error CS0165: Use of unassigned local variable 'a'
+(13,36): warning CS0219: The variable 'e' is assigned but its value is never used
+(15,26): warning CS0219: The variable 'e' is assigned but its value is never used
+(16,24): warning CS0219: The variable 'e' is assigned but its value is never used
+`
+`/debug+ /d:defassign 
+// Exception
+using System;
+using System.IO;
+namespace test{
+  public class N{
+    static N sf;
+    N f;
+    public N(N p){
+      N a;
+      try{
+        throw new IOException();
+      }catch(FileNotFoundException e){
+        a=p;
+      }catch(IOException e){
+        a=p;
+      }catch(Exception e){
+      }
+      f=a;
+    }
+	  public static void Main(){		  Console.WriteLine("No Violation");	  }
+  }
+}
+`
+(18,9): error CS0165: Use of unassigned local variable 'a'
+(12,36): warning CS0219: The variable 'e' is assigned but its value is never used
+(14,26): warning CS0219: The variable 'e' is assigned but its value is never used
+(16,24): warning CS0219: The variable 'e' is assigned but its value is never used
+`
+`/d:DEFASSIGN
+// Check method returning value
+public class Test {
+  public static void Main() {}
+  
+  public int Foo() {
+  }
+  
+  public int Bar(int x) {
+    if (x == 0) { return 0; }
+  }
+}
+`
+(5,14): error CS0161: 'Test.Foo()': not all code paths return a value
+(8,14): error CS0161: 'Test.Bar(int)': not all code paths return a value
+`
+`/d:DEFASSIGN
+class Test {
+
+
+    public static void Main() {
+        int x;
+
+        Foo(ref x);
+    }
+
+    static void Foo(ref int x) {}
+
+    public void Bar(out int y) {
+        Foo(ref y);
+    }
+
+    public struct S {
+        public int x;
+        public int y;
+
+        public void TestMe() {}
+    }
+
+    public struct T {
+        public int x;
+        private int z;
+
+        public void TestMe() {}
+    }
+
+    public void TestS1() {
+        S s;
+
+        if (s.x == 0) { return; }
+    }
+
+    public void TestS2() {
+        S x;
+
+        TakeS(x);
+    }
+
+
+    public void TestS3() {
+        S x;
+        TakeSByRef(ref x);
+    }
+
+    public void TestS4() {
+        S x;
+        TakeSAsOut(out x);
+    }
+
+    public void TakeS(S s) {}
+
+    public void TakeSByRef(ref S s) {}
+
+    public void TakeSAsOut(out S s) {}
+
+
+    public void TakeSAsOut2(out S s) 
+    {
+        s.x = 5;
+    }
+
+    public void TakeSAsOut3(out S s) 
+    {
+        s.x = 5;
+        s.y = 7;
+
+        s.TestMe();
+    }
+
+    public void Init(out int a) {
+        a = 5;
+    }
+
+    public void TakeSAsOut4(out S s) 
+    {
+        Init(out s.x);
+        Init(out s.y);
+
+        s.TestMe();
+    }
+
+    public void TakeTAsOut1(out T t) 
+    {
+        t.x = 5;
+        t.TestMe();
+        t.TestMe();
+    }
+
+    public void TakeintAsOut1(out int t) 
+    {
+        TestRefInt(ref t);
+        TestRefInt(ref t);
+    }
+
+    public void TestRefInt(ref int t) {}
+
+    public void UseS() {
+        S x;
+
+        x.TestMe();
+    }
+
+
+    public void TestException(string s) {
+        
+        string t;
+        try {
+            t = s;
+            if (s != null) s.ToString();
+        }
+        catch {
+            t.ToString();
+        }
+    }
+}
+`
+(7,13): error CS0165: Use of unassigned local variable 'x'
+(13,17): error CS0165: Use of unassigned local variable 'y'
+(33,13): warning CS0170: Use of possibly unassigned field 'x'
+(39,15): error CS0165: Use of unassigned local variable 'x'
+(45,20): error CS0165: Use of unassigned local variable 'x'
+(57,17): error CS0177: The out parameter 's' must be assigned to before control leaves the current method
+(60,17): error CS0177: The out parameter 's' must be assigned to before control leaves the current method
+(88,9): error CS0165: Use of unassigned local variable 't'
+(94,24): error CS0165: Use of unassigned local variable 't'
+(103,9): error CS0165: Use of unassigned local variable 'x'
+(115,13): error CS0165: Use of unassigned local variable 't'
+`
+`/d:DEFASSIGN
+// check returning value
+using System;
+
+class T {
+
+    int M1() {}
+
+    int M2(string s) {
+        if (s == null) return 0;
+    }
+
+    int M3(string s) {
+        if (s == null) {
+            return 0;
+        }
+        else {
+            return 1;
+        }
+    }
+
+    int M4(string s) {
+        if (s == null) {
+            throw new Exception("");
+        }
+        else {
+            return 1;
+        }
+    }
+    
+    int M5(string s) {
+    L:
+        goto L;
+    }
+
+}
+`
+(6,9): error CS0161: 'T.M1()': not all code paths return a value
+(8,9): error CS0161: 'T.M2(string)': not all code paths return a value
+`
+`/d:DEFASSIGN
+// Ok use of by ref parameters
+class T {
+  public static void Main() {
+    int x = 0;
+    
+    ByRef(ref x);
+  }
+  
+  public static int ByRef(ref int y) {
+    return y+1;
+  }
+}
+`
+`
+`/d:DEFASSIGN
+using System;
+using System.Collections.Generic;
+
+namespace N{
+  
+ using C=System.Collections;
+
+ public class M { 
+ 
+    public static void Main() {
+    }
+       
+    static void Print(string s, IEnumerable<System.Collections.DictionaryEntry>! xs) {
+            foreach(System.Collections.DictionaryEntry d in xs){ Console.Write(d.Key); Console.Write("~>"); Console.Write(d.Value); Console.Write(" "); } 
+    }
+
+    static void Print(string s, IEnumerable<object>! xs) {
+       foreach(object e in xs) Console.Write(e+" "); 
+   }
+  }
+}
+`
+`
+`/d:DEFASSIGN
+// Checks unboxing.
+using System;
+using System.Collections;
+namespace N{
+
+  public class M {
+    static void Print(IEnumerable! xs) {
+      foreach(DictionaryEntry d in xs){ object o = d.Key; if (o != null) o.ToString(); }
+    }
+    
+    public static void Main() {}
+  }
+}
+`
+`
+`/d:DEFASSIGN
+// Check that instance calls on structs act as uses of the struct contents.
+using System;
+using System.Collections;
+namespace N{
+  struct Map:IEnumerable {
+    Hashtable h;
+    public void Add(object key, object value){
+      if (h==null) h = new Hashtable();
+      h.Add(key,value);
+    }
+    public IEnumerator GetEnumerator() {
+      if (h==null) h = new Hashtable();
+      return h.GetEnumerator();
+    }
+  }
+
+  class M {
+    public static int Main(){
+
+        Map m = new Map{1~>'a'};
+        return 0;
+    }
+  }
+}
+`
+(20,13): warning CS0219: The variable 'm' is assigned but its value is never used
+`
+`/d:DEFASSIGN
+using System.Runtime.InteropServices;
+
+public class T {
+    public int z;
+}
+
+
+public class S {
+
+    public static void M([Out] T x) {
+    }
+
+    public static void N([Out] X xx) {}
+
+    public static void Main() {}
+}
+
+public struct X {
+    public int y;
+}
+`
+`
+`/d:DEFASSIGN
+public class searchtree
+{
+        public uint MAX_BITS = 0;
+
+        public searchtree(int count)
+        {
+        }
+
+        public searchtree()
+        {
+        }
+        
+        public static void Main() {}
+}
+`
+`
+`/d:DEFASSIGN
+// Check that struct is considered fully assigned when all fields are initialized
+
+struct myStruct
+{
+	public int x;
+	public int y;
+}
+
+class A
+{
+	public static int Main()
+	{
+		myStruct[,] arr = new myStruct[3,2];
+		
+		myStruct ms;
+		ms.x = 4;
+		ms.y = 5;
+
+		arr[2,0] = ms;
+
+		if (arr[2,0].x == 4 && arr[2,0].y == 5)
+			return 0;
+
+		return 1;
+	}
+}
+`
+`
+`/d:DEFASSIGN
+// check individual struct field uses
+public class T {
+  struct S {
+     public int x;
+     public int y;
+  }
+  
+  public static void Main() {
+    S s;
+    
+    s.x = 5;
+    
+    if (s.x == 6) { }
+    
+    if (s.y == 7) {}
+  }
+}
+`
+(15,9): warning CS0170: Use of possibly unassigned field 'y'
+`
+`/d:DEFASSIGN
+// check initialization of struct fields in constructor
+public class T {
+  struct S {
+     public int x;
+     public int y;
+     
+     public S(int z) {
+       x = y;
+     }
+  }
+  
+  public static void Main() {}
+}
+`
+(8,12): warning CS0170: Use of possibly unassigned field 'y'
+`
+`/d:DEFASSIGN
+// check by ref initialization of struct fields
+public class T {
+  struct S {
+     public int x;
+     public int y;
+     
+     public void Foo() {}
+  }
+  
+  public static void Main() {
+    S s;
+    
+    Init(out s.x);
+    Init(out s.y);
+    
+    s.Foo();
+  }
+  
+  public static void Init(out int z) { z = 0; }
+}
+`
+`
+`/d:DEFASSIGN
+// check contructor initialization of struct fields
+public class T {
+  struct S {
+     public int x;
+     public int y;
+     
+     public S(int z) {}
+  }
+  
+  public static void Main() {
+  }
+}
+`
+(7,6): error CS0171: Field 'T.S.x' must be fully assigned before control leaves the constructor
+`
+`/d:DEFASSIGN
+// check by ref initialization of struct fields
+public class T {
+  struct S {
+     public int x;
+     public int y;
+     
+     public void Foo() {}
+  }
+  
+  public static void Main() {
+    S s;
+    
+    Init(out s.x);
+    
+    s.Foo();
+  }
+  
+  public static void Init(out int z) { z = 0; }
+}
+`
+(15,5): error CS0165: Use of unassigned local variable 's'
+`
+`/d:DEFASSIGN
+// check loops
+public class T {
+
+  public static void Main() {
+  }
+  
+  int Foo() {
+  
+    for(;;) {
+      if (Bar>0) { return 0; }
+    }
+  }
+  
+  int Bar;
+}
+`
+`
+`/d:DEFASSIGN
+public struct MyStruct {
+      public MyStruct(int intJ) {
+            intI = intJ;
+      }
+      public int intI;
+}
+
+public struct MyStruct1 {
+      public MyStruct1(int intI) {
+            s1 = new MyStruct(1);
+      }
+      public MyStruct s1;
+}
+
+public struct MyStruct2 {
+      public MyStruct2(int intI) {
+            s1 = new MyStruct(2);
+      }
+      public MyStruct s1;
+
+      public static int Main() {
+            MyStruct1 Test1 = new MyStruct1(0);
+            MyStruct2 Test2 = new MyStruct2(0);
+
+            if(Test1.s1.intI != 1) {
+                  return 1;
+            }           
+            if(Test2.s1.intI != 2) {
+                  return 1;
+            }     
+            return 0;
+      }
+}
+`
+`
+`/d:DEFASSIGN
+using System;
+public class Test
+{
+  public void Meth(out string t) {}
+  public static int Main()
+  {
+    return 1;
+  }
+}
+`
+(4,15): error CS0177: The out parameter 't' must be assigned to before control leaves the current method
+`
+// Test strange control flow within finally duplication
+using System;
+
+class Class1 {
+
+    static void Main(string[] args) {
+      before_try:
+        try {
+
+        } catch (Exception) {
+           goto before_try;
+        } finally {
+
+        before_inner_try:
+
+            try {
+
+            } catch (ApplicationException) {
+
+                goto before_inner_try;
+
+            } finally {
+            }
+        }
+    }
+}
+`
+`
+using System;
+
+      public class T {
+        public static void Main() {}
+      }
+
+        // the common ICMP header
+        public struct IcmpHeader
+        {
+            public byte    type;
+        }
+
+
+        public struct IcmpEchoRequest
+        {
+            public IcmpHeader  header;
+
+            public IcmpEchoRequest(ushort seq)
+            {
+                header.type   = 0;
+            }
+        }
+`
+`
+// Delayed reference errors
+using System;
+using Microsoft.Contracts;
+
+public class Foo {
+    public T t;
+}
+public class T {
+
+    static T cache;
+
+    public Foo f;
+
+    [Delayed]
+    public T() {
+        cache = this;
+    }
+
+    [Delayed]
+    public T(Foo! f) {
+        f.t = this;
+    }
+   
+    [Delayed]
+    public T(int i) {
+        Foo f = this.f;
+    }
+
+    [Delayed]
+    public T(string s) {
+        Foo f = new Foo();
+        f.t = this;
+    }
+
+    public static void Main(){}
+}
+`
+(16,17): warning CS2665: Cannot store delayed value into non(or incompatibly)-delayed location
+(21,15): warning CS2665: Cannot store delayed value into non(or incompatibly)-delayed location
+(26,13): warning CS0219: The variable 'f' is assigned but its value is never used
+(32,15): warning CS2665: Cannot store delayed value into non(or incompatibly)-delayed location
+`
+// Delayed constructor
+using System;
+using Microsoft.Contracts;
+
+public class Foo {
+    public T t;
+}
+public class T {
+
+    public Foo! f;
+
+    [Delayed]
+    public T() {
+        // forgot to initialize
+    }
+
+    [Delayed]
+    public T(int ok) {
+        f = new Foo();
+    }
+
+    [Delayed]
+    public T(Foo! f) {
+        this.f = f;
+    }
+   
+    public static void Main(){}
+}
+`
+(13,12): warning CS2666: The non-null field T.f must be initialized by the end of the delayed constructor
+`
+// Delayed constructor tests
+using System;
+using Microsoft.Contracts;
+
+public class Foo {
+    public T t;
+}
+public class T {
+
+    public Foo! f;
+
+    [Delayed]
+    public T() {
+        // forgot to initialize
+    }
+
+    [Delayed]
+    public T(int ok) {
+        f = new Foo();
+    }
+
+    [Delayed]
+    public T(Foo! f) {
+        this.f = f;
+    }
+   
+    public static void Main(){}
+}
+`
+(13,12): warning CS2666: The non-null field T.f must be initialized by the end of the delayed constructor
+`
+using Microsoft.Contracts;
+
+public class List {
+
+    Node! listHead;
+
+    private class Node {
+        Node! prev;
+        Node! next;
+        List! parent;
+
+        [Delayed]
+        public Node([Delayed] List! parent) {
+            this.prev = this;
+            this.next = this;
+            this.parent = parent;
+        }
+    }
+
+    [Delayed]
+    public List() {
+        this.listHead = new Node(this);
+    }
+
+    public static void Main() {}
+}
+`
+`
+// check delayed struct constructors
+using Microsoft.Contracts;
+
+public class T {
+  struct S {
+      [Delayed]
+      public S(float f){}
+  }
+
+  public static void Main() {
+  }
+}
+`
+(6,7): warning CS2672: Struct constructors cannot be delayed
+`
+using Microsoft.Contracts;
+
+public class List {
+
+    List next;
+
+    public static void Foo([Delayed] List! l1, [Delayed] List! l2, List! l3) {
+        l1.next = l2;
+        l2.next = l1;
+        l3.next = l2;
+    }
+
+    public void Bar([Delayed] List! l1) {
+        Foo(this, l1, l1);
+    }
+
+    public static void Main() {}
+}
+`
+(10,19): warning CS2665: Cannot store delayed value into non(or incompatibly)-delayed location
+(14,13): warning CS2673: Actual argument No.1 must have the same delay as argument No.2
+(14,23): warning CS2669: Delayed actual argument is not compatible with non-delayed formal parameter
+`
+using System;
+using Microsoft.Contracts;
+
+public class BaseTest {
+    public void OnTextChanged(object sender, EventArgs e) {
+    }
+
+    public void OnEvent1([Delayed] object sender, EventArgs e) {
+    }
+
+    delegate void Bad([Delayed] object bar);
+}
+
+public class Test : BaseTest {
+
+    public Test() {
+      EventHandler h = new EventHandler(this.OnTextChanged);
+      h(null, null);
+    }
+
+    public void Test1() {
+      EventHandler h = new EventHandler(this.OnEvent1);
+      h(null, null);
+    }
+
+    static void Main() {
+    }
+}
+//This must fail for mismatched delegate applications. Also add cases
+//for overriding/implementing of methods
+`
+(18,7): warning CS2674: Delayed receiver is not compatible with non-delayed method
+`
+using Microsoft.Contracts;
+
+public class N {
+
+   public N([Delayed] X o) {
+   }
+}
+
+public class O : N {
+
+    public O() : base(new X()) {
+    }
+
+    public static X staticx;
+
+    public O(int i) {
+        X x = new X();
+
+        base(x);
+        O.staticx = x;
+
+    }
+
+    public O(float i) {
+        X x = new X();
+        O.staticx = x;
+        base(x);
+    }
+}
+
+public class X {public static void Main(){}}
+`
+(11,18): warning CS2673: Actual argument No.1 must have the same delay as argument this(receiver)
+(19,14): warning CS2673: Actual argument No.1 must have the same delay as argument this(receiver)
+(27,14): warning CS2673: Actual argument No.1 must have the same delay as argument this(receiver)
+`
+using Microsoft.Contracts;
+
+public struct SeqOfInt{
+  public int[] els;
+  
+  public int Count{
+    get{
+        return 0;
+    }
+  }
+}
+
+static class Tools
+{
+   public sealed class Range_Enumerator
+   {
+      public SeqOfInt Values;
+
+      public Range_Enumerator()
+      {
+          int x = this.Values.Count;
+      }
+      [NotDelayed]
+      public Range_Enumerator(int i)
+      {
+          int x = this.Values.Count;
+      }
+
+   }
+}
+
+static class Test
+{
+   static void Main()
+   {
+   }
+}
+`
+(21,19): warning CS0170: Use of possibly unassigned field 'this.Values'
+(21,15): warning CS0219: The variable 'x' is assigned but its value is never used
+(26,19): warning CS0170: Use of possibly unassigned field 'this.Values'
+(26,15): warning CS0219: The variable 'x' is assigned but its value is never used
+`
+// Check that class fields are properly initialized prior to use.
+using Microsoft.Contracts;
+
+class T {
+
+    public static void Init(ref int i) {
+        i = 0;
+    }
+
+    public static void Init2(out int i) {
+        i = 0;
+    }
+
+    int of;
+
+    [NotDelayed]
+    public T() {
+        this.of = 0;
+        Init(ref of);
+    }
+
+    [NotDelayed]
+    public T(int i) {
+        Init(ref of);
+    }
+
+    [NotDelayed]
+    public T(string s) {
+        Init2(out of);
+    }
+
+    public static void Main() {
+    }
+}
+`
+(24,14): warning CS0170: Use of possibly unassigned field 'this.of'
+`
+// Check that sealed classes have more lenient treatment of delayed
+// status.
+sealed class Process {
+
+       int[]! data;
+       public Process() {
+         data = new int[50];
+       }
+
+       public Process(int i) : this() {
+         // uses this in non-delayed form, which is okay here.
+         this.Foo(i);
+       }
+
+       public int Foo(int i) { return this.data[i]; }
+
+       public static void Main(){}
+}
+
+class NonSealed {
+
+       int[]! data;
+       public NonSealed() {
+         data = new int[50];
+       }
+
+       public NonSealed(int i) : this() {
+         // uses this in non-delayed form, which should cause an error here.
+         this.Foo(i);
+       }
+
+       public int Foo(int i) { return this.data[i]; }
+}
+`
+(29,10): warning CS2674: Delayed receiver is not compatible with non-delayed method
+`
+// Check that null can be used as a delayed or non-delayed value.
+using System;
+using Microsoft.Contracts;
+
+delegate int TestMe(int x);
+
+
+class Test {
+
+    public Test([Delayed] TestMe del) 
+        : this(del, null)
+    {
+    }
+
+    public Test([Delayed] TestMe del1,
+                [Delayed] TestMe del2)
+    {
+    }
+
+
+    public static void Main() {
+    }
+
+    public static void T(TestMe d) {
+        Test t = new Test(d, null);
+    }    
+}
+
+class Other {
+
+    Test t;
+    public Other() {
+
+        this.t = new Test(null);
+    }
+}
+`
+(25,14): warning CS0219: The variable 't' is assigned but its value is never used
+`
+using System;
+using Microsoft.Contracts;
+
+class Node {
+   public NodePool! graph;
+   string! info;
+   [Delayed] public Node([Delayed] NodePool! g, string! i){
+     this.graph = g;
+     if (this.graph == null) // this is not allowed in earlier version but is ok now. 
+      	System.Console.WriteLine("this.graph is null");
+     else 
+      	System.Console.WriteLine("this.graph is not null");
+     info = i;
+   }
+}
+
+class NodePool { 
+   // a pool of nodes
+   Node! head; 
+   public Node! sen;
+   
+   public NodePool() {
+     head = new Node(this, "head");
+     sen = new Node(this, "sentinel");
+   }   
+}
+
+public class Program
+{
+  static void Main(string[]! args)
+    requires forall{string s in args; s != null};
+  {
+    // how about this version, which should be similar 
+    NodePool pool = new NodePool() ; // new Node(pool, "head"), new Node(pool, "sentinel"));
+    System.Console.WriteLine("{0}", pool); 
+  }
+}
+`
+this.graph is not null
+this.graph is not null
+NodePool
+`
+using System;
+using Microsoft.Contracts;
+
+class Node {
+   public NodePool! graph;
+   string! info;
+   private static void foo([Delayed]NodePool g, NodePool h, [Delayed] NodePool i, [Delayed]Node n, Node n1) {
+   }
+   private static void bar([Delayed] NodePool g, string x) {}
+   private static void bar1([Delayed] NodePool g, [Delayed] string x) {}
+   
+   [Delayed] public Node([Delayed] NodePool! g, string! i){
+     this.graph = g.sen.graph; // wrong! left is universally delayed, right is existentially delayed
+     Node  n0 = g.sen;  // ok, n0 will be existential delayed
+     Node! n = g.sen;  // not ok, because g.sen may be non-null -- Now allow it because g.sen.graph is refered to above
+     string! s = this.info; // same as above; should be a warning
+     this.graph = n.graph; // again, universal vs. existential, also n could be null
+     string s1;
+     if (n.graph != null) { // fine
+        this.graph = n.graph ; // this time only complains about universal vs. existential
+        s1 = ("very good");
+     }
+     else s1= this.info; 
+     
+     // now using s1, s1 should still be existential typed;
+     s = s1;   // warning...
+     
+     foo(g.sen.graph, // existential delayed can't be actual argument
+         g.sen.graph, // of course cannot used as non-delayed
+         g,           // this one is fine
+         g.sen,       // again existential delayed 
+         g.sen        // again existential delayed
+         ); 
+     info = i;
+     
+     foo(g,null,g, this, null); // fine, all delayed is universal delayed
+     bar(this.graph, ""); // fine, only one delayed, existential is fine
+     bar1(this.graph, this.info); // not fine, two delayed, although both existential
+     bar1(g, this.info);   // not fine, one existential one universal
+     bar1(this.graph, ""); // not fine, one existential, one nodelay
+     bar1(g, "");          // not fine, one universal, one no delay
+     bar1(this.graph, i);  // not fine, one existtential, one no delay
+     bar(g,""); // fine too, only one delayed
+     bar(null,""); // fine, no delay
+   }
+}   
+
+class NodePool { 
+   // a pool of nodes
+   Node! head; 
+   public Node! sen;
+   public NodePool(Node! h, Node! s){
+      head = h;
+      sen = s;
+   }
+   
+   public NodePool() {
+     head = new Node(this, "head");
+     sen = new Node(this, "sentinel");
+   }
+   void AddNode(Node! n){
+      
+   }   
+}
+
+
+
+
+public class Program
+{
+  static void Main(string[]! args)
+    requires forall{string s in args; s != null};
+  {
+  }
+}
+`
+(13,19): warning CS2665: Cannot store delayed value into non(or incompatibly)-delayed location
+(17,19): warning CS2665: Cannot store delayed value into non(or incompatibly)-delayed location
+(20,22): warning CS2665: Cannot store delayed value into non(or incompatibly)-delayed location
+(31,10): warning CS2673: Actual argument No.4 must have the same delay as argument No.1
+(29,10): warning CS2669: Delayed actual argument is not compatible with non-delayed formal parameter
+(32,10): warning CS2669: Delayed actual argument is not compatible with non-delayed formal parameter
+(38,23): warning CS2673: Actual argument No.2 must have the same delay as argument No.1
+(39,14): warning CS2673: Actual argument No.2 must have the same delay as argument No.1
+(40,23): warning CS2673: Actual argument No.2 must have the same delay as argument No.1
+(41,14): warning CS2673: Actual argument No.2 must have the same delay as argument No.1
+(42,23): warning CS2673: Actual argument No.2 must have the same delay as argument No.1
+(14,12): warning CS0219: The variable 'n0' is assigned but its value is never used
+(16,14): warning CS0219: The variable 's' is assigned but its value is never used
+(13,19): warning CS2614: Receiver might be null (of type 'Node')
+(13,19): warning CS2613: Conversion to 'NodePool!' fails if the value is null
+(16,14): warning CS2613: Conversion to 'string!' fails if the value is null
+(17,19): warning CS2613: Conversion to 'NodePool!' fails if the value is null
+(26,10): warning CS2613: Conversion to 'string!' fails if the value is null
+`
+using System;
+using Microsoft.Contracts;
+
+class Node {
+   public NodePool! graph;
+   string! info;
+   private static void foo(string! s){}
+   private static void foo1(ref string s) {}
+   private static void bar([Delayed]NodePool! x){}
+   
+   [Delayed] public Node([Delayed] NodePool! g, string! i){
+     Node! n = g.sen;  // not ok, because n will be existentially delayed, thus g.sen will not be non-null, thus a warning
+     string! s = this.info; // same as above; should be a warning
+     string s1;
+     if (n.graph != null) { // fine
+        NodePool! x = n.graph ; // warning: n is existential, thus possibly null
+        bar(x);
+        s1 = x.head.info; // warns properly about x.head being possibly null
+     }
+     else s1 = this.info;
+
+     foo(s1); // could be delayed and possibly null
+
+     if (s!= null) {
+       s1 = s; // also ok
+     }
+     else 
+       s1 = "";
+       
+     foo(s1); // non-null but still delayed
+     foo(s1); // same as above
+     
+     s1 = null; foo1(ref s1); // s1 is changed
+     foo(s1); //  warning s1 possibly null, but not delayed
+     
+     graph = g;  // avoid other warnings
+     info = "";
+     
+   }
+}
+
+class NodePool {
+   // a pool of nodes
+   public readonly Node! head;
+   public Node! sen;
+   public NodePool(Node! h, Node! s){
+      head = h;
+      sen = s;
+   }
+
+   public NodePool() {
+     head = new Node(this, "head");
+     sen = new Node(this, "sentinel");
+   }
+   void AddNode(Node! n){
+
+   }
+}
+
+
+
+
+public class Program
+{
+  static void Main(string[]! args)
+    requires forall{string s in args; s != null};
+  {
+  }
+}
+`
+(22,10): warning CS2669: Delayed actual argument is not compatible with non-delayed formal parameter
+(30,10): warning CS2669: Delayed actual argument is not compatible with non-delayed formal parameter
+(31,10): warning CS2669: Delayed actual argument is not compatible with non-delayed formal parameter
+(12,12): warning CS2613: Conversion to 'Node!' fails if the value is null
+(13,14): warning CS2613: Conversion to 'string!' fails if the value is null
+(18,14): warning CS2614: Receiver might be null (of type 'Node')
+(22,10): warning CS2613: Conversion to 'string!' fails if the value is null
+(34,10): warning CS2613: Conversion to 'string!' fails if the value is null
+`
+// use non-null element array in constructor, 
+// should not report an error because string is a sealed class that
+// does not have a constructor that accepts a delayed parameter
+using System;
+using Microsoft.Contracts; 
+
+class C {
+	static void print_string(string! str) {
+		Console.WriteLine("Non-null string is {0}",str);
+	}
+    public C() {
+	    string![] array = new string ![100];
+	    
+	    for (int i=0; i<100; i++) 
+	      array[i] = new string ('a',5);
+	    
+	    NonNullType.AssertInitialized(array);
+	    
+	    print_string(array[4]); // should give no warning
+    }
+    public static void Main (string! []args) {
+    }
+}
+`
+`
+// same as above, there are two arrays though
+using System;
+using Microsoft.Contracts; 
+
+class C {
+	static void print_string(string! str) {
+		Console.WriteLine("Non-null string is {0}",str);
+	}
+	
+    public C() {
+	    string![] array = new string ![100];
+	    string![] array2 = new string ![100];
+	       
+	   
+	     for (int i=0; i<100; i++) 
+	      array2[i] = new string ('a',5);
+	   
+	     for (int i=0; i<100; i++) 
+	      array[i] = new string ('a',5);
+	    
+	    NonNullType.AssertInitialized(array2);
+	    NonNullType.AssertInitialized(array);
+	    
+	    print_string(array[3]);
+	    print_string(array2[3]);  
+	    
+    }
+    public static void Main (string! []args) {
+    }
+}
+`
+`
+// has one array; use array element before commitment. 
+// a warning should be issued
+using System;
+using Microsoft.Contracts; 
+
+class C {
+	static void print_string(string! str) {
+		Console.WriteLine("Non-null string is {0}",str);
+	}
+	string![] array1;
+	//string![] array2;
+	
+	
+    public  C() {
+	    string! [] array = new string ![100];
+	       
+	    for (int i=0; i<100; i++) 
+	      array[i] = new string ('a',5);
+	    
+	    print_string(array[4]); // should issue a warning
+	    
+	    NonNullType.AssertInitialized(array);
+	        
+	    print_string(array[3]);
+    }
+    public static void Main (string! []args) {
+    }
+}
+`
+(20,19): warning CS2669: Delayed actual argument is not compatible with non-delayed formal parameter
+`
+// same as the previous one, just that in a non-delay method instead of a constructor
+using System;
+using Microsoft.Contracts; 
+
+class C {
+	static void print_string(string! str) {
+		Console.WriteLine("Non-null string is {0}",str);
+	}
+	string![] array1;
+	//string![] array2;
+	
+	
+    public void C00() {
+	    string! [] array = new string ![100];
+	       
+	    for (int i=0; i<100; i++) 
+	      array[i] = new string ('a',5);
+	    
+	    print_string(array[4]); // should issue a warning
+	    
+	    NonNullType.AssertInitialized(array);
+	    
+	    print_string(array[3]);  
+    }
+    public static void Main (string! []args) {
+    }
+}
+`
+(19,19): warning CS2669: Delayed actual argument is not compatible with non-delayed formal parameter
+`
+//normal use of one array in a non-delay method
+using System;
+using Microsoft.Contracts; 
+
+class C {
+	static void print_string(string! str) {
+		Console.WriteLine("Non-null string is {0}",str);
+	}
+	
+    public void C00() {
+	    string ! [] array = new string ![100];
+	       
+	    for (int i=0; i<100; i++) 
+	      array[i] = new string ('a',5);
+	    
+	    NonNullType.AssertInitialized(array);
+	    
+	    print_string(array[3]);
+    }
+    public static void Main (string! []args) {
+    }
+}
+`
+`
+// in delayed method, array is a field; accessing after commitment issues a
+// warning because "this" is delayed and still floating around.
+using System;
+using Microsoft.Contracts; 
+
+class C {
+	static void print_string(string! str) {
+		Console.WriteLine("Non-null string is {0}",str);
+	}
+	string![] array;
+	
+	[Microsoft.Contracts.Delayed]
+    public void C00() {
+	    array = new string ![100];
+	       
+	    for (int i=0; i<100; i++) {
+	      array[i] = new string ('a',5); 
+        }
+	    
+	    NonNullType.AssertInitialized(array);
+	    	    
+	    print_string(array[3]); // a warning here because this.array[3]
+   }
+   public static void Main (string! []args) {
+    }
+}
+`
+(22,19): warning CS2669: Delayed actual argument is not compatible with non-delayed formal parameter
+`
+// one of the array elements is not initialized. Error should be caught by run-time checking
+using System;
+using Microsoft.Contracts; 
+
+class C {
+	static void print_string(string! str) {
+		Console.WriteLine("Non-null string is {0}",str);
+	}
+    public static void Main(string! [] args) {
+	    string! []array = new string ![100];
+	    string ![] arr = new string! [10];   
+	    
+	    
+	    for (int i=0; i<array.Length; i++) {
+	      array[i] = new string ('a',5);
+        }
+	    
+	    for (int i=0; i<arr.Length-1; i++) {
+	      array[i] = new string ('a',5);
+        }
+	    NonNullType.AssertInitialized(arr);
+	    NonNullType.AssertInitialized(array);
+    
+	    print_string(arr[3]);
+	    print_string(array[3]);
+	    
+    }
+}
+`
+Exception of type 'Microsoft.Contracts.NullException' was thrown.
+`
+// One of the array is not committed on all paths
+using System;
+using Microsoft.Contracts; 
+
+class C {
+	static void print_string(string! str) {
+		Console.WriteLine("Non-null string is {0}",str);
+	}
+
+    public void C00() {
+	   string! [] array = new string ![100];
+	   string ![] arr = new string! [10];   
+	    
+	   if (array.Length > 100)  
+	    NonNullType.AssertInitialized(arr);
+	    
+	   NonNullType.AssertInitialized(array);
+	  	    
+	   print_string(arr[3]); // arrays are not committed
+	   print_string(array[3]); 	    
+    }
+    public static void Main (string! []args) {
+    }
+}
+`
+(12,16): warning CS2731: You may need to call NonNullType.AssertInitialized() for variable 'arr' on all paths before return.
+`
+// Old comment (which shows what this case was intended)
+// when we are unable to determine whether the array element will use "this" in a constructor,
+// that is, there are still delayed variables around, we will defer the commitment of the array to the end of the constructor.
+// New comment: 
+// Because we didnt refer to any delayed value in between creation and commitment, we
+// are fine. 
+using System;
+using Microsoft.Contracts; 
+
+class T {
+}
+class C {
+	static void print_string(T! str) {
+		Console.WriteLine("Non-null string is {0}",str);
+	}
+	
+    public C() {
+	    T![] array = new T ![100];
+	    
+	    for (int i=0; i<array.Length-1; i++) {
+	      array[i] = new T();
+        }
+    
+	    NonNullType.AssertInitialized(array);
+	   
+	    print_string(array[3]); // no more warning
+    }
+    
+    public static void Main (string! []args) {
+    }
+}
+`
+`
+// test loadArrayElementAddress
+using System;
+using Microsoft.Contracts; 
+
+class C {
+	/*static void print_string(string! str) {
+		Console.WriteLine("Non-null string is {0}",str);
+	}*.
+	string![] array1;
+	//string![] array2;
+	
+	/*void C02([Delayed] ref string! str) {
+	}*/
+	
+    static void C01(ref string! str) {
+      
+    }	
+    public static void Main(string! [] args) {
+	    string ! [] array = new string ![100];
+	       
+	    for (int i=0; i<100; i++) 
+	      array[i] = new string ('a',5);
+	    
+	    
+	    
+	    C01(ref array[4]);
+	    
+	    NonNullType.AssertInitialized(array);
+    }
+}
+`
+(26,10): warning CS2670: Cannot pass a delayed reference by reference
+`
+// Now it is safe to access the inner array, since the outer array
+// is not referenced between its creation and commitment
+using System;
+using Microsoft.Contracts; 
+
+class T {}
+
+class C {
+	static void print(T! t) {
+		Console.WriteLine("{0}",t);
+	}
+
+    public void C00() {
+	   T! [] arr = new T![100];
+	   T ![] array = new T! [10];   
+	    
+	   NonNullType.AssertInitialized(array);
+	   
+	   print(array[3]); 
+	    
+	   NonNullType.AssertInitialized(arr);
+	  	    
+	   print(arr[3]); 
+	   	    
+    }
+    public static void Main (string! []args) {
+    }
+}
+`
+`
+// outer array is referenced between inner array's creation 
+// and commitment. inner array is thus not lifted to non-delay
+// upon commitment
+using System;
+using Microsoft.Contracts; 
+
+class T {
+}
+class C {
+    static void print(T! t) {
+		Console.WriteLine("{0}",t);
+	}
+
+    static void touch_delayed([Delayed] T![] t) {
+    }
+
+    public void C00() {
+	   T! [] arr = new T![100];
+	   T ![] array = new T! [10];   
+	    
+	   // Be conservative. After this we dont commit array 
+	   touch_delayed(arr);
+	   
+	   NonNullType.AssertInitialized(array);
+	   
+	   print(array[3]);  
+	    
+	   NonNullType.AssertInitialized(arr);
+	  	    
+	   print(arr[3]); 
+	   	    
+    }
+    public static void Main (string! []args) {
+    }
+}
+`
+(26,11): warning CS2669: Delayed actual argument is not compatible with non-delayed formal parameter
+`
+// Same as above. Just that the outer array is refered to in one 
+// branch of a conditional.
+using System;
+using Microsoft.Contracts; 
+
+class T {
+}
+class C {
+    static void print(T! t) {
+		Console.WriteLine("{0}",t);
+	}
+
+    static void touch_delayed([Delayed] T![] t) {
+    }
+
+    public void C00() {
+	   T! [] arr = new T![100];
+	   T ![] array = new T! [10];   
+	    
+	   if (array.Length > 2) {
+	     touch_delayed(arr);
+	   }
+	   
+	   NonNullType.AssertInitialized(array);
+	   
+	   print(array[3]);  
+	    
+	   NonNullType.AssertInitialized(arr);
+	  	    
+	   print(arr[3]); 
+	   	    
+    }
+    public static void Main (string! []args) {
+    }
+}
+// 
+`
+(26,11): warning CS2669: Delayed actual argument is not compatible with non-delayed formal parameter
+`
+// override methods with delayed parameters
+using Microsoft.Contracts;
+
+class T {}
+
+class S {
+  public virtual void m2([Delayed] T t) {}
+}
+
+class A : S {
+  [Delayed]
+  public virtual void m1([Delayed]T t, B b){
+  }
+}
+
+class B: A {
+  public override void m1(T s, [Delayed] B b){
+  }
+  
+  public override void m2(T t) {
+    
+  }
+  
+  public static void Main(string [] args) {}
+}
+`
+(17,27): error CS2726: Parameter 's' needs an explicit [Microsoft.Contracts.Delayed] attribute because the corresponding parameter of the overriden method has one.
+(17,32): error CS2727: Parameter 'b' should not be delayed because the corresponding parameter of the overriden method has none.
+(17,3): error CS2728: Method 'm1' needs an explicit [Microsoft.Contracts.Delayed] attribute because the method it overrides has one.
+(20,27): error CS2726: Parameter 't' needs an explicit [Microsoft.Contracts.Delayed] attribute because the corresponding parameter of the overriden method has one.
+`
+`
+using System;
+
+class Test 
+{
+    private int[] _indices;
+
+    string [] arr;
+
+    public Test(int rank) {
+        _indices = new int[rank];
+
+        _indices[0]--;
+
+        arr = new string [rank];
+
+        arr[0] = new string('h',3); // This will generate an unnecessary warning; this is on the TODO list and should be fixed shortly
+    }
+    
+    public static void Main (string [] args) {
+    }
+}
+`
+`
+//
+// Check returning of delayed references
+//
+using Microsoft.Contracts;
+
+public class Test {
+  public static void Main() {}
+
+  public static Test Foo([Delayed]Test t) {
+    return t;
+  }
+}
+`
+(11,3): error CS2730: Cannot return a delayed value.
+`
+//
+// Check returning of delayed references
+//
+using Microsoft.Contracts;
+
+public class Test {
+  public static void Main() {}
+
+  public static Test![]! Foo() {
+    return new Test![1];
+  }
+}
+`
+(11,3): error CS2730: Cannot return a delayed value.
+`
+//
+// Check returning of delayed references
+//
+using Microsoft.Contracts;
+
+public class Test {
+  public static void Main() {}
+
+  public static Test Foo([Delayed]Test t, bool b) {
+    Test result = t;
+    if (b) {
+      result = null;
+    }
+    return result;
+  }
+}
+`
+(15,3): error CS2730: Cannot return a delayed value.
+`
+using System;
+using Microsoft.Contracts;
+
+class T {
+  public string! [] StringArr;
+  public T![] TArr;
+}
+
+class C {
+  void touchT([Delayed]T t) {
+  }
+  public void M([Delayed] T! t) {
+    t.StringArr = new string! [1];
+    t.TArr = new T![1];
+    
+    // We talked about disallowing initialization of non-null array unless it belongs to this, or this method?
+    // But we didnt enforce this rule. 
+    // Problem is that maybe we just dont know t.TArr is being committed
+    NonNullType.AssertInitialized(t.StringArr);
+    NonNullType.AssertInitialized(t.TArr);
+  }
+  
+  static public void Main(string! [] args) {}
+}
+`
+`
+// has one array; use array element before commitment. 
+// a warning should be issued
+using System;
+using Microsoft.Contracts; 
+class T {}
+class C {
+ static void touchArray([Delayed] T! t) {}
+ static void print_string(string! str) {
+  Console.WriteLine("Non-null string is {0}",str);
+ }
+ string![] array1;
+ //string![] array2;
+ 
+ 
+    public  C() {
+     T! [] array = new T ![100];
+     
+     touchArray(array[4]); // should issue a warning
+     
+     NonNullType.AssertInitialized(array);
+    }
+    public static void Main (string! []args) {
+    }
+}
+`
+`
+using System;
+using Microsoft.Contracts; 
+class T {}
+class C {
+ static void touchArray([Delayed] T! t) {}
+ static void print_string(string! str) {
+  Console.WriteLine("Non-null string is {0}",str);
+ }
+ string![] array1;
+ //string![] array2;
+ 
+ 
+    public  C() {
+     T! [] array = new T ![100];
+     
+     touchArray(array[4]); // should issue a warning
+     
+     // NonNullType.AssertInitialized(array);
+    }
+    public static void Main (string! []args) {
+    }
+}
+`
+(14,12): warning CS2725: Variable 'array', a non-null element array, may not have been initialized. Did you forget to call NonNullType.AssertInitialized()?
+`
+using System;
+using Microsoft.Contracts; 
+class T {}
+class C {
+  static void touchArray([Delayed] T! t) {}
+  static void print_string(string! str) {
+    Console.WriteLine("Non-null string is {0}",str);
+  }
+  string![] array1;
+  //string![] array2;
+ 
+ 
+  public  C() {
+    T! [] array = new T ![100];
+     
+    touchArray(array[4]); // should issue a warning
+     
+    if (array.Length > 23)  NonNullType.AssertInitialized(array);
+  }
+  public static void Main (string! []args) {
+  }
+}
+`
+(14,11): warning CS2731: You may need to call NonNullType.AssertInitialized() for variable 'array' on all paths before return.
+`
+`/p:v2
+using Microsoft.Contracts;
+
+class Test {
+  public static void Main(string [] args) {}
+}
+class T<E> where E: struct{
+  private E[] cs;
+  public T(E [] cs) {
+  }
+  public T<E> foo() {
+    E[] arr = new E[10];
+    for (int i=0; i<10; i++) {
+      arr[i] = cs[i];
+    }
+    NonNullType.AssertInitialized<E>(arr);
+    return new T<E>(arr);
+  }
+}
+`
+(13,16): warning CS2638: Using possibly null pointer as array
+`
+`/p:v2
+using Microsoft.Contracts;  
+
+class Test {
+  public static void Main(string [] args) {}
+}
+class T<E> where E: struct{
+  private E[] cs;
+  public T(E [] cs) {
+  }
+  public T<E> foo() {
+    E[] arr = new E[10];
+    for (int i=0; i<10; i++) {
+      arr[i] = cs[i];
+    }
+    // NonNullType.AssertInitialized<E>(arr);
+    return new T<E>(arr);
+  }
+}
+`
+(13,16): warning CS2638: Using possibly null pointer as array
+`
+`/p:v2
+using Microsoft.Contracts;  
+
+class Test {
+  public static void Main(string [] args) {}
+}
+class T<E> {
+  private E[] cs;
+  public T(E [] cs) {
+  }
+  public T<E> foo() {
+    E[] arr = new E[10];
+    for (int i=0; i<10; i++) {
+      arr[i] = cs[i];
+    }
+    //NonNullType.AssertInitialized<E>(arr);
+    return new T<E>(arr);
+  }
+}
+`
+(11,9): warning CS2725: Variable 'arr', a non-null element array, may not have been initialized. Did you forget to call NonNullType.AssertInitialized()?
+(13,16): warning CS2638: Using possibly null pointer as array
+`
+//
+// Make sure we don't crash on this access.
+//
+using System;
+using Microsoft.Contracts;
+
+public struct S {
+    public int x;
+    string! f;
+
+    public void Test() {
+    }
+
+}
+
+
+public class Test {
+
+    public static void Main() {}
+
+    S[]! vec;
+    public Test() {
+        vec = new S[10];
+
+        vec[0].Test();
+    }
+}
+`
+(25,9): warning CS2674: Delayed receiver is not compatible with non-delayed method
+`
+// 
+// Treat non-virtual calls to Object class as treating their receiver
+// "delayed"
+//
+class Test {
+
+    string foo;
+
+    public Test() {
+        this.foo = base.GetHashCode().ToString(); // okay
+    }
+
+
+    public Test(int i) {
+        this.foo = GetHashCode().ToString(); // not okay
+    }
+
+    public static void Main() {}
+}
+`
+(15,20): warning CS2674: Delayed receiver is not compatible with non-delayed method
+`
+// An array of zero length will be considered as fully initialized and does not require
+// a commit call.
+using System;
+
+class C {
+  static string! [] arr;
+  public static void Main(string [] args) {
+    arr = new string! [0];
+    return;
+  }
+}
+`
+`
+using System;
+
+class C {
+  public static void Main(string! []! args) {
+    string ![] tmp = args;
+    if (args.Length ==0) {
+      tmp = new string![2];
+      tmp[0] = "haha";
+      tmp[1] = "haha";
+      Microsoft.Contracts.NonNullType.AssertInitialized(tmp);
+    }
+    //Console.WriteLine(tmp[0]);
+  }
+}
+`
+`
+using System;
+
+class C {
+  static void touch(object o) {}
+  public static void Main(string! []! args) {
+    string ![] tmp = args;
+    touch(tmp);
+  }
+}
+`
+`
+// error message should not point to the field unless absolutely necessary. 
+using System;
+
+class C {
+  string![] tmp;
+  void foo(string! []! args) {
+      tmp = new string![2];
+      tmp[0] = "haha";
+      tmp[1] = "haha";
+      //Microsoft.Contracts.NonNullType.AssertInitialized(tmp);
+  }
+  static public void Main(string[] args) {}
+}
+`
+(7,7): warning CS2725: Field 'C this.C.tmp', a non-null element array, may not have been initialized. Did you forget to call NonNullType.AssertInitialized()?
+`
+//
+// Allow delayed return values on delayed properties
+// Treat property access result as delayed if receiver is delayed.
+//
+using System;
+using Microsoft.Contracts;
+
+
+    public class DelayedTest
+    {
+        private DelayedTest next;
+
+        public DelayedTest()
+        //^ ensures Next == null;
+        {
+        }
+
+        public DelayedTest(DelayedTest next)
+        //^ ensures Next == next;
+        {
+            this.next = next;
+        }
+
+        public DelayedTest Next
+        {
+            //^ [Delayed]
+            get { return next; }
+        }
+
+        //^ [Delayed]
+        public DelayedTest GetNext()
+        {
+            return next;
+        }
+
+        //^ [Delayed]
+        public DelayedTest GetNext2()
+        {
+            return this.Next;
+        }
+
+        public static void Main() {}
+    }
+`
+(34,9): error CS2730: Cannot return a delayed value.
+(40,9): error CS2730: Cannot return a delayed value.
+`

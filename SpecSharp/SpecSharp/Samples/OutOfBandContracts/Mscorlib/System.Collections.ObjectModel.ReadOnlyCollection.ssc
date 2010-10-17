@@ -1,0 +1,131 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using Microsoft.Contracts;
+
+namespace System.Collections.ObjectModel {
+  public class ReadOnlyCollection<T> {
+    // Summary:
+    //     Initializes a new instance of the System.Collections.ObjectModel.ReadOnlyCollection<T>
+    //     class that is a read-only wrapper around the specified list.
+    //
+    // Parameters:
+    //   list:
+    //     The list to wrap.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     list is null.
+    public ReadOnlyCollection(IList<T>! list);
+
+    // Summary:
+    //     Gets the number of elements contained in the System.Collections.ObjectModel.ReadOnlyCollection<T>
+    //     instance.
+    //
+    // Returns:
+    //     The number of elements contained in the System.Collections.ObjectModel.ReadOnlyCollection<T>
+    //     instance.
+    public int Count { get; }
+    //
+    // Summary:
+    //     Returns the System.Collections.Generic.IList<T> that the System.Collections.ObjectModel.ReadOnlyCollection<T>
+    //     wraps.
+    //
+    // Returns:
+    //     The System.Collections.Generic.IList<T> that the System.Collections.ObjectModel.ReadOnlyCollection<T>
+    //     wraps.
+    protected IList<T>! Items { get; }
+
+    // Summary:
+    //     Gets the element at the specified index.
+    //
+    // Parameters:
+    //   index:
+    //     The zero-based index of the element to get.
+    //
+    // Returns:
+    //     The element at the specified index.
+    //
+    // Exceptions:
+    //   System.ArgumentOutOfRangeException:
+    //     index is less than zero.-or-index is equal to or greater than System.Collections.ObjectModel.ReadOnlyCollection<T>.Count.
+    public T this[int index] { get; }
+
+    // Summary:
+    //     Determines whether an element is in the System.Collections.ObjectModel.ReadOnlyCollection<T>.
+    //
+    // Parameters:
+    //   value:
+    //     The object to locate in the System.Collections.ObjectModel.ReadOnlyCollection<T>.
+    //     The value can be null for reference types.
+    //
+    // Returns:
+    //     true if value is found in the System.Collections.ObjectModel.ReadOnlyCollection<T>;
+    //     otherwise, false.
+    public bool Contains(T value);
+    //
+    // Summary:
+    //     Copies the entire System.Collections.ObjectModel.ReadOnlyCollection<T> to
+    //     a compatible one-dimensional System.Array, starting at the specified index
+    //     of the target array.
+    //
+    // Parameters:
+    //   array:
+    //     The one-dimensional System.Array that is the destination of the elements
+    //     copied from System.Collections.ObjectModel.ReadOnlyCollection<T>. The System.Array
+    //     must have zero-based indexing.
+    //
+    //   index:
+    //     The zero-based index in array at which copying begins.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     index is equal to or greater than the length of array.-or-The number of elements
+    //     in the source System.Collections.ObjectModel.ReadOnlyCollection<T> is greater
+    //     than the available space from index to the end of the destination array.
+    //
+    //   System.ArgumentOutOfRangeException:
+    //     index is less than zero.
+    //
+    //   System.ArgumentNullException:
+    //     array is null.
+    public void CopyTo(T[]! array, int index);
+    //
+    // Summary:
+    //     Returns an enumerator that iterates through the System.Collections.ObjectModel.ReadOnlyCollection<T>.
+    //
+    // Returns:
+    //     An System.Collections.Generic.IEnumerator<T> for the System.Collections.ObjectModel.ReadOnlyCollection<T>.
+    [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+    public IEnumerator<T>! GetEnumerator();
+      ensures result.IsNew;
+    //
+    // Summary:
+    //     Searches for the specified object and returns the zero-based index of the
+    //     first occurrence within the entire System.Collections.ObjectModel.ReadOnlyCollection<T>.
+    //
+    // Parameters:
+    //   value:
+    //     The object to locate in the System.Collections.Generic.List<T>. The value
+    //     can be null for reference types.
+    //
+    // Returns:
+    //     The zero-based index of the first occurrence of item within the entire System.Collections.ObjectModel.ReadOnlyCollection<T>,
+    //     if found; otherwise, -1.
+    public int IndexOf(T value);
+  }
+}

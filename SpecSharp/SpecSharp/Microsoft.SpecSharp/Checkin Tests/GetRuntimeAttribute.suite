@@ -1,0 +1,289 @@
+``/d:NONONNULLTYPECHECK
+`/r:System.Compiler.dll /unsafe
+using System;
+using System.Compiler;
+using System.Reflection;
+
+namespace Data
+{
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple=false)]
+    public class Attr : Attribute
+    {
+        private Type foo;
+        private Type bar;
+
+        public Attr(Type foo)
+        {
+            this.foo = foo;
+        }
+
+        public Type Foo
+        {
+            get
+            {
+                return this.foo;
+            }
+        }
+
+        public Type Bar
+        {
+            get
+            {
+                return this.bar;
+            }
+
+            set
+            {
+                this.bar = value;
+            }
+        }
+    }
+
+    [Attr(typeof(string), Bar=typeof(int))]
+    public class Target
+    {
+    }
+}
+
+namespace Test
+{
+    using Data;
+
+    class Program
+    {
+        static int Main()
+        {
+            Class target = (Class) TypeNode.GetTypeNode(typeof(Data.Target));
+            Program.Assert(target != null, "The target class was null");
+
+            Program.Assert(target.Attributes[0] != null, "Could not get the attribute");
+            Attr attribute = (Attr) target.Attributes[0].GetRuntimeAttribute();
+            Program.Assert(attribute != null, "GetRuntimeAttribute returned null");
+            
+            Program.Assert(attribute.Foo == typeof(string), "Foo does not match.");
+            Program.Assert(attribute.Bar == typeof(int), "Bar does not match.");
+
+            return 0;
+        }
+
+        static void Assert(bool condition, string format, params object[] arg)
+        {
+            if (!condition)
+            {
+                Console.WriteLine("Test Failure: " + format, arg);
+            }
+        }
+    }
+}
+`
+`
+`/r:System.Compiler.dll /unsafe
+using System;
+using System.Compiler;
+
+namespace Data
+{
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple=false)]
+    public class Attr : Attribute
+    {
+        private Type[] types;
+        
+        public Attr(Type[] types)
+        {
+            this.types = types;
+        }
+
+        public Type[] Types
+        {
+            get
+            {
+                return this.types;
+            }
+        }
+    }
+
+    [Attr(new Type[] { typeof(string), typeof(int) })]
+    public class Target
+    {
+    }
+}
+
+namespace Test
+{
+    using Data;
+
+    class Program
+    {
+        static int Main()
+        {
+            Class target = (Class) TypeNode.GetTypeNode(typeof(Data.Target));
+            Program.Assert(target != null, "The target class was null");
+
+            Program.Assert(target.Attributes[0] != null, "The attribute was null");
+            Attr attribute = (Attr) target.Attributes[0].GetRuntimeAttribute();
+            Program.Assert(attribute != null, "GetRuntimeAttribute returned null");
+
+            Program.Assert(attribute.Types != null, "The types array was null");
+            Program.AssertArray(attribute.Types, typeof(string), typeof(int));
+
+            return 0;
+        }
+
+        static void AssertArray(Array array, params object[] expectedValues)
+        {
+            Program.Assert(array.GetLength(0) == expectedValues.Length, "The arrays lengths are differents");
+            for (int i = 0; i < expectedValues.Length; i++)
+            {
+                Program.Assert(array.GetValue(i).Equals(expectedValues[i]), "Unexpected values");
+            }
+        }
+
+        static void Assert(bool condition, string format, params object[] arg)
+        {
+            if (!condition)
+            {
+                Console.WriteLine("Test Failure: " + format, arg);
+            }
+        }
+    }
+}
+`
+`
+`/r:System.Compiler.dll /unsafe
+using System;
+using System.Compiler;
+
+namespace Data
+{
+    public enum EnumType { Default, X, Y };
+
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple=false)]
+    public class Attr : Attribute
+    {
+        private EnumType enumType;
+
+        public Attr(EnumType enumType)
+        {
+            this.enumType = enumType;
+        }
+        
+        public EnumType EnumType
+        {
+            get
+            {
+                return this.enumType;
+            }
+        }
+    }
+
+    [Attr(EnumType.X)]
+    public class Target
+    {
+    }
+}
+
+namespace Test
+{
+    using Data;
+
+    class Program
+    {
+        static int Main()
+        {
+            Class target = (Class) TypeNode.GetTypeNode(typeof(Data.Target));
+            Program.Assert(target != null, "The target class was null");
+
+            Program.Assert(target.Attributes[0] != null, "Could not get the attribute");            
+            Attr attribute = (Attr) target.Attributes[0].GetRuntimeAttribute();
+            Program.Assert(attribute != null, "GetRuntimeAttribute returned null");
+            
+            Program.Assert(attribute.EnumType == EnumType.X, "Enum doesn't match");
+            
+            return 0;
+        }
+
+        static void Assert(bool condition, string format, params object[] arg)
+        {
+            if (!condition)
+            {
+                Console.WriteLine("Test Failure: " + format, arg);
+            }
+        }
+    }
+}
+`
+`
+`/r:System.Compiler.dll /unsafe
+using System;
+using System.Compiler;
+
+namespace Data
+{
+    public enum EnumType { Default, X, Y };
+
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple=false)]
+    public class Attr : Attribute
+    {
+        private EnumType[] enums;
+
+        public Attr(EnumType[] enums)
+        {
+            this.enums = enums;
+        }
+
+        public EnumType[] Enums
+        {
+            get
+            {
+                return this.enums;
+            }
+        }
+    }
+
+    [Attr(new EnumType[] { EnumType.X, EnumType.Y })]
+    public class Target
+    {
+    }
+}
+
+namespace Test
+{
+    using Data;
+
+    class Program
+    {
+        static int Main()
+        {
+            Class target = (Class) TypeNode.GetTypeNode(typeof(Data.Target));
+            Program.Assert(target != null, "The target class was null");
+            
+            Program.Assert(target.Attributes[0] != null, "The attribute was null");            
+            Attr attribute = (Attr) target.Attributes[0].GetRuntimeAttribute();
+            Program.Assert(attribute != null, "GetRuntimeAttribute returned null");
+
+            Program.Assert(attribute.Enums != null, "The Enums array was null");
+            Program.AssertArray(attribute.Enums, EnumType.X, EnumType.Y);
+    
+            return 0;
+        }
+
+        static void AssertArray(Array array, params object[] expectedValues)
+        {
+            Program.Assert(array.GetLength(0) == expectedValues.Length, "The arrays lengths are differents");
+            for (int i = 0; i < expectedValues.Length; i++)
+            {
+                Program.Assert(array.GetValue(i).Equals(expectedValues[i]), "Unexpected values");
+            }
+        }
+
+        static void Assert(bool condition, string format, params object[] arg)
+        {
+            if (!condition)
+            {
+                Console.WriteLine("Test Failure: " + format, arg);
+            }
+        }
+    }
+}
+`
+`

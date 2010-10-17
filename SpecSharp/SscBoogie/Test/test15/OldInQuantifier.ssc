@@ -1,0 +1,10 @@
+class C{
+  public void OkM(int[]! xs)
+    requires 0 < xs.Length;
+    ensures forall{int i in (0:xs.Length); old(xs[i]) == xs [i]};
+  {}
+  public void ErrorM(int[]! xs)
+    requires 0 < xs.Length;
+    ensures forall{int i in (0:xs.Length); old(xs[i]) == xs [i]};
+  { xs[0] = xs[0] + 1; }
+}

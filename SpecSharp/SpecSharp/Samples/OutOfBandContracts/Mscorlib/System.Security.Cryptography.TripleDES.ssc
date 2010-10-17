@@ -1,0 +1,35 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security.Cryptography
+{
+
+    public class TripleDES
+    {
+
+        public Byte[]! Key
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public static bool IsWeakKey (Byte[] rgbKey);
+
+        public static TripleDES Create (string str);
+
+        public static TripleDES Create ();
+
+        public TripleDES ();
+    }
+}

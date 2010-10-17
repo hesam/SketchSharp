@@ -1,0 +1,222 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Globalization
+{
+
+    public class DateTimeFormatInfo
+    {
+
+        public string UniversalSortableDateTimePattern
+        {
+          get;
+        }
+
+        public CalendarWeekRule CalendarWeekRule
+        {
+          get;
+          set
+            requires (int)value >= 0 otherwise ArgumentOutOfRangeException;
+            requires (int)value <= 2 otherwise ArgumentOutOfRangeException;
+        }
+
+        public string! AMDesignator
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public String[]! DayNames
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+            requires value.Length == 7 otherwise ArgumentException;
+        }
+
+        public string! ShortTimePattern
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string! ShortDatePattern
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public DayOfWeek FirstDayOfWeek
+        {
+          get;
+          set
+            requires (int)value >= 0 otherwise ArgumentOutOfRangeException;
+            requires (int)value <= 6 otherwise ArgumentOutOfRangeException;
+        }
+
+        public static DateTimeFormatInfo CurrentInfo
+        {
+          get;
+        }
+
+        public String[]! MonthNames
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+            requires value.Length == 13 otherwise ArgumentException;
+        }
+
+        public String[]! AbbreviatedMonthNames
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+            requires value.Length == 13 otherwise ArgumentException;
+        }
+
+        public string! PMDesignator
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public String[]! AbbreviatedDayNames
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+            requires value.Length == 7 otherwise ArgumentException;
+        }
+
+        public string! DateSeparator
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string! FullDateTimePattern
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string! TimeSeparator
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public Calendar! Calendar
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string! LongTimePattern
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public static DateTimeFormatInfo InvariantInfo
+        {
+          get;
+        }
+
+        public string! MonthDayPattern
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string! YearMonthPattern
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string SortableDateTimePattern
+        {
+          get;
+        }
+
+        public string! LongDatePattern
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string RFC1123Pattern
+        {
+          get;
+        }
+
+        public bool IsReadOnly
+        {
+          get;
+        }
+
+        public static DateTimeFormatInfo ReadOnly (DateTimeFormatInfo! dtfi)
+            requires dtfi != null otherwise ArgumentNullException;
+
+        public string GetMonthName (int month)
+            requires month >= 1 otherwise ArgumentOutOfRangeException;
+            requires month <= 13 otherwise ArgumentOutOfRangeException;
+
+        public string GetAbbreviatedMonthName (int month)
+            requires month >= 1 otherwise ArgumentOutOfRangeException;
+            requires month <= 13 otherwise ArgumentOutOfRangeException;
+
+        public string GetDayName (DayOfWeek dayofweek)
+            requires (int)dayofweek >= 0 otherwise ArgumentOutOfRangeException;
+            requires (int)dayofweek <= 6 otherwise ArgumentOutOfRangeException;
+
+        public String[] GetAllDateTimePatterns (Char format);
+
+        public String[] GetAllDateTimePatterns ();
+
+        public string GetAbbreviatedDayName (DayOfWeek dayofweek)
+            requires (int)dayofweek >= 0 otherwise ArgumentOutOfRangeException;
+            requires (int)dayofweek <= 6 otherwise ArgumentOutOfRangeException;
+
+        public string GetAbbreviatedEraName (int era)
+            requires era >= 0 otherwise ArgumentOutOfRangeException;
+
+        public string GetEraName (int era)
+            requires era >= 0 otherwise ArgumentOutOfRangeException;
+
+        public int GetEra (string! eraName)
+            requires eraName != null otherwise ArgumentNullException;
+
+        public object Clone ();
+
+        public object GetFormat (Type formatType);
+
+        public static DateTimeFormatInfo GetInstance (IFormatProvider provider);
+
+        public DateTimeFormatInfo ();
+    }
+}

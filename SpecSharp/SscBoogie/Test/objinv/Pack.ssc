@@ -1,0 +1,100 @@
+namespace Good1
+{
+
+public sealed class Cell
+{
+    int x;
+    invariant 0 <= x;
+
+    public Cell(int x)
+        requires 0 <= x;
+    {
+        this.x = x;
+    }
+
+    public int GetX()
+        ensures 0 <= result;
+    {
+        expose (this)
+        {
+            return x;
+        }
+    }
+}
+
+}
+
+namespace Good2
+{
+
+public sealed class Cell {
+    int x;
+    invariant 0 <= x;
+
+    public Cell(int x)
+        requires 0 <= x;
+    {
+        this.x = x;
+    }
+
+    public int GetX()
+        ensures 0 <= result;
+    {
+        expose (this)
+        {
+            return x++;
+        }
+    }
+}
+
+}
+
+namespace Bad1
+{
+
+public sealed class Cell
+{
+    int x;
+    invariant 0 <= x;
+
+    public Cell(int x)
+    {
+        this.x = x;
+    }
+
+    public int GetX()
+        ensures 0 <= result;
+    {
+        expose (this)
+        {
+            return x;
+        }
+    }
+}
+
+}
+
+namespace Bad2
+{
+
+public sealed class Cell {
+    int x;
+    invariant 0 <= x;
+
+    public Cell(int x)
+        requires 0 <= x;
+    {
+        this.x = x;
+    }
+
+    public int GetX()
+        ensures 0 <= result;
+    {
+        expose (this)
+        {
+            return x--;
+        }
+    }
+}
+
+}

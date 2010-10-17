@@ -1,0 +1,117 @@
+using Microsoft.Contracts;
+using Microsoft.SpecSharp;
+
+sealed class Cell
+{
+   [StrictReadonly] readonly int id;
+   int value;
+
+   [Verify(false), NotDelayed]
+   public Cell(int id)
+      ensures this.Value == 0;
+      ensures this.Id == id;
+   {
+      this.id = id;
+      base();
+   }
+
+   public int Id
+   {
+      [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+      get
+      {
+         return this.id;
+      }
+   }
+
+   public int Value
+   {
+      get
+      {
+         return this.value;
+      }
+   }
+
+   public void Increment()
+     modifies this.*;
+   {
+      expose (this)
+      {
+        this.value++;
+      }
+   }
+
+   public int Natural {
+      [Pure]
+      get
+         ensures 0 <= result;
+      {
+         return 5;
+      }
+   }
+
+  [SpecPublic] int theField;
+  public int FieldLikeProperty {
+    get
+      ensures result == theField;
+    {
+      return theField;
+    }
+    set
+      modifies this.theField;
+      ensures theField == value;
+    {
+      theField = value;
+    }
+  }
+}
+
+static class Test
+{
+   static void TestGood()
+   {
+      Cell cell = new Cell(5);
+      assert cell.Id == 5;
+      assert cell.Value == 0;
+      cell.Increment();
+      assert cell.Id == 5;
+   }
+
+   static void TestBad()
+   {
+      Cell cell = new Cell(5);
+      assert cell.Id == 5;
+      assert cell.Value == 0;
+      cell.Increment();
+      assert cell.Value == 0;  // error
+   }
+
+   static void AnotherTestGood()
+   {
+      Cell cell = new Cell(10);
+      int x = cell.Natural;
+      assert 0 <= x;
+      cell.Increment();
+      assert 0 <= cell.Natural;
+      assert false;  // error (but verification should reach this far)
+   }
+
+   static void FieldLikeTest()
+   {
+      Cell cell = new Cell(19);
+      int x = cell.FieldLikeProperty;
+      assert x == cell.FieldLikeProperty;
+
+      cell.FieldLikeProperty = 200;
+      int y = cell.FieldLikeProperty;
+      assert y == 200;
+
+      Cell cell2 = new Cell(0);
+      x = cell2.FieldLikeProperty;
+
+      assert cell.FieldLikeProperty == y;
+
+      cell.Increment();
+      assert cell.FieldLikeProperty == y;  // error: we cannot determine this from the spec of Increment
+   }
+}

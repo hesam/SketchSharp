@@ -1,0 +1,18 @@
+class SimpleWhile3
+{
+
+	public void AMethod()
+	{
+		int i = 300476;	 // note: 300476 is larger than the max int value supported by BoogiePL
+		int count = 0;
+
+		while(i > 0) 
+		{
+			i --;
+			count --;
+		}
+
+		assert count < 0;	// Cannot prove it, as the inferred loop invariant is too weak (needs loop unrolling or loops invariant on demand
+	}
+
+}

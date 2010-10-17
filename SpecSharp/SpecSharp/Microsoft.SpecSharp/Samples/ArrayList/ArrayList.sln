@@ -1,0 +1,19 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{07C4E3D1-6B67-4060-8A92-940DB82041ED}") = "ArrayList", "ArrayList.sscproj", "{3D57086C-09D2-4ACB-9D72-E08C7DA35D6E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|.NET = Debug|.NET
+		Release|.NET = Release|.NET
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3D57086C-09D2-4ACB-9D72-E08C7DA35D6E}.Debug|.NET.ActiveCfg = Debug|.NET
+		{3D57086C-09D2-4ACB-9D72-E08C7DA35D6E}.Debug|.NET.Build.0 = Debug|.NET
+		{3D57086C-09D2-4ACB-9D72-E08C7DA35D6E}.Release|.NET.ActiveCfg = Release|.NET
+		{3D57086C-09D2-4ACB-9D72-E08C7DA35D6E}.Release|.NET.Build.0 = Release|.NET
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

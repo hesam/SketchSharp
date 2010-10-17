@@ -1,0 +1,43 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.ComponentModel.Design
+{
+
+    public class ServiceContainer
+    {
+
+        public void RemoveService (Type! serviceType, bool promote)
+            requires serviceType != null otherwise ArgumentNullException;
+
+        public void RemoveService (Type serviceType);
+
+        public object GetService (Type serviceType);
+
+        public void AddService (Type! serviceType, ServiceCreatorCallback! callback, bool promote)
+            requires serviceType != null otherwise ArgumentNullException;
+            requires callback != null otherwise ArgumentNullException;
+
+        public void AddService (Type serviceType, ServiceCreatorCallback callback);
+
+        public void AddService (Type! serviceType, object! serviceInstance, bool promote)
+            requires serviceType != null otherwise ArgumentNullException;
+            requires serviceInstance != null otherwise ArgumentNullException;
+
+        public void AddService (Type serviceType, object serviceInstance);
+
+        public ServiceContainer (IServiceProvider parentProvider);
+
+        public ServiceContainer ();
+    }
+}

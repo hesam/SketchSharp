@@ -1,0 +1,16 @@
+public class C {
+  // In the following method, there are two variables with the name "b".  The two
+  // variables have different types and one is used in an assert statement.  This
+  // program once caused Boogie to crash, because the translation of assert/assume/
+  // loop-invariant expressions did not use the instruction translator's local-
+  // variable name separation mechanism.  That has now been fixed and this method
+  // tests that the translation still works.
+  void M() {
+    for (int b = 0; b < 100; b++) {
+    }
+    for (int n = 0; n < 200; n++) {
+      bool b = n < 120;
+      assert b;  // error
+    }
+  }
+}

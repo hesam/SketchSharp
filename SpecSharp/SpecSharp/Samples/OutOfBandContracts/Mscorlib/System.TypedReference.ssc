@@ -1,0 +1,38 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System
+{
+
+    public struct TypedReference
+    {
+
+        public static void SetTypedReference (TypedReference target, object! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public static RuntimeTypeHandle TargetTypeToken (TypedReference value);
+
+        public static Type GetTargetType (TypedReference value);
+
+        public static object ToObject (TypedReference arg0);
+
+        public bool Equals (object o);
+
+        public int GetHashCode ();
+
+        public static TypedReference MakeTypedReference (object! target, System.Reflection.FieldInfo[]! flds)
+            requires target != null otherwise ArgumentNullException;
+            requires flds != null otherwise ArgumentNullException;
+            requires flds.Length != 0 otherwise ArgumentException;
+    }
+}

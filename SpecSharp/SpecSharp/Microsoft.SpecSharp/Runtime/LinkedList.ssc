@@ -1,0 +1,96 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+#define SpecSharp
+
+using System;
+using System.Diagnostics;
+#if CCINamespace
+using Microsoft.Cci;
+#else
+using System.Compiler;
+#endif
+using Microsoft.Contracts;
+using System.Collections.Generic;
+
+// "using" nothing (from the other collection classes)
+
+namespace Microsoft.SpecSharp.Collections{
+
+/*internal*/ 
+public class LinkedList<T>{
+  /*internal*/ 
+  public T head;
+  /*internal*/ 
+  public LinkedList<T> tail;
+  /*internal*/ 
+  public LinkedList(T head, LinkedList<T> tail){
+    this.head = head; this.tail = tail;
+  }
+  /*internal*/ 
+  public LinkedList<T>! Add( T o, bool replace, out bool added){
+    LinkedList<T> l = this;
+    if (!replace){
+      while(l!= null && !Object.Equals(l.head,o))
+        l = l.tail;                        
+      if (l!= null) {
+        added = false;
+        return this;
+      }else{
+        added = true;
+        return new LinkedList<T>(o,this);
+      }
+    }else
+      return Update(this,  o, out  added);
+  }
+  private LinkedList<T>! Update(LinkedList<T> l, T o,  out bool added){
+    if (l==null) {
+      added = true;
+      return new LinkedList<T>(o,null);
+    }
+    if (Object.Equals(l.head,o)){
+      added = false;
+      return new LinkedList<T>(o,l.tail);
+    }else
+      return new LinkedList<T>(l.head,Update(l.tail, o, out  added));
+  }
+  /*internal*/ 
+  public LinkedList<T> Remove(T o,  out bool deleted){
+    LinkedList<T> l = this;
+    if (l==null) {
+      deleted = false;
+      return l;
+    }
+    if (Object.Equals(l.head,o)){
+      deleted = true;
+      return l.tail;
+    }else if (l.tail == null){
+      deleted = false;
+      return l;
+    }else
+      return new LinkedList<T>(l.head,l.tail.Remove(o, out deleted));
+  }
+  /*internal*/
+  public static object Lookup(LinkedList<T> l , T o){
+    while(l!= null && !Object.Equals(l.head,o))
+      l = l.tail;
+    if (l!= null)
+      return l.head;
+     else
+       return null;
+  }
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public override string! ToString(){
+    string s = (head == null ? "" : head.ToString())+" ";
+    LinkedList<T> l = tail;
+    while(l!= null){
+      l = l.tail;
+      s+=(l == null || l.head == null ? "" : l.head.ToString())+" ";
+    }
+    return s;
+  }
+}
+
+}

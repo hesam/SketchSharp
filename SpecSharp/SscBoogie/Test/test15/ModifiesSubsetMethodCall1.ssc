@@ -1,0 +1,20 @@
+class C {
+  int x;
+  int y;
+  void N()
+    modifies this.y;
+  {
+    y++;
+  }
+  void M() 
+    modifies x;
+  {
+    N(); //ERROR: calls function with bigger modifies clause
+  }
+}
+
+//current error:
+// Error: Method C.M(), unsatisfied frame condition
+
+//better error:
+// modifies clause broken, because method with bigger MC called!

@@ -1,0 +1,491 @@
+using System.IO;
+using System.Collections;
+using System.Collections.Generic;
+using Microsoft.Contracts;
+
+namespace SExpressionSimplifier
+{
+  public class PrettySx
+  {
+    public static void Main()
+      modifies System.Console.In.*, System.Console.Out.*;
+    {
+      new PrettySx().DoIt(System.Console.In, System.Console.Out);
+    }
+
+    public void DoIt(TextReader! rd, TextWriter! wr)
+      modifies this.*, rd.*, wr.*;
+    {
+      while (!AtEndOfStream(rd, wr)) 
+      {
+        Sx! sx = Read(rd);
+        sx = sx.Simplify();
+        Write(sx, wr);
+      }
+    }
+    
+    // --------------------------------- Write ------------------------------
+    
+    void Write(Sx! sx, TextWriter! wr)
+      modifies wr.*;
+    {
+      sx.Write(wr);
+      wr.WriteLine();
+    }
+
+    // --------------------------------- Read and its utility routines ------------------------------
+    
+    Sx! Read(TextReader! rd)
+      modifies this.*, rd.*;
+    {
+      string s;
+      Token tok = ReadToken(rd, out s);
+      if (tok == Token.OpenParen) {
+        tok = ReadToken(rd, out s);
+        assume tok == Token.Id;  // otherwise, S-expression is malformed (in which case we're okay with having this program crash)
+        assert s != null;  // guaranteed by postcondition of ReadToken (needed here to satisfy type checker)
+        string name = s;
+
+        List<Sx!> list = new List<Sx!>();
+        while (PeekToken(rd, out s) != Token.CloseParen)
+        {
+          Sx! sx = Read(rd);
+          list.Add(sx);
+        }
+        tok = ReadToken(rd, out s);
+        assume tok == Token.CloseParen;  // guaranteed by the postcondition of PeekToken
+
+        return new Nary(name, list);
+
+      } else {
+        assume tok == Token.Id;  // otherwise, S-expression is malformed (in which case we're okay with having this program crash)
+        assert s != null;  // guaranteed by postcondition of ReadToken (needed here to satisfy type checker)
+        return new Atom(s);
+      }
+    }
+    
+    enum Token { OpenParen, CloseParen, Id }
+    
+    Token currentToken = Token.Id;
+    string currentTokenString = null;  // empty look ahead indicated by:  currentToken==Token.Id && currentTokenString==null
+    
+    Token ReadToken(TextReader! rd, out string s)
+      modifies this.*, rd.*;
+      ensures result == Token.Id ==> s != null;
+    {
+      Token tok = PeekToken(rd, out s);
+      // clear the look ahead buffer
+      expose (this) {
+        currentToken = Token.Id;
+        currentTokenString = null;
+      }
+      return tok;
+    }
+    
+    Token PeekToken(TextReader! rd, out string s)
+      modifies this.*, rd.*;
+      ensures result == Token.Id ==> s != null;
+    {
+      if (currentToken == Token.Id && currentTokenString == null)
+      {
+        // refill look ahead buffer
+
+        SkipWhiteSpace(rd, null);
+
+        // skip until first non-white character
+        int ch = (char)rd.Read();
+        if (ch == '(') {
+          expose (this) {
+            currentTokenString = null;
+            currentToken = Token.OpenParen;
+          }
+        } else if (ch == ')') {
+          expose (this) {
+            currentTokenString = null;
+            currentToken = Token.CloseParen;
+          }
+        } else {
+          System.Text.StringBuilder sb = new System.Text.StringBuilder();
+          while (true)
+          {
+            sb.Append((char)ch);
+            ch = (char)rd.Peek();
+            if (ch == -1 || ch == '(' || ch == ')' || ch == ';' || char.IsWhiteSpace((char)ch)) {
+              break;
+            }
+            ch = (char)rd.Read();
+          }
+          expose (this) {
+            currentTokenString = sb.ToString();
+            currentToken = Token.Id;
+          }
+        }
+      }
+      s = currentTokenString;
+      return currentToken;
+    }
+
+    void SkipWhiteSpace(TextReader! rd, TextWriter wr)
+      modifies rd.*, wr.*;
+    {
+      while (true) 
+      {
+        int ch = rd.Peek();
+        if (ch != -1 && char.IsWhiteSpace((char)ch)) {
+          rd.Read();  // consume the white space character
+        } else if (ch == ';') {
+          string s = rd.ReadLine();
+          if (wr != null) {
+            wr.WriteLine(s);
+          }
+        } else {
+          return;
+        }
+      }
+    }
+
+    bool AtEndOfStream(TextReader! rd, TextWriter wr)
+      modifies rd.*, wr.*;
+    {        
+      SkipWhiteSpace(rd, wr);
+      return rd.Peek() == -1;
+    }
+
+  }
+
+  // --------------------------------- Sx AST ------------------------------
+
+  [Immutable]
+  abstract class Sx
+  {
+    public abstract void Write(TextWriter! wr);
+      modifies wr.*;
+
+    
+    public virtual Sx! Simplify()
+    {
+      return this;
+    }
+       
+
+    protected static string! Beautify(string! s)
+    {
+      int n = s.Length;
+      if (n >= 2 && s[0] == '|' && s[n-1] == '|') {
+        string shave = s.Substring(1, n-2);
+        if (shave == "<" || shave == "<=" || shave == ">=" || shave == ">" ||
+            shave == "+" || shave == "-" || shave == "*" || shave == "/" || shave == "%" ||
+            shave == "<:")
+        {
+          return shave;
+        }
+        foreach (char ch in shave) {
+          if (char.IsLetterOrDigit(ch) || ch == '_') {
+            // fine
+          } else {
+            // quoting brackets are needed
+            return s;
+          }
+        }
+        return shave;
+      }
+      return s;
+    }
+
+    protected static string! Quote(string! s)
+    {
+      int n = s.Length;
+      if (n >= 2 && s[0] == '|' && s[n-1] == '|') {
+        // already quoted
+        return s;
+      } else {
+        return "|" + s + "|";
+      }
+    }
+
+    public bool IsTrue {
+      get {
+        Atom atom = this as Atom;
+        return atom != null && atom.S == "TRUE";
+      }
+    }
+    
+    public bool IsFalse {
+      get {
+        Atom atom = this as Atom;
+        return atom != null && atom.S == "FALSE";
+      }
+    }
+
+    public bool IsBool(bool val)
+    {
+      return (val && IsTrue) || (!val && IsFalse);
+    }
+    
+    public static Sx! True {
+      [Pure(false)]
+      get
+      {
+        return new Atom("TRUE");
+      }
+    }
+    
+    public static Sx! False {
+      [Pure(false)]
+      get
+      {
+        return new Atom("FALSE");
+      }
+    }
+
+    public static Sx! Bool(bool val)
+    {
+      if (val) {
+        return True;
+      } else {
+        return False;
+      }
+    }
+  }
+  
+  [Immutable]
+  class Atom : Sx {
+    public readonly string! S;
+
+    public Atom(string! s)
+    {
+      this.S = Beautify(s);
+      base();
+    }
+    
+    public Atom(Atom! atom, bool ensuresQuotes)
+    {
+      if (ensuresQuotes) {
+        this.S = Quote(atom.S);
+      } else {
+        this.S = Beautify(atom.S);
+      }
+      base();
+    }
+    
+    public override void Write(TextWriter! wr)
+    {
+      wr.Write(S);
+    }
+  }
+  
+  [Immutable]
+  class Nary : Sx {
+    public readonly string! F;
+
+    [Rep]
+    public readonly List<Sx!>! Args;
+    
+    public Nary(string! functionName, Sx! arg0, Sx! arg1)
+    {
+      this(functionName, new List<Sx!>(new Sx![]{arg0, arg1}));
+    }
+
+    public Nary(string! functionName, [Captured] List<Sx!>! args)
+      modifies args.*;
+    {
+      string name = Beautify(functionName);
+      this.F = name;
+      if (name == "LBLNEG" || name == "LBLPOS") {
+        assume args.Count == 2;
+        Sx a0 = args[0];
+        assume a0 is Atom;
+        args[0] = new Atom((Atom)a0, true);
+      }
+      this.Args = args;
+      base();
+    }
+
+    public Nary! FromArguments(Sx! arg)
+    {
+      List<Sx!> args = new List<Sx!>(1);
+      args.Add(arg);
+      return new Nary(this.F, args);
+    }
+
+    public Nary! FromArguments(Sx! arg0, Sx! arg1)
+    {
+      List<Sx!> args = new List<Sx!>(2);
+      args.Add(arg0);
+      args.Add(arg1);
+      return new Nary(this.F, args);
+    }
+
+    public Nary! FromArguments([Captured] List<Sx!>! args) 
+      modifies args.*;
+    {
+      return new Nary(this.F, args);
+    }
+
+    static Sx! JunctionFromArguments(bool and, [Captured] List<Sx!>! args)
+      modifies args.*;
+    {
+      if (args.Count == 0) {
+        return Sx.Bool(and);
+      } else if (args.Count == 1) {
+        return args[0];
+      } else {
+        return new Nary(and ? "AND" : "OR", args);
+      }
+    }
+
+  
+    public override void Write(TextWriter! wr)
+    {
+      wr.Write("({0}", F);
+      foreach (Sx! sx in Args)
+      {
+        wr.Write(" ");
+        sx.Write(wr);
+      }
+      wr.Write(")");
+    }
+
+    public override Sx! Simplify()
+    {
+      Sx! a0;
+      Sx! a1;
+      List<Sx!> argList;
+      List<Sx!> aa;
+      switch (F) {
+        case "AND":
+          aa = new List<Sx!>();
+          CollectArguments(aa, true);
+          return JunctionFromArguments(true, aa);
+
+        case "OR":
+          aa = new List<Sx!>();
+          CollectArguments(aa, false);
+          return JunctionFromArguments(false, aa);
+
+        case "IMPLIES":
+          assume Args.Count == 2;
+          aa = new List<Sx!>();
+          CollectAntecedent(aa, out a1);
+          a0 = JunctionFromArguments(true, aa);
+          if (a0.IsTrue || a1.IsTrue) {
+            return a1;
+          } else if (a0.IsFalse) {
+            return Sx.True;
+          } else {
+            return FromArguments(a0, a1);
+          }
+
+        case "IFF":
+          assume Args.Count == 2;
+          a0 = Args[0].Simplify();
+          a1 = Args[1].Simplify();
+          if (a0.IsTrue) {
+            return a1;
+          } else if (a1.IsTrue) {
+            return a0;
+          } else if (a0.IsFalse && a1.IsFalse) {
+            return Sx.True;
+          } else {
+            return FromArguments(a0, a1);
+          }
+
+        case "NOT":
+          assume Args.Count == 1;
+          a0 = Args[0];
+          if (a0 is Nary && ((Nary)a0).F == this.F) {
+            // (NOT (NOT x)) --> x
+            Nary n = (Nary)a0;
+            assume n.Args.Count == 1;
+            return n.Args[0].Simplify();
+          }
+          a0 = a0.Simplify();
+          if (a0.IsTrue) {
+            return Sx.False;
+          } else if (a0.IsFalse) {
+            return Sx.True;
+          } else {
+            if (a0 is Nary) {
+              Nary cmp = (Nary)a0;
+              if (cmp.F == "EQ") {
+                assume cmp.Args.Count == 2;
+                return new Nary("NEQ", cmp.Args[0], cmp.Args[1]);
+              } else if (cmp.F == "NEQ") {
+                assume cmp.Args.Count == 2;
+                return new Nary("EQ", cmp.Args[0], cmp.Args[1]);
+              }
+            }
+            return FromArguments(a0);
+          }
+
+        case "FORALL":
+        case "EXISTS":
+        case "LBLPOS":
+        case "LBLNEG":
+          assume Args.Count >= 2;   // the label plus the argument, or the bound variables plus optional patterns plus the body
+          argList = new List<Sx!>(Args.Count);
+          argList.Add(Args[0]);  // the label or the bound variables, so don't apply any simplication here (we could look for unused bound variables...)
+          for (int i = 1; i < Args.Count; i++) {
+            argList.Add(Args[i].Simplify());
+          }
+          return FromArguments(argList);
+
+        case "BG_PUSH":
+          argList = new List<Sx!>(Args.Count);
+          foreach (Sx arg in Args) {
+            argList.Add(arg.Simplify());
+          }
+          return FromArguments(argList);
+
+        default:
+          return this;
+      }
+    }
+
+    void CollectArguments(List<Sx!>! list, bool and)
+      requires (and && F.Equals("AND")) || (!and && F.Equals("OR"));
+      modifies list.*;
+    {
+      foreach (Sx! arg in Args) {
+        if (arg is Nary && ((Nary)arg).F == this.F) {
+          Nary n = (Nary)arg;
+          n.CollectArguments(list, and);
+        } else {
+          Sx a = arg.Simplify();
+          if (!a.IsBool(and)) {
+            list.Add(a);
+          }
+        }
+      }
+    }
+
+    void CollectAntecedent(List<Sx!>! antecedent, out Sx! consequent)
+      requires F == "IMPLIES";
+      modifies antecedent.*;
+    {
+      assume Args.Count == 2;
+
+      Sx! ante = Args[0];
+      if (ante is Nary && ((Nary)ante).F == "AND") {
+        Nary conj = (Nary)ante;
+        conj.CollectArguments(antecedent, true);
+      } else {
+        ante = ante.Simplify();
+        if (ante.IsFalse) {
+          consequent = Sx.True;
+          return;
+        }
+        if (!ante.IsTrue) {
+          antecedent.Add(ante);
+        }
+      }
+
+      Nary imp = Args[1] as Nary;
+      if (imp != null && imp.F == "IMPLIES") {
+        imp.CollectAntecedent(antecedent, out consequent);
+      } else {
+        consequent = Args[1].Simplify();
+      }
+    }
+  }
+}

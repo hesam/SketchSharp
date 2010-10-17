@@ -1,0 +1,100 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Reflection.Emit
+{
+
+    public class ConstructorBuilder
+    {
+
+        public Type ReflectedType
+        {
+          get;
+        }
+
+        public System.Reflection.MethodAttributes Attributes
+        {
+          get;
+        }
+
+        public string Signature
+        {
+          get;
+        }
+
+        public RuntimeMethodHandle MethodHandle
+        {
+          get;
+        }
+
+        public Type DeclaringType
+        {
+          get;
+        }
+
+        public Type ReturnType
+        {
+          get;
+        }
+
+        public string Name
+        {
+          get;
+        }
+
+        public bool InitLocals
+        {
+          get;
+          set;
+        }
+
+        public void SetImplementationFlags (System.Reflection.MethodImplAttributes attributes);
+
+        public bool IsDefined (Type attributeType, bool inherit);
+
+        public void SetCustomAttribute (CustomAttributeBuilder customBuilder);
+
+        public void SetCustomAttribute (System.Reflection.ConstructorInfo con, Byte[] binaryAttribute);
+
+        public Object[] GetCustomAttributes (Type attributeType, bool inherit);
+
+        public System.Reflection.MethodImplAttributes GetMethodImplementationFlags ();
+
+        public Object[] GetCustomAttributes (bool inherit);
+
+        public System.Reflection.ParameterInfo[] GetParameters ();
+
+        public object Invoke (object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, Object[] parameters, System.Globalization.CultureInfo culture);
+
+        public object Invoke (System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, Object[] parameters, System.Globalization.CultureInfo culture);
+
+        public System.Reflection.Module GetModule ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public void AddDeclarativeSecurity (System.Security.Permissions.SecurityAction action, System.Security.PermissionSet! pset)
+            requires (int)action >= 2 otherwise ArgumentOutOfRangeException;
+            requires (int)action <= 7 otherwise ArgumentOutOfRangeException;
+            requires pset != null otherwise ArgumentNullException;
+
+        public ILGenerator GetILGenerator ();
+
+        public void SetSymCustomAttribute (string name, Byte[] data);
+
+        public ParameterBuilder DefineParameter (int iSequence, System.Reflection.ParameterAttributes attributes, string strParamName);
+
+        public MethodToken GetToken ();
+    }
+}

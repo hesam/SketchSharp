@@ -1,0 +1,120 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.ComponentModel
+{
+
+    public class TypeDescriptor
+    {
+
+        public static IComNativeDescriptorHandler ComNativeDescriptorHandler
+        {
+          get;
+          set;
+        }
+
+        public static void SortDescriptorArray (System.Collections.IList infos);
+
+        public static void Refresh (System.Reflection.Assembly assembly);
+
+        public static void Refresh (System.Reflection.Module module);
+
+        public static void Refresh (Type type);
+
+        public static void Refresh (object component);
+
+        public static PropertyDescriptorCollection GetProperties (object component, Attribute[] attributes, bool noCustomTypeDesc);
+
+        public static PropertyDescriptorCollection GetProperties (object! component, Attribute[] attributes)
+            requires component != null otherwise ArgumentNullException;
+
+        public static PropertyDescriptorCollection GetProperties (Type componentType, Attribute[] attributes);
+
+        public static PropertyDescriptorCollection GetProperties (object! component, bool noCustomTypeDesc)
+            requires component != null otherwise ArgumentNullException;
+
+        public static PropertyDescriptorCollection GetProperties (object component);
+
+        public static PropertyDescriptorCollection GetProperties (Type componentType);
+
+        public static EventDescriptorCollection GetEvents (object component, Attribute[] attributes, bool noCustomTypeDesc);
+
+        public static EventDescriptorCollection GetEvents (object component, Attribute[] attributes);
+
+        public static EventDescriptorCollection GetEvents (Type componentType, Attribute[] attributes);
+
+        public static EventDescriptorCollection GetEvents (object component, bool noCustomTypeDesc);
+
+        public static EventDescriptorCollection GetEvents (object component);
+
+        public static EventDescriptorCollection GetEvents (Type componentType);
+
+        public static object GetEditor (Type type, Type editorBaseType);
+
+        public static object GetEditor (object! component, Type editorBaseType, bool noCustomTypeDesc)
+            requires component != null otherwise ArgumentNullException;
+
+        public static object GetEditor (object component, Type editorBaseType);
+
+        public static PropertyDescriptor GetDefaultProperty (object component, bool noCustomTypeDesc);
+
+        public static PropertyDescriptor GetDefaultProperty (object component);
+
+        public static PropertyDescriptor GetDefaultProperty (Type componentType);
+
+        public static EventDescriptor GetDefaultEvent (object component, bool noCustomTypeDesc);
+
+        public static EventDescriptor GetDefaultEvent (object component);
+
+        public static EventDescriptor GetDefaultEvent (Type componentType);
+
+        public static TypeConverter GetConverter (Type type);
+
+        public static TypeConverter GetConverter (object! component, bool noCustomTypeDesc)
+            requires component != null otherwise ArgumentNullException;
+
+        public static TypeConverter GetConverter (object component);
+
+        public static string GetComponentName (object! component, bool noCustomTypeDesc)
+            requires component != null otherwise ArgumentNullException;
+
+        public static string GetComponentName (object component);
+
+        public static string GetClassName (object! component, bool noCustomTypeDesc)
+            requires component != null otherwise ArgumentNullException;
+
+        public static string GetClassName (object component);
+
+        public static AttributeCollection GetAttributes (object component, bool noCustomTypeDesc);
+
+        public static AttributeCollection GetAttributes (object component);
+
+        public static AttributeCollection GetAttributes (Type componentType);
+
+        public static PropertyDescriptor CreateProperty (Type componentType, PropertyDescriptor oldPropertyDescriptor, Attribute[] attributes);
+
+        public static PropertyDescriptor CreateProperty (Type componentType, string name, Type type, Attribute[] attributes);
+
+        public static EventDescriptor CreateEvent (Type componentType, EventDescriptor oldEventDescriptor, Attribute[] attributes);
+
+        public static EventDescriptor CreateEvent (Type componentType, string name, Type type, Attribute[] attributes);
+
+        public static System.ComponentModel.Design.IDesigner CreateDesigner (IComponent component, Type designerBaseType);
+
+        public static void AddEditorTable (Type editorBaseType, System.Collections.Hashtable table);
+
+        public static void remove_Refreshed (RefreshEventHandler value);
+
+        public static void add_Refreshed (RefreshEventHandler value);
+    }
+}

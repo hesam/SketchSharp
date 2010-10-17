@@ -1,0 +1,64 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Reflection.Emit
+{
+
+    public class ParameterBuilder
+    {
+
+        public int Attributes
+        {
+          get;
+        }
+
+        public int Position
+        {
+          get;
+        }
+
+        public bool IsOut
+        {
+          get;
+        }
+
+        public string Name
+        {
+          get;
+        }
+
+        public bool IsOptional
+        {
+          get;
+        }
+
+        public bool IsIn
+        {
+          get;
+        }
+
+        public ParameterToken GetToken ();
+
+        public void SetCustomAttribute (CustomAttributeBuilder! customBuilder)
+            requires customBuilder != null otherwise ArgumentNullException;
+
+        public void SetCustomAttribute (System.Reflection.ConstructorInfo! con, Byte[]! binaryAttribute)
+            requires con != null otherwise ArgumentNullException;
+            requires binaryAttribute != null otherwise ArgumentNullException;
+
+        public void SetConstant (object defaultValue);
+
+        public void SetMarshal (UnmanagedMarshal! unmanagedMarshal)
+            requires unmanagedMarshal != null otherwise ArgumentNullException;
+    }
+}

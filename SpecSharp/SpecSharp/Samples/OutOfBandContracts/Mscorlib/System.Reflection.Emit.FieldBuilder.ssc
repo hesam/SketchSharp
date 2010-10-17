@@ -1,0 +1,76 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Reflection.Emit
+{
+
+    public class FieldBuilder
+    {
+
+        public System.Reflection.FieldAttributes Attributes
+        {
+          get;
+        }
+
+        public Type DeclaringType
+        {
+          get;
+        }
+
+        public RuntimeFieldHandle FieldHandle
+        {
+          get;
+        }
+
+        public string Name
+        {
+          get;
+        }
+
+        public Type FieldType
+        {
+          get;
+        }
+
+        public Type ReflectedType
+        {
+          get;
+        }
+
+        public bool IsDefined (Type attributeType, bool inherit);
+
+        public void SetCustomAttribute (CustomAttributeBuilder! customBuilder)
+            requires customBuilder != null otherwise ArgumentNullException;
+
+        public void SetCustomAttribute (System.Reflection.ConstructorInfo! con, Byte[]! binaryAttribute)
+            requires con != null otherwise ArgumentNullException;
+            requires binaryAttribute != null otherwise ArgumentNullException;
+
+        public Object[] GetCustomAttributes (Type attributeType, bool inherit);
+
+        public Object[] GetCustomAttributes (bool inherit);
+
+        public void SetValue (object obj, object val, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Globalization.CultureInfo culture);
+
+        public object GetValue (object obj);
+
+        public void SetConstant (object defaultValue);
+
+        public void SetMarshal (UnmanagedMarshal! unmanagedMarshal)
+            requires unmanagedMarshal != null otherwise ArgumentNullException;
+
+        public void SetOffset (int iOffset);
+
+        public FieldToken GetToken ();
+    }
+}

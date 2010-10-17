@@ -1,0 +1,41 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Reflection.Emit
+{
+
+    public class EventBuilder
+    {
+
+        public void SetCustomAttribute (CustomAttributeBuilder! customBuilder)
+            requires customBuilder != null otherwise ArgumentNullException;
+
+        public void SetCustomAttribute (System.Reflection.ConstructorInfo! con, Byte[]! binaryAttribute)
+            requires con != null otherwise ArgumentNullException;
+            requires binaryAttribute != null otherwise ArgumentNullException;
+
+        public void AddOtherMethod (MethodBuilder! mdBuilder)
+            requires mdBuilder != null otherwise ArgumentNullException;
+
+        public void SetRaiseMethod (MethodBuilder! mdBuilder)
+            requires mdBuilder != null otherwise ArgumentNullException;
+
+        public void SetRemoveOnMethod (MethodBuilder! mdBuilder)
+            requires mdBuilder != null otherwise ArgumentNullException;
+
+        public void SetAddOnMethod (MethodBuilder! mdBuilder)
+            requires mdBuilder != null otherwise ArgumentNullException;
+
+        public EventToken GetEventToken ();
+    }
+}

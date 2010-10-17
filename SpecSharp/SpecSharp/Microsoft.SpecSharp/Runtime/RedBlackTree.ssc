@@ -1,0 +1,260 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+#define SpecSharp
+
+using System;
+using System.Diagnostics;
+//using SC = System.Collections;
+#if CCINamespace
+using Microsoft.Cci;
+#else
+using System.Compiler;
+#endif
+using Microsoft.Contracts;
+using System.Collections.Generic;
+
+// "using" LinkedList (from the other collection classes)
+
+namespace Microsoft.SpecSharp.Collections{
+
+/*internal*/ 
+public enum Color{Red, Black};
+/*internal*/ 
+public class RedBlackTree<T> : IEnumerable<T> {
+  Color color;
+  readonly int key;
+  /*internal*/ 
+  public LinkedList<T>! elems;
+  RedBlackTree<T> left,right;
+
+  /*internal*/ 
+  public RedBlackTree(Color c, int k, LinkedList<T>! e, RedBlackTree<T> l, RedBlackTree<T> r){
+    color = c; key =k; elems = e; left =l; right = r; base();
+  }
+
+  /*internal*/ 
+  public static RedBlackTree<T> Remove(RedBlackTree<T> t, T! o, out bool deleted){
+    RedBlackTree<T> root = RemoveHelper(t,o, out deleted);
+    if (root!=null)
+      root.color = Color.Black;
+    return root;
+  }
+  private static RedBlackTree<T> RemoveHelper(RedBlackTree<T> t, T! o, out bool deleted){
+    if (t == null){
+      deleted = false;
+      return t;
+    }else{
+      int k = o.GetHashCode(); 
+      if (k == t.key){
+        LinkedList<T> xs = t.elems.Remove(o, out deleted);
+        if (! deleted)
+          return t;
+        else if (xs!=null)
+          return new RedBlackTree<T>(t.color, t.key, xs, t.left, t.right);                   
+        else if(t.left==null)
+          return t.right;
+        else if (t.right==null)
+          return t.left; 
+        else
+          return Relink(t.left,t.right);
+      }else if (k < t.key)
+        return Balance(t.color, t.key, t.elems, RemoveHelper(t.left, o, out deleted), t.right);
+      else
+        return Balance(t.color, t.key, t.elems, t.left, RemoveHelper(t.right, o, out deleted));
+    }
+  }
+
+  private static RedBlackTree<T> Relink(RedBlackTree<T>! t, RedBlackTree<T> s) {
+    if(s==null)
+      return t;
+    else if (t.key < s.key)
+      return Balance(s.color, s.key, s.elems, Relink(t, s.left), s.right);
+    else
+      return Balance(s.color, s.key, s.elems, s.left, Relink(t, s.right));
+  }
+
+  /*internal*/ 
+  public static RedBlackTree<T> Insert(RedBlackTree<T> t, T! o, bool replace, out bool added){
+    RedBlackTree<T>! root = InsertHelper(t,o, replace, out added);
+    root.color = Color.Black;
+    return root;
+  }
+  private static RedBlackTree<T>! InsertHelper(RedBlackTree<T> t, T! o, bool replace, out bool added){
+    if (t == null){
+      added = true;
+      return new RedBlackTree<T>(Color.Red, o.GetHashCode(), new LinkedList<T>(o,null), null, null);
+    }else{
+      int k = o.GetHashCode(); 
+      if (k == t.key){
+        LinkedList<T> xs = t.elems.Add(o, replace, out added);
+        return added || replace? new RedBlackTree<T>(t.color, t.key, xs, t.left, t.right) : t;
+      }else if (k < t.key)
+        return Balance(t.color, t.key, t.elems, InsertHelper(t.left, o, replace, out added), t.right);
+      else
+        return Balance(t.color, t.key, t.elems, t.left, InsertHelper(t.right, o, replace, out added));
+    }
+  }
+  private static RedBlackTree<T>! Balance(Color c, int k, LinkedList<T>! e, RedBlackTree<T> l, RedBlackTree<T> r) {
+    if (c == Color.Red)
+      return new RedBlackTree<T>(c,k,e,l,r);
+    else{
+      /*c == Color.Black*/
+      if (l != null && l.color == Color.Red && l.left!= null && l.left.color == Color.Red){
+        RedBlackTree<T> ll = l.left;
+        RedBlackTree<T> newl = new RedBlackTree<T>(Color.Black,ll.key,ll.elems,ll.left,ll.right);
+        RedBlackTree<T> newr = new RedBlackTree<T>(Color.Black,k,e,l.right,r);
+        return new RedBlackTree<T>(Color.Red,l.key, l.elems, newl, newr);
+      }else if (l != null && l.color == Color.Red && l.right!= null && l.right.color == Color.Red){
+        RedBlackTree<T> newl = new RedBlackTree<T>(Color.Black,l.key,l.elems,l.left,l.right.left);
+        RedBlackTree<T> newr = new RedBlackTree<T>(Color.Black,k,e,l.right.right,r);
+        return new RedBlackTree<T>(Color.Red,l.right.key, l.right.elems, newl, newr);
+      }else if (r != null && r.color == Color.Red && r.left!= null && r.left.color == Color.Red){
+        RedBlackTree<T> newl = new RedBlackTree<T>(Color.Black,k,e,l,r.left.left);
+        RedBlackTree<T> newr = new RedBlackTree<T>(Color.Black,r.key,r.elems,r.left.right,r.right);
+        return new RedBlackTree<T>(Color.Red,r.left.key, r.left.elems, newl, newr);
+      }else if (r!= null && r.color == Color.Red && r.right!= null && r.right.color == Color.Red){
+        RedBlackTree<T> rr = r.right;
+        RedBlackTree<T> newl = new RedBlackTree<T>(Color.Black,k,e,l,r.left);
+        RedBlackTree<T> newr = new RedBlackTree<T>(Color.Black,rr.key,rr.elems,rr.left,rr.right);
+        return new RedBlackTree<T>(Color.Red,r.key, r.elems, newl, newr);
+      }else
+        return new RedBlackTree<T>(c,k,e,l,r);
+    }
+  }
+  /*internal*/ 
+  public static object Lookup(RedBlackTree<T> t, T! o){
+    if (t == null) 
+      return null;
+    else{
+      int k = o.GetHashCode(); 
+      if (k == t.key)
+        return LinkedList<T>.Lookup(t.elems,o);
+      else if (k < t.key)
+        return Lookup(t.left,o);
+      else //if (k > t.key)
+        return Lookup(t.right,o);
+    }
+  }
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public override int GetHashCode(){
+    int k = key; 
+    if (left != null)
+      k^= left.GetHashCode();
+    if (right != null)
+      k^= right.GetHashCode();
+    return k;
+  }
+  [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+  public IEnumerator<T>! GetEnumerator() { 
+    return new RootEnumerator<T>(new LazyRedBlackTreeEnumerator(this));
+  }
+ 
+  [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+  System.Collections.IEnumerator! System.Collections.IEnumerable.GetEnumerator(){
+    return ((IEnumerable<T>)this).GetEnumerator();
+  }
+//  public IEnumerator<T> GetProjectionEnumerator(Projection p) { 
+//    return new RootEnumerator<T>(new LazyRedBlackTreeEnumerator(this),p);
+//  }
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public override string! ToString() {
+    string s = key + "(" + color + ", ";
+    if (left != null)
+      s += left.ToString() +", ";
+    else
+      s += "null, ";
+    s+=elems.ToString()+", ";
+    if (right != null)
+      s += right.ToString();
+    else
+      s += "null";
+    return s+")";
+  }
+
+  /*internal*/ 
+  public class LazyRedBlackTreeEnumerator : NestedEnumerator<T>{
+    /*internal*/ 
+    //public int pc;
+    /*internal*/ 
+    public RedBlackTree<T>! t;
+    /*internal*/ 
+    public LinkedList<T> l;
+    /*internal*/ 
+    public LazyRedBlackTreeEnumerator(RedBlackTree<T>! t) { this.t = t; base(); }
+    public override NestedEnumState NestedMoveNext(){
+      for(;;) {
+        switch (pc) {
+          case 0: 
+            pc++; 
+            l = t.elems;
+            if (t.left != null){
+              currentEnumerator = new LazyRedBlackTreeEnumerator(t.left);
+              return NestedEnumState.Enumerator;
+            }
+            break;
+          case 1 : 
+            if (l == null){
+              pc ++;
+              break;
+            } else {
+              T h = l.head;
+              l = l.tail;                         
+              currentValue = h; 
+              return NestedEnumState.Value;
+              //return new Yield(h); 
+            }
+          case 2: 
+            pc++;
+            if (t.right != null){
+              currentEnumerator = new LazyRedBlackTreeEnumerator(t.right);
+              return NestedEnumState.Enumerator;
+            }
+            break;
+          case 3 : 
+            return NestedEnumState.Done;
+        }
+      }
+    }
+  }
+
+//ToString - - - -  - - - - - - - - - - - - - - - - - - - - - - - -
+//  public override string ToString() {
+//    String s = "{";
+//    int i = 0;
+//    foreach(object o in this)
+//      if (i>0)
+//        s+= ", " +o;
+//      else
+//        s = o.ToString();
+//    return s+"}";   
+//  }
+//
+
+  /*internal*/ 
+  public struct RedBlackTreeEnumerator: IEnumerator<T>{
+    RedBlackTree<T> t;
+    public RedBlackTreeEnumerator(RedBlackTree<T> t) { 
+      this.t = t; 
+    }
+    public bool MoveNext(){
+      return true;
+    }
+    public T Current{ 
+      get {return default(T);}
+    }
+    object System.Collections.IEnumerator.Current{
+      [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+      get { return ((IEnumerator<T>)this).Current; }
+    }
+    public void Reset() {
+    }
+    public void Dispose(){
+      t = null;
+    }
+  }
+}
+
+}

@@ -1,0 +1,263 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Text
+{
+
+    public class StringBuilder
+    {
+
+        public Char this [int index]
+        {
+          get;
+              requires 0 <= index && index < this.Length otherwise IndexOutOfRangeException;
+          set;
+        }
+
+        public int MaxCapacity
+        {
+          get;
+        }
+
+        public int Length
+        {
+          get;
+              ensures 0 <= result;
+          set;
+        }
+
+        public int Capacity
+        {
+          get;
+          set;
+        }
+
+        [WriteConfined]
+        public StringBuilder! Replace (Char oldChar, Char newChar, int startIndex, int count)
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+
+        [WriteConfined]
+        public StringBuilder! Replace (Char oldChar, Char newChar);
+
+        [Pure]
+        public bool Equals (StringBuilder sb);
+
+        [WriteConfined]
+        public StringBuilder! Replace (string arg0, string arg1, int arg2, int arg3);
+
+        [WriteConfined]
+        public StringBuilder! Replace (string oldValue, string newValue);
+
+        [WriteConfined]
+        public StringBuilder! AppendFormat (IFormatProvider provider, string! format, Object[]! args)
+            requires format != null otherwise ArgumentNullException;
+            requires args != null otherwise ArgumentNullException;
+
+        [WriteConfined]
+        public StringBuilder! AppendFormat (string format, Object[] args);
+
+        [WriteConfined]
+        public StringBuilder! AppendFormat (string format, object arg0, object arg1, object arg2);
+
+        [WriteConfined]
+        public StringBuilder! AppendFormat (string format, object arg0, object arg1);
+
+        [WriteConfined]
+        public StringBuilder! AppendFormat (string format, object arg0);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, object value);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, UInt64 value);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, UInt32 value);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, UInt16 value);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, Decimal value);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, double value);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, Single value);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, Int64 value);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, int value);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int arg0, Char[] arg1, int arg2, int arg3);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, Char[] value);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, Char value);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, Int16 value);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, byte value);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, SByte value);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, bool value);
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, string value);
+
+        [WriteConfined]
+        public StringBuilder! Append (Char[] value);
+
+        [WriteConfined]
+        public StringBuilder! Append (object value);
+
+        [WriteConfined]
+        public StringBuilder! Append (UInt64 value);
+
+        [WriteConfined]
+        public StringBuilder! Append (UInt32 value);
+
+        [WriteConfined]
+        public StringBuilder! Append (UInt16 value);
+
+        [WriteConfined]
+        public StringBuilder! Append (Decimal value);
+
+        [WriteConfined]
+        public StringBuilder! Append (double value);
+
+        [WriteConfined]
+        public StringBuilder! Append (Single value);
+
+        [WriteConfined]
+        public StringBuilder! Append (Int64 value);
+
+        [WriteConfined]
+        public StringBuilder! Append (int value);
+
+        [WriteConfined]
+        public StringBuilder! Append (Int16 value);
+
+        [WriteConfined]
+        public StringBuilder! Append (Char value);
+
+        [WriteConfined]
+        public StringBuilder! Append (byte value);
+
+        [WriteConfined]
+        public StringBuilder! Append (SByte value);
+
+        [WriteConfined]
+        public StringBuilder! Append (bool value);
+
+        [WriteConfined]
+        public StringBuilder! Remove (int startIndex, int length);
+            requires 0 <= startIndex otherwise ArgumentOutOfRangeException;
+            requires 0 <= length otherwise ArgumentOutOfRangeException;
+            requires startIndex + length <= Length otherwise ArgumentOutOfRangeException;
+            modifies this.*;
+            ensures result == this;
+            ensures Length == old(Length) - length;
+
+        [WriteConfined]
+        public StringBuilder! Insert (int index, string value, int count)
+            requires value != null || (index == 0 && count == 0) otherwise ArgumentNullException;
+            requires 0 <= index && index < Length otherwise ArgumentOutOfRangeException;
+            requires 1 <= count otherwise ArgumentOutOfRangeException;
+            modifies this.*;
+            ensures result == this;
+            ensures Length == old(Length) + count * value.Length;
+
+        [WriteConfined]
+        public StringBuilder! Append (string! value, int startIndex, int count)
+            requires value != null || (startIndex == 0 && count == 0) otherwise ArgumentNullException;
+            requires 0 <= count otherwise ArgumentOutOfRangeException;
+            requires 0 <= startIndex otherwise ArgumentOutOfRangeException;
+            requires startIndex <= (value.Length - count) otherwise ArgumentOutOfRangeException;
+            modifies this.*;
+            ensures result == this;
+            ensures Length == old(Length) + count;
+
+        [WriteConfined]
+        public StringBuilder! Append (string value);
+            modifies this.*;
+            ensures result == this;
+            ensures value == null ==> Length == old(Length);
+            ensures value != null ==> Length == old(Length) + value.Length;
+
+        [WriteConfined]
+        public StringBuilder! Append (Char[]! value, int startIndex, int charCount)
+            requires 0 <= startIndex otherwise ArgumentOutOfRangeException;
+            requires 0 <= charCount otherwise ArgumentOutOfRangeException;
+            requires charCount <= value.Length - startIndex otherwise ArgumentOutOfRangeException;
+            ensures result == this;
+            ensures Length == old(Length) + charCount;
+
+        [WriteConfined]
+        public StringBuilder! Append (Char value, int repeatCount)
+            requires 0 <= repeatCount otherwise ArgumentOutOfRangeException;
+
+        [Pure]
+        public string! ToString (int startIndex, int length);
+            requires 0 <= startIndex otherwise ArgumentOutOfRangeException;
+            requires 0 <= length otherwise ArgumentOutOfRangeException;
+            requires startIndex + length <= Length otherwise ArgumentOutOfRangeException;
+            ensures result.Length == length;
+
+        [Pure]
+        public string! ToString ();
+            ensures result.Length == this.Length;
+
+        [Pure]
+        public int EnsureCapacity (int capacity)
+            requires capacity >= 0 otherwise ArgumentOutOfRangeException;
+
+        public StringBuilder (int capacity, int maxCapacity)
+            requires capacity <= maxCapacity otherwise ArgumentOutOfRangeException;
+            requires maxCapacity >= 1 otherwise ArgumentOutOfRangeException;
+            requires capacity >= 0 otherwise ArgumentOutOfRangeException;
+            ensures Length == 0;
+
+        public StringBuilder (string value, int startIndex, int length, int capacity)
+            requires capacity >= 0 otherwise ArgumentOutOfRangeException;
+            requires length >= 0 otherwise ArgumentOutOfRangeException;
+
+        public StringBuilder (string value, int capacity)
+            requires capacity >= 0 otherwise ArgumentOutOfRangeException;
+            ensures value == null ==> Length == 0;
+            ensures value != null ==> Length == value.Length;
+
+        public StringBuilder (string value)
+            ensures value == null ==> Length == 0;
+            ensures value != null ==> Length == value.Length;
+
+        public StringBuilder (int capacity)
+            requires capacity >= 0 otherwise ArgumentOutOfRangeException;
+            ensures Length == 0;
+
+        public StringBuilder ()
+            ensures Length == 0;
+    }
+}

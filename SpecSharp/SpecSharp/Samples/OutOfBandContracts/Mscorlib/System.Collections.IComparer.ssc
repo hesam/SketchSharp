@@ -1,0 +1,41 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using System.Runtime.InteropServices;
+
+namespace System.Collections {
+  // Summary:
+  //     Exposes a method that compares two objects.
+  [ComVisible(true)]
+  public interface IComparer {
+    // Summary:
+    //     Compares two objects and returns a value indicating whether one is less than,
+    //     equal to, or greater than the other.
+    //
+    // Parameters:
+    //   y:
+    //     The second object to compare.
+    //
+    //   x:
+    //     The first object to compare.
+    //
+    // Returns:
+    //     Value Condition Less than zero x is less than y. Zero x equals y. Greater
+    //     than zero x is greater than y.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     Neither x nor y implements the System.IComparable interface.-or- x and y
+    //     are of different types and neither one can handle comparisons with the other.
+    int Compare(object x, object y);
+  }
+}

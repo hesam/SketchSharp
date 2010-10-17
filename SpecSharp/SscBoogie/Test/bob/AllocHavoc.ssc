@@ -1,0 +1,16 @@
+public class F
+{
+}
+
+public class Test
+{
+    private F field;
+
+    public F! Test0()
+    {
+        field = new F();
+        F! f = new F();
+        assert field != null;
+        return f;
+    }
+}

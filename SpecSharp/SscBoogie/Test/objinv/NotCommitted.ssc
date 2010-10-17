@@ -1,0 +1,156 @@
+/* This file contains some tests for an experimental mode of default contracts (currently
+ * implemented) which does not say anything about whether or not an object is committed.
+ * In particular, "committed" (or "!writable", as the implementation has it) is not mentioned
+ * for parameters of pure methods.  This seems like a good idea.  Also, for the return
+ * value of property getters, the postcondition does not mention committed.  It's not clear
+ * if this is a good idea, but it seemed worth trying.
+ */
+
+using Microsoft.Contracts;
+
+// -----------------------------------------------------
+
+public class A {
+  [Owned] K! k = new K();
+  public void M() {
+    this.k.Mutator();  // error: this.k is committed, but the precondition asks for an object that is not committed
+  }
+  public virtual void N() {
+    expose (this) {
+      this.k.Mutator();  // this is the way to do it
+    }
+  }
+  public virtual void P() {
+    this.k.PureAndGentle();  // this can be called outside an expose block
+    expose (this) {
+      this.k.PureAndGentle();  // and also inside an expose block
+    }
+  }
+
+}
+
+// -----------------------------------------------------
+
+public class K {
+  protected int x = 12;
+  invariant 10 <= x;
+  [Owned] K next;
+
+  public void Mutator() {
+    assert 5 <= x;  // follows from the fact that the object is consistent
+  }
+
+  [Pure]
+  public void PureAndGentle() {
+    assert 5 <= x;  // follows from the fact that the object is fully valid
+    if (next != null) {
+      this.next.PureAndGentle();  // should be fine
+    }
+    this.OverrideMe(this);  // fine
+  }
+
+  [Pure]
+  public virtual void OverrideMe(K! k) {
+    assert 5 <= x;  // fine, because this is fully valid
+    assert 5 <= k.x;  // fine, because k is fully valid
+    expose (this) {  // error: it is not known whether or not this is not committed
+      this.x = 12;
+    }
+  }
+}
+
+// -----------------------------------------------------
+
+public sealed class L : K {
+  int lx;
+
+  public void X() {
+    expose (this) {}  // L is sealed; this is fine
+  }
+
+  [Pure]
+  public void Y() {
+    expose (this) {  // error: the expose statement requires the object to be not committed
+    }
+  }
+
+  [Pure]
+  public void Z() {
+    PureAndGentle();  // fine
+  }
+
+  public void W() {
+    Mutator();  // fine
+  }
+
+  [Pure]
+  public void V() {
+    Mutator();  // error: precondition of callee says object must be not committed
+  }
+
+  [Pure]
+  public override void OverrideMe(K! k) {
+    assert 5 <= x;  // fine, because this is fully valid
+    if (k is L) {
+      L l = (L)k;
+      assert 5 <= l.x;  // fine, because k is fully valid
+    }
+    PureAndGentle();  // fine, since nothing about committed is required and the enclosing class is sealed
+    expose (this) {  // error: this override is still a pure method
+      this.lx = 12;
+    }
+  }
+}
+
+// -----------------------------------------------------
+
+public sealed class AW {
+  bool y;
+  [Owned] K! k = new K();
+
+  public K! Es {
+    get {
+      return this.y ? new K() : this.k;  // fine to return a not-committed or committed object
+    }
+    [param: Captured]
+    set {
+      expose (this) {
+        this.k = value;
+      }  // fine, because we still require "value" to be not-committed on entry (is that a good idea?)
+    }
+  }
+}
+
+// -----------------------------------------------------
+
+public class Client {
+  public K! M(AW! aw) {
+    K! k = aw.Es;
+    return k;
+  }  // error: return value is not known to be not committeed
+
+  public void N(AW! aw) {
+    K! k = aw.Es;
+    k.PureAndGentle();  // fine, since the method invoked is pure
+    k.Mutator();  // error: k is not known to be not committed
+  }
+
+  [Owned(true)] K ownIt;
+  [Owned(false)] K dontOwnIt;
+
+  public virtual void C0(AW! aw) {
+    expose (this) {
+      K tmp = aw.Es;
+      assume this.IsExposed;  // BUGBUG: this is needed to work around a (Simplify?) bug
+      ownIt = tmp;  // error:  "tmp" is not known to have an appropriate owner
+    }
+  }
+
+  public virtual void C1(AW! aw) {
+    expose (this) {
+      K tmp = aw.Es;
+      assume this.IsExposed;  // BUGBUG: this is needed to work around a (Simplify?) bug
+      dontOwnIt = tmp;
+    }  // fine
+  }
+}

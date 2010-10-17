@@ -1,0 +1,54 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security
+{
+
+    public class SecurityManager
+    {
+
+        public static bool SecurityEnabled
+        {
+          get;
+          set;
+        }
+
+        public static bool CheckExecutionRights
+        {
+          get;
+          set;
+        }
+
+        public static void SavePolicy ();
+
+        public static System.Collections.IEnumerator PolicyHierarchy ();
+
+        public static System.Collections.IEnumerator ResolvePolicyGroups (System.Security.Policy.Evidence evidence);
+
+        public static PermissionSet ResolvePolicy (System.Security.Policy.Evidence evidence);
+
+        public static PermissionSet ResolvePolicy (System.Security.Policy.Evidence evidence, PermissionSet reqdPset, PermissionSet optPset, PermissionSet denyPset, ref PermissionSet denied);
+
+        public static void SavePolicyLevel (System.Security.Policy.PolicyLevel level);
+
+        public static System.Security.Policy.PolicyLevel LoadPolicyLevelFromString (string! str, PolicyLevelType type)
+            requires str != null otherwise ArgumentNullException;
+
+        public static System.Security.Policy.PolicyLevel LoadPolicyLevelFromFile (string! path, PolicyLevelType type)
+            requires path != null otherwise ArgumentNullException;
+
+        public static void GetZoneAndOrigin (ref System.Collections.ArrayList zone, ref System.Collections.ArrayList origin);
+
+        public static bool IsGranted (IPermission perm);
+    }
+}

@@ -1,0 +1,28 @@
+using System;
+using Microsoft.Contracts;
+
+public class Target
+{
+  int k;
+
+  [Pure] Target()
+    ensures k == 0;
+  {}
+
+  [Pure] Target(int i) 
+    ensures k == i;
+  { k = i; }
+
+  public void Foo1()
+    modifies new Target().k;
+    ensures new Target().k != 0;  // error
+  {}
+
+  public void Foo2()
+    ensures new Target(5).k != 0;
+  {}
+
+  public void Foo3()
+    ensures new Target(5).k != 5;  // error
+  {}
+}

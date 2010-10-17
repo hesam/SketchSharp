@@ -1,0 +1,52 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security.Policy
+{
+
+    public class PolicyStatement
+    {
+
+        public PolicyStatementAttribute Attributes
+        {
+          get;
+          set;
+        }
+
+        public System.Security.PermissionSet PermissionSet
+        {
+          get;
+          set;
+        }
+
+        public string AttributeString
+        {
+          get;
+        }
+
+        public void FromXml (System.Security.SecurityElement! et, PolicyLevel level)
+            requires et != null otherwise ArgumentNullException;
+
+        public System.Security.SecurityElement ToXml (PolicyLevel level);
+
+        public void FromXml (System.Security.SecurityElement et);
+
+        public System.Security.SecurityElement ToXml ();
+
+        public PolicyStatement Copy ();
+
+        public PolicyStatement (System.Security.PermissionSet permSet, PolicyStatementAttribute attributes);
+
+        public PolicyStatement (System.Security.PermissionSet permSet);
+    }
+}

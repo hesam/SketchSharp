@@ -1,0 +1,176 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Reflection
+{
+
+    public class Assembly
+    {
+
+        public string! FullName
+        {
+          get;
+        }
+
+        public string EscapedCodeBase
+        {
+          get;
+        }
+
+        public MethodInfo EntryPoint
+        {
+          get;
+        }
+
+        public bool GlobalAssemblyCache
+        {
+          get;
+        }
+
+        public System.Security.Policy.Evidence Evidence
+        {
+          get;
+        }
+
+        public string! CodeBase
+        {
+          get;
+        }
+
+        public string Location
+        {
+          get;
+        }
+
+        public string ImageRuntimeVersion
+        {
+          get;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string! ToString ();
+
+        public ManifestResourceInfo GetManifestResourceInfo (string resourceName);
+
+        public AssemblyName[] GetReferencedAssemblies ();
+
+        public static Assembly GetEntryAssembly ();
+
+        public static Assembly GetCallingAssembly ();
+
+        public static Assembly! GetExecutingAssembly ();
+
+        public String[]! GetManifestResourceNames ();
+
+        public System.IO.FileStream[]! GetFiles (bool getResourceModules);
+
+        public System.IO.FileStream[]! GetFiles ();
+
+        public System.IO.FileStream GetFile (string name);
+
+        public Module GetModule (string arg0);
+
+        public Module[]! GetModules (bool getResourceModules);
+
+        public Module[]! GetModules ();
+
+        public Module[]! GetLoadedModules (bool getResourceModules);
+
+        public Module[]! GetLoadedModules ();
+
+        public object CreateInstance (string typeName, bool ignoreCase, BindingFlags bindingAttr, Binder binder, Object[] args, System.Globalization.CultureInfo culture, Object[] activationAttributes);
+
+        public object CreateInstance (string typeName, bool ignoreCase);
+
+        public object CreateInstance (string typeName);
+
+        public Module LoadModule (string moduleName, Byte[] rawModule, Byte[] rawSymbolStore);
+
+        public Module LoadModule (string moduleName, Byte[] rawModule);
+
+        public static Assembly LoadFile (string path, System.Security.Policy.Evidence securityEvidence);
+
+        public static Assembly LoadFile (string path);
+
+        public static Assembly Load (Byte[] rawAssembly, Byte[] rawSymbolStore, System.Security.Policy.Evidence securityEvidence);
+
+        public static Assembly Load (Byte[] rawAssembly, Byte[] rawSymbolStore);
+
+        public static Assembly Load (Byte[] rawAssembly);
+
+        public static Assembly LoadWithPartialName (string partialName, System.Security.Policy.Evidence securityEvidence);
+
+        public static Assembly LoadWithPartialName (string partialName);
+
+        public static Assembly Load (AssemblyName assemblyRef, System.Security.Policy.Evidence assemblySecurity);
+
+        public static Assembly Load (AssemblyName assemblyRef);
+
+        public static Assembly Load (string assemblyString, System.Security.Policy.Evidence assemblySecurity);
+
+        public static Assembly Load (string assemblyString);
+
+        public static Assembly LoadFrom (string! assemblyFile, System.Security.Policy.Evidence securityEvidence, Byte[] hashValue, System.Configuration.Assemblies.AssemblyHashAlgorithm hashAlgorithm)
+            requires assemblyFile != null otherwise ArgumentNullException;
+
+        public static Assembly LoadFrom (string assemblyFile, System.Security.Policy.Evidence securityEvidence);
+
+        public static Assembly LoadFrom (string assemblyFile);
+
+        public bool IsDefined (Type! attributeType, bool inherit)
+            requires attributeType != null otherwise ArgumentNullException;
+
+        public Object[]! GetCustomAttributes (Type! attributeType, bool inherit)
+            requires attributeType != null otherwise ArgumentNullException;
+
+        public Object[]! GetCustomAttributes (bool inherit);
+
+        public void GetObjectData (System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context)
+            requires info != null otherwise ArgumentNullException;
+
+        public Assembly GetSatelliteAssembly (System.Globalization.CultureInfo culture, Version version);
+
+        public Assembly GetSatelliteAssembly (System.Globalization.CultureInfo culture);
+
+        public System.IO.Stream GetManifestResourceStream (string name);
+
+        public System.IO.Stream GetManifestResourceStream (Type type, string name);
+
+        public Type[]! GetTypes ();
+
+        public Type[]! GetExportedTypes ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)][ResultNotNewlyAllocated]
+        public Type! GetType ();
+
+        public Type GetType (string arg0, bool arg1, bool arg2);
+
+        public Type GetType (string arg0, bool arg1);
+
+        public Type GetType (string arg0);
+
+        public static Assembly GetAssembly (Type! type)
+            requires type != null otherwise ArgumentNullException;
+
+        public static string CreateQualifiedName (string arg0, string arg1);
+
+        public AssemblyName! GetName (bool copiedName);
+
+        public AssemblyName! GetName ();
+
+        public void remove_ModuleResolve (ModuleResolveEventHandler value);
+
+        public void add_ModuleResolve (ModuleResolveEventHandler value);
+    }
+}

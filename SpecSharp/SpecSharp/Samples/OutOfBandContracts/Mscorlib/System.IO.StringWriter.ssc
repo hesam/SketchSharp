@@ -1,0 +1,52 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.IO
+{
+
+    public class StringWriter
+    {
+
+        public System.Text.Encoding Encoding
+        {
+          get;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string! ToString ();
+
+        public void Write (string value);
+
+        public void Write (Char[]! buffer, int index, int count)
+            requires buffer != null otherwise ArgumentNullException;
+            requires index >= 0 otherwise ArgumentOutOfRangeException;
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+            requires (buffer.Length - index) >= count otherwise ArgumentException;
+
+        public void Write (Char value);
+
+        public System.Text.StringBuilder! GetStringBuilder ();
+
+        public void Close ();
+
+        public StringWriter (System.Text.StringBuilder! sb, IFormatProvider formatProvider)
+            requires sb != null otherwise ArgumentNullException;
+
+        public StringWriter (System.Text.StringBuilder! sb);
+
+        public StringWriter (IFormatProvider formatProvider);
+
+        public StringWriter ();
+    }
+}

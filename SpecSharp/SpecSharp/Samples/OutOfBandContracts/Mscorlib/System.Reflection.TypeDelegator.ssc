@@ -1,0 +1,113 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Reflection
+{
+
+    public class TypeDelegator
+    {
+
+        public string FullName
+        {
+          get;
+        }
+
+        public Assembly Assembly
+        {
+          get;
+        }
+
+        public Type UnderlyingSystemType
+        {
+          get;
+        }
+
+        public RuntimeTypeHandle TypeHandle
+        {
+          get;
+        }
+
+        public Type BaseType
+        {
+          get;
+        }
+
+        public string Name
+        {
+          get;
+        }
+
+        public Guid GUID
+        {
+          get;
+        }
+
+        public string Namespace
+        {
+          get;
+        }
+
+        public string AssemblyQualifiedName
+        {
+          get;
+        }
+
+        public Module Module
+        {
+          get;
+        }
+
+        public InterfaceMapping GetInterfaceMap (Type interfaceType);
+
+        public bool IsDefined (Type attributeType, bool inherit);
+
+        public Object[] GetCustomAttributes (Type attributeType, bool inherit);
+
+        public Object[] GetCustomAttributes (bool inherit);
+
+        public Type GetElementType ();
+
+        public MemberInfo[] GetMembers (BindingFlags bindingAttr);
+
+        public MemberInfo[] GetMember (string name, MemberTypes type, BindingFlags bindingAttr);
+
+        public Type GetNestedType (string name, BindingFlags bindingAttr);
+
+        public Type[] GetNestedTypes (BindingFlags bindingAttr);
+
+        public EventInfo[] GetEvents (BindingFlags bindingAttr);
+
+        public PropertyInfo[] GetProperties (BindingFlags bindingAttr);
+
+        public EventInfo[] GetEvents ();
+
+        public EventInfo GetEvent (string name, BindingFlags bindingAttr);
+
+        public Type[] GetInterfaces ();
+
+        public Type GetInterface (string name, bool ignoreCase);
+
+        public FieldInfo[] GetFields (BindingFlags bindingAttr);
+
+        public FieldInfo GetField (string name, BindingFlags bindingAttr);
+
+        public MethodInfo[] GetMethods (BindingFlags bindingAttr);
+
+        public ConstructorInfo[] GetConstructors (BindingFlags bindingAttr);
+
+        public object InvokeMember (string name, BindingFlags invokeAttr, Binder binder, object target, Object[] args, ParameterModifier[] modifiers, System.Globalization.CultureInfo culture, String[] namedParameters);
+
+        public TypeDelegator (Type! delegatingType)
+            requires delegatingType != null otherwise ArgumentNullException;
+    }
+}

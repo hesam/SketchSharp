@@ -1,0 +1,21 @@
+class Cell
+{
+    public int x;
+
+    public Cell()
+        ensures x == 0;
+    {
+    }
+
+    public static void DoStuff(Cell cell)
+    {
+    }
+
+    public static void Main()
+    {
+        Cell cell1 = new Cell();
+        Cell cell2 = new Cell();
+        DoStuff(cell1);
+        assert cell2.x == 0;
+    }
+}

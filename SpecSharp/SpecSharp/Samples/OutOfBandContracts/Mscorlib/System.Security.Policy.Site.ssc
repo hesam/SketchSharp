@@ -1,0 +1,44 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Security.Policy
+{
+
+    public class Site
+    {
+
+        public string Name
+        {
+          get;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public object Copy ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object o);
+
+        public System.Security.IPermission CreateIdentityPermission (Evidence evidence);
+
+        public static Site CreateFromUrl (string url);
+
+        public Site (string! name)
+            requires name != null otherwise ArgumentNullException;
+    }
+}

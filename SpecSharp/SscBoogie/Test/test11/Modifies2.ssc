@@ -1,0 +1,57 @@
+using Microsoft.Contracts;
+
+internal class D {
+
+  [Rep] public int[]! ar = new int [5];
+
+  public static void f0(D! obj)
+    requires obj.ar.Length >= 3;
+  modifies obj.*, obj.ar[*]; {
+
+    expose (obj) {
+      obj.ar[1] = 5;
+    }
+  }
+
+  public static void f1(D! obj) {
+    obj.g();     // error
+  }
+
+  public static void f2(D! obj) modifies obj.*; {
+    obj.g();
+    f2(obj);
+  }
+
+  public static void f3(D! obj) {
+    f2(obj);  // error
+  }
+
+  public void g() {
+    expose (this) {
+      if (ar.Length > 0)
+        ar[0] = 15;
+    }
+  }
+
+  public static void h0(int[]! ar)
+    requires ar.Length > 3; {
+    h1(ar);         // error
+  }
+
+  public static void h1(int[]! ar)
+    requires ar.Length > 3; modifies ar[0]; {
+    ar[1] = 5;     // error
+  }
+
+  public static void h2(int[]! ar)
+    requires ar.Length > 3; modifies ar[1]; {
+    h0(ar);     // ok
+    h2(ar);     // ok
+    h1(ar);     // error
+  }
+
+  public void i0(int[]! newAr) {
+    ar = newAr;  // error
+  }
+
+}

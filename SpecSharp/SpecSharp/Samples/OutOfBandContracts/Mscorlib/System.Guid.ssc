@@ -1,0 +1,64 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System
+{
+    
+    public struct Guid
+    {
+
+        [Pure]
+        public string ToString (string format, IFormatProvider provider);
+
+        [Pure]
+        public string ToString (string format);
+
+        public static Guid NewGuid ();
+
+        [Pure]
+        public static bool operator != (Guid a, Guid b);
+
+        [Pure]
+        public static bool operator == (Guid a, Guid b);
+
+        [Pure]
+        public int CompareTo (object value);
+
+        [Pure]
+        public bool Equals (object o);
+
+        public int GetHashCode ();
+
+        [Pure]
+        public string ToString ();
+
+        [Pure]
+        public Byte[] ToByteArray ();
+
+        public Guid (int a, Int16 b, Int16 c, byte d, byte e, byte f, byte g, byte h, byte i, byte j, byte k);
+
+        public Guid (int a, Int16 b, Int16 c, Byte[]! d)
+            requires d != null otherwise ArgumentNullException;
+            requires d.Length == 8 otherwise ArgumentException;
+
+        public Guid (string! g)
+            requires g != null otherwise ArgumentNullException;
+
+        public Guid (UInt32 a, UInt16 b, UInt16 c, byte d, byte e, byte f, byte g, byte h, byte i, byte j, byte k);
+
+        public Guid (Byte[]! b)
+            requires b != null otherwise ArgumentNullException;
+            requires b.Length == 16 otherwise ArgumentException;
+    }
+}

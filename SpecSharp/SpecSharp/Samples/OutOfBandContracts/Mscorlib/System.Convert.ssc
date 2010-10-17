@@ -1,0 +1,719 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System
+{
+
+    public class Convert
+    {
+
+        public static Byte[] FromBase64CharArray (Char[] arg0, int arg1, int arg2);
+
+        public static int ToBase64CharArray (Byte[] arg0, int arg1, int arg2, Char[] arg3, int arg4);
+
+        public static Byte[] FromBase64String (string arg0);
+
+        public static string ToBase64String (Byte[] arg0, int arg1, int arg2);
+
+        public static string ToBase64String (Byte[]! inArray)
+            requires inArray != null otherwise ArgumentNullException;
+
+        public static string ToString (Int64 value, int toBase)
+            requires toBase == 2 || toBase == 8 || toBase == 10 || toBase == 16 otherwise ArgumentException;
+
+        public static string ToString (int value, int toBase)
+            requires toBase == 2 || toBase == 8 || toBase == 10 || toBase == 16 otherwise ArgumentException;
+
+        public static string ToString (Int16 value, int toBase)
+            requires toBase == 2 || toBase == 8 || toBase == 10 || toBase == 16 otherwise ArgumentException;
+
+        public static string ToString (byte value, int toBase)
+            requires toBase == 2 || toBase == 8 || toBase == 10 || toBase == 16 otherwise ArgumentException;
+
+        public static UInt64 ToUInt64 (string value, int fromBase)
+            requires fromBase == 2 || fromBase == 8 || fromBase == 10 || fromBase == 16 otherwise ArgumentException;
+
+        public static Int64 ToInt64 (string value, int fromBase)
+            requires fromBase == 2 || fromBase == 8 || fromBase == 10 || fromBase == 16 otherwise ArgumentException;
+
+        public static UInt32 ToUInt32 (string value, int fromBase)
+            requires fromBase == 2 || fromBase == 8 || fromBase == 10 || fromBase == 16 otherwise ArgumentException;
+
+        public static int ToInt32 (string value, int fromBase)
+            requires fromBase == 2 || fromBase == 8 || fromBase == 10 || fromBase == 16 otherwise ArgumentException;
+
+        public static UInt16 ToUInt16 (string value, int fromBase)
+            requires fromBase == 2 || fromBase == 8 || fromBase == 10 || fromBase == 16 otherwise ArgumentException;
+
+        public static Int16 ToInt16 (string value, int fromBase)
+            requires fromBase == 2 || fromBase == 8 || fromBase == 10 || fromBase == 16 otherwise ArgumentException;
+
+        public static SByte ToSByte (string value, int fromBase)
+            requires fromBase == 2 || fromBase == 8 || fromBase == 10 || fromBase == 16 otherwise ArgumentException;
+
+        public static byte ToByte (string value, int fromBase)
+            requires fromBase == 2 || fromBase == 8 || fromBase == 10 || fromBase == 16 otherwise ArgumentException;
+
+        public static string ToString (string value, IFormatProvider provider);
+
+        public static string ToString (string value);
+
+        public static string ToString (DateTime value, IFormatProvider provider);
+
+        public static string ToString (DateTime value);
+
+        public static string ToString (Decimal value, IFormatProvider provider);
+
+        public static string ToString (Decimal value);
+
+        public static string ToString (double value, IFormatProvider provider);
+
+        public static string ToString (double value);
+
+        public static string ToString (Single value, IFormatProvider provider);
+
+        public static string ToString (Single value);
+
+        public static string ToString (UInt64 value, IFormatProvider provider);
+
+        public static string ToString (UInt64 value);
+
+        public static string ToString (Int64 value, IFormatProvider provider);
+
+        public static string ToString (Int64 value);
+
+        public static string ToString (UInt32 value, IFormatProvider provider);
+
+        public static string ToString (UInt32 value);
+
+        public static string ToString (int value, IFormatProvider provider);
+
+        public static string ToString (int value);
+
+        public static string ToString (UInt16 value, IFormatProvider provider);
+
+        public static string ToString (UInt16 value);
+
+        public static string ToString (Int16 value, IFormatProvider provider);
+
+        public static string ToString (Int16 value);
+
+        public static string ToString (byte value, IFormatProvider provider);
+
+        public static string ToString (byte value);
+
+        public static string ToString (SByte value, IFormatProvider provider);
+
+        public static string ToString (SByte value);
+
+        public static string ToString (Char value, IFormatProvider provider);
+
+        public static string ToString (Char value);
+
+        public static string ToString (bool value, IFormatProvider provider);
+
+        public static string ToString (bool value);
+
+        public static string ToString (object value, IFormatProvider provider);
+
+        public static string ToString (object value);
+
+        public static DateTime ToDateTime (Decimal value);
+
+        public static DateTime ToDateTime (double value);
+
+        public static DateTime ToDateTime (Single value);
+
+        public static DateTime ToDateTime (Char value);
+
+        public static DateTime ToDateTime (bool value);
+
+        public static DateTime ToDateTime (UInt64 value);
+
+        public static DateTime ToDateTime (Int64 value);
+
+        public static DateTime ToDateTime (UInt32 value);
+
+        public static DateTime ToDateTime (int value);
+
+        public static DateTime ToDateTime (UInt16 value);
+
+        public static DateTime ToDateTime (Int16 value);
+
+        public static DateTime ToDateTime (byte value);
+
+        public static DateTime ToDateTime (SByte value);
+
+        public static DateTime ToDateTime (string value, IFormatProvider provider);
+
+        public static DateTime ToDateTime (string value);
+
+        public static DateTime ToDateTime (object value, IFormatProvider provider);
+
+        public static DateTime ToDateTime (object value);
+
+        public static DateTime ToDateTime (DateTime value);
+
+        public static Decimal ToDecimal (DateTime value);
+
+        public static Decimal ToDecimal (bool value);
+
+        public static Decimal ToDecimal (Decimal value);
+
+        public static Decimal ToDecimal (string value, IFormatProvider provider);
+
+        public static Decimal ToDecimal (string value);
+
+        public static Decimal ToDecimal (double value);
+
+        public static Decimal ToDecimal (Single value);
+
+        public static Decimal ToDecimal (UInt64 value);
+
+        public static Decimal ToDecimal (Int64 value);
+
+        public static Decimal ToDecimal (UInt32 value);
+
+        public static Decimal ToDecimal (int value);
+
+        public static Decimal ToDecimal (UInt16 value);
+
+        public static Decimal ToDecimal (Int16 value);
+
+        public static Decimal ToDecimal (Char value);
+
+        public static Decimal ToDecimal (byte value);
+
+        public static Decimal ToDecimal (SByte value);
+
+        public static Decimal ToDecimal (object value, IFormatProvider provider);
+
+        public static Decimal ToDecimal (object value);
+
+        public static double ToDouble (DateTime value);
+
+        public static double ToDouble (bool value);
+
+        public static double ToDouble (string value, IFormatProvider provider);
+
+        public static double ToDouble (string value);
+
+        public static double ToDouble (Decimal value);
+
+        public static double ToDouble (double value);
+
+        public static double ToDouble (Single value);
+
+        public static double ToDouble (UInt64 value);
+
+        public static double ToDouble (Int64 value);
+
+        public static double ToDouble (UInt32 value);
+
+        public static double ToDouble (int value);
+
+        public static double ToDouble (UInt16 value);
+
+        public static double ToDouble (Char value);
+
+        public static double ToDouble (Int16 value);
+
+        public static double ToDouble (byte value);
+
+        public static double ToDouble (SByte value);
+
+        public static double ToDouble (object value, IFormatProvider provider);
+
+        public static double ToDouble (object value);
+
+        public static Single ToSingle (DateTime value);
+
+        public static Single ToSingle (bool value);
+
+        public static Single ToSingle (string value, IFormatProvider provider);
+
+        public static Single ToSingle (string value);
+
+        public static Single ToSingle (Decimal value);
+
+        public static Single ToSingle (double value);
+
+        public static Single ToSingle (Single value);
+
+        public static Single ToSingle (UInt64 value);
+
+        public static Single ToSingle (Int64 value);
+
+        public static Single ToSingle (UInt32 value);
+
+        public static Single ToSingle (int value);
+
+        public static Single ToSingle (UInt16 value);
+
+        public static Single ToSingle (Int16 value);
+
+        public static Single ToSingle (Char value);
+
+        public static Single ToSingle (byte value);
+
+        public static Single ToSingle (SByte value);
+
+        public static Single ToSingle (object value, IFormatProvider provider);
+
+        public static Single ToSingle (object value);
+
+        public static UInt64 ToUInt64 (DateTime value);
+
+        public static UInt64 ToUInt64 (string value, IFormatProvider provider);
+
+        public static UInt64 ToUInt64 (string value);
+
+        public static UInt64 ToUInt64 (Decimal value);
+
+        public static UInt64 ToUInt64 (double value)
+            requires value >= 0 otherwise OverflowException;
+            requires value < 0 otherwise OverflowException;
+
+        public static UInt64 ToUInt64 (Single value);
+
+        public static UInt64 ToUInt64 (UInt64 value);
+
+        public static UInt64 ToUInt64 (Int64 value)
+            requires value >= 0 otherwise OverflowException;
+
+        public static UInt64 ToUInt64 (UInt32 value);
+
+        public static UInt64 ToUInt64 (int value)
+            requires value >= 0 otherwise OverflowException;
+
+        public static UInt64 ToUInt64 (UInt16 value);
+
+        public static UInt64 ToUInt64 (Int16 value)
+            requires value >= 0 otherwise OverflowException;
+
+        public static UInt64 ToUInt64 (byte value);
+
+        public static UInt64 ToUInt64 (SByte value)
+            requires value >= 0 otherwise OverflowException;
+
+        public static UInt64 ToUInt64 (Char value);
+
+        public static UInt64 ToUInt64 (bool value);
+
+        public static UInt64 ToUInt64 (object value, IFormatProvider provider);
+
+        public static UInt64 ToUInt64 (object value);
+
+        public static Int64 ToInt64 (DateTime value);
+
+        public static Int64 ToInt64 (string value, IFormatProvider provider);
+
+        public static Int64 ToInt64 (string value);
+
+        public static Int64 ToInt64 (Decimal value);
+
+        public static Int64 ToInt64 (double value)
+            requires value < 0 || value < 0 otherwise OverflowException;
+            requires value > 0 otherwise OverflowException;
+
+        public static Int64 ToInt64 (Single value);
+
+        public static Int64 ToInt64 (Int64 value);
+
+        public static Int64 ToInt64 (UInt64 value)
+            requires value <= 4294967295 otherwise OverflowException;
+
+        public static Int64 ToInt64 (UInt32 value);
+
+        public static Int64 ToInt64 (int value);
+
+        public static Int64 ToInt64 (UInt16 value);
+
+        public static Int64 ToInt64 (Int16 value);
+
+        public static Int64 ToInt64 (byte value);
+
+        public static Int64 ToInt64 (SByte value);
+
+        public static Int64 ToInt64 (Char value);
+
+        public static Int64 ToInt64 (bool value);
+
+        public static Int64 ToInt64 (object value, IFormatProvider provider);
+
+        public static Int64 ToInt64 (object value);
+
+        public static UInt32 ToUInt32 (DateTime value);
+
+        public static UInt32 ToUInt32 (string value, IFormatProvider provider);
+
+        public static UInt32 ToUInt32 (string value);
+
+        public static UInt32 ToUInt32 (Decimal value);
+
+        public static UInt32 ToUInt32 (double value)
+            requires value >= 0 otherwise OverflowException;
+            requires value < 0 otherwise OverflowException;
+
+        public static UInt32 ToUInt32 (Single value);
+
+        public static UInt32 ToUInt32 (UInt64 value)
+            requires value <= 0xFFFFFFFF otherwise OverflowException;
+
+        public static UInt32 ToUInt32 (Int64 value)
+            requires value >= 0 otherwise OverflowException;
+            requires value <= 0xFFFFFFFF otherwise OverflowException;
+
+        public static UInt32 ToUInt32 (UInt32 value);
+
+        public static UInt32 ToUInt32 (int value)
+            requires value >= 0 otherwise OverflowException;
+
+        public static UInt32 ToUInt32 (UInt16 value);
+
+        public static UInt32 ToUInt32 (Int16 value)
+            requires value >= 0 otherwise OverflowException;
+
+        public static UInt32 ToUInt32 (byte value);
+
+        public static UInt32 ToUInt32 (SByte value)
+            requires value >= 0 otherwise OverflowException;
+
+        public static UInt32 ToUInt32 (Char value);
+
+        public static UInt32 ToUInt32 (bool value);
+
+        public static UInt32 ToUInt32 (object value, IFormatProvider provider);
+
+        public static UInt32 ToUInt32 (object value);
+
+        public static int ToInt32 (DateTime value);
+
+        public static int ToInt32 (string value, IFormatProvider provider);
+
+        public static int ToInt32 (string value);
+
+        public static int ToInt32 (Decimal value);
+
+        public static int ToInt32 (double value)
+            requires value < 0 || value < 0 otherwise OverflowException;
+            requires value >= 0 otherwise OverflowException;
+
+        public static int ToInt32 (Single value);
+
+        public static int ToInt32 (UInt64 value)
+            requires value <= 2147483647 otherwise OverflowException;
+
+        public static int ToInt32 (Int64 value)
+            requires value >= -2147483648 otherwise OverflowException;
+            requires value <= 2147483647 otherwise OverflowException;
+
+        public static int ToInt32 (int value);
+
+        public static int ToInt32 (UInt32 value)
+            requires value <= 2147483647 otherwise OverflowException;
+
+        public static int ToInt32 (UInt16 value);
+
+        public static int ToInt32 (Int16 value);
+
+        public static int ToInt32 (byte value);
+
+        public static int ToInt32 (SByte value);
+
+        public static int ToInt32 (Char value);
+
+        public static int ToInt32 (bool value);
+
+        public static int ToInt32 (object value, IFormatProvider provider);
+
+        public static int ToInt32 (object value);
+
+        public static UInt16 ToUInt16 (DateTime value);
+
+        public static UInt16 ToUInt16 (string value, IFormatProvider provider);
+
+        public static UInt16 ToUInt16 (string value);
+
+        public static UInt16 ToUInt16 (Decimal value);
+
+        public static UInt16 ToUInt16 (double value);
+
+        public static UInt16 ToUInt16 (Single value);
+
+        public static UInt16 ToUInt16 (UInt64 value)
+            requires value <= 65535 otherwise OverflowException;
+
+        public static UInt16 ToUInt16 (Int64 value)
+            requires value >= 0 otherwise OverflowException;
+            requires value <= 65535 otherwise OverflowException;
+
+        public static UInt16 ToUInt16 (UInt32 value)
+            requires value <= 65535 otherwise OverflowException;
+
+        public static UInt16 ToUInt16 (UInt16 value);
+
+        public static UInt16 ToUInt16 (int value)
+            requires value >= 0 otherwise OverflowException;
+            requires value <= 65535 otherwise OverflowException;
+
+        public static UInt16 ToUInt16 (Int16 value)
+            requires value >= 0 otherwise OverflowException;
+
+        public static UInt16 ToUInt16 (byte value);
+
+        public static UInt16 ToUInt16 (SByte value)
+            requires value >= 0 otherwise OverflowException;
+
+        public static UInt16 ToUInt16 (Char value);
+
+        public static UInt16 ToUInt16 (bool value);
+
+        public static UInt16 ToUInt16 (object value, IFormatProvider provider);
+
+        public static UInt16 ToUInt16 (object value);
+
+        public static Int16 ToInt16 (DateTime value);
+
+        public static Int16 ToInt16 (string value, IFormatProvider provider);
+
+        public static Int16 ToInt16 (string value);
+
+        public static Int16 ToInt16 (Decimal value);
+
+        public static Int16 ToInt16 (double value);
+
+        public static Int16 ToInt16 (Single value);
+
+        public static Int16 ToInt16 (UInt64 value)
+            requires value <= 32767 otherwise OverflowException;
+
+        public static Int16 ToInt16 (Int64 value)
+            requires value >= -32768 otherwise OverflowException;
+            requires value <= 32767 otherwise OverflowException;
+
+        public static Int16 ToInt16 (Int16 value);
+
+        public static Int16 ToInt16 (UInt32 value)
+            requires value <= 32767 otherwise OverflowException;
+
+        public static Int16 ToInt16 (int value)
+            requires value >= -32768 otherwise OverflowException;
+            requires value <= 32767 otherwise OverflowException;
+
+        public static Int16 ToInt16 (UInt16 value)
+            requires value <= 32767 otherwise OverflowException;
+
+        public static Int16 ToInt16 (byte value);
+
+        public static Int16 ToInt16 (SByte value);
+
+        public static Int16 ToInt16 (char value)
+            requires value <= (char)32767 otherwise OverflowException;
+
+        public static Int16 ToInt16 (bool value);
+
+        public static Int16 ToInt16 (object value, IFormatProvider provider);
+
+        public static Int16 ToInt16 (object value);
+
+        public static byte ToByte (DateTime value);
+
+        public static byte ToByte (string value, IFormatProvider provider);
+
+        public static byte ToByte (string value);
+
+        public static byte ToByte (Decimal value);
+
+        public static byte ToByte (double value);
+
+        public static byte ToByte (Single value);
+
+        public static byte ToByte (UInt64 value)
+            requires value <= 255 otherwise OverflowException;
+
+        public static byte ToByte (Int64 value)
+            requires value >= 0 otherwise OverflowException;
+            requires value <= 255 otherwise OverflowException;
+
+        public static byte ToByte (UInt32 value)
+            requires value <= 255 otherwise OverflowException;
+
+        public static byte ToByte (int value)
+            requires value >= 0 otherwise OverflowException;
+            requires value <= 255 otherwise OverflowException;
+
+        public static byte ToByte (UInt16 value)
+            requires value <= 255 otherwise OverflowException;
+
+        public static byte ToByte (Int16 value)
+            requires value >= 0 otherwise OverflowException;
+            requires value <= 255 otherwise OverflowException;
+
+        public static byte ToByte (SByte value)
+            requires value >= 0 otherwise OverflowException;
+
+        public static byte ToByte (char value)
+            requires value <= (char)255 otherwise OverflowException;
+
+        public static byte ToByte (byte value);
+
+        public static byte ToByte (bool value);
+
+        public static byte ToByte (object value, IFormatProvider provider);
+
+        public static byte ToByte (object value);
+
+        public static SByte ToSByte (DateTime value);
+
+        public static SByte ToSByte (string value, IFormatProvider provider);
+
+        public static SByte ToSByte (string value);
+
+        public static SByte ToSByte (Decimal value);
+
+        public static SByte ToSByte (double value);
+
+        public static SByte ToSByte (Single value);
+
+        public static SByte ToSByte (UInt64 value)
+            requires value <= 127 otherwise OverflowException;
+
+        public static SByte ToSByte (Int64 value)
+            requires value >= -128 otherwise OverflowException;
+            requires value <= 127 otherwise OverflowException;
+
+        public static SByte ToSByte (UInt32 value)
+            requires value <= 127 otherwise OverflowException;
+
+        public static SByte ToSByte (int value)
+            requires value >= -128 otherwise OverflowException;
+            requires value <= 127 otherwise OverflowException;
+
+        public static SByte ToSByte (UInt16 value)
+            requires value <= 127 otherwise OverflowException;
+
+        public static SByte ToSByte (Int16 value)
+            requires value >= -128 otherwise OverflowException;
+            requires value <= 127 otherwise OverflowException;
+
+        public static SByte ToSByte (byte value)
+            requires value <= 127 otherwise OverflowException;
+
+        public static SByte ToSByte (char value)
+            requires value <= (char)127 otherwise OverflowException;
+
+        public static SByte ToSByte (SByte value);
+
+        public static SByte ToSByte (bool value);
+
+        public static SByte ToSByte (object value, IFormatProvider provider);
+
+        public static SByte ToSByte (object value);
+
+        public static Char ToChar (DateTime value);
+
+        public static Char ToChar (Decimal value);
+
+        public static Char ToChar (double value);
+
+        public static Char ToChar (Single value);
+
+        public static Char ToChar (string value, IFormatProvider provider);
+
+        public static Char ToChar (string! value)
+            requires value != null otherwise ArgumentNullException;
+            requires value.Length == 1 otherwise FormatException;
+
+        public static Char ToChar (UInt64 value)
+            requires value <= 65535 otherwise OverflowException;
+
+        public static Char ToChar (Int64 value)
+            requires value >= 0 otherwise OverflowException;
+            requires value <= 65535 otherwise OverflowException;
+
+        public static Char ToChar (UInt32 value)
+            requires value <= 65535 otherwise OverflowException;
+
+        public static Char ToChar (int value)
+            requires value >= 0 otherwise OverflowException;
+            requires value <= 65535 otherwise OverflowException;
+
+        public static Char ToChar (UInt16 value);
+
+        public static Char ToChar (Int16 value)
+            requires value >= 0 otherwise OverflowException;
+
+        public static Char ToChar (byte value);
+
+        public static Char ToChar (SByte value)
+            requires value >= 0 otherwise OverflowException;
+
+        public static Char ToChar (Char value);
+
+        public static Char ToChar (bool value);
+
+        public static Char ToChar (object value, IFormatProvider provider);
+
+        public static Char ToChar (object value);
+
+        public static bool ToBoolean (DateTime value);
+
+        public static bool ToBoolean (Decimal value);
+
+        public static bool ToBoolean (double value);
+
+        public static bool ToBoolean (Single value);
+
+        public static bool ToBoolean (string value, IFormatProvider provider);
+
+        public static bool ToBoolean (string value);
+
+        public static bool ToBoolean (UInt64 value);
+
+        public static bool ToBoolean (Int64 value);
+
+        public static bool ToBoolean (UInt32 value);
+
+        public static bool ToBoolean (int value);
+
+        public static bool ToBoolean (UInt16 value);
+
+        public static bool ToBoolean (Int16 value);
+
+        public static bool ToBoolean (byte value);
+
+        public static bool ToBoolean (Char value);
+
+        public static bool ToBoolean (SByte value);
+
+        public static bool ToBoolean (bool value);
+
+        public static bool ToBoolean (object value, IFormatProvider provider);
+
+        public static bool ToBoolean (object value);
+
+        public static object! ChangeType (object! value, Type! conversionType, IFormatProvider provider);
+
+        public static object! ChangeType (object! value, Type! conversionType);
+
+        public static object! ChangeType (object! value, TypeCode typeCode, IFormatProvider provider)
+            requires (int)typeCode != 0 otherwise InvalidCastException;
+
+        public static object! ChangeType (object! value, TypeCode typeCode);
+
+        public static bool IsDBNull (object value);
+
+        public static TypeCode GetTypeCode (object value);
+    }
+}

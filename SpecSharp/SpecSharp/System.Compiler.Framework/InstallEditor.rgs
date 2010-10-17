@@ -1,0 +1,34 @@
+HKLM
+{
+ NoRemove Software 
+ { 
+  Microsoft 
+  { 
+   VisualStudio 
+   { 
+    %VsVersion% 
+    {                   
+      NoRemove Editors
+      {
+        ForceRemove %EditorFactoryGuid% = s '%EditorName%'
+        {
+          val Package = s '%PackageGuid%'
+          
+          ForceRemove Extensions
+          {
+            val %SourceFileExtension% = d 40
+          }
+          ForceRemove LogicalViews
+          {
+            val '{7651a700-06e5-11d1-8ebd-00a0c90f26ea}' = s ''
+            val '{7651a701-06e5-11d1-8ebd-00a0c90f26ea}' = s ''
+            val '{7651a702-06e5-11d1-8ebd-00a0c90f26ea}' = s ''
+            val '{7651a703-06e5-11d1-8ebd-00a0c90f26ea}' = s ''
+          }
+        }
+      }
+    }
+   }
+  }
+ }
+}

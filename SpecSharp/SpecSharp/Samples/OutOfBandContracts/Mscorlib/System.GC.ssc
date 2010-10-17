@@ -1,0 +1,46 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System
+{
+
+    public class GC
+    {
+
+        public static int MaxGeneration
+        {
+          get;
+        }
+
+        public static Int64 GetTotalMemory (bool forceFullCollection);
+
+        public static void ReRegisterForFinalize (object! obj)
+            requires obj != null otherwise ArgumentNullException;
+
+        public static void SuppressFinalize (object! obj)
+            requires obj != null otherwise ArgumentNullException;
+
+        public static void WaitForPendingFinalizers ();
+
+        public static int GetGeneration (WeakReference wo);
+
+        public static void KeepAlive (object arg0);
+
+        public static void Collect ();
+
+        public static void Collect (int generation)
+            requires generation >= 0 otherwise ArgumentOutOfRangeException;
+
+        public static int GetGeneration (object arg0);
+    }
+}

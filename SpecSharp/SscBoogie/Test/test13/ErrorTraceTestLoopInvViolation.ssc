@@ -1,0 +1,60 @@
+
+public class ErrorTraceTestLoopInvViolation {
+  private int val;
+  private int dummy;
+
+  // assert statement false - "real invariant"
+  public void assertAsLoopInvInitViolation() {
+    val = 0;
+    while(true) invariant val == 1; { 
+      assume false;
+    }
+  }
+
+
+  // loop invariant initially false - real invariant
+  public void loopInvInitViolation() {
+    val = 0;
+    while(true) invariant val == 1; { 
+      dummy = 0;
+    }
+  }
+
+  // loop invariant not maintained - real invariant
+  public void loopInvMaintainedViolation() {
+    val = 0;
+    while(true) invariant val == 0; {
+      val = 1;
+    }
+  }
+
+  // simple assertion
+  public void assertionViolation() {
+    val = 0;
+    assert val == 1;
+  }
+
+  // assertion violation, but we shouldn't confuse this with a "loop invariant initially false"
+  public void loopInvInitViolationForAssertion() {
+    val = 0;
+    do {
+      assert val == 2;
+      val = 1;
+    } while(true);
+  }
+
+  // assertion violation, but we shouldn't confuse this with a "loop invariant not maintained"
+  public void loopInvMaintainedViolationForAssertion() {
+    int val = 0;
+    do {
+      assert val == 0;
+      val = 1;
+    } while(true);
+  }
+
+  
+  public static void Main(string[] args) {
+    
+  }
+
+}

@@ -1,0 +1,2623 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+namespace Microsoft.Boogie
+{
+    using System;
+    using System.Text;
+    using System.Diagnostics;
+    using System.Collections;
+    using Cci = System.Compiler;
+    using Bpl = Microsoft.Boogie;
+    using Microsoft.Contracts;
+
+  #region Explanation of the CIL input language
+  /*
+   * This pass's input language is the CLR Common Intermediate
+   * Language, with two stages of preprocessing before this pass
+   * begins. First, the code of a method body is organized into a
+   * control flow graph, with a single entry node and three exit
+   * nodes, namely, one for normal exits (returns), one for
+   * exceptional exits (throws), and an exit join point to which both
+   * the normal and exception blocks jump. To encode try/catch scopes,
+   * every CFG block has a chain of exception handling blocks
+   * (eblocks).  Every eblock begins with a CATCH statement that
+   * encodes which exception the block handles and has a pointer to
+   * the next eblock in the chain.  If two normal CFG blocks are in
+   * the same try/catch scope in the source program, then they share
+   * the same handler chain.
+   * 
+   * The second preprocessing pass takes this CFG representation and
+   * eliminates all use of the CLR's evaluation stack. Every place
+   * where the result of evaluation one expression is stored on the
+   * evaluation stack for use in evaluating the next expression, this
+   * pass inserts an explicit store to a local variable. Hence the
+   * expression 1+(2+3), i.e.  { ldc.i4 1; ldc.i4 2; ldc.i4 3; add;
+   * add; }, would become the program
+   * 
+   * stack0 := 1;
+   * stack1 := 2+3;
+   * stack0 := stack0 + stack1;
+   * 
+   * As the example shows, all expressions that would be stored to the
+   * very bottom of the evaluation stack (call this position 0) get
+   * stored to local stack0. All expressions stored to position 1 in
+   * the evaluation stack are stored to the local stack1, and so
+   * on. This means that "stack" local variables are treated as
+   * untyped and are reused freely at any type.
+   * 
+   * 
+   * type (token) T
+   * label L
+   * method M
+   * variable v
+   * constant c
+   * field f
+   * local variable l
+   * introduced "stack" local variable s
+   * variable v ::= l | s
+   * 
+   * method ::= block* eblock
+   * block  ::= L: statement* jump HANDLERS hblock*
+   * hblock ::= catch statement*
+   * eblock ::= L: RETURN
+   * 
+   * catch ::=  
+   *    v := CATCH(T);
+   * 
+   * jump   ::=
+   *    IF (v) GOTO L
+   *    GOTO L
+   *
+   * statement ::= 
+   *   v := c;                  load constant
+   *   v := v;                  local-local copy
+   *   v := v[v];               load array element
+   *   v[v] := v;               store array element
+   *   v := v.f;                load field 
+   *   v.f := v;                store field
+   *   v := *((T*)v);           load indirect (for unsafe pointers and ref params) 
+   *   *((T*)v) := v;           store indirect
+   *   v := & v;                load address
+   *   v := T;                  load type token (e.g. typeof(X))
+   *   v := NEW T;              new object
+   *   v := NEW T[v];           new array 
+   *   v := v AS T;             type test
+   *   v := CAST(v,T);          typecast (over reference types -- see also conv)
+   *   v := v binop v;          binary operator
+   *   v := unop v;             unary operator
+   *   v := CALL v.M(v*);       nonvirtual call
+   *   v := VIRTCALL v.M(v*);   virtual call
+   *   v := CALL M(v*);         static call
+   *   THROW v;                 exception throw
+   * 
+   * binop ::=
+   *    add add_ovf add_ovf_un
+   *    sub sub_ovf sub_ovf_un
+   *    mul mul_ovf mul_ovf_un
+   *    div div_un
+   *    rem rem_un
+   *    shr shr_un shl
+   *    and or xor
+   *    ceq eq ne lt gt le ge
+   *    log_and log_or
+   * 
+   * unop ::= 
+   *    not 
+   *    neg 
+   *    ldlen 
+   *    conv<bits,signed>       where bits in {1,2,4,8}, signed in {T,F}
+   *    conv_ovf<bits,signed>
+   * 
+   * 
+  */
+  #endregion
+
+  #region Explanation of the type lattice
+  /*
+   * This pass computes some typing information to make the
+   * translation pass easier. The main issue is that the "stack"
+   * locals of our input language are untyped; whereas all locals in
+   * the output language BPL are typed (albeit in a simple type
+   * language). Hence, we have to compute what type these stack locals
+   * have at every program point, so that the translation pass can
+   * introduce new local variables at different types as necessary.
+   * 
+   * There are a few other complications as well. First, unlike C#,
+   * CIL uses integers for conditionals, with the inherited C
+   * semantics of zero is false, non-zero is true. In BPL, we'd prefer
+   * to treat conditionals as booleans, so we need to recover which
+   * integers are really booleans.
+   *
+   * Second, integer literals are just bit patterns in the IL.  Ostensibly,
+   * these look like signed integers of some bit width.  However, if
+   * such a literal flows to an unsigned destination, the bit pattern
+   * is supposed to be treated as an unsigned integer.
+   * 
+   * Third, we need to track type tokens as integers with special
+   * meaning, because BPL programs needs to reason about types (as
+   * names) in Pack and Unpack statements. Hence, when we translate a
+   * call to the Pack method into a Pack statement, we need to know
+   * the static value of the argument so we can output what type the
+   * object is being packed to.
+   * 
+   * Fourth, there is the issue of (managed) pointers. These are used
+   * as the values of ref parameters and arguments. They are also
+   * used to access and copy structs. For the purposes of
+   * the CIL-to-Boogie translation, there are two kinds of pointers,
+   * based on their origin: 1) a pointer that is a ref argument of
+   * the method being translated, and 2) a pointer that is the result
+   * of an instruction in the body of the method being translated
+   * that takes the address of a variable (a local, a field, or an
+   * array element). Since pointers are used to implement ref
+   * parameters in CIL and since BPL uses copy-in/copy-out to mimic
+   * call-by-reference, we need to track the origins of pointers, so
+   * that a store indirect to a ref argument can be translated to an
+   * update to an appropriate out parameter.
+   * 
+   * To do all this, we do a one-pass abstract interpretation over the
+   * control-flow graph. Because stack variables are reused at
+   * different types and it is this pass's job to split up the different
+   * uses, we uniquely number every occurrence of a stack local. That
+   * is, we treat each stack variable as a variable at a program point
+   * (called a SituatedVariable).  Of course, the original program
+   * refers only to stack locals, not our situated variables, so we
+   * need to track which situated variable is live at a given program
+   * point, that is, which situated variable was most recently
+   * assigned to a stack local.
+   * 
+   * Our dataflow state consists of two maps
+   * 
+   *    live : Variable -> SituatedVariable
+   *    value : SituatedVariable -> EquivalenceClass<LatticeValue>
+   * 
+   * where the lattice values are drawn from this lattice
+   * 
+   * Top
+   *    > Int
+   *        > Enum<T>
+   *            > Nat
+   *                > Bool
+   *                    > Zero
+   *                    > One
+   *                > BitPattern (other than 0 or 1)
+   *    > Real
+   *    > Struct
+   *    > Ref
+   *        > Array<LatticeValue>
+   *        > TypeObject<T>
+   *    > TypeToken<T>
+   *    > AddrOf<X>
+   *    > Arg<P>
+   *
+   * plus a least element Bottom. Array keeps track of the lattice
+   * element of the elements. Type<T> is a singleton type over type
+   * tokens T.  AddrOf<X> is a singleton type indicating the address
+   * of X where X can be a variable, a field, or a method.  Arg<P> is
+   * a singleton type indicating the value of parameter P of the
+   * method being translated. Note: Arg<P> is used only for ref
+   * parameters.
+   * 
+   * We group lattice values into equivalence classes, so that at a
+   * join point, we can union the two equivalence classes of a live
+   * variable from the two joined dataflow states.  This merging of
+   * equivalence classes has the effect of weakening previously known
+   * information without having to go back an reevaluate a
+   * block. Hence, this an O(n) algorithm, i.e.  a single pass over
+   * the CFG.
+   * 
+   */
+  #endregion
+  
+  #region Explanation of the algorithm
+  /*
+   * Here's what the algorithm does per statement at program point P,
+   * for local L, stack local S, field F, method or operator M, and
+   * constant C. Notice that in many cases, only stack variables are
+   * interesting.
+   * 
+   *  S := C           value[S@P] := c2v(C)
+   *                   live[S] := S@P
+   *
+   *  S1 := S2         value[S1@P] := value[live[S2]]
+   *                   live[S1] := S1@P
+   *
+   *  L := S           value[live[S]] := t2v(typeof(L),L)
+   *
+   *  S := L           value[S@P] := t2v(typeof(L),L)
+   *                   live[S] := S@P
+   *
+   * L1 := L2          value[L1@P] := value[live[L2]]  NB: Same as S1 := S2
+   *                   live[L1] := L1@P
+   *
+   *  S1 := S2[S3]     value[S1@P] := elementtype(value[live[S2]])
+   *                   value[live[S3]] := Int
+   *
+   *  S1[S2] := S3     value[live[S1]] := Array<value[live[S3]]>
+   *                   value[live[S2]] := Int
+   *
+   *  S1.F := S2       value[live[S2]] := t2v(typeof(F))
+   *                   value[live[S1]] := Ref
+   *
+   *  S1 := S2.F       value[S1@P] := t2v(typeof(F))
+   *                   value[live[S2]] := Ref
+   *                   live[S1] := S1@P
+   *
+   *  S1 := *((T*)S2)  value[S1@P] := t2v(typeofref(pointee(live[S2])))
+   *                   live[S1] := S1@P
+   *
+   *  *((T*)S1) := S2  value[live[S2]] := t2v(typeofref(pointee(live[S1])))
+   *
+   *  S1 := & S2       value[S1@P] = Ptr<S2>
+   *                   live[S1] := S1@P
+   *
+   *  S := T           live[S@P] := Type<T>
+   *                   live[S] := S@P
+   *
+   *  S := NEW T       value[S@P] := Ref
+   *                   live[S] := S@P
+   *
+   *  S1 := NEW T[S2]  value[S1@P] := Array<t2v(T)>
+   *                   value[live[S2]] := Int
+   *                   live[S1] := S1@P
+   *
+   *  S1 := S2 AS T    value[S1@P] := Ref
+   *                   value[live[S2]] := Ref
+   *                   live[S1] := S1@P
+   *
+   *  S1 := CAST(S2,T) value[S1@P] := Ref
+   *                   value[live[S2]] := Ref
+   *                   live[S1] := S1@P
+   *
+   *  S1 := S2 add S3  value[S1@P] := Int
+   *                   value[live[S2]] := Int
+   *                   value[live[S3]] := Int
+   *                   live[S1] := S1@P        ... and so on for other binops
+   *
+   *  S1 := neg S2     value[S1@P] := Int
+   *                   value[live[S2]] := Int
+   *                   live[S1] := S1@P        ... and so on for other unops
+   *
+   *  S1 := S2.M(SS)   value[S1@P] := t2v(returntype(M)) 
+   *                   value[live[S2]] := Ref
+   *                   foreach S_i in SS: 
+   *                      value[live[S]] := t2v(typeof(arg_i)), if value[live[S_i]] != Type<T>
+   *                   live[S1] := S1@P
+   * 
+   *  S1 := System.Type.GetTypeFromHandle(S2)
+   *                   value[S1@P] := value[live[S2]]
+   *                   live[S1] := S1@P
+   *                       This is a special case. A program calls this method
+   *                       to get a runtime type representation for a particular
+   *                       statically known type token. For static analysis, we treat
+   *                       this handle as though it were still the token, so we
+   *                       can retain our knowledge of the static type wherever
+   *                       the handle is used. (To be more accurate, we could 
+   *                       create a new lattice value Handle<T> < Ref. Maybe we need
+   *                       this for code that uses reflection?)
+   *
+   *  THROW S          value[live[S]] := Ref
+   *  
+   *  IF (S) GOTO L    value[live[S]] := Bool
+   *
+   * 
+   * where t2v maps CIL types to lattice values, e.g.
+   *    t2v(System.Bool,V) = Bool
+   *    t2v(System.Int32,V) = Int
+   *    etc.
+   *    t2v(T@,V) = Ptr<X>
+   * and
+   *    t2v(T) = t2v(T,none)
+   *
+   * (t2v also takes a variable as an argument to support Ptr (ref parameters))
+   *
+   * and c2v maps literals to lattice values:
+   *    c2v(0) = Zero
+   *    c2v(1) = One
+   *    c2v(n) = Int, for any other integral literal n
+   *    c2v(c) = Ref, otherwise
+   *
+   * and elementtype(Array<value>) = value
+   *
+   * and pointee(Ptr<X>) = V
+   *
+   * and typeof looks up a declared type in the CIL program
+   *   typeof(L) = declared CIL type of local/formal L
+   *   typeof(F) = declared CIL type of field F
+   * 
+   * and typeofref(V) = T where typeof(V) = T*
+   * 
+   * 
+   */
+  #endregion
+
+  internal enum Role { Def, Use }
+
+
+    internal class SituatedVariable 
+    {
+        public Cci.Variable! Variable;
+        public Cci.Statement! ProgramPoint;
+        public Role Role;
+
+
+        private SituatedVariable (Cci.Variable! variable, Cci.Statement! statement, Role role)
+        {
+            this.Variable = variable;
+            this.ProgramPoint = statement;
+            this.Role = role;
+            base();
+        }
+
+        public static SituatedVariable For (Cci.Variable! variable, Cci.Statement! statement, Role role)
+        {
+            return new SituatedVariable(variable, statement, role);
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public override bool Equals (object obj)
+        {
+            SituatedVariable that = obj as SituatedVariable;
+            if (that == null) return false;
+            return 
+                this.Variable.Equals(that.Variable) &&
+                this.ProgramPoint.UniqueKey == that.ProgramPoint.UniqueKey &&
+                this.Role == that.Role;
+        }
+
+        [Pure]
+        public override int GetHashCode()
+        {
+            return ((!)this.ToString()).GetHashCode();
+        }
+
+        [Pure]
+        public override string! ToString()
+        {
+            string variableName = this.Variable.Name == null ? "<no name>" : this.Variable.Name.Name;
+            return String.Format("({2} {0}@{1})", variableName, this.ProgramPoint.UniqueKey, this.Role);
+        }
+
+    }
+
+
+
+  /*
+    A FlowedValue is an equivalence class representative
+  */
+  internal class FlowedValue 
+  {
+    public abstract class Pointee
+    {
+      public abstract Cci.TypeNode! Type { get; }
+      public abstract bool IsStruct { get; }
+    }
+    
+    public class VariablePointee : Pointee
+    {
+      public Cci.Variable! Variable;
+      public VariablePointee (Cci.Variable! v)
+        requires v != null;
+      {
+        this.Variable = v;
+        base();
+      }
+      public override Cci.TypeNode! Type { get { return this.Variable.Type; } }
+      [Pure] public override string! ToString() { return String.Format("Var({0})", this.Variable.Name == null ? "?" : this.Variable.Name.Name); }
+      public override bool IsStruct { get { return Sink.IsStruct(this.Variable.Type); } }
+    }
+    
+    public class BoxedPointee : Pointee
+    {
+      public Cci.TypeNode! BoxedType;
+      public BoxedPointee (Cci.TypeNode! t) {
+        this.BoxedType = t;
+        base();
+      }
+      public override Cci.TypeNode! Type { get { return this.BoxedType; } }
+      [Pure] public override string! ToString() { return String.Format("Boxed({0})", this.BoxedType.FullName); }
+      public override bool IsStruct { get { return Sink.IsStruct(this.BoxedType); } }
+    }
+     
+    public class FieldPointee : Pointee
+    {
+      public Cci.Variable Variable;
+      public Cci.Field! Field;
+      public Bpl.TypedIdent SavedObject; 
+      public FieldPointee (Cci.Variable v, Cci.Field! f) {
+        this.Variable = v;
+        this.Field = f;
+        base();
+      }
+      public override Cci.TypeNode! Type { get { return this.Field.Type; } }
+      [Pure] public override string! ToString() { return String.Format("Field({0}.{1})", this.Variable == null ? "" : this.Variable.Name.Name, this.Field.FullName); }
+      public override bool IsStruct { get { return Sink.IsStruct(this.Field.Type); } }
+    }
+     
+    public class MethodPointee : Pointee
+    {
+      public Cci.Variable Variable;
+      public Cci.Method! Method;
+      public MethodPointee (Cci.Variable v, Cci.Method! m) { this.Variable = v; this.Method = m; }
+      public override Cci.TypeNode! Type { get { return this.Method.ReturnType; } } // FIXME!!
+      [Pure] public override string! ToString() { return String.Format("Method({0}.{1})", this.Variable == null ? "null" : this.Variable.Name.Name, this.Method.FullName); }
+      public override bool IsStruct { get { return false; } }
+    }
+    
+    public class ElementPointee : Pointee
+    {
+        public Cci.Variable! Array;
+        public Cci.Variable[]! Indexes;
+        public Cci.TypeNode! ElementType;
+        public Bpl.TypedIdent SavedArray;
+        public Bpl.TypedIdent[] SavedIndices; 
+        
+        invariant SavedIndices == null || Indexes.Length == SavedIndices.Length;
+        
+        public ElementPointee (Cci.Variable! a, Cci.Variable! i, Cci.TypeNode! eltType) 
+        {
+            this.Array = a; 
+            Cci.Variable[] indexes = new Cci.Variable[1];
+            indexes[0] = i;
+            this.Indexes = indexes;
+            this.ElementType = eltType; 
+            base();
+        }
+        public ElementPointee (Cci.Variable! a, Cci.Variable[]! indices, Cci.TypeNode! eltType) 
+        {
+            this.Array = a; 
+            this.Indexes = indices;
+            this.ElementType = eltType; 
+            base();
+        }
+        public override Cci.TypeNode! Type 
+        {
+            get 
+            {
+                Cci.TypeNode arrayType = TypeDataflowState.StripModifiers(Array.Type);
+                return arrayType is Cci.ArrayType ? ((Cci.ArrayType)arrayType).ElementType : (!)Cci.SystemTypes.Object; 
+            } 
+        }
+        [Pure]
+        public override string! ToString() 
+        {
+            System.Text.StringBuilder buffer = new System.Text.StringBuilder("Element(");
+            buffer.Append(this.Array.Name.Name);
+            buffer.Append("[");
+            for (int i=0; i<this.Indexes.Length; i++)
+            {
+                if (i > 0) { buffer.Append(","); }
+                buffer.Append(Sink.NameOf( ((Cci.Variable!)this.Indexes[i]).Name));
+            }
+            buffer.Append("])");
+            return buffer.ToString(); 
+        }
+        public override bool IsStruct { get { return Sink.IsStruct(this.ElementType); } }
+    }
+ 
+ 
+    internal class MissingTypeAssignmentInformation : Exception
+    {
+        private Cci.Variable! variable;
+        private Cci.Statement! programPoint;
+        private Role role;
+        private Cci.IMap/*<SituatedVariable, FlowedValue>*/! values;
+        
+        public MissingTypeAssignmentInformation (Cci.Variable! variable, Cci.Statement! programPoint, Role role, Cci.IMap/*<SituatedVariable, FlowedValue>*/! values)
+        {
+            this.variable = variable;
+            this.programPoint = programPoint;
+            this.role = role;
+            this.values = values;
+        }
+        
+        public override string Message 
+        {
+            get
+            {
+                System.Text.StringBuilder buffer = new System.Text.StringBuilder();
+                buffer.AppendFormat("Missing information on how '{0}' is {1} at program point {2}.", this.variable.Name.Name, 
+                    this.role == Role.Def ? "defined" : "used", programPoint);
+                bool first = true;
+                foreach (SituatedVariable! sv in (!)this.values.Keys)
+                {
+                  if (sv.ProgramPoint.UniqueKey == this.programPoint.UniqueKey)
+                  {
+                    if (first) { buffer.AppendFormat("known information: "); }
+                    first = false;
+                    buffer.AppendFormat("{0} {1} ", sv.Variable.Name.Name, sv.Role == Role.Def ? "defined" : "used");
+                  }
+                }
+                return buffer.ToString();
+            }
+        }
+    }
+ 
+ 
+    [Immutable]
+    public class Type
+    {
+      // Note: The Join routine counts on the order of these enum values, so do not reorder without fixing up Join.
+      public enum Tag { Bottom, Zero, One, Bool, BitPattern, Nat, Enum, Int, Real, Array, Ref, Struct, TyTok, TyObj, AddrOf, Arg, Top };
+      
+      // a "Type" is basically a tagged union
+      private Tag tag;
+      private Type elementType;
+      invariant tag == Tag.Array ==> elementType != null;
+      private Cci.TypeNode typeToken;
+      invariant tag == Tag.Enum || tag == Tag.TyTok || tag == Tag.TyObj ==> typeToken != null;
+      private Pointee pointee;
+      invariant tag == Tag.AddrOf ==> pointee != null;
+      private Cci.Parameter parameter;
+      invariant tag == Tag.Arg ==> parameter != null;
+
+      private Type (Tag tag)
+        requires tag != Tag.Enum && tag != Tag.TyTok && tag != Tag.TyObj;
+        requires tag != Tag.Array;
+        requires tag != Tag.AddrOf;
+        requires tag != Tag.Arg;
+      { this.tag = tag; }
+      
+      private Type (Type! eltType)
+      { this.tag = Tag.Array; this.elementType = eltType; }
+      
+      private Type (Tag tag, Cci.TypeNode! tytoken)
+        requires tag == Tag.Enum || tag == Tag.TyTok || tag == Tag.TyObj;
+      { this.tag = tag; this.typeToken = tytoken; }
+      
+      private Type (Pointee! v)
+      { this.tag = Tag.AddrOf; this.pointee = v; }
+      
+      private Type (Cci.Parameter! parameter)
+      { this.tag = Tag.Arg; this.parameter = parameter; }
+
+      // maker methods (note, these property getters are not pure methods!)
+      public static Type! Bottom     { [Pure(false)] get { return new Type(Tag.Bottom); } }
+      public static Type! Zero       { [Pure(false)] get { return new Type(Tag.Zero); } }
+      public static Type! One        { [Pure(false)] get { return new Type(Tag.One); } }
+      public static Type! Bool       { [Pure(false)] get { return new Type(Tag.Bool); } }
+      public static Type! BitPattern { [Pure(false)] get { return new Type(Tag.BitPattern); } }
+      public static Type! Nat        { [Pure(false)] get { return new Type(Tag.Nat); } }
+      public static Type! Enum (Cci.TypeNode! t) { return new Type(Tag.Enum, t); }
+      public static Type! Int        { [Pure(false)] get { return new Type(Tag.Int); } }
+      public static Type! Real       { [Pure(false)] get { return new Type(Tag.Real); } }
+      public static Type! Ref        { [Pure(false)] get { return new Type(Tag.Ref); } }
+      public static Type! Struct     { [Pure(false)] get { return new Type(Tag.Struct); } }
+      public static Type! Top        { [Pure(false)] get { return new Type(Tag.Top); } }
+      public static Type! Array (Type! eltType) { return new Type(eltType); }
+      public static Type! TypeToken (Cci.TypeNode! t) { return new Type(Tag.TyTok, t); }
+      public static Type! TypeObject (Cci.TypeNode! t) { return new Type(Tag.TyObj, t); }
+      public static Type! AddrOf (Pointee! poi) { return new Type(poi); }
+      public static Type! Arg (Cci.Parameter! parm) { return new Type(parm); }
+
+      // predicate methods that examine the tag
+      public bool IsArray { get { return this.tag == Tag.Array; } }
+      public bool IsEnum { get { return this.tag == Tag.Enum; } }
+      public bool IsAddrOf { get { return this.tag == Tag.AddrOf; } }
+      public bool IsArg { get { return this.tag == Tag.Arg; } }
+      public bool IsSingleton { get { return this.IsAddrOf || this.IsArg; } }
+      public bool IsStruct { get { return this.tag == Tag.Struct; } }
+      public bool IsTypeToken { get { return this.tag == Tag.TyTok || this.tag == Tag.TyObj; } }
+      
+      // properties to retrieve the tag and extra arguments
+      public Tag TypeTag { get { return this.tag; } }
+      public Type! ElementType {
+        [Pure(false)]  // We're currently unable to discharge the consistency check for purity axiom, so we'll just disable the purity of this property getter
+        get requires IsArray; {
+          Type t = (!)this.elementType;
+          assume t.IsPeerConsistent;
+          return t;
+      } }
+      public Cci.TypeNode! EnumType {
+        [Pure(false)]  // We're currently unable to discharge the consistency check for purity axiom, so we'll just disable the purity of this property getter
+        get requires IsEnum; {
+          Cci.TypeNode t = (!)this.typeToken;
+          assume t.IsPeerConsistent;
+          return t;
+      } }
+      public Cci.TypeNode! TToken {
+        [Pure(false)]  // We're currently unable to discharge the consistency check for purity axiom, so we'll just disable the purity of this property getter
+        get requires IsTypeToken; {
+          Cci.TypeNode t = (!)this.typeToken;
+          assume t.IsPeerConsistent;
+          return t;
+      } }
+      public Pointee! Pointee {
+        [Pure(false)]  // We're currently unable to discharge the consistency check for purity axiom, so we'll just disable the purity of this property getter
+        get requires IsAddrOf; {
+          Pointee poi = (!)this.pointee;
+          assume poi.IsPeerConsistent;
+          return poi;
+      } }
+      public Cci.Parameter! Parameter {
+        [Pure(false)]  // We're currently unable to discharge the consistency check for purity axiom, so we'll just disable the purity of this property getter
+        get requires IsArg; {
+          Cci.Parameter parm = (!)this.parameter;
+          assume parm.IsPeerConsistent;
+          return parm;
+      } }
+
+      public Cci.TypeNode! PointeeType
+      {
+        [Pure(false)]  // We're currently unable to discharge the consistency check for purity axiom, so we'll just disable the purity of this property getter
+        get
+          requires IsSingleton;
+        {
+          assume IsAddrOf || IsArg;  // TODO: This is supposed to follow from IsSingleton
+          Cci.TypeNode tn;
+          switch (this.tag)
+          {
+            case FlowedValue.Type.Tag.AddrOf:
+              assert pointee != null;
+              assume pointee.IsPeerConsistent;
+              tn = pointee.Type;
+              assume tn.IsPeerConsistent;
+              return tn;
+                
+            case FlowedValue.Type.Tag.Arg:
+              assert parameter != null;
+              assume parameter.IsPeerConsistent;
+              Cci.TypeNode t = parameter.Type;
+              assume t is Cci.Reference;
+              tn = ((Cci.Reference) t).ElementType;
+              assume tn.IsPeerConsistent;
+              return tn;
+                
+            default:
+              assert false;
+          }
+        }
+      }
+      
+      [Pure]
+      public override string! ToString() 
+      {
+        String result = this.tag.ToString();
+        switch (this.tag)
+        {
+          case Tag.Enum:
+          case Tag.TyTok:
+          case Tag.TyObj:
+            assert typeToken != null;
+            assume typeToken.IsPeerConsistent;
+            result += "<" + typeToken.ToString() + ">";
+            break;
+          case Tag.Array:
+            result += "<" + ((!)this.elementType).ToString() + ">";
+            break;
+          case Tag.AddrOf:
+            assert pointee != null;
+            assume pointee.IsPeerConsistent;
+            result += "<" + pointee.ToString() + ">";
+            break;
+          case Tag.Arg:
+            assert parameter != null;
+            assume parameter.IsPeerConsistent;
+            result += "<" + parameter.ToString() + ">";
+            break;
+        }
+        return result;
+      }
+
+      public static Type! Join (Type! a, Type! b)
+      {
+        if (a.tag == b.tag) {
+          switch (a.tag) {
+            case Tag.Enum:
+            case Tag.TyTok:
+            case Tag.TyObj:
+              assert a.typeToken != null && b.typeToken != null;
+              assume a.typeToken.IsPeerConsistent && b.typeToken.IsPeerConsistent;
+              if (a.typeToken == b.typeToken) {
+                return b;
+              } else {
+                return Int;
+              }
+            case Tag.Array:
+              assert a.elementType != null && b.elementType != null;
+              Type e = Join(a.elementType, b.elementType);
+              return Array(e);
+            case Tag.AddrOf:
+              if (a.pointee == b.pointee) {
+                return b;
+              } else {
+                return Top;
+              }
+            case Tag.Arg:
+              if (a.parameter == b.parameter) {
+                return b;
+              } else {
+                return Top;
+              }
+            default:
+              return b;
+          }
+        }
+
+        // To cut down on the cases to consider, sort a and b.
+        if (a.tag > b.tag) { Type temp = a; a = b; b = temp; }
+        assert a.tag < b.tag;
+
+        if (a.tag == Tag.Bottom || b.tag == Tag.Top) { return b; }
+
+        switch (100*(int) a.tag + (int) b.tag) // a hack to switch on pairs
+        {
+          case 100*(int) Tag.Zero       + (int) Tag.One:   return Bool;
+          case 100*(int) Tag.Zero       + (int) Tag.Bool:  return Bool;
+          case 100*(int) Tag.Zero       + (int) Tag.Nat:   return Nat;
+          case 100*(int) Tag.Zero       + (int) Tag.Enum:  return b;  // 0 is part of any Enum
+          case 100*(int) Tag.Zero       + (int) Tag.BitPattern:  return Int;  // no reason to think it's a Nat or Enum
+          case 100*(int) Tag.Zero       + (int) Tag.Int:   return Int;
+          case 100*(int) Tag.One        + (int) Tag.Bool:  return Bool;
+          case 100*(int) Tag.One        + (int) Tag.BitPattern:  return Int;  // no reason to think it's a Nat
+          case 100*(int) Tag.One        + (int) Tag.Nat:   return Nat;
+          case 100*(int) Tag.One        + (int) Tag.Enum:  return Int;  // TODO:  an improvement would be to see if 1 is included in the Enum type
+          case 100*(int) Tag.One        + (int) Tag.Int:   return Int;
+          case 100*(int) Tag.Bool       + (int) Tag.BitPattern:  return Int;  // no reason to think it's a Nat
+          case 100*(int) Tag.Bool       + (int) Tag.Nat:   return Nat;
+          case 100*(int) Tag.Bool       + (int) Tag.Enum:  return Int;  // TODO:  an improvement would be to see if 1 is included in the Enum type
+          case 100*(int) Tag.Bool       + (int) Tag.Int:   return Int;
+          case 100*(int) Tag.BitPattern + (int) Tag.Nat:   return Nat;
+          case 100*(int) Tag.BitPattern + (int) Tag.Enum:  return Int;  // TODO:  or, would it be better to return b?
+          case 100*(int) Tag.BitPattern + (int) Tag.Int:   return Int;
+          case 100*(int) Tag.Nat        + (int) Tag.Enum:  return Int;  // TODO:  or, would it be better to return b?
+          case 100*(int) Tag.Nat        + (int) Tag.Int:   return Int;
+          case 100*(int) Tag.Enum       + (int) Tag.Int:   return Int;
+          case 100*(int) Tag.Int        + (int) Tag.Real:  return Real;
+          case 100*(int) Tag.Array      + (int) Tag.Ref:   return Ref;
+          case 100*(int) Tag.TyObj      + (int) Tag.Ref:   return Ref;
+          case 100*(int) Tag.Int        + (int) Tag.AddrOf:   return b; // depends on AddrOf being "bigger" than Int
+          default: return Top;
+        }
+      }
+
+    } // class Type
+
+
+    // Fields that define the equivalence class
+    private /*maybenull*/ ArrayList/*<FlowedValue>*/ others; // others in this EC
+    private /*maybenull*/ FlowedValue rep;
+    private Type! type;
+
+
+    public FlowedValue (Type! type)
+    {
+      this.type = type;
+      this.rep = null;
+      this.others = new ArrayList();
+      base();
+    }
+
+
+
+    public Type! FlowedValueType { get { return this.Representative.type; } }
+
+
+    [Pure]
+    public override string! ToString()
+    {
+      return String.Format("{0} [{1:x}, ec rep {2:x}]", this.Representative.type, this.GetHashCode(), 
+        this.rep == null ? 0 : this.rep.GetHashCode());
+    }
+
+
+
+
+
+
+    public void Update (Type! e) 
+    {
+      this.Representative.type = Type.Join(this.Representative.type, e); 
+    }
+
+
+    public void Union (FlowedValue! that)
+    {
+      if (this.rep != null)
+      {
+        // If I'm not the representative, union with
+        // the representative instead.
+        this.Representative.Union(that);
+        return;
+      }
+
+      that = that.Representative;
+
+      if (this == that) { return; } // these two ECRs have already been merged
+
+      if (that.others != null)
+      {
+        if (this.others == null) { this.others = new ArrayList(); }
+      
+        foreach (FlowedValue! kid in (!)that.others)
+        {
+          this.type = Type.Join(this.type, kid.type);
+          this.others.Add(kid);
+          assert kid != this;
+          kid.rep = this;
+        }
+        that.others = null;
+      }
+
+      this.type = Type.Join(this.type, that.type);
+
+      that.rep = this;
+      assume this.others != null;
+      this.others.Add(that);
+    }
+
+
+    public FlowedValue! Representative 
+    {
+      get
+      {
+        assert this.rep != this; //, "type assignement created cyclic equivalence class");
+        assert this.rep == null || this.rep.rep == null; //, "type assignment equivalence classes broken");
+        return (this.rep == null) ? this : this.rep;
+      }
+    }
+
+  }
+
+
+
+
+  internal class TypeDataflowState : Cci.IDataFlowState
+  {
+    public static System.IO.TextWriter LogWriter = null;
+    
+    private static Cci.IMap/*<SituatedVariable, FlowedValue>*/! values;  // we can share these
+    private Cci.IMap/*<Cci.Variable, SituatedVariable>*/! liveVars;
+
+    private TypeDataflowState () 
+    {
+        this.liveVars = new Cci.HashedMap();
+        base();
+    }
+
+
+
+
+    private TypeDataflowState (TypeDataflowState! that)
+    {
+        this.liveVars = (Cci.IMap!) that.liveVars.Copy(); // do not share!
+        base();
+    }
+
+
+    public TypeDataflowState Clone ()
+    {
+        return new TypeDataflowState(this);
+    }
+
+
+    public void Dump ()
+    {
+        Console.WriteLine("LIVE:");
+        foreach (Cci.Variable! v in (!)liveVars.Keys)
+        {
+            Console.WriteLine("  {0} defined at {1}", v.Name.Name, ((SituatedVariable!)this.liveVars[v]).ProgramPoint);
+        }
+        Console.WriteLine("VALUES:");
+        foreach (SituatedVariable! vAtP in (!)values.Keys)
+        {
+            Console.WriteLine("  {0}@{1} = {2}", 
+            vAtP.Variable.Name.Name, 
+            vAtP.ProgramPoint, 
+            ((FlowedValue!)values[vAtP]).Representative);
+        }
+    }
+
+
+
+    /// <summary>
+    /// Resets the dataflow analysis and returns an empty state.
+    /// </summary>
+    public static TypeDataflowState CreateInitialState()
+    {
+        values = new Cci.HashedMap();
+        return new TypeDataflowState();
+    }
+
+
+
+    // Main query that this class needs to answer.
+    //
+    public FlowedValue.Type! GetType (Cci.Variable! variable, Cci.Statement! programPoint, Role role)
+    {
+        SituatedVariable varAtProgramPoint = SituatedVariable.For(variable, programPoint, role);
+        FlowedValue value = (FlowedValue) values[varAtProgramPoint];
+        if (value == null)
+        {
+            Exception e = new FlowedValue.MissingTypeAssignmentInformation(variable, programPoint, role, values);
+            throw e;
+        }
+        return value.FlowedValueType;
+    }
+    
+    
+    public static Cci.TypeNode! StripModifiers (Cci.TypeNode! type)
+    {
+        Cci.OptionalModifier optType = type as Cci.OptionalModifier;
+        return (optType == null) ? type : StripModifiers(optType.ModifiedType); 
+    }
+
+
+    public static FlowedValue.Type! LatticeTypeFromCilType (Cci.TypeNode! type)
+        requires !(type is Cci.Reference);
+    {
+        type = StripModifiers(type);
+    
+        if (type == Cci.SystemTypes.Boolean) { return FlowedValue.Type.Bool; }
+        if (type == Cci.SystemTypes.Char)    { return FlowedValue.Type.Nat; }
+        if (type == Cci.SystemTypes.Int8)    { return FlowedValue.Type.Int; }
+        if (type == Cci.SystemTypes.Int16)   { return FlowedValue.Type.Int; }
+        if (type == Cci.SystemTypes.Int32)   { return FlowedValue.Type.Int; }
+        if (type == Cci.SystemTypes.Int64)   { return FlowedValue.Type.Int; }
+        if (type == Cci.SystemTypes.IntPtr)  { return FlowedValue.Type.Int; }
+        if (type == Cci.SystemTypes.UInt8)   { return FlowedValue.Type.Nat; }
+        if (type == Cci.SystemTypes.UInt16)  { return FlowedValue.Type.Nat; }
+        if (type == Cci.SystemTypes.UInt32)  { return FlowedValue.Type.Nat; }
+        if (type == Cci.SystemTypes.UInt64)  { return FlowedValue.Type.Nat; }
+        if (type == Cci.SystemTypes.UIntPtr) { return FlowedValue.Type.Nat; }
+        if (type == Cci.SystemTypes.Single)  { return FlowedValue.Type.Real; }
+        if (type == Cci.SystemTypes.Double)  { return FlowedValue.Type.Real; }
+        if (type == Cci.SystemTypes.Array)   { return FlowedValue.Type.Array(FlowedValue.Type.Ref); }
+
+        if (type is Cci.ArrayType)
+        {
+            Cci.ArrayType arrayType = (Cci.ArrayType) type;
+            return FlowedValue.Type.Array(LatticeTypeFromCilType(arrayType.ElementType));
+        }
+
+        if (type is Cci.Struct)
+        {
+            return FlowedValue.Type.Struct;
+        }
+        
+        if (Sink.IsEnumValueType(type)) {
+          return FlowedValue.Type.Enum(type);
+        } else if (Sink.IsEnumType(type)) {
+          return FlowedValue.Type.Int;
+        }
+
+        return FlowedValue.Type.Ref;
+    }
+
+
+
+    public void RecordDefinition (Cci.Variable! dest, Cci.Statement! statement, FlowedValue! value)
+    {
+        SituatedVariable varAtPoint = SituatedVariable.For(dest, statement, Role.Def);
+        values[varAtPoint] = value.Representative;
+        this.liveVars[dest] = varAtPoint;
+        
+        if (LogWriter != null) { LogWriter.WriteLine("DEF {1} {2}  in  {0} ", Cci.CodePrinter.StatementToString(statement), dest.Name.Name, value); LogWriter.Flush(); }
+    }
+
+
+    public void RecordDefinition (Cci.Variable! dest, Cci.Statement! statement, Cci.Variable! source)
+    {
+        SituatedVariable varAtPoint = SituatedVariable.For(dest, statement, Role.Def);
+        FlowedValue value = ((FlowedValue!)values[this.liveVars[source]]).Representative;
+        values[varAtPoint] = value;
+        this.liveVars[dest] = varAtPoint;
+          
+        if (LogWriter != null) { LogWriter.WriteLine("DEF {1} {2}  in  {0}", Cci.CodePrinter.StatementToString(statement), dest.Name.Name, value); LogWriter.Flush(); }
+    }
+
+
+    public void RecordUse (Cci.Variable! var, Cci.Statement! statement, FlowedValue newValue)
+        requires VariableIsLive(var);
+    {
+        SituatedVariable varAtPoint = (SituatedVariable) this.liveVars[var];
+        Debug.Assert(varAtPoint != null); //, String.Format("variable {0} not live at {1}", var.Name.Name, statement));
+        FlowedValue absValue = ((FlowedValue!) values[varAtPoint]).Representative;
+
+        if (newValue != null)
+        {
+            if (LogWriter != null) 
+            { 
+                LogWriter.WriteLine("USE-MERGE {1} {2}+{3}  in  {0}", Cci.CodePrinter.StatementToString(statement), 
+                    var.Name.Name, newValue, absValue); 
+                LogWriter.Flush();
+            }
+            absValue.Update(newValue.FlowedValueType);
+        }
+
+        // Since there will also be queries about uses, not just defs,
+        // we need to record the value at the use site as well.
+        varAtPoint = SituatedVariable.For(var, statement, Role.Use);
+        values[varAtPoint] = absValue;
+        
+        if (LogWriter != null) 
+        { 
+            LogWriter.WriteLine("USE {1} {2}  in  {0}", Cci.CodePrinter.StatementToString(statement), 
+                var.Name.Name, newValue == null ? "(" + absValue.ToString() + ")" : absValue.ToString()); 
+            LogWriter.Flush();                        
+        }
+    }
+
+
+    public void RecordUse (Cci.Variable! var, Cci.Statement! statement)
+        requires VariableIsLive(var);
+    {
+        RecordUse(var, statement, null);
+    }
+
+    [Pure] public bool VariableIsLive (Cci.Variable! var)
+    {
+        return var is Cci.StackVariable ? this.liveVars.Contains(var) : true;
+    }
+
+    public FlowedValue.Type! this [ Cci.Variable! var ]
+    {
+        get
+        {
+            if (var is Cci.ParameterBinding)
+            {
+                return this[(!)((Cci.ParameterBinding)var).BoundParameter];
+            }
+            else 
+            {
+                return ((FlowedValue!) values[this.liveVars[var]]).FlowedValueType;
+            }
+        }
+    }
+
+
+    public TypeDataflowState! Merge (TypeDataflowState! that, Cci.Statement! statement, int depth)
+    {
+        if (depth == 0) { return this; }
+
+        TypeDataflowState result = new TypeDataflowState();
+
+        foreach (Cci.Variable! variable in (!)this.liveVars.Keys)
+        {
+            if (variable is Cci.StackVariable)
+            {
+                string! varName = (!) variable.Name.Name;
+                int varDepth = Int32.Parse(varName.Substring(5));
+                if (varDepth >= depth) { continue; }
+            }
+
+            if (that.liveVars.Contains(variable))
+            {
+                // For all variables that are live in both dataflow states,
+                // 
+                SituatedVariable varAtPoint1 = (SituatedVariable) this.liveVars[variable];
+                SituatedVariable varAtPoint2 = (SituatedVariable) that.liveVars[variable];
+                SituatedVariable varAtJoin = SituatedVariable.For(variable, statement, Role.Def); 
+                result.liveVars.Add(variable, varAtJoin);
+
+                FlowedValue! thisValue = (FlowedValue!) values[varAtPoint1];
+                FlowedValue! thatValue = (FlowedValue!) values[varAtPoint2];
+                thisValue.Union(thatValue);
+                values.Add(varAtJoin, thisValue);
+                
+                if (LogWriter != null) 
+                { 
+                    LogWriter.WriteLine("MERGE {0} {1} (other {2})", variable.Name.Name, thisValue, thatValue);
+                    LogWriter.Flush();
+                }
+            }
+        }
+
+        return result;
+    }
+
+  } // TypeDataflowState
+
+
+
+
+  internal class TypeAssignment : Cci.ForwardDataFlowAnalysis
+  {
+    private TypeDataflowState dataflowState;
+    private Cci.ControlFlowGraph flowGraph;
+    private Cci.Method! method;
+
+
+    public TypeAssignment (Cci.Method! method, Cci.ControlFlowGraph cfg) 
+    {
+        this.method = method;
+        this.flowGraph = cfg;
+    }
+
+
+    public FlowedValue.Type! GetType (Cci.Variable! variable, Cci.Statement! statement, Role role)
+    {
+        assume this.dataflowState != null;
+        return this.dataflowState.GetType(variable, statement, role); 
+    }
+
+
+    public void Run ()
+    {
+        this.dataflowState = TypeDataflowState.CreateInitialState();
+        base.Run(this.flowGraph, this.dataflowState);
+    }
+
+
+    protected override Cci.IDataFlowState VisitBlock (
+        Cci.CfgBlock cfgBlock, 
+        Cci.IDataFlowState dataflowState
+        )
+        // do not modify dataflowState
+    {
+        if (cfgBlock == null) { return null; }
+    
+        Cci.Block! block = (!) this.ConvertBlock(cfgBlock);
+
+        TypeAssignmentInstructionVisitor instructionVisitor = new TypeAssignmentInstructionVisitor(this.method);
+
+        // The dataflow engine demands that we treat dataflowState functionally, so clone it.
+        TypeDataflowState state = ((TypeDataflowState!) dataflowState).Clone();
+
+        if ( ! Sink.IsInstrumentationCode(cfgBlock))
+        {
+            for (int i = 0, n = block.Statements.Count; i < n; i++)
+            {
+                Cci.Statement s = block.Statements[i];
+                instructionVisitor.Visit(s, state);
+            }
+        }
+
+        // The following ensures that we analyze blocks in exception handlers as well as normal blocks.
+        if (cfgBlock.ExceptionHandler != null)
+        {
+            this.PushExceptionState(cfgBlock, state);
+        }
+
+        return state;
+    }
+
+
+    protected override Cci.IDataFlowState Merge (
+      Cci.CfgBlock previous, 
+      Cci.CfgBlock joinPoint, 
+      Cci.IDataFlowState atMerge, 
+      Cci.IDataFlowState incoming, 
+      out bool resultDiffers, 
+      out bool mergeIsPrecise
+      )
+    {
+        assert incoming != null;
+    
+        mergeIsPrecise = false; // turn off an optimization in the data flow engine
+
+        if (atMerge == null) 
+        {
+            resultDiffers = true;
+            return incoming;
+        }
+
+        resultDiffers = false; // we never need to go back
+        TypeDataflowState state1 = (TypeDataflowState) atMerge;
+        TypeDataflowState state2 = (TypeDataflowState) incoming;
+          
+        int depth = ((!) joinPoint).StackDepth;
+        if (IsCatchBlock(joinPoint)) { depth = 0; } // stack0 is a fresh exception, not a flowed value
+        return state1.Merge(state2, JoinStatement(), depth);
+    }
+    
+    
+    bool IsCatchBlock (Cci.CfgBlock! block)
+    {
+        return block.Statements != null &&
+            block.Statements.Count > 0 &&
+            block.Statements[0] is Cci.Catch;
+    }
+    
+    
+    /*
+    Generate a fresh statement to stand for the program point where a join occurs.
+    Our data structures manage triples <Variable,Statement,Def|Use>, which should
+    uniquely pinpoint a storage cell where data flows to or from. Our dataflow analysis
+    has the model that data coming from two blocks that jump to a join block are first
+    merged, then the merged data are used for analyzing the join block. For our
+    data structures, we need statements to represent the program point where the 
+    merge occurs, hence we make up new ones. We can't just use the first statement
+    of the join block, since that program point can introduce its own facts about flow.
+    */
+    private static Cci.Statement! JoinStatement () 
+    {
+      return new Cci.Assumption(); // Any CCI statement should do.
+    }
+
+
+    protected override void SplitExceptions (
+      Cci.CfgBlock handler, 
+      ref Cci.IDataFlowState currentHandlerState, 
+      out Cci.IDataFlowState nextHandlerState
+      )
+    {
+      nextHandlerState = null;
+    }
+
+
+  } // class TypeAssignment
+
+
+
+
+
+
+
+  public class TypeAssignmentInstructionVisitor : Cci.InstructionVisitor
+  {
+    private static FlowedValue! Top { get { return new FlowedValue(FlowedValue.Type.Top); } }
+    private static FlowedValue! Bool { get { return new FlowedValue(FlowedValue.Type.Bool); } }
+    private static FlowedValue! Zero { get { return new FlowedValue(FlowedValue.Type.Zero); } }
+    private static FlowedValue! One { get { return new FlowedValue(FlowedValue.Type.One); } }
+    private static FlowedValue! BitPattern { get { return new FlowedValue(FlowedValue.Type.BitPattern); } }
+    private static FlowedValue! Nat { get { return new FlowedValue(FlowedValue.Type.Nat); } }
+    private static FlowedValue! Enum (Cci.TypeNode! t) { return new FlowedValue(FlowedValue.Type.Enum(t)); }
+    private static FlowedValue! Int { get { return new FlowedValue(FlowedValue.Type.Int); } }
+    private static FlowedValue! Real { get { return new FlowedValue(FlowedValue.Type.Real); } }
+    private static FlowedValue! Ref { get { return new FlowedValue(FlowedValue.Type.Ref); } }
+    private static FlowedValue! Array (FlowedValue.Type! elementType) { return new FlowedValue(FlowedValue.Type.Array(elementType)); }
+    private static FlowedValue! TypeToken (Cci.TypeNode! t) { return new FlowedValue(FlowedValue.Type.TypeToken(t)); }
+    private static FlowedValue! TypeObject (Cci.TypeNode! t) { return new FlowedValue(FlowedValue.Type.TypeObject(t)); }
+
+    [StrictReadonly] readonly Cci.Method! currentMethod;
+     
+    public TypeAssignmentInstructionVisitor(Cci.Method! currentMethod) {
+      this.currentMethod = currentMethod;
+      base();
+    }
+
+
+    protected override object DefaultVisit (Cci.Statement statement, object arg)
+    {
+        if (statement == null) { return null; }
+    
+        // assignment statements are problematic if we don't handle them:
+        // Check that we handle all assignments.
+
+        if (statement.NodeType == Cci.NodeType.AssignmentStatement) 
+        {
+            Cci.AssignmentStatement ast = (Cci.AssignmentStatement)statement;
+
+            Debugger.Break();
+            Console.WriteLine("  (type assignment default visit) TODO: should handle visit of stmt {0}", 
+                Cci.CodePrinter.StatementToString(statement));
+
+            // avoid crash
+            TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+            dataflowState.RecordDefinition((Cci.Variable!)ast.Target, statement, Top);
+
+        }
+        return arg;
+    }
+
+
+    private static FlowedValue.Type! LatticeTypeFromCilType (Cci.TypeNode! type)
+    {
+      return TypeDataflowState.LatticeTypeFromCilType(type);
+    }
+
+
+    /*
+     * NOTE NOTE!!! ACHTUNG!
+     * 
+     * In all the individual Visit methods, any 
+     * RecordUse call must precede any RecordDefinition call.
+     */
+     
+     protected override object VisitMethodEntry (
+        Cci.Method method, 
+        IEnumerable/*<Parameter>*/ parameters, 
+        Cci.Statement stat, 
+        object arg)
+     {
+        if (method == null || stat == null) { return null; }
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        foreach (Cci.Parameter! param in (!)parameters)
+        {
+            FlowedValue.Type! type;
+            if (param.Type is Cci.Reference)
+                type = FlowedValue.Type.Arg(param);
+            else
+                type = LatticeTypeFromCilType(param.Type);
+            // Wrap the variable in a binding, so that equality with other bindings of the same variable works correctly. This is necessary to use the variable as a hashtable key. In Everett, it happened to work without this hack because the Hashtable indexer getter called equals on the argument, not on the key in the table; the Whidbey Hashtable indexer getter calls equals on the key in the table.
+            Cci.Variable p;
+            if (param is Cci.This)
+                p = new Cci.ThisBinding((Cci.This) param, param.SourceContext);
+            else
+                p = new Cci.ParameterBinding(param, param.SourceContext);
+            dataflowState.RecordDefinition(p, stat, new FlowedValue(type));
+        }
+        foreach (Cci.Variable! local in GetLocals(method))
+        {
+            if (!(local.Type is Cci.Reference))
+                dataflowState.RecordDefinition(local, stat, new FlowedValue(LatticeTypeFromCilType(local.Type)));
+        }
+        return arg;
+     } 
+     
+     
+     static ICollection/*<Cci.Variable>*/! GetLocals (Cci.Method method)
+     {
+        LocalGatherer g = new LocalGatherer();
+        g.Visit(method);
+        return g.Locals;
+     }
+
+
+    protected override object VisitCatch ( // var := catch(type);
+      Cci.Variable var, 
+      Cci.TypeNode type, 
+      Cci.Statement stat, 
+      object arg
+      )
+    {
+        if (var == null || stat == null) { return null; }
+    
+      TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+      dataflowState.RecordDefinition(var, stat, Ref);
+      return arg;
+    }
+
+
+
+    protected override object VisitBranch ( // if (cond) ...
+        Cci.Variable cond, 
+        Cci.Block target, 
+        Cci.Statement stat, 
+        object arg
+        )
+    {
+        if (stat == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        if (cond != null)
+        {
+            dataflowState.RecordUse(cond, stat);
+        }
+        return arg;
+    }
+
+
+
+    protected override object VisitLoadNull (
+        Cci.Variable dest, 
+        Cci.Literal source, 
+        Cci.Statement statement, 
+        object arg
+        ) 
+    {
+        if (statement == null || dest == null || source == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        Cci.ArrayType arrT = dest.Type as Cci.ArrayType;
+        if (arrT != null)
+          dataflowState.RecordDefinition(dest, statement, Array(LatticeTypeFromCilType(arrT.ElementType)));
+        else
+          dataflowState.RecordDefinition(dest, statement, Ref);
+        
+        return arg;
+    }
+    
+    enum IntegralProxy { Zero, One, Other }
+    /// <summary>
+    /// Returns true iff "val" is considered some kind of integer value.  If the
+    /// return value is true, then "intVal" will return as a proxy for the integral
+    /// value.
+    /// </summary>
+    bool IsIntegral (object val, out IntegralProxy intVal)
+    {
+      int x;
+      if (val is byte) {
+        x = (byte)val;
+      } else if (val is sbyte) {
+        x = (sbyte)val;
+      } else if (val is char) {
+        x = (char)val;
+      } else if (val is short) {
+        x = (short)val;
+      } else if (val is ushort) {
+        x = (ushort)val;
+      } else if (val is int) {
+        x = (int)val;
+      } else if (val is uint) {
+        x = (int) (uint)val;
+      } else if (val is long) {
+        long l = (long)val;
+        if (0 <= l && l <= int.MaxValue) {
+          x = (int)l;
+        } else {
+          x = -1;
+        }
+      } else if (val is ulong) {
+        ulong ul = (ulong)val;
+        if (ul <= int.MaxValue) {
+          x = (int)ul;
+        } else {
+          x = -1;
+        }
+      } else {
+        intVal = IntegralProxy.Other;
+        return false;
+      }
+      switch (x) {
+        case 0:  intVal = IntegralProxy.Zero; break;
+        case 1:  intVal = IntegralProxy.One; break;
+        default:  intVal = IntegralProxy.Other; break;
+      }
+      return true;
+    }
+
+
+    protected override object VisitLoadConstant ( // dest := literal;
+        Cci.Variable dest, 
+        Cci.Literal literal, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || literal == null || dest == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        
+        FlowedValue aiValue = Ref;
+
+        if (dest is Cci.StackVariable)
+        {            
+            object constant = literal.Value;
+            if (constant is bool)
+            {
+                aiValue = Bool;
+            }
+            else if (constant is float || constant is double)
+            {
+                aiValue = Real;
+            }
+            else
+            {
+                IntegralProxy intValue;
+                if (IsIntegral(constant, out intValue))
+                {
+                    switch (intValue)
+                    {
+                        case IntegralProxy.Zero:  aiValue = Zero; break;
+                        case IntegralProxy.One:   aiValue = One; break;
+                        case IntegralProxy.Other: aiValue = BitPattern; break;
+                        default:  assert false;  // unexpected IntegralProxy
+                    }
+                }
+            }
+        }
+        else
+        {
+            aiValue = new FlowedValue(LatticeTypeFromCilType(dest.Type));
+        }
+        
+        dataflowState.RecordDefinition(dest, statement, aiValue);
+        return arg;
+    }
+
+
+    protected override object VisitLoadElement ( // dest := source[index];
+        Cci.Variable dest, 
+        Cci.Variable source, 
+        Cci.Variable index, 
+        Cci.TypeNode elementType,
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || source == null || dest == null || index == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        FlowedValue.Type! arrayType = (!) dataflowState[source];
+        assume arrayType.IsArray;
+        dataflowState.RecordUse(source, statement);
+        dataflowState.RecordUse(index, statement, Int);
+        dataflowState.RecordDefinition(dest, statement, new FlowedValue(arrayType.ElementType)); 
+        return arg;
+    }
+
+
+    protected override object VisitStoreElement ( // dest[index] := source;
+        Cci.Variable dest, 
+        Cci.Variable index, 
+        Cci.Variable source, 
+        Cci.TypeNode elementType,
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || source == null || dest == null || index == null || arg == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState) arg;
+        FlowedValue.Type destType = dataflowState[dest];
+        assume destType.IsArray;
+
+        Cci.StackVariable sv = source as Cci.StackVariable;
+        if (sv != null){ 
+          dataflowState.RecordUse(source, statement, new FlowedValue( (!) destType.ElementType));
+        }else{ // assume it is a "real" local, no need to update its type information
+          dataflowState.RecordUse(source, statement);
+        }
+        dataflowState.RecordUse(index, statement, Int);
+        dataflowState.RecordUse(dest, statement);
+        return arg;
+    }
+
+
+    protected override object VisitLoadField ( // dest := source.field;
+        Cci.Variable dest, 
+        Cci.Variable source, 
+        Cci.Field field, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || field == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        if (source != null)
+        {
+            dataflowState.RecordUse(source, statement);
+        }
+        FlowedValue.Type! fieldType = LatticeTypeFromCilType(field.Type);
+        dataflowState.RecordDefinition(dest, statement, new FlowedValue(fieldType));
+        return arg;
+    }
+
+
+    protected override object VisitStoreField ( // dest.field := source;
+        Cci.Variable dest, 
+        Cci.Field field, 
+        Cci.Variable source, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || source == null || field == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        FlowedValue.Type fieldType = LatticeTypeFromCilType(field.Type);
+        if (source != null && source.Type != null &&
+             source.Type != field.Type &&
+             source.Type.IsAssignableTo(field.Type)){
+             // then typeof(source) <: typeof(field) so no need to change it
+             // need to make an exception for when the types are identical
+             // because otherwise the default assigning of literals as booleans
+             // means that an integer field having a constant of zero or one
+             // stored into it gets (incorrectly) a bool stored into it.
+          dataflowState.RecordUse(source, statement);
+        }else{
+          // either we're narrowing or setting it because the source's
+          // type is an integer and the field's type is
+          // an enum or something else that gets represented in the IL
+          // as an integer.
+          dataflowState.RecordUse(source, statement, new FlowedValue(fieldType));
+        }
+        if (dest != null)
+        {
+            dataflowState.RecordUse(dest, statement);
+        }
+        return arg;
+    }
+
+
+    protected override object VisitInitObj (Cci.Variable dest, Cci.TypeNode valueType, Cci.Statement statement, object arg) // *dest := initobj T;
+    {
+        if (statement == null || dest == null || valueType == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        dataflowState.RecordUse(dest, statement, null);
+        return arg;
+    }
+
+
+    protected override object VisitStoreIndirect ( // (*(type*)pointer) := source;
+        Cci.Variable pointer, 
+        Cci.Variable source, 
+        Cci.TypeNode type, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || source == null || pointer == null || type == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        FlowedValue.Type! ptrType = dataflowState[pointer];
+        
+        // We learn something about 'source' based on where it's being stored.
+        dataflowState.RecordUse(source, statement, new FlowedValue(LatticeTypeFromCilType(ptrType.PointeeType)));
+        dataflowState.RecordUse(pointer, statement);
+        return arg;
+    }
+
+
+    protected override object VisitLoadIndirect ( // dest := *((type*)pointer);
+        Cci.Variable dest, 
+        Cci.Variable pointer, 
+        Cci.TypeNode type, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || pointer == null || type == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        FlowedValue.Type! ptrType = dataflowState[pointer];
+          
+        dataflowState.RecordUse(pointer, statement);
+        dataflowState.RecordDefinition(dest, statement, new FlowedValue(LatticeTypeFromCilType(ptrType.PointeeType)));
+        return arg;
+    }
+
+
+    protected override object VisitLoadToken ( // dest := token
+        Cci.Variable dest, 
+        object token, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || token == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        assume token is Cci.TypeNode;
+        dataflowState.RecordDefinition(dest, statement, TypeToken((Cci.TypeNode)token));
+        return arg;
+    }
+
+
+    protected override object VisitNewArray ( // dest := new type[size];
+        Cci.Variable dest, 
+        Cci.TypeNode type, 
+        Cci.Variable size, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || size == null || type == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        dataflowState.RecordUse(size, statement, Int);
+        dataflowState.RecordDefinition(dest, statement, new FlowedValue(FlowedValue.Type.Array(LatticeTypeFromCilType(type))));
+        return arg;
+    }
+
+
+    protected override object VisitNewObject ( // dest := new type;
+        Cci.Variable dest, 
+        Cci.TypeNode type, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || type == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        dataflowState.RecordDefinition(dest, statement, new FlowedValue(LatticeTypeFromCilType(type)));
+        return arg;
+    }
+
+
+    protected override object VisitIsInstance ( // dest := source AS type;
+      Cci.Variable dest, 
+      Cci.Variable source, 
+      Cci.TypeNode type, 
+      Cci.Statement statement, 
+      object arg
+      )
+    {
+      if (statement == null || source == null || dest == null || type == null) { return null; }
+    
+      TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+      dataflowState.RecordUse(source, statement);
+      dataflowState.RecordDefinition(dest, statement, Ref);
+      return arg;
+    }
+
+
+
+    protected override object VisitBinaryOperator ( // dest := operand1 op operand2;
+        Cci.NodeType op, 
+        Cci.Variable dest, 
+        Cci.Variable operand1, 
+        Cci.Variable operand2, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || operand1 == null || operand2 == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+
+        FlowedValue destValue = Ref;
+        FlowedValue operandValue = null;
+        
+        FlowedValue.Type! op1Type = dataflowState[operand1], op2Type = dataflowState[operand2];
+        FlowedValue.Type! join = FlowedValue.Type.Join(op1Type, op2Type);
+        bool isRealOp = join.TypeTag == FlowedValue.Type.Tag.Real;
+        bool isBoolOp = join.TypeTag == FlowedValue.Type.Tag.Bool;
+
+        switch (op)
+        {
+            // int/float arithmetic operators
+            case Cci.NodeType.Add: case Cci.NodeType.Add_Ovf: case Cci.NodeType.Add_Ovf_Un:
+            case Cci.NodeType.Sub: case Cci.NodeType.Sub_Ovf: case Cci.NodeType.Sub_Ovf_Un:
+            case Cci.NodeType.Mul: case Cci.NodeType.Mul_Ovf: case Cci.NodeType.Mul_Ovf_Un:
+            case Cci.NodeType.Div: case Cci.NodeType.Div_Un:
+            case Cci.NodeType.Rem: case Cci.NodeType.Rem_Un:
+            {
+                operandValue = isRealOp ? Real : Int;
+                destValue = isRealOp ? Real : Int;
+                break;
+            }
+            
+            // bitwise operators
+            case Cci.NodeType.Shr: case Cci.NodeType.Shr_Un:
+            case Cci.NodeType.Shl:
+            case Cci.NodeType.Xor:
+            {
+                operandValue = Int;
+                destValue = Int;
+                break;
+            }
+    
+            case Cci.NodeType.And:
+            case Cci.NodeType.Or:
+            {
+                operandValue = isBoolOp ? Bool : Int;
+                destValue = isBoolOp ? Bool : Int;
+                break;
+            }
+            
+            case Cci.NodeType.Ceq:
+            case Cci.NodeType.Eq:
+            case Cci.NodeType.Ne:
+            {
+                destValue = Bool;
+                if (!(join.TypeTag == FlowedValue.Type.Tag.Ref)) {
+                    operandValue = new FlowedValue(join);
+                }
+                break;
+            }
+
+            // int/float comparisons
+            case Cci.NodeType.Lt:
+            case Cci.NodeType.Le:
+            case Cci.NodeType.Gt:
+            case Cci.NodeType.Ge:
+            case Cci.NodeType.Clt:
+            case Cci.NodeType.Cgt:
+            case Cci.NodeType.Cgt_Un:
+            {
+                operandValue = isRealOp ? Real : Int;
+                destValue = Bool;
+                break;
+            }
+
+            case Cci.NodeType.LogicalAnd:
+            case Cci.NodeType.LogicalOr:
+            {
+                //operandValue = Bool;
+                destValue = Bool;
+                break;
+            }
+        }
+
+        dataflowState.RecordUse(operand1, statement, operandValue);
+        dataflowState.RecordUse(operand2, statement, operandValue);
+        dataflowState.RecordDefinition(dest, statement, destValue);
+        return arg;
+    }
+
+
+    protected override object VisitUnaryOperator ( // dest := op operand;
+        Cci.NodeType op, 
+        Cci.Variable dest, 
+        Cci.Variable operand, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || operand == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+
+        FlowedValue destValue = Top;
+        FlowedValue operandValue = null;
+        FlowedValue.Type opType = dataflowState[operand];
+        bool isRealOp = opType.TypeTag == FlowedValue.Type.Tag.Real;
+
+        switch (op)
+        {
+            // conversion operators
+            case Cci.NodeType.Conv_I:
+            case Cci.NodeType.Conv_I1:
+            case Cci.NodeType.Conv_I2:
+            case Cci.NodeType.Conv_I4:
+            case Cci.NodeType.Conv_I8:
+            case Cci.NodeType.Conv_U:
+            case Cci.NodeType.Conv_U1:
+            case Cci.NodeType.Conv_U2:
+            case Cci.NodeType.Conv_U4:
+            case Cci.NodeType.Conv_U8:
+            case Cci.NodeType.Conv_Ovf_I:
+            case Cci.NodeType.Conv_Ovf_I1:
+            case Cci.NodeType.Conv_Ovf_I2:
+            case Cci.NodeType.Conv_Ovf_I4:
+            case Cci.NodeType.Conv_Ovf_I8:
+            case Cci.NodeType.Conv_Ovf_U:
+            case Cci.NodeType.Conv_Ovf_U1:
+            case Cci.NodeType.Conv_Ovf_U2:
+            case Cci.NodeType.Conv_Ovf_U4:
+            case Cci.NodeType.Conv_Ovf_U8:
+            {
+                operandValue = isRealOp? Real : Int;
+                destValue = Int;
+                break;
+            }
+            
+            case Cci.NodeType.Conv_R_Un:
+            case Cci.NodeType.Conv_R4:
+            case Cci.NodeType.Conv_R8:
+            {
+                operandValue = Int;
+                destValue = Real;
+                break;
+            }
+
+            case Cci.NodeType.Neg:  // 2's complement negation
+            {
+                // We're doing integer arithmetic on this operand,
+                // so it's not a boolean.
+                if (isRealOp)
+                {
+                    operandValue = Real;
+                    destValue = Real;
+                }
+                else
+                {
+                    operandValue = Int;
+                    destValue = Int;
+                }
+                break;
+            }
+
+            case Cci.NodeType.Not:  // 1's complement (that is, bitwise complement)
+            {
+                operandValue = Int;
+                destValue = Int;
+                break;
+            }
+            
+            case Cci.NodeType.LogicalNot:
+            {
+                // This is the branch-false instruction, which we're treating as having a boolean result
+                destValue = Bool;
+                break;
+            }
+
+            case Cci.NodeType.Ldlen:
+            {
+                destValue = Int;
+                break;
+            }
+        }
+
+        dataflowState.RecordUse(operand, statement, operandValue);
+        dataflowState.RecordDefinition(dest, statement, destValue);
+        return arg;
+    }
+
+
+    private void HandleCall (
+        Cci.Variable dest, 
+        Cci.Variable receiver, 
+        Cci.Variable[]! arguments, 
+        Cci.Method callee,
+        string! calleeName, 
+        Cci.TypeNodeList! parameterTypes,
+        Cci.TypeNode! calleeReturnType,
+        TypeDataflowState! dataflowState,
+        Cci.Statement! statement
+        )
+    {
+        for (int i=0; i<arguments.Length; i++)
+        {
+            Cci.Variable! actual = (!) arguments[i];
+            Cci.TypeNode! parameterType = (!) parameterTypes[i];
+            
+            FlowedValue argValue;
+            if (parameterTypes[i] is Cci.Reference) {
+              argValue = null; // We already have complete information.
+            }
+            else
+            {
+              FlowedValue.Type formalType = LatticeTypeFromCilType(parameterType);
+              
+              // Typically, we just note here that an actual is being used.
+              // However, in the case that a Zero, One, Bool, BitPattern, Nat, or Enum is being 
+              // passed as an Int, we weaken the value to Int.
+              // Similarly, in the case of a Zero, One, Bool, BitPattern, or Nat being
+              // passed as an Enum<T>, we weaken the value to Enum<T>.
+              // And, in the case of a Zero, One, Bool, or BitPattern being
+              // passed as a Nat, we weaken the value to Nat.
+              if (formalType.TypeTag == FlowedValue.Type.Tag.Int) {
+                argValue = Int;
+              } else if (formalType.TypeTag == FlowedValue.Type.Tag.Enum) {
+                argValue = Enum(formalType.EnumType);
+              } else if (formalType.TypeTag == FlowedValue.Type.Tag.Nat) {
+                argValue = Nat;
+              } else {
+                argValue = null;
+              }
+            }
+            dataflowState.RecordUse(actual, statement, argValue);
+        }
+
+        if (receiver != null)
+        {
+            dataflowState.RecordUse(receiver, statement);
+        }
+
+        if (dest != null)
+        {
+            FlowedValue.Type returnType;
+
+            if (calleeName == "System.Type.GetTypeFromHandle(System.RuntimeTypeHandle)")
+            {
+                FlowedValue.Type argType = dataflowState[(!)arguments[0]];
+                assume argType.IsTypeToken;
+                returnType = FlowedValue.Type.TypeObject(argType.TToken);
+            }
+            else if (calleeName.EndsWith(".get_SpecSharp::FrameGuard"))
+            {
+                assume callee != null && callee.DeclaringType != null;
+                returnType = FlowedValue.Type.TypeObject(callee.DeclaringType);
+            }
+            else if (calleeName == "Microsoft.Contracts.Guard.StartWritingTransitively")
+            {
+                assume receiver != null;
+                FlowedValue.Type recType = dataflowState[receiver];
+                assume recType.IsTypeToken;
+                returnType = recType;
+            }
+            else if (calleeName == "Microsoft.Contracts.Guard.StartWritingAtTransitively(optional(Microsoft.Contracts.NonNullType) System.Type)")
+            {
+                assume receiver != null;
+                FlowedValue.Type recType = dataflowState[receiver];
+                assume recType.IsTypeToken;
+                returnType = recType;
+            }
+            else if (calleeReturnType is Cci.Reference)
+            {
+                // We can't represent such a reference.
+                returnType = FlowedValue.Type.Top;
+            }
+            else
+            {
+                returnType = LatticeTypeFromCilType(calleeReturnType);
+            }
+
+            dataflowState.RecordDefinition(dest, statement, new FlowedValue(returnType)); 
+        }
+    }
+    
+    
+    
+    private bool HandleSpecialCaseMethod ( 
+        Cci.Variable dest, 
+        Cci.Variable receiver, 
+        Cci.Method! callee, 
+        Cci.ExpressionList! arguments, 
+        Cci.Statement! statement, 
+        TypeDataflowState! dataflowState
+        )
+    {
+        Cci.ArrayType arrayType = callee.DeclaringType as Cci.ArrayType;
+        if (arrayType != null && callee == arrayType.Address)
+        {
+            assert receiver != null && dest != null;
+        
+            dataflowState.RecordUse(receiver, statement);
+            
+            Cci.Variable[] indices = new Cci.Variable[arguments.Count];
+            for (int i=0; i<arguments.Count; i++) 
+            {
+                indices[i] = (Cci.Variable)arguments[i]; 
+                dataflowState.RecordUse( (!) indices[i], statement, Int);
+            }
+            
+            Cci.ArrayType at = (Cci.ArrayType) TypeDataflowState.StripModifiers(receiver.Type);
+            dataflowState.RecordDefinition(dest, statement, 
+                new FlowedValue(FlowedValue.Type.AddrOf(new FlowedValue.ElementPointee(receiver, indices, at.ElementType))));
+                
+            return true;
+        }
+        return false;
+    }
+    
+    
+    
+    protected override object VisitCall ( // dest := receiver.callee(arguments);
+        Cci.Variable dest, 
+        Cci.Variable receiver, 
+        Cci.Method callee, 
+        Cci.ExpressionList arguments, 
+        bool virtcall, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || callee == null) { return null; }
+        if (arguments == null) { arguments = new Cci.ExpressionList(); }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        
+        #region Set IsDeferringConstructor
+        // I'm sure there's a better way to do this than checking the current
+        // method on every call instruction!
+        Cci.InstanceInitializer ctor = this.currentMethod as Cci.InstanceInitializer;
+        if (ctor != null && receiver != null){
+          if (dataflowState[receiver] == dataflowState[this.currentMethod.ThisParameter]
+              && callee is Cci.InstanceInitializer
+              && callee.DeclaringType == ctor.DeclaringType) {
+            ctor.IsDeferringConstructor = true;
+          }
+        }
+        #endregion
+        
+        if (HandleSpecialCaseMethod(dest, receiver, callee, arguments, statement, dataflowState)) { return arg; }
+        
+        Cci.TypeNodeList parameterTypes = new Cci.TypeNodeList();
+        assume !callee.IsVarArg ==> callee.Parameters == null || callee.Parameters.Count == arguments.Count;
+        int actualCount = callee.IsVarArg ? (callee.Parameters == null ? 0 : callee.Parameters.Count) : arguments.Count;
+        Cci.Variable[] actuals = new Cci.Variable[actualCount];
+        for (int i=0; i<actualCount; i++)
+        {
+            parameterTypes.Add( ((!) callee.Parameters[i]).Type);
+            actuals[i] = (Cci.Variable) arguments[i];
+        }
+        HandleCall(dest, receiver, actuals, callee, (!)callee.FullName, parameterTypes, callee.ReturnType, dataflowState, statement);
+        if (callee.IsVarArg && actualCount < arguments.Count)
+        {
+          // Need to account for the extra arguments that are going to be left out of the call. If no record is made of their
+          // use, an error is issued downstream.
+          for (int i = callee.Parameters.Count; i < arguments.Count; i++)
+          {
+            dataflowState.RecordUse((Cci.Variable) (!) arguments[i], statement, null);
+          }
+        }
+        return arg;
+    }
+
+    protected override object VisitConstrainedCall ( // dest := Constraint(T).receiver.callee(arguments)
+      Cci.Variable dest, 
+      Cci.Variable receiver, 
+      Cci.Method callee, 
+      Cci.ExpressionList/*<Variable>*/ arguments, 
+      Cci.TypeNode constraint,
+      Cci.Statement statement, 
+      object arg
+      ) 
+    {
+      if (statement == null || callee == null || constraint == null || receiver == null) { return null; }
+      if (arguments == null) { arguments = new Cci.ExpressionList(); }
+
+      TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+      
+      if (HandleSpecialCaseMethod(dest, receiver, callee, arguments, statement, dataflowState)) { return arg; }
+      
+      Cci.TypeNodeList parameterTypes = new Cci.TypeNodeList();
+      assume !callee.IsVarArg ==> callee.Parameters == null || callee.Parameters.Count == arguments.Count;
+      int actualCount = callee.IsVarArg ? (callee.Parameters == null ? 0 : callee.Parameters.Count) : arguments.Count;
+      Cci.Variable[] actuals = new Cci.Variable[actualCount];
+      for (int i=0; i<actualCount; i++)
+      {
+        parameterTypes.Add( ((!) callee.Parameters[i]).Type);
+        actuals[i] = (Cci.Variable) arguments[i];
+      }
+      dataflowState.RecordUse(receiver, statement);
+      // BUGBUG: Is there ever a time where we want to join in the type indicated by the
+      // constraint? That is what using this override would do.
+      HandleCall(dest, receiver, actuals, callee, (!)callee.FullName, parameterTypes, callee.ReturnType, dataflowState, statement);
+      if (callee.IsVarArg && actualCount < arguments.Count)
+      {
+        // Need to account for the extra arguments that are going to be left out of the call. If no record is made of their
+        // use, an error is issued downstream.
+        for (int i = callee.Parameters.Count; i < arguments.Count; i++)
+        {
+          dataflowState.RecordUse((Cci.Variable) (!) arguments[i], statement, null);
+        }
+      }
+      return arg;
+    }
+    
+    protected override object VisitCopy ( // dest := source;
+        Cci.Variable dest, 
+        Cci.Variable source, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || source == null) { return null; }
+    
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+
+        Cci.StackVariable sv_dest = dest as Cci.StackVariable;
+        Cci.StackVariable sv_source = source as Cci.StackVariable;
+        if (sv_dest != null && sv_source != null){
+          //  S1 := S2         value[S1@P] := value[live[S2]]
+          //                   live[S1] := S1@P
+          dataflowState.RecordUse(source, statement);
+          dataflowState.RecordDefinition(dest, statement, source);
+        }else if (sv_dest == null && sv_source != null){ // assume it is a "real" local
+          //  L := S           value[live[S]] := t2v(typeof(L),L)
+          dataflowState.RecordUse(source, statement, new FlowedValue(LatticeTypeFromCilType(dest.Type)));
+          dataflowState.RecordDefinition(dest, statement, new FlowedValue(LatticeTypeFromCilType(dest.Type)));
+        }else if (sv_dest == null && sv_source != null){
+          //  S := L           value[S@P] := t2v(typeof(L),L)
+          //                   live[S] := S@P
+          dataflowState.RecordUse(source, statement);
+          dataflowState.RecordDefinition(dest, statement, new FlowedValue(LatticeTypeFromCilType(source.Type)));
+        }else{
+          // L1 := L2          value[L1@P] := value[live[L2]]  NB: Same as S1 := S2
+          //                   live[L1] := L1@P
+          dataflowState.RecordUse(source, statement);
+          dataflowState.RecordDefinition(dest, statement, source);
+        }
+
+        return arg;
+    }
+
+
+
+    protected override object VisitThrow ( // throw var;
+      Cci.Variable var, 
+      Cci.Statement statement, 
+      object arg
+      )
+    {
+      if (statement == null || var == null) { return null; }
+        
+      TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+      dataflowState.RecordUse(var, statement);
+      return arg;
+    }
+
+
+    protected override object VisitCastClass ( // dest := (type) source;
+      Cci.Variable dest, 
+      Cci.TypeNode type, 
+      Cci.Variable source, 
+      Cci.Statement statement, 
+      object arg
+      )
+    {
+      if (statement == null || dest == null || source == null || type == null) { return null; }
+        
+      TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+      dataflowState.RecordUse(source, statement);
+      dataflowState.RecordDefinition(dest, statement, new FlowedValue(LatticeTypeFromCilType(type)));
+      return arg;
+    }
+
+
+
+    protected override object VisitLoadAddress ( // dest := & source;
+      Cci.Variable dest, 
+      Cci.Variable source, 
+      Cci.Statement statement, 
+      object arg
+      )
+    {
+        if (statement == null || dest == null || source == null) { return null; }
+        
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        // The address is going to be used for a store indirect (or something effectively the
+        // same such as an initobj instruction), so *that* will really define the source
+        // variable. But for now, consider this as its definition. The difference is important
+        // if the type of the local (or parameter) that is having its address assigned to dest
+        // ends up getting used as a different type than the type the local/parameter is declared
+        // to have. But that probably never happens when the IL is generated from either the C#
+        // or Spec# compiler.
+        dataflowState.RecordDefinition(source, statement, new FlowedValue(LatticeTypeFromCilType(source.Type)));
+        dataflowState.RecordDefinition(dest, statement, new FlowedValue(FlowedValue.Type.AddrOf(new FlowedValue.VariablePointee(source))));
+        return arg;
+    }
+
+
+
+    protected override object VisitBox ( // dest := BOX source  (source has type type)
+      Cci.Variable dest, 
+      Cci.Variable source, 
+      Cci.TypeNode type, 
+      Cci.Statement statement, 
+      object arg
+      )
+    {
+        if (statement == null || dest == null || source == null || type == null) { return null; }
+        
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        dataflowState.RecordUse(source, statement);
+        dataflowState.RecordDefinition(dest, statement, Ref);
+        return arg;
+    }
+    
+    
+
+    protected override object VisitUnbox ( // dest := UNBOX(type) source
+      Cci.Variable dest, 
+      Cci.Variable source, 
+      Cci.TypeNode type, 
+      Cci.Statement statement, 
+      object arg
+      )
+    {
+        if (statement == null || dest == null || source == null || type == null) { return null; }
+        
+        // Note: UNBOX has a somewhat surprising semantics. It takes an object
+        // reference to a boxed value off the stack and pushes a managed pointer
+        // to the same value onto the stack. In particular, it does not push the 
+        // value itself onto the stack (which can be of arbitrary size, due to structs).
+        // Hence we record a def on the 'dest' variable of type Ptr<v>. 
+        //
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        dataflowState.RecordUse(source, statement);
+        dataflowState.RecordDefinition(dest, statement, new FlowedValue(FlowedValue.Type.AddrOf(new FlowedValue.BoxedPointee(type))));
+        return arg;
+    }
+
+    protected override object VisitUnboxAny ( // dest := UNBOX.ANY(type) source
+      Cci.Variable dest, 
+      Cci.Variable source, 
+      Cci.TypeNode type, 
+      Cci.Statement statement, 
+      object arg
+      )
+    {
+        if (statement == null || dest == null || source == null || type == null) { return null; }
+        
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        dataflowState.RecordUse(source, statement);
+        dataflowState.RecordDefinition(dest, statement, new FlowedValue(LatticeTypeFromCilType(type)));
+        return arg;
+    }
+
+
+    protected override object VisitSizeOf ( // dest := sizeof(valueType);
+        Cci.Variable dest, 
+        Cci.TypeNode valueType, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || valueType == null) { return null; }
+        
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        dataflowState.RecordDefinition(dest, statement, new FlowedValue(FlowedValue.Type.Int));
+        return arg;
+    }
+
+
+
+    protected override object VisitReturn ( // return var;  (where var may be null)
+        Cci.Variable var, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null) { return null; }
+        
+        if (var != null)
+        {
+            TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+            dataflowState.RecordUse(var, statement, new FlowedValue(LatticeTypeFromCilType(currentMethod.ReturnType)));
+        }
+        return arg;
+    }
+
+
+    protected override object VisitSwitch ( // switch (selector) { ...targets... }
+        Cci.Variable selector, 
+        Cci.BlockList targets, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || selector == null || targets == null) { return null; }
+        
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        dataflowState.RecordUse(selector, statement);
+        return arg;
+    }
+
+
+
+    protected override object VisitLoadElementAddress ( // dest := & (array[index]);
+        Cci.Variable dest, 
+        Cci.Variable array, 
+        Cci.Variable index, 
+        Cci.TypeNode elementType,
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || array == null || index == null) { return null; }
+        
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+
+        dataflowState.RecordUse(array, statement);
+        dataflowState.RecordUse(index, statement, Int);
+        
+        Cci.TypeNode eltType = null;
+        Cci.TypeNode at = array.Type;
+        at = TypeDataflowState.StripModifiers(at);
+        Cci.ArrayType arrayType = at as Cci.ArrayType;
+        if (arrayType != null){
+          eltType = arrayType.ElementType;
+        }else{
+          // the stack variable for the array was generated from a pop
+          // expression and so didn't get a type in CFG. Try to compensate
+          // by seeing if we know the type from whatever was pushed on the
+          // stack.
+          FlowedValue.Type ft = dataflowState.GetType(array,statement, Role.Use);
+          if (ft.IsArray){
+            // then the type tracking remembered that it was actually an array
+            // that was pushed onto the stack. The problem now is that we
+            // just know the type tag and not the CCI type. So try to find
+            // it from the type of the dest, which should be a reference
+            // (pointer) to the type that sits in the array.
+            Cci.Reference destType = dest.Type as Cci.Reference;
+            if (destType != null){
+              eltType = destType.ElementType;
+            }
+          }
+        }
+        // I don't know of any fool-proof way to make sure we can recover the type
+        // of the elements in the array, but the above code is as good as I know how
+        // to make it. It needs to be non-null, but at least the assumption that we've
+        // found it is recorded here.
+        assume eltType != null;
+        
+        dataflowState.RecordDefinition(dest, statement, 
+            new FlowedValue(FlowedValue.Type.AddrOf(new FlowedValue.ElementPointee(array, index, eltType))));
+            
+        return arg;
+    }
+
+
+
+    protected override object VisitLoadFieldAddress ( // dest := & source.field;    where source is null for a static field
+        Cci.Variable dest, 
+        Cci.Variable source, 
+        Cci.Field field, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || field == null) { return null; }
+        
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        if (source != null)
+        {
+            dataflowState.RecordUse(source, statement);
+        }
+        dataflowState.RecordDefinition(dest, statement, 
+            new FlowedValue(FlowedValue.Type.AddrOf(new FlowedValue.FieldPointee(source, field))));
+        return arg;
+    }
+
+
+
+    protected override object VisitLoadFunction (
+        Cci.Variable dest, 
+        Cci.Variable source, 
+        Cci.Method method, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || method == null) { return null; }
+        
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        dataflowState.RecordDefinition(dest, statement, new FlowedValue(FlowedValue.Type.AddrOf(new FlowedValue.MethodPointee(source, method))));
+        return arg;
+    }
+
+
+
+    // A RefAny is a pair of a managed pointer and a type token, which makes
+    // an object self-describing. The only two operations on a RefAny are
+    // projections to get the managed pointer and type token respectively.
+
+    protected override object VisitMakeRefAny (  // dest := RefAny<source,type>
+        Cci.Variable dest, 
+        Cci.Variable source, 
+        Cci.TypeNode type, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || source == null || type == null) { return null; }
+        
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        dataflowState.RecordUse(source, statement);
+        dataflowState.RecordDefinition(dest, statement, Ref);
+        return arg;
+    }
+
+
+
+    protected override object VisitRefAnyType ( // dest := type(source)
+        Cci.Variable dest, 
+        Cci.Variable source, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || source == null) { return null; }
+        
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        dataflowState.RecordUse(source, statement);
+        dataflowState.RecordDefinition(dest, statement, Ref);
+        return arg;
+    }
+
+
+
+    protected override object VisitRefAnyValue ( // dest := value(source)
+        Cci.Variable dest, 
+        Cci.Variable source, 
+        Cci.TypeNode type, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || source == null || type == null) { return null; }
+        
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        dataflowState.RecordUse(source, statement);
+        dataflowState.RecordDefinition(dest, statement, Ref);
+        return arg;
+    }
+
+
+
+
+    protected override object VisitCallIndirect ( // dest := receiver.callee(arguments) where signature of callee given by fp
+        Cci.Variable dest, 
+        Cci.Variable callee, 
+        Cci.Variable receiver, 
+        Cci.Variable[] arguments, 
+        Cci.FunctionPointer fp, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || dest == null || callee == null || fp == null || arguments == null) { return null; }
+        
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        dataflowState.RecordUse(callee, statement);
+        HandleCall(dest, receiver, arguments, null, (!)fp.FullName, fp.ParameterTypes, fp.ReturnType, dataflowState, statement);
+        return arg;
+    }
+
+
+
+    protected override object VisitCopyBlock (
+        Cci.Variable destaddr, 
+        Cci.Variable srcaddr, 
+        Cci.Variable size, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || destaddr == null || srcaddr == null || size == null) { return null; }
+        
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        dataflowState.RecordUse(srcaddr, statement);
+        dataflowState.RecordUse(size, statement, Int);
+        dataflowState.RecordDefinition(destaddr, statement, Ref);
+        return arg;
+    }
+
+
+
+    protected override object VisitInitializeBlock (
+        Cci.Variable addr, 
+        Cci.Variable val, 
+        Cci.Variable size, 
+        Cci.Statement statement, 
+        object arg
+        )
+    {
+        if (statement == null || addr == null || val == null || size == null) { return null; }
+        
+        TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+        dataflowState.RecordUse(val, statement);
+        dataflowState.RecordUse(size, statement, Int);
+        dataflowState.RecordDefinition(addr, statement, Ref);
+        return arg;
+    }
+
+
+
+
+
+    protected override object VisitBreak (Cci.Statement stat, object arg)
+    {
+      return arg;
+    }
+
+    protected override object VisitArgumentList (Cci.Variable dest, Cci.Statement statement, object arg)
+    {
+      if (statement == null || dest == null) { return null; }
+        
+      TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+      dataflowState.RecordDefinition(dest, statement, Ref);
+      return arg;
+    }
+
+    protected override object VisitEndFilter (Cci.Variable code, Cci.Statement statement, object arg)
+    {
+      if (statement == null || code == null) { return null; }
+        
+      TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+      dataflowState.RecordUse(code, statement);
+      return arg;
+    }
+
+    protected override object VisitFilter (Cci.Variable dest, Cci.Statement statement, object arg)
+    {
+      if (statement == null || dest == null) { return null; }
+        
+      TypeDataflowState! dataflowState = (TypeDataflowState!) arg;
+      dataflowState.RecordDefinition(dest, statement, Ref);
+      return arg;
+    }
+
+
+    protected override object VisitNop (Cci.Statement stat, object arg)
+    {
+      return arg;
+    }
+
+    protected override object VisitRethrow (Cci.Statement stat, object arg)
+    {
+      return arg;
+    }
+
+    protected override object VisitUnwind (Cci.Statement stat, object arg)
+    {
+      return arg;
+    }
+
+
+  } // class TypeAssignmentInstructionVisitor
+
+
+
+
+
+
+  class LocalGatherer : Cci.StandardVisitor
+  {
+    ArrayList! locals = new ArrayList();
+    public LocalGatherer ()
+    {
+    }
+    public ICollection! Locals { get { return this.locals; } }
+    public override Cci.Expression VisitLocal (Cci.Local local)
+    {
+      if ( ! locals.Contains(local)) locals.Add(local);
+      return local;
+    }
+  }
+    
+    
+
+}

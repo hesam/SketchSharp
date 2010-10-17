@@ -1,0 +1,457 @@
+
+-------------------- Simple.dfy --------------------
+// Simple.dfy
+
+class MyClass<T, U> {
+  var x: int;
+
+  method M(s: bool, lotsaObjects: set<object>)
+      returns (t: object, u: set<int>, v: seq<MyClass<bool,U>>)
+    requires s;
+    modifies this, lotsaObjects;
+    ensures t == t;
+    ensures old(null) != this;
+  {
+    x := 12;
+    while (x < 100)
+      invariant x <= 100;
+    {
+      x := x + 17;
+      if (x % 20 == 3) {
+        x := this.x + 1;
+      } else {
+        this.x := x + 0;
+      }
+      call t, u, v := M(true, lotsaObjects);
+      var to: MyClass<T,U>;
+      call to, u, v := M(true, lotsaObjects);
+      call to, u, v := to.M(true, lotsaObjects);
+      assert v[x] != null ==> null !in v[2 .. x][1..][5 := v[this.x]][..10];
+    }
+  }
+
+  function F(x: int, y: int, h: WildData, k: WildData): WildData
+  {
+    if x < 0 then
+      h
+    else if x == 0 then
+      if if h == k then true else false then
+        h
+      else if y == 0 then
+        k
+      else
+        h
+    else
+      k
+  }
+}
+
+datatype List<T> {
+  Nil;
+  Cons(T, List<T>);
+}
+
+datatype WildData {
+  Something;
+  JustAboutAnything<G, H>(G, myName: set<H>, int, WildData);
+  More(List<int>);
+}
+
+class C {
+  var w: WildData;
+  var list: List<bool>;
+}
+
+Dafny program verifier finished with 0 verified, 0 errors
+
+-------------------- TypeTests.dfy --------------------
+TypeTests.dfy(4,13): Error: incorrect type of function argument 0 (expected C, got D)
+TypeTests.dfy(4,13): Error: incorrect type of function argument 1 (expected D, got C)
+TypeTests.dfy(5,13): Error: incorrect type of function argument 0 (expected C, got int)
+TypeTests.dfy(5,13): Error: incorrect type of function argument 1 (expected D, got int)
+TypeTests.dfy(11,4): Error: incorrect type of method in-parameter 0 (expected int, got bool)
+TypeTests.dfy(12,4): Error: incorrect type of method out-parameter 0 (expected int, got C)
+TypeTests.dfy(12,4): Error: incorrect type of method out-parameter 1 (expected C, got int)
+TypeTests.dfy(20,9): Error: because of cyclic dependencies among constructor argument types, no instances of datatype 'Nothing' can be constructed
+TypeTests.dfy(23,9): Error: because of cyclic dependencies among constructor argument types, no instances of datatype 'NeverendingList' can be constructed
+TypeTests.dfy(55,9): Error: Assignment to array element is not allowed in this context (because this is a ghost method or because the statement is guarded by a specification-only expression)
+TypeTests.dfy(64,6): Error: Duplicate local-variable name: z
+TypeTests.dfy(66,6): Error: Duplicate local-variable name: x
+TypeTests.dfy(69,8): Error: Duplicate local-variable name: x
+TypeTests.dfy(72,6): Error: Duplicate local-variable name: y
+14 resolution/type errors detected in TypeTests.dfy
+
+-------------------- SmallTests.dfy --------------------
+SmallTests.dfy(30,7): Error: RHS expression must be well defined
+Execution trace:
+    (0,0): anon0
+SmallTests.dfy(61,36): Error: possible division by zero
+Execution trace:
+    (0,0): anon10_Then
+SmallTests.dfy(62,51): Error: possible division by zero
+Execution trace:
+    (0,0): anon10_Else
+    (0,0): anon3
+    (0,0): anon11_Else
+SmallTests.dfy(63,22): Error: target object may be null
+Execution trace:
+    (0,0): anon10_Then
+    (0,0): anon3
+    (0,0): anon11_Then
+    (0,0): anon6
+SmallTests.dfy(82,20): Error: decreases expression must be well defined at top of each loop iteration
+Execution trace:
+    (0,0): anon0
+    SmallTests.dfy(81,5): anon7_LoopHead
+    (0,0): anon7_LoopBody
+    (0,0): anon8_Then
+SmallTests.dfy(116,5): Error: call may violate caller's modifies clause
+Execution trace:
+    (0,0): anon0
+    (0,0): anon4_Else
+    (0,0): anon3
+SmallTests.dfy(129,7): Error: call may violate caller's modifies clause
+Execution trace:
+    (0,0): anon0
+    (0,0): anon3_Then
+SmallTests.dfy(131,7): Error: call may violate caller's modifies clause
+Execution trace:
+    (0,0): anon0
+    (0,0): anon3_Else
+SmallTests.dfy(171,11): Error: foreach assignment may update an object not in the enclosing method's modifies clause
+Execution trace:
+    (0,0): anon0
+    (0,0): anon4_Else
+    (0,0): anon3
+
+Dafny program verifier finished with 28 verified, 9 errors
+
+-------------------- Definedness.dfy --------------------
+Definedness.dfy(8,7): Error: possible division by zero
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(15,16): Error: possible division by zero
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(24,16): Error: target object may be null
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(25,21): Error: target object may be null
+Execution trace:
+    (0,0): anon0
+    (0,0): anon3_Then
+Definedness.dfy(26,17): Error: possible division by zero
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(33,16): Error: target object may be null
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(50,18): Error: target object may be null
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(55,18): Error: target object may be null
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(77,9): Error: LHS expression must be well defined
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(78,12): Error: LHS expression must be well defined
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(79,7): Error: RHS expression must be well defined
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(84,18): Error: assert condition must be well defined
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(85,5): Error: assume condition must be well defined
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(90,16): Error: if guard must be well defined
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(97,19): Error: loop guard must be well defined
+Execution trace:
+    (0,0): anon0
+    Definedness.dfy(97,5): anon8_LoopHead
+    (0,0): anon8_LoopBody
+    Definedness.dfy(97,5): anon9_Else
+    (0,0): anon3
+Definedness.dfy(106,23): Error: decreases expression must be well defined at top of each loop iteration
+Execution trace:
+    (0,0): anon0
+    Definedness.dfy(105,5): anon13_LoopHead
+    (0,0): anon13_LoopBody
+    (0,0): anon14_Then
+Definedness.dfy(112,17): Error: decreases expression must be well defined at top of each loop iteration
+Execution trace:
+    (0,0): anon0
+    Definedness.dfy(105,5): anon13_LoopHead
+    (0,0): anon13_LoopBody
+    Definedness.dfy(105,5): anon14_Else
+    (0,0): anon3
+    (0,0): anon15_Then
+    (0,0): anon6
+    Definedness.dfy(111,5): anon16_LoopHead
+    (0,0): anon16_LoopBody
+    (0,0): anon17_Then
+Definedness.dfy(122,22): Error: loop invariant must be well defined
+Execution trace:
+    (0,0): anon0
+    Definedness.dfy(121,5): anon7_LoopHead
+    (0,0): anon7_LoopBody
+    (0,0): anon8_Then
+Definedness.dfy(122,22): Error BP5004: This loop invariant might not hold on entry.
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(123,17): Error: decreases expression must be well defined at top of each loop iteration
+Execution trace:
+    (0,0): anon0
+    Definedness.dfy(121,5): anon7_LoopHead
+    (0,0): anon7_LoopBody
+    (0,0): anon8_Then
+Definedness.dfy(132,24): Error: loop guard must be well defined
+Execution trace:
+    (0,0): anon0
+    Definedness.dfy(132,5): anon7_LoopHead
+    (0,0): anon7_LoopBody
+    Definedness.dfy(132,5): anon8_Else
+    (0,0): anon3
+Definedness.dfy(151,24): Error: loop guard must be well defined
+Execution trace:
+    (0,0): anon0
+    Definedness.dfy(145,5): anon13_LoopHead
+    (0,0): anon13_LoopBody
+    Definedness.dfy(145,5): anon14_Else
+    (0,0): anon3
+    (0,0): anon15_Then
+    (0,0): anon6
+    Definedness.dfy(151,5): anon16_LoopHead
+    (0,0): anon16_LoopBody
+    Definedness.dfy(151,5): anon17_Else
+    (0,0): anon9
+Definedness.dfy(170,44): Error: loop invariant must be well defined
+Execution trace:
+    (0,0): anon0
+    Definedness.dfy(162,5): anon16_LoopHead
+    (0,0): anon16_LoopBody
+    Definedness.dfy(162,5): anon17_Else
+    (0,0): anon3
+    (0,0): anon18_Then
+    (0,0): anon6
+    Definedness.dfy(169,5): anon19_LoopHead
+    (0,0): anon19_LoopBody
+    (0,0): anon20_Then
+Definedness.dfy(191,21): Error: collection expression must be well defined
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(193,11): Error: foreach assignment may update an object not in the enclosing method's modifies clause
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(195,33): Error: range expression must be well defined
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(201,18): Error: RHS of assignment must be well defined
+Execution trace:
+    (0,0): anon0
+Definedness.dfy(210,23): Error: loop invariant must be well defined
+Execution trace:
+    (0,0): anon0
+    Definedness.dfy(208,5): anon7_LoopHead
+    (0,0): anon7_LoopBody
+    (0,0): anon8_Then
+Definedness.dfy(210,23): Error BP5004: This loop invariant might not hold on entry.
+Execution trace:
+    (0,0): anon0
+
+Dafny program verifier finished with 21 verified, 29 errors
+
+-------------------- Array.dfy --------------------
+Array.dfy(10,12): Error: assignment may update an array not in the enclosing method's modifies clause
+Execution trace:
+    (0,0): anon0
+    (0,0): anon3_Then
+Array.dfy(17,9): Error: RHS expression must be well defined
+Execution trace:
+    (0,0): anon0
+Array.dfy(24,10): Error: LHS expression must be well defined
+Execution trace:
+    (0,0): anon0
+Array.dfy(48,20): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+Array.dfy(56,12): Error: assignment may update an array not in the enclosing method's modifies clause
+Execution trace:
+    (0,0): anon0
+    (0,0): anon3_Then
+Array.dfy(63,12): Error: assignment may update an array not in the enclosing method's modifies clause
+Execution trace:
+    (0,0): anon0
+    (0,0): anon3_Then
+Array.dfy(95,18): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+Array.dfy(107,6): Error: insufficient reads clause to read array element
+Execution trace:
+    (0,0): anon0
+    (0,0): anon4_Then
+    (0,0): anon5_Then
+Array.dfy(115,6): Error: insufficient reads clause to read array element
+Execution trace:
+    (0,0): anon0
+    (0,0): anon4_Then
+    (0,0): anon5_Then
+Array.dfy(131,10): Error: assignment may update an array not in the enclosing method's modifies clause
+Execution trace:
+    (0,0): anon0
+Array.dfy(138,10): Error: assignment may update an array not in the enclosing method's modifies clause
+Execution trace:
+    (0,0): anon0
+
+Dafny program verifier finished with 22 verified, 11 errors
+
+-------------------- Modules0.dfy --------------------
+Modules0.dfy(7,8): Error: Duplicate name of top-level declaration: T
+Modules0.dfy(13,7): Error: module T named among imports does not exist
+Modules0.dfy(24,7): Error: import graph contains a cycle: H -> I -> J -> G
+Modules0.dfy(51,6): Error: inter-module calls must follow the module import relation (so module X2 must transitively import YY)
+Modules0.dfy(62,6): Error: inter-module calls must follow the module import relation (so module X1 must transitively import X2)
+Modules0.dfy(72,6): Error: inter-module calls must follow the module import relation (so module X0 must transitively import X1)
+Modules0.dfy(91,4): Error: inter-module calls must follow the module import relation (so module _default must transitively import YY)
+Modules0.dfy(116,16): Error: ghost variables are allowed only in specification contexts
+8 resolution/type errors detected in Modules0.dfy
+
+-------------------- Modules1.dfy --------------------
+Modules1.dfy(55,3): Error: decreases expression must be bounded below by 0
+Execution trace:
+    (0,0): anon0
+Modules1.dfy(61,3): Error: failure to decrease termination measure
+Execution trace:
+    (0,0): anon0
+
+Dafny program verifier finished with 16 verified, 2 errors
+
+-------------------- BadFunction.dfy --------------------
+BadFunction.dfy(6,3): Error: failure to decrease termination measure
+Execution trace:
+    (0,0): anon0
+
+Dafny program verifier finished with 2 verified, 1 error
+
+-------------------- Termination.dfy --------------------
+Termination.dfy(102,3): Error: cannot prove termination; try supplying a decreases clause for the loop
+Execution trace:
+    (0,0): anon0
+    Termination.dfy(102,3): anon7_LoopHead
+    (0,0): anon7_LoopBody
+    Termination.dfy(102,3): anon8_Else
+    (0,0): anon3
+    Termination.dfy(102,12): anon9_Else
+    (0,0): anon5
+Termination.dfy(110,3): Error: cannot prove termination; try supplying a decreases clause for the loop
+Execution trace:
+    (0,0): anon0
+    Termination.dfy(110,3): anon7_LoopHead
+    (0,0): anon7_LoopBody
+    Termination.dfy(110,3): anon8_Else
+    (0,0): anon3
+    Termination.dfy(110,16): anon9_Else
+    (0,0): anon5
+Termination.dfy(119,3): Error: decreases expression might not decrease
+Execution trace:
+    (0,0): anon0
+    Termination.dfy(119,3): anon7_LoopHead
+    (0,0): anon7_LoopBody
+    Termination.dfy(119,3): anon8_Else
+    (0,0): anon3
+    Termination.dfy(119,16): anon9_Else
+    (0,0): anon5
+Termination.dfy(120,17): Error: decreases expression must be bounded below by 0 at end of loop iteration
+Execution trace:
+    (0,0): anon0
+    Termination.dfy(119,3): anon7_LoopHead
+    (0,0): anon7_LoopBody
+    Termination.dfy(119,3): anon8_Else
+    (0,0): anon3
+    Termination.dfy(119,16): anon9_Else
+    (0,0): anon5
+
+Dafny program verifier finished with 25 verified, 4 errors
+
+-------------------- Use.dfy --------------------
+Use.dfy(16,18): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+Use.dfy(26,18): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+Use.dfy(35,18): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+Use.dfy(54,12): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+Use.dfy(84,17): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+Use.dfy(126,23): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+Use.dfy(143,5): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+Use.dfy(143,5): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+Use.dfy(143,5): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+Use.dfy(213,19): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+
+Dafny program verifier finished with 39 verified, 10 errors
+
+-------------------- DTypes.dfy --------------------
+DTypes.dfy(15,14): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+DTypes.dfy(28,13): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+DTypes.dfy(54,18): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+
+Dafny program verifier finished with 13 verified, 3 errors
+
+-------------------- TypeParameters.dfy --------------------
+TypeParameters.dfy(41,22): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+TypeParameters.dfy(63,27): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+TypeParameters.dfy(130,28): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+    (0,0): anon5_Then
+TypeParameters.dfy(132,33): Error: assertion violation
+Execution trace:
+    (0,0): anon0
+    (0,0): anon5_Else
+    (0,0): anon6_Then
+
+Dafny program verifier finished with 27 verified, 4 errors
+
+-------------------- Datatypes.dfy --------------------
+
+Dafny program verifier finished with 10 verified, 0 errors
+
+-------------------- SplitExpr.dfy --------------------
+
+Dafny program verifier finished with 5 verified, 0 errors
+
+-------------------- Refinement.dfy --------------------
+
+Dafny program verifier finished with 53 verified, 0 errors

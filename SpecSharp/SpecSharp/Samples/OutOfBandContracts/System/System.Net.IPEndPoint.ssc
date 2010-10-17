@@ -1,0 +1,56 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Net
+{
+
+    public class IPEndPoint
+    {
+
+        public int Port
+        {
+          get;
+          set;
+        }
+
+        public IPAddress Address
+        {
+          get;
+          set;
+        }
+
+        public System.Net.Sockets.AddressFamily AddressFamily
+        {
+          get;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object comparand);
+
+        public EndPoint Create (SocketAddress socketAddress);
+
+        public SocketAddress Serialize ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public IPEndPoint (IPAddress! address, int port)
+            requires address != null otherwise ArgumentNullException;
+
+        public IPEndPoint (Int64 address, int port);
+    }
+}

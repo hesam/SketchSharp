@@ -1,0 +1,58 @@
+// Bounded Linear Search - 2 versions
+// Rosemary Monahan
+// 27th Feb 2007
+
+// changed to introduce errors for error message evaluation
+
+public class C {
+
+  public static int BLS(int[]! a, int key)
+    ensures /* 0 <= result && */ result < a.Length ==> a[result] == key; //ERROR: missing antecedent
+    ensures result < 0 ==> forall{int n in (0: a.Length); a[n] != key};
+  {
+    int n;
+    for (n = 0; n < a.Length && a[n] != key; n++)
+      invariant n <= a.Length;
+      invariant forall{int i in (0: n); a[i] != key};
+    {
+    }
+    if (n == a.Length)
+      return -1;
+    else return n;
+  }
+  //current error:
+  // Error: Method C.BLS(int[]! a, int key), unsatisfied postcondition: result < a.Length ==> a[result] == key
+  // boundedLinearSearch.ssc(19,5):    (trace position related to previous error)
+  // boundedLinearSearch.ssc(20,7):    (trace position related to previous error)
+
+  //better error:
+  // concrete example:  a.Length == 0; result == -1, [that means that "a[-1] == key" should hold, which can't happen]
+  
+  public static int BLS2(int[]! a, int key)
+    ensures 0 <= result && result < a.Length ==> a[result] == key;
+    ensures result < 0 ==> forall{int n in (0: a.Length); a[n] != 	key};
+  {
+    int n;
+    for (n = 0; n < a.Length; n++)
+      invariant forall{int i in (0.. n); a[i] != key}; //ERROR: should be (0: n)
+    {
+      if (a[n] == key)
+      { 
+        return n;
+        break;
+      }
+    }
+    return -1;
+  }
+
+  //current error:
+  // boundedLinearSearch.ssc(37,17): Error: Initially: Loop invariant might not hold: forall{int i in (0.. n); a[i] != key}
+
+  //better error:
+  // concrete example: n == 0 ; a.Length == 2 ; a[0] == 1 ; key == 1 ; a[i] == key  
+}
+
+
+
+
+

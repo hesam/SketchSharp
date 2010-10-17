@@ -1,0 +1,125 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+
+namespace System.Collections
+{
+
+    public class Hashtable
+    {
+
+        public object this [object! key]
+        {
+          get
+            requires key != null otherwise ArgumentNullException;
+          set;
+        }
+
+        public int Count
+        {
+          get;
+        }
+
+        public object! SyncRoot
+        {
+          get;
+        }
+
+        public ICollection! Keys
+        {
+          [ElementCollection]
+          get;
+        }
+
+        public bool IsSynchronized
+        {
+          get;
+        }
+
+        public bool IsFixedSize
+        {
+          get;
+        }
+
+        public ICollection! Values
+        {
+          [ElementCollection]
+          get;
+        }
+
+        public bool IsReadOnly
+        {
+          get;
+        }
+
+        public void OnDeserialization (object sender);
+
+        public void GetObjectData (System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context)
+            requires info != null otherwise ArgumentNullException;
+
+        public static Hashtable! Synchronized (Hashtable! table)
+            requires table != null otherwise ArgumentNullException;
+
+        public void Remove (object! key)
+            requires key != null otherwise ArgumentNullException;
+
+        [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+        public IDictionaryEnumerator! GetEnumerator ();
+            ensures result.IsNew;
+
+        public void CopyTo (Array! array, int arrayIndex)
+            requires array != null otherwise ArgumentNullException;
+            requires arrayIndex >= 0 otherwise ArgumentOutOfRangeException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public bool ContainsValue (object value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public bool ContainsKey (object! key)
+            requires key != null otherwise ArgumentNullException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public bool Contains (object! key);
+
+        public object! Clone ();
+
+        public void Clear ();
+
+        public void Add (object! key, object value);
+
+        public Hashtable (IDictionary! d, Single loadFactor, IHashCodeProvider hcp, IComparer comparer)
+            requires d != null otherwise ArgumentNullException;
+
+        public Hashtable (IDictionary d, IHashCodeProvider hcp, IComparer comparer);
+
+        public Hashtable (IDictionary d, Single loadFactor);
+
+        public Hashtable (IDictionary d);
+
+        public Hashtable (int capacity, IHashCodeProvider hcp, IComparer comparer);
+
+        public Hashtable (IHashCodeProvider hcp, IComparer comparer);
+
+        public Hashtable (int capacity, Single loadFactor, IHashCodeProvider hcp, IComparer comparer)
+            requires capacity >= 0 otherwise ArgumentOutOfRangeException;
+            requires loadFactor >= 0 otherwise ArgumentOutOfRangeException;
+            requires loadFactor <= 0 otherwise ArgumentOutOfRangeException;
+
+        public Hashtable (int capacity, Single loadFactor);
+
+        public Hashtable (int capacity);
+
+        public Hashtable ();
+    }
+}

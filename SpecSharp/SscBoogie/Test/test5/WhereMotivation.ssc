@@ -1,0 +1,129 @@
+using Microsoft.Contracts;
+
+public sealed class Types {
+  int x;
+  [Rep] Types next;
+
+  void M() {
+    assume next != null;
+    object o = next;
+    assert o is Types;
+  }
+
+  void MLoop0()
+    modifies this.x;
+  {
+    assume next != null;
+
+    // In the following loop, only this.x is modified.  However, without any declared,
+    // automatic, or inferred loop invariant, it will seem to the verifier as if (just about)
+    // all of $Heap is modified.  Thus, after the loop, the verifier would not know that
+    // this.next has remained unchanged through the loop.
+    while (x < 10) {
+      additive expose (this) {
+        x++;
+      }
+    }
+
+    object o = next;
+    assert o == null || o is Types;  // this is always fine (because of where clauses)
+    assert o is Types;  // this gives an error, unless /modifiesOnLoop is used
+  }
+
+  void MLoop1()
+    modifies this.x;
+  {
+    assume next != null;
+
+    // In this example, the loop occurs inside the expose block.  At the end of the expose
+    // block, there is a proof obligation that all owned fields are consistent.  To meet this
+    // proof obligation, the verifier thus needs some kind of loop invariant.
+    additive expose (this) {
+      while (x < 10) {
+        x++;
+      }
+    }  // Because of an automatic loop invariant about changing owners, any object that the
+       // loop causes to be owned by [this,Types] is newly allocated, and such objects are
+       // fully valid.  Hence, the PACK command here succeeds.
+
+    object o = next;
+    assert o is Types;  // error without /modifiesOnLoop, no error with /modifiesOnLoop
+  }
+
+  void MLoop2()
+    modifies this.x;
+  {
+    assume next != null;
+
+    additive expose (this) {
+      // Here, the loop and the subsequent assertions are all done inside the expose block.
+      while (x < 10) {
+        x++;
+      }
+
+      object o = next;
+      assert o == null || o is Types;  // fine
+      assert o is Types;  // this produces an error, unless /modifiesOnLoop is used
+    }  // fine (with /modifiesOnLoop), for the same reason as stated above in MLoop1
+  }
+
+  void MLoop3()
+    modifies this.x;
+  {
+    // In this example, the /modifiesOnLoop frame condition does not say anything about the
+    // state of the newly allocated "ty".
+    Types ty = new Types();
+    additive expose (ty) {
+      additive expose (this) {
+        while (x < 10) {
+          x++;
+        }
+      }
+    }
+  }
+
+  void SLoop0()
+    modifies this.next;
+  {
+    additive expose (this) {
+      for (int i = 0; i < 10; i++)
+        invariant this.IsPrevalid;
+      {
+        this.next = SomeValue();
+      }
+
+      this.next = null;
+    }  // (unless modifies clause checking is engaged), the invariant/ownership properties hold here
+  }
+
+  void SLoop1()
+    modifies this.next;
+  {
+    additive expose (this) {
+      for (int i = 0; i < 10; i++) {
+        this.next = SomeValue();
+      }
+
+      object o = this.next;
+      assert o == null || o is Types;
+      assert o is Types;  // this is an error, and should always be reported
+
+      this.next = null;
+    }
+  }
+
+  static Types SomeValue()
+    ensures result.IsNew;
+  {
+    return new Types();
+  }
+
+  void MCall() {
+    assume next != null;
+
+    M();
+
+    object o = next;
+    assert o is Types;
+  }
+}

@@ -1,0 +1,37 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System
+{
+
+    public class Random
+    {
+
+        public void NextBytes (Byte[]! buffer)
+            requires buffer != null otherwise ArgumentNullException;
+
+        public double NextDouble ();
+
+        public int Next (int maxValue)
+            requires maxValue >= 0 otherwise ArgumentOutOfRangeException;
+
+        public int Next (int minValue, int maxValue)
+            requires minValue <= maxValue otherwise ArgumentOutOfRangeException;
+
+        public int Next ();
+
+        public Random (int Seed);
+
+        public Random ();
+    }
+}

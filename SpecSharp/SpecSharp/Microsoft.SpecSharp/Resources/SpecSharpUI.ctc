@@ -1,0 +1,72 @@
+
+/***************************************************************************
+         Copyright (c) Microsoft Corporation, All rights reserved.             
+    This code sample is provided "AS IS" without warranty of any kind, 
+    it is not recommended for use in a production environment.
+***************************************************************************/
+
+//////////////////////////////////////////////////////////////////////////////
+//
+//File: SpecSharpUI.ctc
+//
+//Contents:  Menus for the SpecSharp preview package (all)
+//
+//
+//If you change this file, run DEVENV /setup.  This will cause the shell to
+//re-merge this menu definition for the package.
+//////////////////////////////////////////////////////////////////////////////
+
+#if _MSC_VER > 1000
+//#pragma once
+#endif  /* _MSC_VER > 1000 */
+
+#ifndef PKG_CTC
+#define PKG_CTC
+
+#define guidXenPkg {0xce6b0818, 0xa057, 0x49e1, {0x90, 0x8c , 0x4e, 0xf2, 0x3a, 0x06, 0xd0, 0x83}}
+#define guidXenUiCmd {0x2805D6BD, 0x47A8, 0x4944, {0x80, 0x02 , 0x4e, 0x29, 0xb9, 0xac, 0x22, 0x69}}
+
+#include "..\..\common\include\vsshlids.h"  // menu groups in the shell that packages may want to reference 
+#include "..\..\common\include\msobtnid.h"  // menu groups in the office that packages may want to reference 
+#include "pkgicmd.h"
+
+CMDS_SECTION guidXenPkg
+
+  NEWGROUPS_BEGIN
+    // GUID:GROUPID							PARENT MENU								PRIORITY	FLAG
+    // Common Reference Root Node context menu
+    guidXenUiCmd:icmdAddXSDReference,           guidSHLMainMenu:IDG_VS_CTXT_REFROOT_ADD,         0x0200;
+	guidXenUiCmd:icmdAddDatabaseReference,      guidSHLMainMenu:IDG_VS_CTXT_REFROOT_ADD,         0x0201;
+	guidXenUiCmd:icmdCompilable,    		    guidSHLMainMenu:IDG_VS_CTXT_ITEM_PROPERTIES,    		 0x0200;
+  NEWGROUPS_END	
+
+  BUTTONS_BEGIN
+    guidXenUiCmd:icmdAddXSDReference,         guidSHLMainMenu:IDG_VS_CTXT_REFROOT_ADD,    0x0200, guidOfficeIcon:msotcidNoIcon,	BUTTON,	DEFAULTDISABLED | DEFAULTINVISIBLE | DYNAMICVISIBILITY,		"Add &Xsd Schema...";			// rest are not used
+	guidXenUiCmd:icmdAddDatabaseReference,    guidSHLMainMenu:IDG_VS_CTXT_REFROOT_ADD,    0x0201, guidOfficeIcon:msotcidNoIcon,	BUTTON,	DEFAULTDISABLED | DEFAULTINVISIBLE | DYNAMICVISIBILITY,		"Add &Database Schema...";			// rest are not used
+	guidXenUiCmd:icmdCompilable,    		  guidSHLMainMenu:IDG_VS_CTXT_ITEM_PROPERTIES,      0x0200, guidOfficeIcon:msotcidNoIcon,	BUTTON,	DEFAULTDISABLED | DEFAULTINVISIBLE | DYNAMICVISIBILITY,		"Include in &build";			// rest are not used
+  BUTTONS_END 
+
+
+
+
+
+CMDS_END
+
+//////////////////////////////////////////////////////////////////////////////
+// CMDPLACEMENT_SECTION
+// 
+// This sections defines where the commands will be placed if not just in 
+// their primary groups.
+//
+//////////////////////////////////////////////////////////////////////////////
+
+CMDPLACEMENT_SECTION
+	// GUID:GROUPID							PARENT MENU								PRIORITY - or -
+	// GUID:MENUID							PARENT GROUP							PRIORITY
+//	guidXenUiCmd:icmdAddXSDReference,            guidSHLMainMenu:IDG_VS_CTXT_REFROOT_ADD,              0x0100;
+//    guidXenUiCmd:icmdAddDatabaseReference,         guidSHLMainMenu:IDG_VS_CTXT_REFROOT_ADD,            0x0101;
+
+CMDPLACEMENT_END
+
+
+#endif // PKG_CTC

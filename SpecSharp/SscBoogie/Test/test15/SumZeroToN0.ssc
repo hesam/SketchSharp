@@ -1,0 +1,22 @@
+class X {
+  int SumTo (int N)
+    requires 0 <= N;
+    ensures result == sum{int k in (1..N); k};
+  {
+    int s = 1; // ERROR
+    for (int i = 0; i <= N; i++)
+      invariant i <= N+1;
+      invariant s == sum{int k in (0:i); k};
+    {
+      s += i;
+    }
+    return s;
+  }
+}
+
+//current error:
+// sumZeroToN0.ssc(9,17): Error: Initially: Loop invariant might not hold: s == sum{int k in (0:i); k}
+
+//better error:
+// concrete example, s == 1 and sum{...} is not 1 but 0 initially
+

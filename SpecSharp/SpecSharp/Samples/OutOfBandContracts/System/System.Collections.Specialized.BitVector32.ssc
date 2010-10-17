@@ -1,0 +1,47 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Collections.Specialized
+{
+
+    public struct BitVector32
+    {
+        public struct Section { }
+
+        public int Data
+        {
+          get;
+        }
+
+        public bool this [int bit]
+        {
+          get;
+          set;
+        }
+
+        public static string ToString (BitVector32 value);
+
+        public static Section CreateSection (Int16 maxValue, Section previous);
+
+        public static Section CreateSection (Int16 maxValue);
+
+        public static int CreateMask (int previous)
+            requires previous == 0 || previous != -2147483648 otherwise InvalidOperationException;
+
+        public static int CreateMask ();
+
+        public BitVector32 (BitVector32 value);
+
+        public BitVector32 (int data);
+    }
+}

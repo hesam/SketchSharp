@@ -1,0 +1,27 @@
+class T {
+  public int x;
+  public static T! Create()
+  {
+    return new T();
+  }
+  public int P()
+  {
+    return 0;
+  }
+}
+
+class C {
+  T! t = new T();
+  int M() {
+    return t.P(); //ERROR: one solution is for T! t to be [Peer] 
+  }
+}
+
+//current error:
+// missingPeerDec.ssc(16,5): Error: The call to T.P() requires target object to be peer consistent
+
+//better error:
+// add that t is not a [Peer] field ... MORE???
+
+// Suggestion: Consider making 't' Peer or Rep [if it is a field of this].
+//[]: checked by us, only print this suggestion if the [] condition holds

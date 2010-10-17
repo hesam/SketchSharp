@@ -1,0 +1,21 @@
+/*\
+ *  Test to make sure that __arglist is ignored: the BPL procedure doesn't include it
+ *  in its argument list and all calls to the method leave out any extra arguments.
+ *  Need to make sure that there is no name clash with a method that has the identical
+ *  signature except for the __arglist.
+\*/
+class C{
+  public static void foo(int x)
+    requires 0 < x;
+  {}
+  public static void foo(int x, __arglist)
+    requires x == 2;
+  {}
+  public static void bar(){
+    foo(2, __arglist(3));
+    foo(4, __arglist(5,"abc"));
+  }
+  public static void bar(int y){
+    foo(y);
+  }
+}

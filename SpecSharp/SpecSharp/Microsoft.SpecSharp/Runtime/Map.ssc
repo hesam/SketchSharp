@@ -1,0 +1,505 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+#define SpecSharp
+
+using System;
+using System.Diagnostics;
+#if CCINamespace
+using Microsoft.Cci;
+#else
+using System.Compiler;
+#endif
+using Microsoft.Contracts;
+using System.Collections.Generic;
+
+namespace Microsoft.SpecSharp.Collections{
+
+/// <summary>
+/// Maps map keys to values. Maps are similar to hashtables, but in opposite to hashtables, they are immutable.
+/// </summary>
+public struct Map<K,V>: IEnumerable<KeyValuePair<K,V>>{ //:ICollection  
+  
+  //Auxiliary Type, needed for adapting Equals method...
+  sealed public class Maplet{
+    /*internal*/ public KeyValuePair<K,V> d;
+    public Maplet(KeyValuePair<K,V> d){
+      this.d = d;
+    }
+    [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+    public override bool Equals (Object o){
+      Maplet m = o as Maplet;
+      if (m == null) return false;
+      return Object.Equals(d.Key,m.d.Key);
+    }
+    [Pure][Reads(ReadsAttribute.Reads.Owned)]
+    public override int GetHashCode(){
+      return ((!)d.Key).GetHashCode();
+    }
+  }
+
+  private int count; 
+  RedBlackTree<Maplet!> elems;
+
+  // Constructors - - - - - - - - - - - - - - - - - - - - - - - - - -
+  //  public Map(SC.KeyValuePair d){
+  //        bool added = false;
+  //        count = 1; elems = RedBlackTree.Insert(elems,new Maplet(d),true, out added);
+  //  }
+  //      public Map(SC.IEnumerable os) {
+  //          count = 0;
+  //          elems = null;
+  //          bool added = false;
+  //          foreach(SC.KeyValuePair o in os) {
+  //              elems=RedBlackTree.Insert(elems,new Maplet(o), true, out added);
+  //              if (added) count++;
+  //          }
+  //      }
+    
+  /// <summary>
+  /// Returns the Gets the number of key-and-value pairs contained in the map
+  /// </summary>
+  public int Count{
+    [Pure] get { return count; }
+  }
+
+  // Iterators - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  /// <summary>
+  /// Returns an IDictionaryEnumerator that can iterate through the map
+  /// </summary>
+  [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+  public IEnumerator<KeyValuePair<K,V>>! GetEnumerator() { 
+    if (elems == null) yield break;
+    assume elems != null; // non-null analysis doesn't yet recognize "yield break" as not getting here.
+    foreach(Maplet m in elems){
+      yield return m.d;
+    }
+  }   
+  [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+  System.Collections.IEnumerator! System.Collections.IEnumerable.GetEnumerator(){
+    return ((IEnumerable<KeyValuePair<K,V>>)this).GetEnumerator();
+  }
+  /// <summary>
+  /// Gets an IEnumerable containing the keys in the map
+  /// </summary>
+  public IEnumerable<K>! Keys {
+    get{ return new KeysEnumerable(this);}
+  }
+
+  /*internal*/ 
+  public class KeysEnumerable:IEnumerable<K>{
+    Map<K,V> m;
+    /*internal*/ 
+    public KeysEnumerable(Map<K,V> m) {
+      this.m = m;
+    }
+//    public static K KeyProjection(Maplet<K,V>! m){
+//      return m.d.Key;
+//    }
+    [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+    public IEnumerator<K>! GetEnumerator() { 
+//      if (m.elems==null) return new EmptyEnumerator<K>();
+//      return m.elems.GetProjectionEnumerator<Maplet<K,V>>(new Projection(KeysEnumerable.KeyProjection));
+      foreach(KeyValuePair<K,V> kv in this.m){
+        yield return kv.Key;
+      }
+    }
+    [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+    System.Collections.IEnumerator! System.Collections.IEnumerable.GetEnumerator(){
+      return ((IEnumerable<K>)this).GetEnumerator();
+    }
+  }
+
+  /// <summary>
+  /// Gets an IEnumerable containing the values in the map
+  /// </summary>
+  public IEnumerable<V>! Values{
+    get{ return new ValuesEnumerable(this);}
+  }
+    /*internal*/ 
+  public class ValuesEnumerable:IEnumerable<V>{
+    Map<K,V> m;
+    /*internal*/ 
+    public ValuesEnumerable(Map<K,V> m) {
+      this.m = m;
+    }
+    public static V ValueProjection(Maplet! m){
+      return m.d.Value;
+    }
+    [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+    public IEnumerator<V>! GetEnumerator() { 
+      foreach(KeyValuePair<K,V> kv in this.m){
+        yield return kv.Value;
+      }
+    }
+    [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+    System.Collections.IEnumerator! System.Collections.IEnumerable.GetEnumerator(){
+      return ((IEnumerable<V>)this).GetEnumerator();
+    }
+  }
+
+  // Equality - - - - - - - - - - - - - - - - - - - - - - - - - -
+     
+  /// <summary>
+  /// True, if o is a map and contains the same key-value pairs as this, false otherwise [Time: see ==]
+  /// </summary>
+  public override bool Equals (object o){ 
+    return o is Map<K,V> && this == (Map<K,V>)o;
+  }
+
+  /// <summary>
+  /// Returns the hashcode of its key-value pairs [Time: this.Count]
+  /// </summary>
+  public override int GetHashCode() {
+    if (elems == null) return 0;
+    return elems.GetHashCode();
+  }
+          
+  /// <summary>
+  /// Equality: True, if s and t contains the same key-value pairs, false otherwise [Time: min(s.Count,t.Count)*log(max(s.Count,t.Count))]
+  /// </summary>
+  public static bool operator ==(Map<K,V> s, Map<K,V> t) {
+    return s.Count == t.Count && IsSubset(s,t);
+  }
+  private static bool IsSubset(Map<K,V> s, Map<K,V> t){
+    if (s.elems== null) return true;
+    if (t.elems == null) return false;
+
+    foreach(Maplet! o in s.elems) {
+      object res = RedBlackTree<Maplet!>.Lookup(t.elems,o);
+      if (res == null) return false;
+      Maplet p = (Maplet)res;
+      if (!Object.Equals(p.d.Value,o.d.Value))
+        return false;
+    }
+    return true;
+  }
+
+  /// <summary>
+  /// Inequality: True, if s and t do not contain the same key-value pairs, false otherwise [Time: see ==]
+  /// </summary>
+  public static bool operator != (Map<K,V> s, Map<K,V> t){
+    return !(s==t);
+  }
+  //  /// <summary>
+//   /// Subset: True, if every key-value pair from s is also a member of t, false otherwise [Time: see ==]
+//   /// </summary>
+//   public static bool operator <= (Map s, Map t){
+//     return s.Count <= t.Count && IsSubset(s,t); 
+//   }
+//   /// <summary>
+//   /// Proper Subset: True, if s is a subset of t and in addition s is different from t, false otherwise [Time: see ==]
+//   /// </summary>
+//   public static bool operator < (Map s, Map t){ 
+//     return s.Count < t.Count && IsSubset(s,t); 
+//   }
+//   /// <summary>
+//   /// Superset: True, if every key-value pair from t is also a member of s, false otherwise [Time: see ==]
+//   /// </summary>
+//   public static bool operator >= (Map s, Map t){ 
+//     return t <= s;  
+//   }    
+//   /// <summary>
+//   /// Proper Superset: True, if s is a suoerset of t and in addition s is different from t, false otherwise [Time: see ==]
+//   /// </summary>
+//   public static bool operator > (Map s, Map t){ 
+//     return t < s; 
+//   }
+
+  // In situ operations - - - - - - - - - - - - - - - - - - - - - - - -
+
+  /// <summary>
+  /// Get returns the value of the provided key stored in the map, provided it exists, otherwise it abrupts; 
+  /// Set includes/overrides the key-value pair in the map [Time: log(this.Count)]
+  /// </summary>
+  public V this[K! key] { 
+    get{
+      object o = RedBlackTree<Maplet!>.Lookup(elems,new Maplet(new KeyValuePair<K,V>(key,default(V))));
+      Maplet mkv = o as Maplet;
+      if (mkv != null)
+        return mkv.d.Value;
+      else 
+        throw new Exception(String.Format("Map.[]: key '{0}' not in Map",key.ToString()));
+    } 
+    set{
+      bool added;
+      elems = RedBlackTree<Maplet!>.Insert(elems,new Maplet(new KeyValuePair<K,V>(key,value)), true, out added);
+      if (added) 
+        count++;; 
+    }
+  }
+
+  /// <summary>
+  /// Adds an element with the specified key and value into the map [Time: log(this.Count)]
+  /// </summary>
+  public void Add(K! key, V value){
+    bool added;
+    elems = RedBlackTree<Maplet!>.Insert(elems,new Maplet(new KeyValuePair<K,V>(key,value)), true, out added);
+    if (added) 
+      count++;
+    else 
+      throw new Exception(String.Format("Map.Add: Duplicate key '{0}'", key.ToString()));
+  }
+  /*internal*/
+  public int Add(KeyValuePair<K,V> d){
+    bool added;
+    elems = RedBlackTree<Maplet!>.Insert(elems,new Maplet(d), true, out added);
+    if (added) 
+      count++;
+    else 
+      throw new Exception(String.Format("Map.Add: Duplicate key '{0}'", ((!)d.Key).ToString()));
+    return count;
+  }
+  private void Add(Maplet! m){
+    bool added;
+    elems = RedBlackTree<Maplet!>.Insert(elems,m, true, out added);
+    if (added) 
+      count++;
+    else{ 
+      throw new Exception(String.Format("Map.Add: Duplicate key '{0}'", ((!)m.d.Key).ToString()));
+    }
+  }
+  /// <summary>
+  /// Adds an element with the specified key and value into the map [Time: log(this.Count)]
+  /// </summary>
+  public void Override(KeyValuePair<K,V> d){ 
+    bool added;
+    elems = RedBlackTree<Maplet!>.Insert(elems,new Maplet(d), true, out added);
+    if (added) 
+      count++;
+  }
+
+  /// <summary>
+  /// Removes the element with the specified key from the map
+  /// </summary>
+  public void RemoveKey(K! key) { 
+    bool deleted = false;
+    elems = RedBlackTree<Maplet!>.Remove(elems,new Maplet(new KeyValuePair<K,V>(key,default(V))),out deleted);
+    if (deleted)
+      count--;
+  }
+  /// <summary>
+  /// Removes the key-value pair from the map
+  /// </summary>
+  /*internal*/
+  public void Remove(KeyValuePair<K,V> d) { 
+    bool deleted = false;
+    elems = RedBlackTree<Maplet!>.Remove(elems,new Maplet(d),out deleted);
+    if (deleted)
+      count--;
+  }
+
+  // Choose operation- - - - - - - - - - - - - - - - - - - - - - - -
+  /// <summary>
+  /// Returns an arbitraryly chosen key-value pair from the map
+  /// </summary>
+  public KeyValuePair<K,V> Choose() 
+    requires Count > 0;
+  {
+    if (elems==null)
+      throw new Exception("Map.Choose called on empty Domain");
+    if (elems.elems.head==null)
+      throw new Exception("Map.Choose called on empty Domain");
+    return elems.elems.head.d;
+  }
+
+  /// <summary>
+  /// Returns an arbitrarily choosen key-value pair from the map, at the same time removing it from the map
+  /// </summary>
+  public KeyValuePair<K,V> ChooseAndRemove() {
+    KeyValuePair<K,V> d = Choose();
+    Remove(d);
+    return d;
+  }
+
+  //ToString - - - - - - - - - - - - - - - - - - - - - - - - -
+  /// <summary>
+  /// Returns the map formatted in the form "Map{key_1~> value_1, ..., key_n~> value_n}" [Time: this.Count]
+  /// </summary>
+  public override string ToString() {
+    if (elems == null)
+      return "Map{}";
+    else {
+      string s = "Map{";
+      bool succ = false;
+      foreach(Maplet o in elems) {
+        if (succ) s+=", "; else succ = true;
+        V val = o.d.Value;
+        s+= ((!)o.d.Key)+"~>" + (val == null ? null : val.ToString());
+      }
+      return s+"}";
+    }
+  }
+
+  // Comparison operations - - - - - - - - - - - - - - - - - - - - - - -
+
+  /// <summary>
+  /// True, if the map contains a specific key, false otherwise [Time: log(this.Count)]
+  /// </summary>
+  public bool ContainsKey(K! key){
+    return RedBlackTree<Maplet!>.Lookup(elems,new Maplet(new KeyValuePair<K,V>(key,default(V)))) != null;
+  }    
+  /// <summary>
+  /// True, if the map contains a specific key (better key-value pair ... ?), false otherwise [Time: log(this.Count)]                                                
+  /// </summary>
+    
+  /*internal*/
+  public bool Contains(KeyValuePair<K,V> d)
+  { 
+    return RedBlackTree<Maplet!>.Lookup(elems,new Maplet(d)) != null;
+  }
+
+  //Ordinary map operations- - - - - - - - - - - - - - - - - - - - - - - - 
+
+  /// <summary>
+  /// Override: Returns a map combined of s and t that contains every key-value pair of t and those of s for which there was no key in t.
+  /// </summary>
+  public static Map<K,V> operator + (Map<K,V> s, Map<K,V> t){
+    Map<K,V> r = s;
+    bool added = false;
+    if (t.elems!= null)
+      foreach(Maplet o in t.elems){
+        r.elems=RedBlackTree<Maplet!>.Insert(r.elems,o,true,out added);        
+        if (added)
+          r.count++;
+      }
+    return r;
+  }    
+  /// <summary>
+  /// Merge: Returns a map combined of s and t that contains every key-value pair of t and of s, 
+  /// provided that for keys that are in s and t their values agree (implmentation must be fixed ...)
+  /// </summary>
+  public static Map<K,V> Merge (Map<K,V> s, Map<K,V> t){
+    Map<K,V> r;
+    if (s.Count > t.Count) {
+      r = s;
+      foreach(KeyValuePair<K,V> o in t)
+        r.Add(o);
+    } else {
+      r = t;
+      foreach(KeyValuePair<K,V> o in s)
+        r.Add(o);
+    }
+    return r;
+  }
+
+  /// <summary>
+  /// Returns a map consisting of the elements in map whose key is not in keys
+  /// </summary>
+  public static Map<K,V> KeyRestriction (Map<K,V> map, IEnumerable<K>! keys){ 
+    Map<K,V> r = map;
+    foreach(K! o in keys)
+      r.RemoveKey(o);
+    return r;  
+  }
+
+  /// <summary>
+  /// Returns a map consisting of the elements in map whose value is not in values
+  /// </summary>
+  public static Map<K,V> ValueRestriction(Map<K,V> map, IEnumerable<V!>! values) {
+    Set<V> s = new Set<V>();
+    foreach(V o in values)
+      s.Add(o);
+      
+    Map<K,V> r = new Map<K,V>();
+    foreach(KeyValuePair<K,V> d in map){
+      V v = d.Value;
+      if (v != null && !s.Contains(v))
+        r.Add(d);
+    }
+    return r;  
+  }
+  /// <summary>
+  /// Returns a map consisting of the elements in map whose value is not in values
+  /// </summary>
+  public static Map<K,V> ValueRestriction (Map<K,V> map, Set<V> values){ 
+    Set<V> s = values;
+    Map<K,V> r = new Map<K,V>();
+    foreach(KeyValuePair<K,V> d in map){
+      V v = d.Value;
+      if (v != null && !s.Contains(v))
+        r.Add(d);
+    }
+    return r;  
+  }
+
+  /// <summary>
+  /// Returns the set of key-value pairs
+  /// </summary>
+  public Set<Pair<K,V>> ToSet (){ 
+    Set<Pair<K,V>> s = new Set<Pair<K,V>>();
+    IEnumerator<KeyValuePair<K,V>> r = this.GetEnumerator();
+    while (r.MoveNext()) {
+      KeyValuePair<K,V> d = r.Current;
+      s.Add(new Pair<K,V>(d.Key, d.Value));
+    }
+    return s;  
+  }
+
+//   public static Map operator - (Map s, Map t){ 
+//     Map r = s;
+//     foreach(SC.KeyValuePair o in t)
+//       r.Remove(o);
+//     return r;  
+//   }
+//   public static Map operator * (Map s, Map t){ 
+//     Map r;
+//     if (s.Count < t.Count) {
+//       r = s;
+//       foreach(SC.KeyValuePair o in s)
+//         if (!t.Contains(o))
+//           r.Remove(o);
+//     } else {
+//       r = t;
+//       foreach(SC.KeyValuePair o in t)
+//         if (!s.Contains(o))
+//           r.Remove(o);
+//     }
+//     return r;
+//   }
+
+  /// <summary>
+  /// Distributed Merge: Returns the mapping that is constructed by merging all the mappings in s.
+  /// </summary>
+  public static Map<K,V> BigMerge(IEnumerable<Map<K,V>>! s) {
+    Map<K,V> r = new Map<K,V>();  int i = 0;
+    foreach(Map<K,V> ks in s){
+      if (i==0)
+        r = ks;
+      else
+        r = Merge(r,ks);
+      i++;
+    }
+    return r;
+  }
+    /// <summary>
+  /// Distributed Override: Returns the mapping that is constructed by overriding all the mappings in s.
+  /// </summary>
+  public static Map<K,V> BigOverride(IEnumerable<Map<K,V>>! s) {
+    Map<K,V> r = new Map<K,V>();  int i = 0;
+    foreach(Map<K,V> ks in s){
+      if (i==0)
+        r = ks;
+      else
+        r = r+ks;
+      i++;
+    }
+    return r;
+  }
+
+//   public static Map BigIntersect(Map s) { 
+//     Map r = new Map(); int i = 0;
+//     foreach(Map ks in s){
+//       if (i==0)
+//         r = ks;
+//       else
+//         r = r*ks;
+//       i++;
+//     }
+//     return r;
+//   }
+}
+
+}

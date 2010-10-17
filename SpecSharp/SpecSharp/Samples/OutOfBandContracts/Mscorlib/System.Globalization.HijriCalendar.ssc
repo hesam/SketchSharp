@@ -1,0 +1,80 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Globalization
+{
+
+    public class HijriCalendar
+    {
+
+        public Int32[] Eras
+        {
+          get;
+        }
+
+        public int HijriAdjustment
+        {
+          get;
+          set
+            requires value >= -2 otherwise ArgumentOutOfRangeException;
+            requires value <= 2 otherwise ArgumentOutOfRangeException;
+        }
+
+        public int TwoDigitYearMax
+        {
+          get;
+          set
+            requires value >= 100 otherwise ArgumentOutOfRangeException;
+            requires value <= 9666 otherwise ArgumentOutOfRangeException;
+        }
+
+        public int ToFourDigitYear (int year)
+            requires year < 100 || year <= 9666 otherwise ArgumentOutOfRangeException;
+
+        public DateTime ToDateTime (int year, int month, int day, int hour, int minute, int second, int millisecond, int era)
+            requires day >= 1 otherwise ArgumentOutOfRangeException;
+
+        public bool IsLeapYear (int year, int era);
+
+        public bool IsLeapMonth (int year, int month, int era);
+
+        public bool IsLeapDay (int year, int month, int day, int era)
+            requires day >= 1 otherwise ArgumentOutOfRangeException;
+
+        public int GetYear (DateTime time);
+
+        public int GetMonthsInYear (int year, int era);
+
+        public int GetMonth (DateTime time);
+
+        public int GetEra (DateTime time);
+
+        public int GetDaysInYear (int year, int era);
+
+        public int GetDaysInMonth (int year, int month, int era);
+
+        public int GetDayOfYear (DateTime time);
+
+        public DayOfWeek GetDayOfWeek (DateTime time);
+
+        public int GetDayOfMonth (DateTime time);
+
+        public DateTime AddYears (DateTime time, int years);
+
+        public DateTime AddMonths (DateTime time, int months)
+            requires months >= -120000 otherwise ArgumentOutOfRangeException;
+            requires months <= 120000 otherwise ArgumentOutOfRangeException;
+
+        public HijriCalendar ();
+    }
+}

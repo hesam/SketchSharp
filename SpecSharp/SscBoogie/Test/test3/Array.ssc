@@ -1,0 +1,82 @@
+using Spec;
+using System.Diagnostics;
+
+namespace test3
+{
+  public class MyClass
+  {
+    public void M0(MyClass[]! a)
+    {
+      // All arrays have a non-negative length
+      assert a.Length >= 0;
+      // The rank is 1
+      assert a.Rank == 1;
+      // Every array is a System.Array
+      assert a is MyClass[]!;
+      assert a is MyClass[];
+      assert a is System.Array!;
+      assert a is System.Array;
+    }
+
+    public void M1(MyClass[][]! a)
+    {
+      // All arrays have a non-negative length
+      assert a.Length >= 0;
+      // The rank is 1, because this is an array of arrays
+      assert a.Rank == 1;
+      // Every array is a System.Array
+      assert a is System.Array;
+    }
+
+    public void M2(MyClass[,]! a)
+    {
+      // All arrays have a non-negative length
+      assert a.Length >= 0;
+      // The rank is 2
+      assert a.Rank == 2;
+      // Every array is a System.Array
+      assert a is System.Array;
+    }
+
+    public void M3(System.Array! a)
+    {
+      // All arrays have a non-negative length
+      assert a.Length >= 0;
+      // All ranks are positive
+      assert a.Rank >= 1;
+    }
+
+    public void Allocate0(int howMany)
+    {
+      int[] arr = new int[howMany];  // error: possible negative array length
+      assert arr.Length == howMany;
+      assert arr.Rank == 1;
+      // Every array is a System.Array
+      assert arr is System.Array;
+    }
+
+    public void Allocate1(int howMany)
+      requires 0 <= howMany;
+    {
+      int[] arr = new int[howMany];
+      assert arr.Length == howMany;
+      assert arr.Rank == 1;
+      // Every array is a System.Array
+      assert arr is System.Array;
+    }
+
+    public int DimLengthRank1(string[]! a)
+      requires a.Length == 173;
+      ensures result == 173;
+    {
+      return a.GetLength(0);
+    }
+
+    public int DimLengthRank1(string[,]! a)
+      requires a.Length == 173;
+      ensures result == 173;  // error: no reason to think that GetLength(0) equals Length
+    {
+      return a.GetLength(0);
+    }
+  }
+}

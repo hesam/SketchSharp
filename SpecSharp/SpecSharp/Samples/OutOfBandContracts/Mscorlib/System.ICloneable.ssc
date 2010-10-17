@@ -1,0 +1,28 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+using System.Runtime.InteropServices;
+
+namespace System {
+  // Summary:
+  //     Supports cloning, which creates a new instance of a class with the same value
+  //     as an existing instance.
+  public interface ICloneable {
+    // Summary:
+    //     Creates a new object that is a copy of the current instance.
+    //
+    // Returns:
+    //     A new object that is a copy of this instance.
+    object! Clone();
+  }
+}

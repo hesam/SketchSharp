@@ -1,0 +1,11 @@
+all: Microsoft.SpecSharpUI.dll
+
+CS=csc.exe
+RC=rc.exe
+CTC=CTC.EXE
+
+Microsoft.SpecSharpUI.dll: AssemblyInfo.cs resources.res 
+	$(CS) /target:library /win32res:resources.res /out:Microsoft.SpecSharpUI.dll /nowarn:1699 AssemblyInfo.cs
+
+resources.res: resources8.rc SpecSharp.ico SpecSharpProject.ico SpecSharp.bmp
+    $(RC) resources8.rc

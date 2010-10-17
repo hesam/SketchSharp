@@ -1,0 +1,42 @@
+class C {
+
+int i;
+sealed model int mf {
+	satisfies this.mf == this.i;
+	witness this.i;	
+} 
+
+public void m() 	
+	ensures this.mf == 4;
+{	this.i = 4; //disallowed: assignment to field requires expose as it breaks satisfies clause
+}	
+
+public void m2() 	
+	ensures this.mf == 4;
+{	expose (this) {		
+		this.i = 4;	//allowed
+	}	
+}
+
+public void m3()		
+{	this.i = this.i; //allowed: 'benevolent' assignment to field that occurs in satisifies requires expose
+}
+
+
+sealed model int mf2 {
+	satisfies this.mf2 == 4;
+	witness 3;	//allowed: explicit witness does not satisfy satisfies clause, but the right witness is inferred
+}
+
+int j;
+int k;
+invariant this.k > this.j;
+sealed model int mf3 {
+	satisfies this.mf3 <= this.k;
+	satisfies this.mf3 > this.j;
+	witness this.j + 1; //testing witness check, allowed due to invariant.
+}
+
+C() {this.k = 3; this.i = 4; }
+
+}

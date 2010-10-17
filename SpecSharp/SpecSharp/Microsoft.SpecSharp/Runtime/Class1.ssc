@@ -1,0 +1,121 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+#define SpecSharp
+
+using System;
+using System.Diagnostics;
+//using SC = System.Collections;
+#if CCINamespace
+using Microsoft.Cci;
+#else
+using System.Compiler;
+#endif
+using Microsoft.Contracts;
+using System.Collections.Generic;
+
+namespace Microsoft.SpecSharp.Collections{
+
+/*internal*/ 
+public class RandomController{
+  /*internal*/ 
+  public static Random rand = new Random(0);
+}
+public class Debug{
+  public static void Assert(bool b) {
+    if (!b) throw new Exception("Assert failed");
+  }
+}
+
+// ---------------------------------------------------------------------------
+//Lazy Tree Enumerators...
+// ---------------------------------------------------------------------------
+/*internal*/ 
+public interface IStream<T>{
+    T! Force();
+}
+public enum NestedEnumState{
+  Value, Enumerator, Done
+}
+
+public abstract class NestedEnumerator<T>{
+  internal int pc;
+  internal T currentValue;
+  internal NestedEnumerator<T> currentEnumerator;
+  public abstract NestedEnumState NestedMoveNext();
+}
+
+/*internal*/ 
+public class Stream{
+    private Stream() {}
+    public static object Empty = new object();
+}
+
+public class RootEnumerator<T> : IEnumerator<T>{
+  Stack<NestedEnumerator<T>>! stack = new Stack<NestedEnumerator<T>>();
+//  /*internal*/ 
+  [NotDelayed]
+  public RootEnumerator(NestedEnumerator<T> e){
+    stack.Push(e);
+  }
+  /*internal*/ 
+  public T Current {
+    get {
+      if (stack.Count == 0 || ((!)(stack.Peek())).pc == 0)
+        throw new InvalidOperationException();
+      return ((!)(stack.Peek())).currentValue;
+    }
+  }
+  object System.Collections.IEnumerator.Current{
+    [Pure][Reads(ReadsAttribute.Reads.Owned)]
+    get { return ((IEnumerator<T>)this).Current; }
+  }
+  public bool MoveNext(){
+    while(true) {
+      if (stack.Count == 0)
+        return false;
+      NestedEnumerator<T>! nestedEnum = (!) stack.Peek();
+      switch (nestedEnum.NestedMoveNext()){
+        case NestedEnumState.Value:
+          return true;
+        case NestedEnumState.Enumerator:
+          stack.Push(nestedEnum.currentEnumerator);
+          break;
+        case NestedEnumState.Done:
+          stack.Pop();
+          break;
+        default:
+          throw new InvalidOperationException();
+      }
+    }
+  }
+  void System.Collections.IEnumerator.Reset(){
+    throw new ApplicationException("RootEnumerator cannot be reset");
+  }
+
+  void System.IDisposable.Dispose() {
+    //stack= null; BUGBUG: Fix me!
+  }
+}
+
+public class EmptyEnumerator<T>: IEnumerator<T>{
+  public EmptyEnumerator() {}
+  public void Reset() {
+    throw new Exception("Stream not resetable");
+  }
+  public bool MoveNext() {
+    return false;
+  }
+  public T Current {
+    get {throw new Exception("Current called before MoveNext");;}
+  } 
+  object System.Collections.IEnumerator.Current{ 
+    [Pure][Reads(ReadsAttribute.Reads.Owned)]
+    get { return ((IEnumerator<T>)this).Current; }
+  }
+  public void Dispose(){}
+}
+
+}

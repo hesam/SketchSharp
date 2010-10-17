@@ -1,0 +1,21 @@
+class SimpleAssignments0
+{
+	public void M(int val) 
+	{
+		int a, b, c;
+		a = 3;
+
+		if(val >0)
+		{
+			b = -2;
+		}
+		else
+		{
+			b = 2;
+		}	
+
+		c = a + b;
+
+		assert c > 0;
+	}
+}

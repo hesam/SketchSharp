@@ -1,0 +1,49 @@
+HKLM
+{
+ NoRemove Software 
+ { 
+  Microsoft 
+  { 
+   VisualStudio 
+   { 
+    %VsVersion% 
+    {
+      NoRemove Packages
+      {
+        ForceRemove %PackageGuid% = s '%ProductName%'
+        {
+            val InprocServer32 = s '%SystemFolder%mscoree.dll'
+            val Class = s '%PackageClassName%'
+            val Assembly = s '%PackageAssemblyName%'
+            val CompanyName = s '%CompanyName%'
+            val ProductName = s '%ProductName%'
+            val ProductVersion = s '%ProductVersion%'
+            val MinEdition = s 'Standard'
+            val ID = d %PackageLoadKeyId%
+                                    
+            ForceRemove SatelliteDll
+            {
+                val DllName = s '%SatelliteDll%'
+                val Path = s '%BinDir%'
+            }
+        }        
+      }     
+      NoRemove InstalledProducts
+      {
+          ForceRemove %ProductShortName%
+          {
+              val DefaultProductAttribute = s '%ProductShortName%'
+              val Package = s '%PackageGuid%'
+              val UseInterface = d 1
+          }
+      }      
+      NoRemove Menus
+      {
+          val %PackageGuid% = s ',%MenuResourceId%,1'
+      }
+                 
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,33 @@
+using Microsoft.Contracts;
+
+public sealed class StaticFields {
+  public static int g;
+  int f;
+
+  public void M()
+  {
+    additive expose (this) {
+      f = 10;
+      P();
+      assert f == 10;  // error: no reason to think that f didn't change
+    }
+  }
+
+  [NoDefaultContract]
+  void P()
+    requires ((object)this).IsExposable;  // needed right now to make up for missing inv==old(inv) in frame condition
+    modifies this.f;
+    ensures ((object)this).IsExposable;  // needed right now to make up for missing inv==old(inv) in frame condition
+  {
+  }
+
+  public void N()
+    requires g == 20;
+  {
+    additive expose (this) {
+      f = 10;
+      P();
+      assert g == 20;  // error for now:  Static fields can always be modified now, so we get no guarantee that P does not change any static field
+    }
+  }
+}

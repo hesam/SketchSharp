@@ -1,0 +1,18 @@
+using Microsoft.Contracts;
+
+class C {
+  [Rep] int[]! a;
+
+  public C (/* [Captured] */ int[]! b)
+  {
+    int[]! c = b;
+    a = c; // RHS may already have a different owner
+  }
+}
+
+//current error:
+// capturedParameter.ssc(9,5): Error: illegal assignment to rep field, RHS may already have a different owner
+
+//better error:
+// check in the model from z3 whether 'c' is equivalent to a parameter, if so
+// suggest to the user to use [Captured] on that parameter.

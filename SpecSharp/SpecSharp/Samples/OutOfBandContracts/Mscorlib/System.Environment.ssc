@@ -1,0 +1,144 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System
+{
+
+    public class Environment
+    {
+    
+        public enum SpecialFolder
+        {
+            // Fields
+            ApplicationData = 0x1a,
+            CommonApplicationData = 0x23,
+            CommonProgramFiles = 0x2b,
+            Cookies = 0x21,
+            Desktop = 0,
+            DesktopDirectory = 0x10,
+            Favorites = 6,
+            History = 0x22,
+            InternetCache = 0x20,
+            LocalApplicationData = 0x1c,
+            MyComputer = 0x11,
+            MyMusic = 13,
+            MyPictures = 0x27,
+            Personal = 5,
+            ProgramFiles = 0x26,
+            Programs = 2,
+            Recent = 8,
+            SendTo = 9,
+            StartMenu = 11,
+            Startup = 7,
+            System = 0x25,
+            Templates = 0x15
+        }
+
+        public static int ExitCode
+        {
+          get;
+          set;
+        }
+
+        public static OperatingSystem OSVersion
+        {
+          get;
+        }
+
+        public static bool UserInteractive
+        {
+          get;
+        }
+
+        public static Int64 WorkingSet
+        {
+          get;
+        }
+
+        public static string! MachineName
+        {
+          get;
+        }
+
+        public static string CommandLine
+        {
+          get;
+        }
+
+        public static string! NewLine
+        {
+          get;
+        }
+
+        public static string UserDomainName
+        {
+          get;
+        }
+
+        public static string UserName
+        {
+          get;
+        }
+
+        public static bool HasShutdownStarted
+        {
+          get;
+        }
+
+        public static Version Version
+        {
+          get;
+        }
+
+        public static int TickCount
+        {
+          get;
+        }
+
+        public static string SystemDirectory
+        {
+          get;
+        }
+
+        public static string StackTrace
+        {
+          get;
+        }
+
+        public static string! CurrentDirectory
+        {
+          get;
+          
+          set
+            requires value != null otherwise ArgumentNullException;
+            requires value != "" otherwise ArgumentException;
+            //throws System.IO.IOException, System.IO.FileNotFoundException, System.IO.DirectoryNotFoundException, System.Security.SecurityException;
+        }
+
+        public static string GetFolderPath (SpecialFolder folder);
+
+        public static String[] GetLogicalDrives ();
+
+        public static System.Collections.IDictionary GetEnvironmentVariables ();
+
+        public static string GetEnvironmentVariable (string! variable)
+            requires variable != null otherwise ArgumentNullException;
+
+        public static String[] GetCommandLineArgs ();
+
+        public static string ExpandEnvironmentVariables (string! name)
+            requires name != null otherwise ArgumentNullException;
+
+        public static void Exit (int exitCode);
+    }
+}

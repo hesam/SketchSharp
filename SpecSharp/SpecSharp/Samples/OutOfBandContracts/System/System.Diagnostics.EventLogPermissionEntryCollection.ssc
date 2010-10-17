@@ -1,0 +1,44 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Diagnostics
+{
+
+    public class EventLogPermissionEntryCollection
+    {
+
+        public EventLogPermissionEntry this [int index]
+        {
+          get;
+          set;
+        }
+
+        public void Remove (EventLogPermissionEntry value);
+
+        public void Insert (int index, EventLogPermissionEntry value);
+
+        public int IndexOf (EventLogPermissionEntry value);
+
+        public void CopyTo (EventLogPermissionEntry[] array, int index);
+
+        public bool Contains (EventLogPermissionEntry value);
+
+        public void AddRange (EventLogPermissionEntryCollection! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public void AddRange (EventLogPermissionEntry[]! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public int Add (EventLogPermissionEntry value);
+    }
+}

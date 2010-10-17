@@ -1,0 +1,55 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Reflection.Emit
+{
+
+    public class UnmanagedMarshal
+    {
+
+        public System.Runtime.InteropServices.UnmanagedType BaseType
+        {
+          get;
+        }
+
+        public int ElementCount
+        {
+          get;
+        }
+
+        public System.Runtime.InteropServices.UnmanagedType GetUnmanagedType
+        {
+          get;
+        }
+
+        public Guid IIDGuid
+        {
+          get;
+        }
+
+        public static UnmanagedMarshal DefineLPArray (System.Runtime.InteropServices.UnmanagedType elemType);
+
+        public static UnmanagedMarshal DefineByValArray (int elemCount);
+
+        public static UnmanagedMarshal DefineSafeArray (System.Runtime.InteropServices.UnmanagedType elemType);
+
+        public static UnmanagedMarshal DefineByValTStr (int elemCount);
+
+        public static UnmanagedMarshal DefineUnmanagedMarshal (System.Runtime.InteropServices.UnmanagedType unmanagedType)
+            requires (int)unmanagedType != 23 otherwise ArgumentException;
+            requires (int)unmanagedType != 29 otherwise ArgumentException;
+            requires (int)unmanagedType != 30 otherwise ArgumentException;
+            requires (int)unmanagedType != 42 otherwise ArgumentException;
+            requires (int)unmanagedType != 44 otherwise ArgumentException;
+    }
+}

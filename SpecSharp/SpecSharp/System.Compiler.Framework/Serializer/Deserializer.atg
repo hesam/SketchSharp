@@ -1,0 +1,1234 @@
+/*---------------------------------------------------------------------------------------------
+// Deserializer.atg
+// Version 1.0, WS, 1/16/2004
+//
+// History:
+//
+// Initial version by mbarnett
+// 
+//
+// Notes:
+//
+//  Special encoding characters:
+//    '@' is the separator between an object and member (method or field)
+//    '::' is the separator between the namespace and the member name in a qualified path
+//         ? What about nested types, are the parent types part of the namespace or the typename?
+//    '$'  prefix for parameter identifiers  ? why is this necessary ?
+//
+//-------------------------------------------------------------------------------------------*/
+
+using System;
+using System.Collections;
+
+/* Need to use this form of the conditional compiliation commands because
+ * Coco's grammar is limited. TODO: Fix Coco's grammar.
+ */
+using 
+Cci = 
+#if CciNamespace
+Microsoft.Cci
+#else
+System.Compiler
+#endif
+;
+
+using 
+#if CciNamespace
+Microsoft.Cci
+#else
+System.Compiler
+#endif
+;
+
+using System.Diagnostics;
+
+
+COMPILER Omni
+
+
+public class ContractDeserializer : IContractDeserializer 
+{
+  private Module assembly;
+  private ErrorNodeList errorList;
+
+  public ContractDeserializer ()
+  {
+  }
+
+  public ContractDeserializer (Module assembly)
+    : this()
+  {
+    this.CurrentAssembly = assembly;
+  }
+  
+  public Module CurrentAssembly 
+  {
+    get { return this.assembly; }
+    set { this.assembly = value; }
+  }
+
+  public ErrorNodeList ErrorList
+  {
+    get { return this.errorList; }
+    set { this.errorList = value; }
+  }
+
+  Expression IContractDeserializer.ParseContract (MethodContract mc, string text, ErrorNodeList errs)
+  {
+    Expression expression = null;
+    currentMethodContract = mc;
+    currentMethod = null;
+    currentType = null;
+    if (mc != null){
+      currentMethod = mc.DeclaringMethod;
+      currentType = currentMethod.DeclaringType;
+    }
+    try{
+      Parser.ParseContract(this.assembly, text, out expression);
+    }catch (Exception e){
+      ErrorNodeList eList = errs != null ? errs : this.ErrorList;
+      if (eList != null){
+#if OLDERRORS
+        ErrorHandler eh = new ErrorHandler(eList);
+        eh.HandleError(mc,System.Compiler.Error.GenericError,"Deserializer error: " + e.Message);
+#else
+        this.assembly.MetadataImportErrors.Add(e);
+#endif
+      }
+      throw e;
+    }
+    return expression;
+  }
+  Expression IContractDeserializer.ParseContract (Method m, string text, ErrorNodeList errs)
+  {
+    Expression expression = null;
+    currentMethodContract = null;
+    currentMethod = m;
+    currentType = null;
+    if (m != null){
+      currentType = m.DeclaringType;
+    }
+    try{
+      Parser.ParseContract(this.assembly, text, out expression);
+    }catch (Exception e){
+      ErrorNodeList eList = errs != null ? errs : this.ErrorList;
+      if (eList != null){
+#if OLDERRORS
+        ErrorHandler eh = new ErrorHandler(eList);
+        eh.HandleError(m,System.Compiler.Error.GenericError,"Deserializer error: " + e.Message);
+#else
+        this.assembly.MetadataImportErrors.Add(e);
+#endif
+      }
+      throw e;
+    }
+    return expression;
+  }
+
+  Expression IContractDeserializer.ParseContract (TypeContract tc, string text, ErrorNodeList errs)
+  {
+    Expression expression = null;
+    currentMethodContract = null;
+    currentMethod = null;
+    currentType = tc.DeclaringType;
+    try{
+      Parser.ParseContract(this.assembly, text, out expression);
+    }catch (Exception e){
+      ErrorNodeList eList = errs != null ? errs : this.ErrorList;
+      if (eList != null){
+#if OLDERRORS
+        ErrorHandler eh = new ErrorHandler(eList);
+        eh.HandleError(tc,System.Compiler.Error.GenericError,"Deserializer error: " + e.Message);
+#else
+        this.assembly.MetadataImportErrors.Add(e);
+#endif
+      }
+      throw e;
+    }
+    return expression;
+  }
+}
+
+private static Module currentAssembly;
+private static TypeNode currentType;
+private static Method currentMethod;
+private static MethodContract currentMethodContract;
+private static BlockScope currentBlock;
+
+private static TypeNode LookupTypeParameter (string s)
+{
+  TypeNodeList paramsList = currentType.ConsolidatedTemplateParameters;
+  for (int i = paramsList == null ? -1 : (paramsList.Count - 1); 0 <= i; i--)
+  {
+    if (paramsList[i].Name.Name == s)
+      return paramsList[i];
+  }
+  //Debug.Fail("Type parameter not found."); // Manuel says no stinking Fail calls
+  throw new ApplicationException();
+}
+private static TypeNode LookupMethodTypeParameter (string s)
+{
+  TypeNodeList paramsList = currentMethod.TemplateParameters;
+  for (int i = paramsList == null ? -1 : (paramsList.Count - 1); 0 <= i; i--)
+  {
+    if (paramsList[i].Name.Name == s)
+      return paramsList[i];
+  }
+  //Debug.Fail("Type parameter not found."); // Manuel says no stinking Fail calls
+  throw new ApplicationException();
+}
+
+private static Module LookupAssembly (string s) 
+{
+  Debug.Assert(currentAssembly != null);
+  if (s == null)
+  {
+    return currentAssembly;
+  }
+  
+  for (int i=0; i<currentAssembly.AssemblyReferences.Count; i++)
+  {
+    AssemblyReference aref = currentAssembly.AssemblyReferences[i];
+    if (s == aref.Name)
+    {
+      return aref.Assembly;
+    }
+  }
+    
+  return null;
+}
+ 
+internal static int ParseContract (Module assem, string text, out Expression expression)
+{
+  Debug.Assert(assem != null);
+  currentAssembly = assem;
+
+  Scanner.Init(text);
+
+  Errors.SynErr = new ErrorProc(SynErr);
+  t = new Token();
+  Get();
+  Expr(out expression);
+
+  currentMethodContract = null;
+  currentMethod = null;
+  currentAssembly = null;
+  
+  return Errors.count;
+}
+
+
+
+
+/*--------------------------------------------------------------------------*/
+CHARACTERS
+  letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".
+  digit = "0123456789".
+  glyph = "`~!@#$%^&*()-_=+[{]}|;:',<.>/?".
+  cr = '\r'.
+  lf = '\n'.
+  tab = '\t'.
+  space = ' '.
+  quote = '"'.
+  single = '\''.
+  backsl = '\\'.
+  underline = "_".
+  backquote = "`".
+  colon = ':'.
+  nullchar = '\0'.
+  content = letter + digit + space + glyph.
+  /*squote = CHR(9). */
+  allchars = '\u0000' .. '\u3fff'.
+
+TOKENS
+  ident  = (underline | letter) {letter | digit | underline | backquote}.
+  number = digit {digit}.
+  string = quote {content | cr | lf | tab} quote.
+  char = (single allchars single) | (single backsl 'u' digit {digit} single).
+  backslash = backsl.
+
+IGNORE cr + lf + tab
+
+COMMENTS FROM "/*" TO "*/" NESTED
+COMMENTS FROM "//" TO lf
+
+
+
+PRODUCTIONS
+
+Omni 		(. Expression e; .)
+= Expr<out e >
+.
+
+/*------------------------------------------------------------------------*/  
+
+PType<out TypeNode c>
+                   (. c = null; TypeNode modifier=null, modified=null; .)
+=   
+   (
+     "object"      (. c = SystemTypes.Object; .)
+   | "string"      (. c = SystemTypes.String; .)
+   | "char"        (. c = SystemTypes.Char; .)
+   | "void"        (. c = SystemTypes.Void; .)
+   | "bool"        (. c = SystemTypes.Boolean; .)  
+   | "i8"          (. c = SystemTypes.Int8; .)
+   | "i16"         (. c = SystemTypes.Int16; .)
+   | "i32"         (. c = SystemTypes.Int32; .)
+   | "i64"         (. c = SystemTypes.Int64; .)
+   | "u8"          (. c = SystemTypes.UInt8; .)
+   | "u16"         (. c = SystemTypes.UInt16; .)
+   | "u32"         (. c = SystemTypes.UInt32; .)
+   | "u64"         (. c = SystemTypes.UInt64; .)
+   | "single"      (. c = SystemTypes.Single; .)
+   | "double"      (. c = SystemTypes.Double; .)
+   | "optional" "(" PType<out modifier> "," PType<out modified> ")"
+                   (. c = OptionalModifier.For(modifier,modified); .)
+   | "$typeParam" "(" 
+                   (. string id; .) Ident<out id> ")" (. c = LookupTypeParameter(id); .)
+   | "$methodTypeParam" "(" 
+                   (. string id; .) Ident<out id> ")" (. c = LookupMethodTypeParameter(id); .)
+   | PTypeRef<out c>
+   ) 
+   [
+    (
+      "&"          (. c = c.GetReferenceType(); .)
+    | "[" /*[bounds]*/ "]"   (. c = c.GetArrayType(1); .)
+      {"[" /*bounds*/ "]"    (. c = c.GetArrayType(1); .)
+      }
+    | "(" PType<out c>  {"," PType<out c>} ")"
+    | "*"          (. c = c.GetPointerType(); .)
+    )
+   ]
+   /*"(" PType<out c> ")"*/
+.
+
+PTypeRef<out TypeNode tn>
+                   (. Module assem = null;
+                      string ns, tname, nestedname;
+                      ArrayList/*<string>*/ typeNames;
+                      TypeNodeList templateArgs = null;
+                   .)
+=
+  [ Assembly<out assem> ]
+  QualName<out ns, out tname> 
+  NestedTypeName<out typeNames, out nestedname>
+  [
+    "<"  (. TypeNode arg; .)
+    PType<out arg>  (. templateArgs = new TypeNodeList(); templateArgs.Add(arg); .)
+    { 
+      ","
+      PType<out arg>  (. templateArgs.Add(arg); .)
+    }
+    ">"
+  ]
+                   (.
+                      if ( assem == null ){
+                        assem = currentAssembly;
+                      }
+#if !WHIDBEY
+                      if (templateArgs != null){
+                        /* then need to create the pseudo-generic name */
+                        string pseudoGenericName = tname;
+                        /*pseudoGenericName += SystemTypes.GenericTypeNamesMangleChar;*/
+                        /*pseudoGenericName += templateArgs.Count.ToString();*/
+                        pseudoGenericName += "<";
+                        for (int i = 0, n = templateArgs.Count; i < n; i++){
+                          if (i > 0)
+                            pseudoGenericName += ",";
+                          pseudoGenericName += templateArgs[i].FullName;
+                        }
+                        pseudoGenericName += ">";
+                        tname = pseudoGenericName;
+                      }
+#endif                      
+                      tn = assem.GetType(Identifier.For(ns),Identifier.For(tname));
+                      if (tn == null) {
+                        Errors.SemErr(token.filename, token.line, token.col,
+                                      String.Format("could not resolve namespace {0}, type {1}", ns, tname));
+                        throw new Exception("cannot continue"); //Errors.Exception("cannot continue");
+                      }
+                       // now do nested types
+                      for (int i=0; i<typeNames.Count; i++){
+                        tn = tn.GetNestedType(Identifier.For((string)typeNames[i]));
+                      }
+                      if (tn == null) {
+                        Errors.SemErr(token.filename, token.line, token.col,
+                                      String.Format("could not resolve namespace {0} type {1} nesting {2}", ns, tname, nestedname));
+                        throw new Exception("cannot continue"); //Errors.Exception("cannot continue");
+                      }
+#if WHIDBEY
+                      /* Pre-Whidbey, templateArgs are used to construct a pseudo-generic name */
+                      if (templateArgs != null)
+                      {
+                        tn = tn.GetTemplateInstance(assem, null, null, templateArgs);
+                      }
+#endif                      
+                   .)
+.
+
+Assembly<out Module assem>
+                   (. string name; .)
+= "["  FullName<out name> "]"
+                   (. assem = LookupAssembly(name); .)
+.
+
+QualName<out string bname, out string name >
+                   (. string tmp; bname = ""; name = ""; .)
+=                  (. string identName; .)
+  Ident<out identName>
+                   (. tmp = identName; .)                   
+  {
+    "." Ident<out identName>
+                   (. if (bname.Length > 0){
+                        bname += "." + tmp;
+                      }else{
+                        bname = tmp;
+                      }
+                      tmp = identName;
+                   .)
+  }
+                   (. name = tmp; .)
+.
+
+Ident<out string name>
+= (. name = null; .)
+  (
+  ident (. name = token.val; .)
+  { ":" number     /* special case for compiler generated closure names "closure:nnnn" */
+                   (. name += (":" + token.val); .)
+  }
+  |
+  "$weirdIdent" string (. name = token.val.Substring(1, token.val.Length - 2); .)
+  
+  )
+.
+
+NestedTypeName<out ArrayList/*<string>*/ nestedPath, out string tname>
+                   (. nestedPath = new ArrayList(); tname = ""; .)
+= {
+    "+"            (. string name; .)
+    ( Ident<out name> (. nestedPath.Add(name); tname = tname + "/" + name;
+                   .)
+    )
+  }
+.
+
+DottedName<out string name>
+                   (. name = ""; .)
+=                  (. string x; .) 
+  Ident<out x>     (. name = x; .)                   
+  {
+    "." Ident<out x>
+                   (. name += x; .)
+  }
+.
+
+FullName<out string full>
+                   (. string name; .)
+= QualName<out full, out name>
+                   (. if ( full != "" ) full+="."+name; else full = name;  .)
+.
+
+/*------------------------------------------------------------------------*/  
+
+
+Expr <out Expression e>	
+= Term<out e>
+                   (.
+                     if (e == null){
+                       Errors.SemErr(token.filename, token.line, token.col,
+                                     "unable to parse expression");
+                       throw new Exception("cannot continue"); //Errors.Exception("cannot continue");
+                     }
+                   .)
+. 
+
+Term<out Expression e>
+                   (. TypeNode typ; .)
+= Factor<null, out e>
+  {(
+    "@"             
+    Factor<e, out e>
+   |
+    "["                     (. ExpressionList es = new ExpressionList(); Expression a; .)
+    Expr<out a>             (. es.Add(a); .)
+    { "," Expr<out a>       (. es.Add(a); .)
+    }
+    "]"                     (. Indexer idx = new Indexer(e, es); .)
+    "(" PType<out typ>      (. idx.Type = typ; idx.ElementType = typ; .)
+    ")"                     (. // special case to normalizer pointer indexing here.
+                               if (TypeNode.StripModifiers(e.Type).IsPointerType) {
+                                 e = new AddressDereference(new BinaryExpression(e, es[0], NodeType.Add, e.Type), typ);
+                               }
+                               else {
+                                 e = idx; 
+                               } 
+                            .)
+  )}
+.
+  
+Factor<Expression target, out Expression e>
+                   (.
+                     e = null;
+                     Member  m;
+                     ExpressionList es; Expression p;
+                     Expression p1; Expression p2;
+                     TypeNode t1;
+                     /*Identifier blockVarId;*/
+                     MemberBinding mb;
+                   .)
+= (
+    Literal<out e>
+  | Local<out p>   (. e = p; .)
+
+  | MemberRef<out m>
+                   (. Debug.Assert(m != null); e = new MemberBinding(target,m); .)
+    [ArgExprs< out es>
+                   (.
+                     Method meth = (Method)m;
+                     if ( ! meth.IsVirtual){
+                       e = new MethodCall(e, es, NodeType.Call);
+                     }else{
+                       e = new MethodCall(e, es, NodeType.Callvirt); /*dangerous*/
+                     }
+                     e.Type = meth.ReturnType;
+                   .)
+    ]
+    
+  | BlockVar<out mb>
+                   (.
+                     Debug.Assert(target == null);
+                     e = mb;
+                     Debug.Assert(e != null);  // block variable not found
+                   .)
+
+  | backslash "old" "(" 
+    Expr<out e>    (.
+                     OldExpression oe = new OldExpression(e);
+                     oe.Type = e.Type;
+                     e = oe;
+                   .)
+    ")"
+
+  | "(" Expr <out e> ")"
+  | "$coerce" "(" Expr <out p> "," PType<out t1> ")"
+                   (.
+                     e = new BinaryExpression(p,new Literal(t1,SystemTypes.Type),NodeType.ExplicitCoercion);
+                     e.Type = t1;
+                   .)
+  | "$typetest" "(" Expr <out p> "," PType<out t1> ")"
+                   (.
+                     e = new BinaryExpression(p,new Literal(t1,SystemTypes.Type),NodeType.Is);
+                     e.Type = SystemTypes.Boolean;
+                   .)
+  | "$castclass" "(" Expr <out p> "," PType<out t1> ")"
+                   (.
+                     e = new BinaryExpression(p,new Literal(t1,SystemTypes.Type),NodeType.Castclass);
+                     e.Type = t1;
+                   .)
+  | "$typeof" "(" PType<out t1> ")"
+                   (.
+                     e = new UnaryExpression(new Literal(t1, SystemTypes.Type), NodeType.Typeof, OptionalModifier.For(SystemTypes.NonNullType, SystemTypes.Type));
+                   .)
+  | "$ite" "(" Expr <out p> "," Expr <out p1> "," Expr <out p2> "," PType<out t1> ")"
+                   (.
+                     e = new TernaryExpression(p,p1,p2,NodeType.Conditional,t1);
+                   .)
+  | "$box" "(" Expr <out p> "," PType<out t1> ")"
+                   (.
+                     e = new BinaryExpression(p,new MemberBinding(null,t1),NodeType.Box);
+                     e.Type = SystemTypes.Object;
+                   .)
+  | "$unbox" "(" Expr <out p> "," PType<out t1> ")"
+                   (.
+                     e = new BinaryExpression(p,new MemberBinding(null,t1),NodeType.Unbox);
+                     e.Type = t1.GetReferenceType();
+                   .)
+  | "$ref" "(" Expr <out p> ")"
+                   (.
+                     e = new UnaryExpression(p, NodeType.RefAddress, p.Type);
+                   .)
+  | Quantifier<out e>
+  | TrueComprehension<out e>  
+  | (
+       "::"
+       (
+        (
+           "$AddressOf" "(" PType<out t1> ")" "{" Expr<out p> "}"
+                   (.
+                     TypeNode newType = p.Type.GetReferenceType();
+                     e = new UnaryExpression(p,NodeType.AddressOf,newType);
+                   .)
+        |  "$Deref" "{" Expr<out p> "}"
+                   (.
+                     Reference r = (Reference) p.Type;
+                     if (r != null)
+                       e = new AddressDereference(p,r.ElementType);
+                     else
+                       e = new AddressDereference(p, SystemTypes.UInt8);
+                   .)
+/* TODO: REMOVE next production once LKG > 5519 */
+        |          (. TypeNode tt1 = null, tt2 = null, tt3 = null; .)
+           "$Isinst" "(" PType<out tt1> "," PType<out tt2> ")" "{" Expr<out p> "," PType<out tt3> "}"
+                   (. e = new BinaryExpression(p, new Literal(tt3, SystemTypes.Type), NodeType.Isinst); e.Type = tt3; .)
+        )
+       |           (. TypeNode tt1 = null, tt2 = null, tt3 = null; .)
+         "%Isinst" "(" PType<out tt1> "," PType<out tt2> ")" "{" Expr<out p> "," PType<out tt3> "}"
+                   (. e = new BinaryExpression(p, new Literal(tt3, SystemTypes.Type), NodeType.Isinst); e.Type = tt3; .)
+       | OperatorNode<out p>
+                   (. e = p; .)
+       )
+    )
+  )
+.
+
+/*\
+ * Returns a MemberBinding if it finds it in any block
+ * reachable from the currentBlock, or just null if it can't and then
+ * productions calling this one can decide what to do.
+\*/
+BlockVar<out MemberBinding mb>
+                   (. mb = null; TypeNode type = null; .)
+=
+  "$blockVar"
+  "("
+  PType<out type>
+  ")"
+  "{"
+                   (. string name = null; .)
+  Ident<out name>
+                   (.
+                     Identifier id = Identifier.For(name);
+                     for (Scope b = currentBlock; b != null; b = b.OuterScope) {
+                       Field f = b.GetField(id);
+                       if (f != null) {
+                         mb = new MemberBinding(new ImplicitThis(), f);
+                         mb.Type = f.Type;
+                         break;
+                       }
+                     }
+                     if (mb == null){
+                       Field field = new Field(id);
+                       field.Type = type;
+                       field.DeclaringType = new BlockScope();
+                       mb = new MemberBinding(new ImplicitThis(), field);
+                       mb.Type = type;
+                     }
+                   .)
+  "}"
+.
+
+OperatorNode<out Expression p>
+                   (.
+                     p = null; 
+                     int arity;
+                     NodeType opKind; 
+                     TypeNodeList tns = null;
+                     ExpressionList es;
+                     TypeNode resultType;
+                   .)
+=
+  Operator<out opKind, out arity, out resultType>
+  [ArgPTypes<out tns>]
+  ArgExprs<out es>
+                   (.
+                     if (es.Count!= arity) {
+                       Errors.SemErr(token.filename, token.line, token.col,
+                                     String.Format("operator {0} expects {1} arguments, not {2}",
+                                     opKind, arity, es.Count));
+                       throw new Exception("cannot continue"); //Errors.Exception("cannot continue");
+                     }
+                     if (tns != null) {
+                       if (tns.Count != arity) {
+                         Errors.SemErr(token.filename, token.line, token.col,
+                                       String.Format("operator {0} expects {1} type arguments, not {2}",
+                                       p.NodeType, arity, tns.Count));
+                         throw new Exception("cannot continue"); //Errors.Exception("cannot continue");
+                       }
+                       if (opKind == NodeType.Conv_I4 && es[0].Type == SystemTypes.Int32) {
+                         // skip
+                       }
+                       else {
+                         for (int i=0; i<arity; i++) {
+                           Literal lit = es[i] as Literal;
+                           if (lit != null && lit.Type != null && lit.Type != tns[i]) {
+                             if (tns[i] == SystemTypes.Double && lit.Type.IsPrimitiveInteger) {
+                               // then the literal was "3" (for instance), so it was parsed as an integer
+                               double d = Convert.ToDouble(lit.Value);
+                               es[i] = new Literal(d,SystemTypes.Double);
+                             }
+                             // otherwise, it is bad to change literal's type that does not match the literal value's dynamic type
+                           } else {
+                             es[i].Type = tns[i];
+                           }
+                         }
+                       }
+                     }
+                     switch (arity) {
+                       case 1:
+#if !CLOUSOT
+                         if (opKind == NodeType.Ldlen) {
+                           p = new MethodCall(new MemberBinding(es[0], SystemTypes.Array.GetMethod(Identifier.For("get_Length"))), null, NodeType.Call, SystemTypes.Int32);
+                           break;
+                         }
+                         if (opKind == NodeType.Conv_I4 && es[0].Type == SystemTypes.Int32) {
+                           // skip conversion
+                           p = es[0];
+                           break;
+                         }
+#endif
+                         p = new UnaryExpression(es[0], opKind);
+                         break;
+                       case 2:
+                         p = new BinaryExpression(es[0], es[1], opKind);
+                         p.Type = resultType;
+                         break;
+                       default:
+                         break;
+                     }
+                   .)
+.
+
+  
+Local<out Expression p>
+                   (.
+                     p  = null;
+                     int modifier = 0; /* 0 == none, 1 == address dereference, 2 == address of */
+                   .)
+=
+  [ "*"            (. modifier = 1; .)
+  |
+   "&"             (. modifier = 2; .)
+  ]
+  "$"
+  ( Parameter<out p>
+  |
+    SpecialName<out p>
+  )
+                   (.
+                     switch (modifier){
+                       case 1:
+                         Debug.Assert(p.Type is Reference);
+                         Reference r = p.Type as Reference;
+                         p = new AddressDereference(p,r.ElementType);
+                         break;
+                       case 2:
+                         TypeNode newType = p.Type.GetReferenceType();
+                         p = new UnaryExpression(p,NodeType.AddressOf,newType);
+                         break;
+                       default:
+                         /* nothing to do */
+                         break;
+                     }
+                   .)
+.
+
+/* method parameter 0=this, real parameters starting at 1 */
+Parameter<out Expression p>
+                   (. p  = null; .)
+=
+     number
+                   (.
+                     Token x = token;
+                     int index = Convert.ToInt32(x.val);
+                     bool nonStatic = ! currentMethod.IsStatic;
+                     if ( nonStatic && index == 0){
+                       p = currentMethod.ThisParameter;
+                     }else{
+                       // Get the parameter from the Parameters list.
+                       if (nonStatic) { index --; }
+                       if (index < currentMethod.Parameters.Count){
+                         Parameter pa = currentMethod.Parameters[index];
+                         pa.ArgumentListIndex = nonStatic ? index + 1 : index;
+                         p = pa;
+                       }else{
+                         Errors.SemErr(x.filename, x.line, x.col,
+                                       String.Format("current method does not have parameter position {0}",
+                                                     index));
+                         p = null; 
+                       }
+                     }
+                   .)
+.
+
+/* special names such as return value */
+SpecialName<out Expression p>
+                   (. p  = null; .)
+=
+   "{"
+                   (. TypeNode typ=null; .)
+     PType<out typ>
+     ","
+     string        (. string idname = token.val; .)
+     "}"           (.
+                     idname = idname.Substring(1,idname.Length-2);
+                     if (idname.Equals("return value")){
+                       p = new ReturnValue(typ);
+                     }else{
+                       p = new Local(Identifier.For(idname), typ);
+                     }
+                   .)
+.
+  
+MemberRef<out Member  m>
+                   (.
+                     TypeNode dec;
+                     string mname = null;
+                     MemberList mems = null;
+                     TypeNodeList genericInstantiations = null;
+                     TypeNodeList argumentTypes = null;
+                     m = null;
+                   .)
+=
+  PType<out dec>
+  "::"
+  (
+    DottedName<out mname>
+                   (. mems = dec.GetMembersNamed(Identifier.For(mname)); .)
+  |
+    ".ctor"
+                   (. mems = dec.GetConstructors(); .)
+  )
+  [InstPTypes<out genericInstantiations>]
+  [ArgPTypes<out argumentTypes>]
+                   (.
+                     if (mems.Count == 0){
+                       Errors.SemErr(token.filename, token.line, token.col,
+                                     String.Format("could not find member: {0} in type {1}", mname, dec.FullName));
+                       throw new Exception("cannot continue"); //Errors.Exception("cannot continue");
+                     }
+                     if (mems.Count == 1){
+                       m = mems[0]; // Fields can't be overloaded, so there is just one of them, don't even check (Review?)
+                       Method meth = m as Method;
+                       if (meth != null){
+                         m = null;  // just in case it doesn't match stuff
+                         if (meth.IsGeneric){
+                           Debug.Assert(genericInstantiations != null && genericInstantiations.Count == meth.TemplateParameters.Count);
+                           Method instantiatedMethod = meth.GetTemplateInstance(dec, genericInstantiations);
+                           meth = instantiatedMethod;
+                         }
+                         if (meth.ParameterTypesMatchStructurally(argumentTypes)){
+                           m = meth;
+                         }
+                       }
+                     }else{
+                       for(int i = 0; i < mems.Count; i++){
+                         Method meth = mems[i] as Method;
+                         Debug.Assert(meth != null); // why can't they be anything other than methods?
+                         if (meth.IsGeneric){
+                           Debug.Assert(genericInstantiations != null);
+                           if (genericInstantiations.Count != meth.TemplateParameters.Count) continue;
+                           // at least it has the right number of type arguments
+                           Method instantiatedMethod = meth.GetTemplateInstance(dec, genericInstantiations);
+                           if (instantiatedMethod == null) continue;
+                           if (instantiatedMethod.ParameterTypesMatchStructurally(argumentTypes)){
+                             m = instantiatedMethod;
+                             break;
+                           }
+                         }else{
+                           if (meth.ParameterTypesMatchStructurally(argumentTypes)){
+                             m = meth;
+                             break;
+                           }
+                         }
+                       } //end for
+                     }
+                   .)
+.
+
+InstPTypes< out TypeNodeList tns>
+                   (.
+                      tns = new TypeNodeList();
+                      TypeNode tn;
+                   .)
+  = "<"
+  [ PType<out tn>
+                   (. tns.Add(tn); .)
+    { "," PType<out tn>
+                   (. tns.Add(tn); .)
+    }
+  ]
+  ">"
+.
+  
+ArgPTypes< out TypeNodeList tns>
+                   (.
+                     tns = new TypeNodeList();
+                     TypeNode tn;
+                   .)
+=
+  "(" 
+  [ PTypedRef<out tn>
+                   (. tns.Add(tn); .)
+    { "," PTypedRef<out tn>
+                   (. tns.Add(tn); .)
+    }
+  ] 
+  ")"
+.
+
+PTypedRef<out TypeNode tn>	
+                   (. tn = null; .)
+  = ( PType<out tn> | TRef<out tn> )
+.
+
+TRef<out TypeNode tn >
+                   (. tn = null; .)
+  = "$" number     (. tn = null; // TODO 
+                   .)
+.
+
+ArgExprs<out ExpressionList es>
+                   (.Expression e; es = new  ExpressionList(); .)
+=
+  "{" 
+  [ Expr<out e>    (. es.Add(e); .)
+    { "," Expr<out e>
+                   (. es.Add(e); .)
+    }
+  ] 
+  "}"
+.
+
+
+/*\
+ * The production is responsible for parsing a quantifier, which is a keyword
+ * preceding a comprehension.
+ * forall{int i in xs; i > 0};
+ * ==>
+ * "forall{| {i32, $block::a, $1}; ::>(i32,i32){$block::a, 0} |}"
+ *
+ * The type of the comprehension is set here because (for now at least) all
+ * quantifiers are functions from IEnumerable<bool> to bool.
+\*/
+Quantifier<out Expression e>
+                   (.
+                     Quantifier q = new Quantifier();
+                     NodeType n;
+                     Expression cexpr;
+                   .)
+=
+  Quant<out n>
+  Comprehension<out cexpr>
+                   (.
+                     Comprehension c = cexpr as Comprehension;
+                     if (c == null){
+                       e = null;
+                     }else{
+                       c.Type = SystemTypes.GenericIEnumerable.GetTemplateInstance(currentAssembly,SystemTypes.Boolean);
+                       q.QuantifierType = n;
+                       q.Comprehension = c;
+                       q.Type = SystemTypes.Boolean;
+                       q.SourceType = SystemTypes.Boolean;
+                       e = q;
+                     }
+                   .)
+.
+
+Quant<out NodeType n>
+                   (. n = NodeType.Undefined; .)
+=
+  (
+    "$_forall"       (. n = NodeType.Forall; .)
+  | "$_exists"       (. n = NodeType.Exists; .)
+  | "$_exists1"      (. n = NodeType.ExistsUnique; .)
+  | "$_count"        (. n = NodeType.Count; .)
+  | "$_max"          (. n = NodeType.Max; .)
+  | "$_min"          (. n = NodeType.Min; .)
+  | "$_product"      (. n = NodeType.Product; .)
+  | "$_sum"          (. n = NodeType.Sum; .)
+  )
+.
+
+Comprehension<out Expression e>
+                   (. e = null; .)
+=
+  (
+    TrueComprehension<out e>
+  |
+    Display<out e>
+  )
+.
+
+TrueComprehension<out Expression e>  
+                   (.
+                     Expression body;
+                     ExpressionList elist;
+                     BlockScope oldBlock = currentBlock;
+                     Comprehension compr = new Comprehension();
+                   .)
+=
+  "{|"
+    FiltersAndBindings<out elist>
+  ";"
+    Expr<out body>
+  "|}"
+                   (.
+                     compr.BindingsAndFilters = elist;
+                     compr.Elements = new ExpressionList(body);
+                     compr.Type = SystemTypes.GenericIEnumerable.GetTemplateInstance(currentAssembly,body.Type);
+                     e = compr;
+                     currentBlock = oldBlock;
+                   .)
+.
+
+FiltersAndBindings<out ExpressionList elist>
+=
+                   (.
+                     elist = new ExpressionList();
+                     ComprehensionBinding binding;
+                     Expression filter;
+                   .)
+  {
+    "{" Binding<out binding> "}"
+                   (. elist.Add(binding); .)
+  | "(" Expr<out filter> ")"
+                   (. elist.Add(filter); .)
+  }
+.
+
+Binding<out ComprehensionBinding binding>
+=                  (.
+                     binding = new ComprehensionBinding();
+                     TypeNode tn, dummy;
+                     Expression source;
+                     BlockScope newBlock;
+                   .)
+  PType<out tn>    (.
+                     binding.TargetVariableType = tn;
+                     newBlock = new BlockScope();
+                     newBlock.OuterScope = currentBlock;
+                     currentBlock = newBlock;
+                   .)
+  ","
+/*\
+ * This is the same as a BlockVar, but that production is looking for a block-
+ * scoped variable that already exists in a block reachable from the current
+ * block. At this point, we know that this is the declaration of a fresh variable.
+ * But it should be kept in sync with the BlockVar production since both the
+ * declaration and use of a block-scoped variable look the same in the serialized
+ * format.
+ * A new field is created for the identifier in this production.
+\*/
+  "$blockVar"
+  "("
+  PType<out dummy>
+  ")"
+  "{"
+                   (. string identName; .)
+  Ident<out identName>
+                   (.
+                     Identifier id = Identifier.For(identName);
+                     Field f = new Field(id);
+                     f.Type = tn;
+                     f.DeclaringType = currentBlock;
+                     currentBlock.Members.Add(f);
+                     MemberBinding mb = new MemberBinding(new ImplicitThis(),f);
+                     mb.Type = f.Type;
+                     binding.TargetVariable = mb;
+                     binding.ScopeForTemporaryVariables = currentBlock;
+                   .)
+  "}"
+  ","
+  Expr<out source>
+                   (.
+                     binding.SourceEnumerable = source;
+                   .)
+.
+
+Display<out Expression e>  
+                   (.
+                     Comprehension ch = new Comprehension();
+                     ExpressionList es = new ExpressionList();
+                     TypeNode tn = null;
+                   .)
+=
+  "(|"
+  PType<out tn>    (.
+                     ch.Type = SystemTypes.GenericIEnumerable.GetTemplateInstance(currentAssembly,tn);
+                   .)
+  ","
+  [ Expr<out e>    (. es.Add(e); .)
+    { "," Expr<out e>
+                   (. es.Add(e); .)
+    }
+  ] 
+  "|)"
+                   (.
+                     ch.Elements = es;
+                     e = ch;
+                   .)
+.
+
+/*------------------------------------------------------------------------*/
+Num<out Expression e>
+                  (. Token x; int neg = 1; Token decimalPart = null; .)
+=
+  [ "-"  (. neg = -1; .) ] number (. x = token; .) [ "." number (. decimalPart = token; .) ]
+                  (.
+                     try {
+                       if (neg == -1){
+                         if (decimalPart != null){
+                           string temp = "-" + x.val + "." + decimalPart.val;
+                           double d = Convert.ToDouble(temp);
+                           e = new Literal(d, SystemTypes.Double);
+                         } else {
+                           string temp = "-" + x.val;
+                           long n = Convert.ToInt64(temp);
+                           if (int.MinValue <= n){
+                             e = new Literal((int)n,SystemTypes.Int32);
+                           }else{
+                             e = new Literal(n,SystemTypes.Int64);
+                           }
+                         }
+                       }else{
+                         if (decimalPart != null){
+                           string temp = x.val + "." + decimalPart.val;
+                           double d = Convert.ToDouble(temp);
+                           e = new Literal(d, SystemTypes.Double);
+                         } else {
+                           ulong unsignedN = Convert.ToUInt64(x.val);
+                           if (unsignedN <= uint.MaxValue){
+                             e = new Literal((uint)unsignedN,SystemTypes.UInt32);
+                           }else{
+                             e = new Literal(unsignedN,SystemTypes.UInt64);
+                           }
+                         }
+                       }
+                     }catch (OverflowException) {
+                       Errors.SemErr(x.filename, x.line, x.col,"Omni: Overflow in tokenizing a number.");
+                       e = new Literal(0,SystemTypes.Int32); 
+                     }
+                  .)
+.
+
+Literal<out Expression e> 
+=                               (. e =null; .)  
+  ( "True"                      (. e = Cci.Literal.True; .)
+  | "False"                     (. e = Cci.Literal.False; .)
+  | "null"                      (. e = Cci.Literal.Null; .)
+  | "this"                      (. if (currentMethod == null) {
+                                     e = new This();
+                                     if (currentType is Struct)
+                                       e.Type = currentType.GetReferenceType();
+                                     else
+                                       e.Type = currentType;
+                                   } else {
+                                     if (currentMethod.ThisParameter == null) {
+                                       currentMethod.ThisParameter = new This();
+                                     }
+                                     e = currentMethod.ThisParameter;
+                                   }
+                                .)
+  | Num<out e>
+
+  | string                      (. string s = token.val.Substring(1,token.val.Length-2);
+                                   e = new Literal(s,SystemTypes.String); .)
+  | char                        (. string s = token.val;
+                                   if (s.Length == 3 && s[0] == '\'' && s[2] == '\''){
+                                     e = new Literal(s[1], SystemTypes.Char);
+                                   }else if (s.StartsWith("'\\u")){
+                                     try{
+                                       string unicode = s.Substring(3,s.Length-4);
+                                       uint x = Convert.ToUInt32(unicode);
+                                       char c = Convert.ToChar(x);
+                                       e= new Literal(c, SystemTypes.Char);
+                                     }catch{
+                                       e = new Literal('\0', SystemTypes.Char);
+                                     }
+                                   }else{
+                                     e = new Literal('\0', SystemTypes.Char);
+                                   }
+                                .)
+  | NewObj<out e>
+  )
+  .
+  
+/*\
+ * This production is responsible for creating the AST corresponding to "new T{...}".
+\*/
+NewObj<out Expression e>
+                   (.
+                     e = null;
+                     Comprehension c = null;
+                     TypeNode tn = null;
+                     Member addMethod = null;
+                     Member ctor = null;
+                     Expression e2 = null;
+                   .)
+=
+  "new"
+  PType<out tn>
+  ","
+  MemberRef<out addMethod>
+  ","
+  MemberRef<out ctor>
+  ","
+  Comprehension<out e2>
+                   (.
+                     c = e2 as Comprehension;
+                     c.AddMethod = addMethod as Method;
+                     c.nonEnumerableTypeCtor = ctor;
+                     c.TemporaryHackToHoldType = c.Type;
+                     c.Type = tn;
+                     e = c;
+                   .)
+.
+
+/*------------------------------------------------------------------------*/
+/*\
+ * If the returned resultType is null, then whoever calls this production needs
+ * to figure it out.
+\*/
+Operator<out NodeType nt, out int arity, out TypeNode resultType> 	
+                   (. nt = NodeType.Nop; arity = 0; resultType = null; .)
+  = "<"            (. nt = NodeType.Lt; arity = 2; resultType = SystemTypes.Boolean; .)
+  | "<="           (. nt = NodeType.Le; arity = 2; resultType = SystemTypes.Boolean; .)
+  | ">="           (. nt = NodeType.Ge; arity = 2; resultType = SystemTypes.Boolean; .)
+  | ">"            (. nt = NodeType.Gt; arity = 2; resultType = SystemTypes.Boolean; .)
+
+  | "=="           (. nt = NodeType.Eq; arity = 2; resultType = SystemTypes.Boolean; .)
+  | "!="           (. nt = NodeType.Ne; arity = 2; resultType = SystemTypes.Boolean; .)
+
+  | "||"           (. nt = NodeType.LogicalOr; arity = 2; resultType = SystemTypes.Boolean; .)
+  | "&&"           (. nt = NodeType.LogicalAnd; arity = 2; resultType = SystemTypes.Boolean; .)
+  | "!"            (. nt = NodeType.LogicalNot; arity = 1; resultType = SystemTypes.Boolean; .)
+  | "==>"          (. nt = NodeType.Implies; arity = 2; resultType = SystemTypes.Boolean; .)
+  | "<==>"         (. nt = NodeType.Iff; arity = 2; resultType = SystemTypes.Boolean; .)
+
+  | "|"            (. nt = NodeType.Or; arity = 2; .)
+  | "&"            (. nt = NodeType.And; arity = 2; .)
+  | "~"            (. nt = NodeType.Not; arity = 1; .)
+  | "^"            (. nt = NodeType.Xor; arity = 2; .)
+
+  | "*"            (. nt = NodeType.Mul; arity = 2; .)
+  | "+"            (. nt = NodeType.Add; arity = 2; .)
+  | "-"            (. nt = NodeType.Sub; arity = 2; .)
+  | "/"            (. nt = NodeType.Div; arity = 2; .)
+  | "%"            (. nt = NodeType.Rem; arity = 2; .)
+
+  | "0-"           (. nt = NodeType.Neg; arity = 1; .)
+  | "0+"           (. nt = NodeType.UnaryPlus; arity = 1; .)
+
+  | "<<"           (. nt = NodeType.Shl; arity = 2; .)
+  | "1>>"          (. nt = NodeType.Shr; arity = 2; .)
+  | "0>>"          (. nt = NodeType.Shr_Un; arity = 2; .)
+  | "$defaultValue"
+                   (. nt = NodeType.DefaultValue; arity = 1; .)
+  | "$unboxAny"    (. nt = NodeType.UnboxAny; arity = 2; .)
+  | ":"            (. nt = NodeType.Range; arity = 2; resultType = SystemTypes.Range; .)
+  | "$Conv_I1"     (. nt = NodeType.Conv_I1; arity = 1; resultType = SystemTypes.Int8; .)
+  | "$Conv_I2"     (. nt = NodeType.Conv_I2; arity = 1; resultType = SystemTypes.Int16; .)
+  | "$Conv_I4"     (. nt = NodeType.Conv_I4; arity = 1; resultType = SystemTypes.Int32; .)
+  | "$Conv_I8"     (. nt = NodeType.Conv_I8; arity = 1; resultType = SystemTypes.Int64; .)
+  | "$Conv_I"      (. nt = NodeType.Conv_I; arity = 1; resultType = SystemTypes.IntPtr; .)
+  | "$Conv_U1"     (. nt = NodeType.Conv_U1; arity = 1; resultType = SystemTypes.UInt8; .)
+  | "$Conv_U2"     (. nt = NodeType.Conv_U2; arity = 1; resultType = SystemTypes.UInt16; .)
+  | "$Conv_U4"     (. nt = NodeType.Conv_U4; arity = 1; resultType = SystemTypes.UInt32; .)
+  | "$Conv_U8"     (. nt = NodeType.Conv_U8; arity = 1; resultType = SystemTypes.UInt64; .)
+  | "$Conv_U"      (. nt = NodeType.Conv_U; arity = 1; resultType = SystemTypes.UIntPtr; .)
+  | "$Ldlen"       (. nt = NodeType.Ldlen;   arity = 1; resultType = SystemTypes.Int32;  .)
+.
+
+
+END Omni .

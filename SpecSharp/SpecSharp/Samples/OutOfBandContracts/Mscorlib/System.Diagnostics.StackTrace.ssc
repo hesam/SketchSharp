@@ -1,0 +1,59 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Diagnostics
+{
+
+    public class StackTrace
+    {
+
+        public int FrameCount
+        {
+          get;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string! ToString ();
+
+        public StackFrame GetFrame (int index);
+
+        public StackTrace (System.Threading.Thread targetThread, bool needFileInfo);
+
+        public StackTrace (StackFrame frame);
+
+        public StackTrace (Exception! e, int skipFrames, bool fNeedFileInfo)
+            requires e != null otherwise ArgumentNullException;
+            requires skipFrames >= 0 otherwise ArgumentOutOfRangeException;
+
+        public StackTrace (Exception! e, int skipFrames)
+            requires e != null otherwise ArgumentNullException;
+            requires skipFrames >= 0 otherwise ArgumentOutOfRangeException;
+
+        public StackTrace (Exception! e, bool fNeedFileInfo)
+            requires e != null otherwise ArgumentNullException;
+
+        public StackTrace (Exception! e)
+            requires e != null otherwise ArgumentNullException;
+
+        public StackTrace (int skipFrames, bool fNeedFileInfo)
+            requires skipFrames >= 0 otherwise ArgumentOutOfRangeException;
+
+        public StackTrace (int skipFrames)
+            requires skipFrames >= 0 otherwise ArgumentOutOfRangeException;
+
+        public StackTrace (bool fNeedFileInfo);
+
+        public StackTrace ();
+    }
+}

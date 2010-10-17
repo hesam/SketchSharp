@@ -1,0 +1,50 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.CodeDom
+{
+
+    public class CodeParameterDeclarationExpressionCollection
+    {
+
+        public CodeParameterDeclarationExpression this [int index]
+        {
+          get;
+          set;
+        }
+
+        public void Remove (CodeParameterDeclarationExpression value);
+
+        public void Insert (int index, CodeParameterDeclarationExpression value);
+
+        public int IndexOf (CodeParameterDeclarationExpression value);
+
+        public void CopyTo (CodeParameterDeclarationExpression[] array, int index);
+
+        public bool Contains (CodeParameterDeclarationExpression value);
+
+        public void AddRange (CodeParameterDeclarationExpressionCollection! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public void AddRange (CodeParameterDeclarationExpression[]! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public int Add (CodeParameterDeclarationExpression value);
+
+        public CodeParameterDeclarationExpressionCollection (CodeParameterDeclarationExpression[] value);
+
+        public CodeParameterDeclarationExpressionCollection (CodeParameterDeclarationExpressionCollection value);
+
+        public CodeParameterDeclarationExpressionCollection ();
+    }
+}

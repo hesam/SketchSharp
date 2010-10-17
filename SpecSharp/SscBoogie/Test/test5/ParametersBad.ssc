@@ -1,0 +1,15 @@
+public class Ref {
+  public int[] a;
+  public void M(int x, ref int y, out int z)
+    requires 0 <= z;  // error: z is not in scope in precondition
+    modifies x;  // error: in-parameters are not allowed in 
+    modifies y;  // error: ref-parameters are automatically allowed to be modified, and
+                 // are not allowed explicitly in modifies clauses
+    modifies z;  // error: ditto for out parameters
+    modifies a[x];  // fine
+    modifies a[y];  // fine
+    modifies a[z];  // error: out parameters are not in scope in modifies clauses
+  {
+    z = 20;
+  }
+}

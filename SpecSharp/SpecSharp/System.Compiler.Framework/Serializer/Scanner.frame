@@ -1,0 +1,156 @@
+using System;
+using System.IO;
+using System.Collections;
+using System.Text;
+
+
+namespace Omni {
+
+public class Token {
+	public int kind;		// token kind
+    public string filename;  // token file
+	public int pos;		  // token position in the source text (starting at 0)
+	public int col;		  // token column (starting at 0)
+	public int line;		// token line (starting at 1)
+	public string val;	// token value
+	
+	public static Token NoToken = new Token();
+}
+
+}
+
+namespace -->namespace {
+
+//using Omni.Reader;
+
+public class Buffer {
+	static string buf;
+	static int bufLen;
+	static int pos;
+	public const int eof = '\uffff';
+	
+    public static void Fill(StreamReader reader) {
+      buf = reader.ReadToEnd();
+      bufLen = buf.Length;
+      pos = 0;
+    }
+	
+    public static void Fill(string s) {
+      buf = String.Copy(s);
+      bufLen = buf.Length;
+      pos = 0;
+    }
+    
+	public static int Read() {
+		if (pos < bufLen)
+			return buf[pos++];
+		else
+			return eof;
+	}
+
+	public static int Pos {
+		get { return pos; }
+		set {
+			if (value < 0) pos = 0; else if (value >= bufLen) pos = bufLen; else pos = value;
+		}
+	}
+}
+
+
+
+public class Scanner {
+	const char EOF = '\0';
+	const char CR  = '\r';
+	const char LF  = '\n';
+-->declarations
+
+	static Token t;			// current token
+	static char ch;			// current input character
+	static int pos;     // column number of current character
+	static int line;		// line number of current character
+	static int lineStart;	    // start position of current line
+	static Queue oldEols;		  // EOLs that appeared in a comment;
+	static BitArray ignore;	  // set of characters to be ignored by the scanner	
+	static string Filename;
+
+	public static void Init () {
+		pos = -1; line = 1; lineStart = 0;
+		oldEols = new Queue();
+		NextCh();
+-->initialization
+	}
+
+	public static void Init (string contents) {
+	    Filename = "Parsing from string";
+		Buffer.Fill(contents);
+		Init();
+    }
+    
+	public static void Init (string filename, StreamReader reader) {
+	    Filename = filename;
+		Buffer.Fill(reader);
+		Init();
+	}
+	
+	private static void NextCh() {
+		if (oldEols.Count > 0) {
+			ch = (char)oldEols.Dequeue();
+		} else {
+			ch = (char)Buffer.Read(); pos++;
+			if (ch == '\uffff') {
+			  ch = EOF;
+			} else if (ch == LF) {
+			  line++;
+			  lineStart = pos + 1;
+			}
+		}
+	}
+	
+-->comment
+	
+	static void CheckLiteral() {
+		switch (t.val) {
+-->literals
+		}
+	}
+
+	public static Token Scan() {
+		while (ignore[ch]) NextCh();
+-->scan1
+		t = new Token();
+		t.pos = pos; t.col = pos - lineStart + 1; t.line = line; t.filename = Filename;
+		int state = start[ch];
+		StringBuilder buf = new StringBuilder(16);
+		buf.Append(ch); NextCh();
+		
+		switch (state) {
+			case 0: {t.kind = noSym; goto done;} // NextCh already done
+-->scan2
+		}
+		done:
+		t.val = buf.ToString();
+		return t;
+	}
+
+} // end Scanner
+
+
+public delegate void ErrorProc(int n, string filename, int line, int col);
+
+public class Errors {
+	public static int count = 0;	// number of errors detected
+	public static ErrorProc SynErr;	// syntactic errors
+	
+	public static void SemErr(string filename, int line, int col, string msg) {	// semantic errors
+		Console.WriteLine("{0}({1},{2}): error: {3}", filename, line, col, msg);
+		count++;
+	}
+	
+	public static void Exception (string s) {
+		Console.WriteLine(s); System.Environment.Exit(0);
+	}
+
+} // Errors
+
+} // end namespace
+$$$

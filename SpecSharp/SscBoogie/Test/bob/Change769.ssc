@@ -1,0 +1,64 @@
+struct Test1
+{
+    int i;
+
+    Test1(int j) { i = j; }
+}
+
+class MyException : Microsoft.Contracts.CheckedException {}
+
+class Test2
+{
+    static void Foo() throws MyException; {}
+}
+
+class Test3
+{
+    static void Foo() requires (true); {}
+}
+
+class A
+{
+    [Microsoft.Contracts.Pure] public bool Blah() { return true; }
+}
+
+class B : A
+{
+}
+
+class Test4
+{
+    void Foo(A a) requires a is B && ((B) a).Blah(); {}
+}
+
+class Test5
+{
+    void Foo(ref int i) requires i == 0; {}
+}
+
+class Test6
+{
+    [Microsoft.Contracts.Pure] static bool Foo() { return true; }
+
+    static void Bar() requires Foo(); {}
+}
+
+struct S {
+    public S(int i) {}
+    [Microsoft.Contracts.Pure] public bool Foo() { return true;}
+}
+
+class Test7
+{
+    [Microsoft.Contracts.Pure] static S Baz() { S s = new S(3); return s; }
+    static void Bar() requires Baz().Foo(); {}
+}
+
+class Test8
+{
+    static void Foo2(int[]! xs) requires forall{int x in xs; 0 <= TriggerMe(x)}; {}
+    static void Foo3(System.Collections.Generic.IEnumerable<int> xs) requires forall{int x in xs; 0 <= TriggerMe(x)}; {}
+    [Microsoft.Contracts.Pure][Microsoft.Contracts.Reads(Microsoft.Contracts.ReadsAttribute.Reads.Nothing)]
+    static int TriggerMe(int x) { return x; }
+}
+

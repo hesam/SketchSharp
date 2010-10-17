@@ -1,0 +1,42 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security.Principal
+{
+
+    public class GenericIdentity
+    {
+
+        public string Name
+        {
+          get;
+        }
+
+        public string AuthenticationType
+        {
+          get;
+        }
+
+        public bool IsAuthenticated
+        {
+          get;
+        }
+
+        public GenericIdentity (string! name, string! type)
+            requires name != null otherwise ArgumentNullException;
+            requires type != null otherwise ArgumentNullException;
+
+        public GenericIdentity (string! name)
+            requires name != null otherwise ArgumentNullException;
+    }
+}

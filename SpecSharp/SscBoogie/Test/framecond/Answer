@@ -1,0 +1,5 @@
+
+-------------------- Good.ssc --------------------
+
+-------------------- Bad.ssc --------------------
+Bad.ssc(19,9): warning CS2663: Assertion might not hold: cell1.x == 0

@@ -1,0 +1,112 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Reflection.Emit
+{
+
+    public class ILGenerator
+    {
+
+        public void EndScope ();
+
+        public void BeginScope ();
+
+        public void MarkSequencePoint (System.Diagnostics.SymbolStore.ISymbolDocumentWriter! document, int startLine, int startColumn, int endLine, int endColumn)
+            requires startLine != 0 otherwise ArgumentOutOfRangeException;
+            requires startLine >= 0 otherwise ArgumentOutOfRangeException;
+            requires endLine != 0 otherwise ArgumentOutOfRangeException;
+            requires endLine >= 0 otherwise ArgumentOutOfRangeException;
+
+        public void UsingNamespace (string! usingNamespace)
+            requires usingNamespace != null otherwise ArgumentNullException;
+            requires usingNamespace.Length != 0 otherwise ArgumentException;
+
+        public LocalBuilder! DeclareLocal (Type! localType)
+            requires localType != null otherwise ArgumentNullException;
+
+        public virtual LocalBuilder! DeclareLocal(Type! localType, bool pinned);
+        
+        public void EmitWriteLine (System.Reflection.FieldInfo! fld)
+            requires fld != null otherwise ArgumentNullException;
+
+        public void EmitWriteLine (LocalBuilder! localBuilder);
+
+        public void EmitWriteLine (string! value);
+
+        public void ThrowException (Type! excType)
+            requires excType != null otherwise ArgumentNullException;
+
+        public void MarkLabel (Label loc);
+
+        public Label DefineLabel ();
+
+        public void BeginFinallyBlock ();
+
+        public void BeginFaultBlock ();
+
+        public void BeginCatchBlock (Type! exceptionType)
+            requires exceptionType == null otherwise ArgumentException;
+            requires exceptionType != null otherwise ArgumentNullException;
+
+        public void BeginExceptFilterBlock ();
+
+        public void EndExceptionBlock ();
+
+        public Label BeginExceptionBlock ();
+
+        public void Emit (OpCode opcode, LocalBuilder! local)
+            requires local != null otherwise ArgumentNullException;
+
+        public void Emit (OpCode opcode, string! str);
+
+        public void Emit (OpCode opcode, System.Reflection.FieldInfo! field);
+
+        public void Emit (OpCode opcode, Label[]! labels);
+
+        public void Emit (OpCode opcode, Label label);
+
+        public void Emit (OpCode opcode, double arg);
+
+        public void Emit (OpCode opcode, Single arg);
+
+        public void Emit (OpCode opcode, Int64 arg);
+
+        public void Emit (OpCode opcode, Type cls);
+
+        public void Emit (OpCode opcode, System.Reflection.ConstructorInfo! con);
+
+        public void Emit (OpCode opcode, SignatureHelper! signature)
+            requires signature != null otherwise ArgumentNullException;
+
+        public void EmitCall (OpCode opcode, System.Reflection.MethodInfo! methodInfo, Type[] optionalParameterTypes)
+            requires methodInfo != null otherwise ArgumentNullException;
+
+        public void EmitCalli (OpCode opcode, System.Runtime.InteropServices.CallingConvention unmanagedCallConv, Type! returnType, Type[]! parameterTypes);
+
+        public void EmitCalli (OpCode opcode, System.Reflection.CallingConventions callingConvention, Type! returnType, Type[]! parameterTypes, Type[]! optionalParameterTypes)
+            requires optionalParameterTypes == null || (int)((int)callingConvention & 2) != 0 otherwise InvalidOperationException;
+
+        public void Emit (OpCode opcode, System.Reflection.MethodInfo! meth)
+            requires meth != null otherwise ArgumentNullException;
+
+        public void Emit (OpCode opcode, int arg);
+
+        public void Emit (OpCode opcode, Int16 arg);
+
+        public void Emit (OpCode opcode, SByte arg);
+
+        public void Emit (OpCode opcode, byte arg);
+
+        public void Emit (OpCode opcode);
+    }
+}

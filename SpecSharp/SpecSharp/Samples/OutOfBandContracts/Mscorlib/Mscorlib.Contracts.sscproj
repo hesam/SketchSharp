@@ -1,0 +1,1061 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VisualStudioProject>
+  <XEN ProjectType="Local"
+     SchemaVersion="1.0"
+     Name="Mscorlib.Contracts"
+     ProjectGuid="fbca6915-0e72-4a64-ab9e-adc976e89275"
+    >
+    <Build>
+      <Settings ApplicationIcon=""
+         AssemblyName="Mscorlib.Contracts"
+         OutputType="Library"
+         RootNamespace="Contracts"
+         StartupObject=""
+         StandardLibraryLocation=""
+         TargetPlatform="v2"
+         TargetPlatformLocation=""
+         ShadowedAssembly="%SystemRoot%\Microsoft.NET\Framework\v2.0.50727\mscorlib.dll"
+         NoStandardLibraries="True"
+        >
+        <Config Name="Debug"
+           AllowUnsafeBlocks="True"
+           BaseAddress="285212672"
+           CheckForOverflowUnderflow="False"
+           ConfigurationOverrideFile=""
+           DefineConstants="DEBUG;TRACE"
+           DocumentationFile=""
+           DebugSymbols="True"
+           FileAlignment="4096"
+           IncrementalBuild="True"
+           Optimize="False"
+           OutputPath="bin"
+           RegisterForComInterop="False"
+           RemoveIntegerChecks="false"
+           TreatWarningsAsErrors="False"
+           WarningLevel="4"
+           />
+        <Config Name="Release"
+           AllowUnsafeBlocks="True"
+           BaseAddress="285212672"
+           CheckForOverflowUnderflow="False"
+           ConfigurationOverrideFile=""
+           DefineConstants="TRACE;DEBUG"
+           DocumentationFile=""
+           DebugSymbols="False"
+           FileAlignment="4096"
+           IncrementalBuild="false"
+           Optimize="True"
+           OutputPath="bin"
+           RegisterForComInterop="False"
+           RemoveIntegerChecks="false"
+           TreatWarningsAsErrors="False"
+           WarningLevel="4"
+           />
+      </Settings>
+      <References>
+        <Reference Name="System.Compiler.Runtime"
+             AssemblyName="System.Compiler.Runtime"
+             Private="true"
+             HintPath="..\..\..\System.Compiler.Runtime\bin\System.Compiler.Runtime.dll"
+             />
+        <Reference Name="mscorlib"
+             AssemblyName="mscorlib"
+             Private="false"
+             HintPath="../../../WINDOWS/Microsoft.NET/Framework/v2.0.50727/mscorlib.dll"
+             />
+      </References>
+    </Build>
+    <Files>
+      <Include>
+        <File RelPath="Microsoft.Win32.RegistryKey.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Activator.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.AppDomain.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.ArgumentException.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.ArgumentOutOfRangeException.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Array.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Attribute.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.BitConverter.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Boolean.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Char.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Collections.ArrayList.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Collections.BitArray.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Collections.CaseInsensitiveComparer.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Collections.CaseInsensitiveHashCodeProvider.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Collections.CollectionBase.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Collections.Comparer.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Collections.DictionaryEntry.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Collections.Hashtable.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Collections.Queue.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Collections.SortedList.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Collections.Stack.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Console.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Convert.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.DateTime.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Decimal.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Delegate.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Diagnostics.StackTrace.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Environment.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Exception.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.GC.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.Calendar.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.CompareInfo.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.CultureInfo.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.DateTimeFormatInfo.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.GregorianCalendar.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.HebrewCalendar.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.HijriCalendar.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.JapaneseCalendar.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.JulianCalendar.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.KoreanCalendar.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.NumberFormatInfo.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.RegionInfo.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.SortKey.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.StringInfo.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.TaiwanCalendar.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.TextInfo.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Globalization.ThaiBuddhistCalendar.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Guid.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.BinaryReader.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.BinaryWriter.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.BufferedStream.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.Directory.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.DirectoryInfo.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.File.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.FileInfo.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.FileStream.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.IsolatedStorage.IsolatedStorageFile.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.IsolatedStorage.IsolatedStorageFileStream.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.MemoryStream.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.Path.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.Stream.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.StreamReader.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.StreamWriter.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.StringReader.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.StringWriter.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.TextReader.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.IO.TextWriter.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Math.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.MissingMemberException.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.NotFiniteNumberException.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.OperatingSystem.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Random.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Assembly.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.AssemblyFileVersionAttribute.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.AssemblyName.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Emit.AssemblyBuilder.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Emit.ConstructorBuilder.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Emit.EventBuilder.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Emit.FieldBuilder.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Emit.ILGenerator.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Emit.MethodBuilder.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Emit.MethodRental.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Emit.ModuleBuilder.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Emit.ParameterBuilder.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Emit.PropertyBuilder.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Emit.SignatureHelper.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Emit.TypeBuilder.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Emit.UnmanagedMarshal.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Module.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.ParameterInfo.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.ParameterModifier.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.Pointer.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.ReflectionTypeLoadException.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.StrongNameKeyPair.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Reflection.TypeDelegator.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Resources.NeutralResourcesLanguageAttribute.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Resources.ResourceManager.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Resources.ResourceReader.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Resources.ResourceSet.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Resources.ResourceWriter.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Resources.SatelliteContractVersionAttribute.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.InteropServices.Marshal.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.InteropServices.RegistrationServices.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.InteropServices.TypeLibConverter.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Remoting.ActivatedClientTypeEntry.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Remoting.ActivatedServiceTypeEntry.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Remoting.Activation.UrlAttribute.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Remoting.Contexts.Context.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Remoting.Contexts.ContextAttribute.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Remoting.Contexts.SynchronizationAttribute.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Remoting.Messaging.LogicalCallContext.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Remoting.Messaging.MethodResponse.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Remoting.Messaging.RemotingSurrogateSelector.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Remoting.Messaging.ReturnMessage.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Remoting.ObjRef.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Remoting.Proxies.ProxyAttribute.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Remoting.RemotingServices.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Remoting.WellKnownClientTypeEntry.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Remoting.WellKnownServiceTypeEntry.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Serialization.FormatterConverter.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Serialization.FormatterServices.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Serialization.Formatters.InternalST.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Serialization.ObjectIDGenerator.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Serialization.ObjectManager.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Serialization.SerializationInfo.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Runtime.Serialization.SurrogateSelector.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.RuntimeFieldHandle.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.RuntimeMethodHandle.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.RuntimeTypeHandle.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.CodeAccessPermission.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.AsymmetricSignatureDeformatter.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.AsymmetricSignatureFormatter.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.CryptoAPITransform.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.CryptoConfig.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.CryptoStream.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.DES.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.DSA.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.DSACryptoServiceProvider.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.DSASignatureDeformatter.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.DSASignatureFormatter.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.FromBase64Transform.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.HashAlgorithm.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.MACTripleDES.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.PasswordDeriveBytes.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.RC2.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.RNGCryptoServiceProvider.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.RSA.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.RSACryptoServiceProvider.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.RSAPKCS1SignatureDeformatter.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.RSAPKCS1SignatureFormatter.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.SignatureDescription.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.SymmetricAlgorithm.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.ToBase64Transform.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Cryptography.TripleDES.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.PermissionSet.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Permissions.EnvironmentPermission.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Permissions.FileDialogPermission.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Permissions.FileIOPermission.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Permissions.IsolatedStoragePermission.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Permissions.PrincipalPermission.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Permissions.PublisherIdentityPermission.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Permissions.ReflectionPermission.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Permissions.RegistryPermission.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Permissions.SecurityPermission.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Permissions.SiteIdentityPermission.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Permissions.StrongNameIdentityPermission.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Permissions.StrongNamePublicKeyBlob.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Permissions.UIPermission.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Permissions.UrlIdentityPermission.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Permissions.ZoneIdentityPermission.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.AllMembershipCondition.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.ApplicationDirectory.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.ApplicationDirectoryMembershipCondition.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.CodeGroup.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.FileCodeGroup.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.FirstMatchCodeGroup.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.Hash.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.HashMembershipCondition.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.NetCodeGroup.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.PolicyLevel.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.PolicyStatement.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.Publisher.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.PublisherMembershipCondition.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.Site.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.SiteMembershipCondition.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.StrongName.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.StrongNameMembershipCondition.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.UnionCodeGroup.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.Url.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.UrlMembershipCondition.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.Zone.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Policy.ZoneMembershipCondition.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Principal.GenericIdentity.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Principal.GenericPrincipal.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.Principal.WindowsPrincipal.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.SecurityElement.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.SecurityException.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Security.SecurityManager.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.String.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Text.ASCIIEncoding.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Text.Encoding.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Text.StringBuilder.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Text.UTF7Encoding.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Text.UTF8Encoding.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Text.UnicodeEncoding.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Threading.Monitor.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Threading.Overlapped.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Threading.Thread.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Threading.ThreadPool.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Threading.Timer.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Threading.WaitHandle.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Type.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.TypeLoadException.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.TypedReference.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.Version.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File RelPath="System.WeakReference.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.IO.FileSystemInfo.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Object.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Collections.ICollection.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Int32.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Collections.Generic.List.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Collections.Generic.IEnumerable.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Int64.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Collections.ObjectModel.ReadOnlyCollection.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Collections.Generic.Dictionary.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Collections.Generic.ICollection.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Collections.IEnumerable.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Collections.IComparer.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Collections.IEqualityComparer.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Collections.IDictionary.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Reflection.PropertyInfo.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Reflection.ConstructorInfo.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Reflection.MethodBase.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Reflection.MemberInfo.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Collections.Generic.Stack.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Enum.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.ICloneable.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Collections.IList.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Collections.IEnumerator.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.IEquatable.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.IComparable.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Collections.Generic.IDictionary.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Collections.Generic.IEnumerator.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.Nullable.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.IConvertible.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.IntPtr.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="System.UIntPtr.ssc"
+                 />
+      </Include>
+    </Files>
+  </XEN>
+</VisualStudioProject>

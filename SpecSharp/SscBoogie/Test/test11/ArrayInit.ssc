@@ -1,0 +1,44 @@
+using Microsoft.Contracts;
+
+public class Sx { }
+public sealed class SxSealed { }
+  
+public class Nary {
+  void M([Captured] Sx! arg)
+    requires Owner.None(arg);
+  {
+    Sx[] o = new Sx[1];
+    o[0] = arg;
+  }
+
+  void P(Sx[]! a)
+    requires a.Length == 4;
+    modifies a[0];
+  {
+    a[0] = a[1];
+  }
+
+  void Q(Sx[]! a, [Captured] Sx! arg)
+    requires a.Length == 4;
+    requires Owner.None(arg);
+    modifies a[*];
+  {
+    a[0] = arg;  // Error: possible co-variant array element problem
+  }
+
+  void R(Sx[]! a, [Captured] Sx! arg)
+    requires a.Length == 4 && a.GetType() == typeof(Sx[]);
+    requires Owner.None(arg);
+    modifies a[*];
+  {
+    a[0] = arg;  // Error: possible co-variant array element problem
+  }
+
+  void S(SxSealed[]! a, [Captured] SxSealed! arg)
+    requires a.Length == 4;
+    requires Owner.None(arg);
+    modifies a[*];
+  {
+    a[0] = arg;
+  }
+}

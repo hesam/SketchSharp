@@ -1,0 +1,22 @@
+using Microsoft.Contracts;
+
+class C {
+  void P() 
+    modifies this.*; 
+  {
+  }
+  int x;
+  void M()
+    modifies this.*;
+    ensures x == 8;
+  {
+    x = 8;
+    P(); //ERROR: this might change x, change P's modifies clause to exclude x to make this verify
+  }
+}
+
+//current error:
+// Error: Method C.M(), unsatisfied postcondition: x == 8
+
+//better error:
+// explain that P() can change x, therefore x arbitrary and postcondition violated

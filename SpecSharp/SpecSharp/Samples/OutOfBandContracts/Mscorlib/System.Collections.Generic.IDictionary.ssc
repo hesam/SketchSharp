@@ -1,0 +1,141 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using System.Collections;
+using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
+
+using Microsoft.Contracts;
+
+namespace System.Collections.Generic {
+  // Summary:
+  //     Represents a generic collection of key/value pairs.
+  public interface IDictionary<TKey, TValue> : ICollection<KeyValuePair<TKey, TValue>>, IEnumerable<KeyValuePair<TKey, TValue>>, IEnumerable {
+    // Summary:
+    //     Gets an System.Collections.Generic.ICollection<T> containing the keys of
+    //     the System.Collections.Generic.IDictionary<TKey,TValue>.
+    //
+    // Returns:
+    //     An System.Collections.Generic.ICollection<T> containing the keys of the object
+    //     that implements System.Collections.Generic.IDictionary<TKey,TValue>.
+    ICollection<TKey>! Keys { get; }
+    //
+    // Summary:
+    //     Gets an System.Collections.Generic.ICollection<T> containing the values in
+    //     the System.Collections.Generic.IDictionary<TKey,TValue>.
+    //
+    // Returns:
+    //     An System.Collections.Generic.ICollection<T> containing the values in the
+    //     object that implements System.Collections.Generic.IDictionary<TKey,TValue>.
+    ICollection<TValue>! Values { get; }
+
+    // Summary:
+    //     Gets or sets the element with the specified key.
+    //
+    // Parameters:
+    //   key:
+    //     The key of the element to get or set.
+    //
+    // Returns:
+    //     The element with the specified key.
+    //
+    // Exceptions:
+    //   System.NotSupportedException:
+    //     The property is set and the System.Collections.Generic.IDictionary<TKey,TValue>
+    //     is read-only.
+    //
+    //   System.ArgumentNullException:
+    //     key is null.
+    //
+    //   System.Collections.Generic.KeyNotFoundException:
+    //     The property is retrieved and key is not found.
+    TValue this[TKey key] {
+      [ResultNotNewlyAllocated]
+      get;
+        requires ContainsKey(key);
+      set;
+        modifies this.*;
+        ensures ContainsKey(key);
+    }
+
+    // Summary:
+    //     Adds an element with the provided key and value to the System.Collections.Generic.IDictionary<TKey,TValue>.
+    //
+    // Parameters:
+    //   value:
+    //     The object to use as the value of the element to add.
+    //
+    //   key:
+    //     The object to use as the key of the element to add.
+    //
+    // Exceptions:
+    //   System.NotSupportedException:
+    //     The System.Collections.Generic.IDictionary<TKey,TValue> is read-only.
+    //
+    //   System.ArgumentException:
+    //     An element with the same key already exists in the System.Collections.Generic.IDictionary<TKey,TValue>.
+    //
+    //   System.ArgumentNullException:
+    //     key is null.
+    [WriteConfined]
+    void Add(TKey key, TValue value);
+      requires !ContainsKey(key);
+      modifies this.*;
+      ensures ContainsKey(key);
+    //
+    // Summary:
+    //     Determines whether the System.Collections.Generic.IDictionary<TKey,TValue>
+    //     contains an element with the specified key.
+    //
+    // Parameters:
+    //   key:
+    //     The key to locate in the System.Collections.Generic.IDictionary<TKey,TValue>.
+    //
+    // Returns:
+    //     true if the System.Collections.Generic.IDictionary<TKey,TValue> contains
+    //     an element with the key; otherwise, false.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     key is null.
+    [Pure][Reads(ReadsAttribute.Reads.Owned)]
+    bool ContainsKey(TKey key);
+    //
+    // Summary:
+    //     Removes the element with the specified key from the System.Collections.Generic.IDictionary<TKey,TValue>.
+    //
+    // Parameters:
+    //   key:
+    //     The key of the element to remove.
+    //
+    // Returns:
+    //     true if the element is successfully removed; otherwise, false.  This method
+    //     also returns false if key was not found in the original System.Collections.Generic.IDictionary<TKey,TValue>.
+    //
+    // Exceptions:
+    //   System.NotSupportedException:
+    //     The System.Collections.Generic.IDictionary<TKey,TValue> is read-only.
+    //
+    //   System.ArgumentNullException:
+    //     key is null.
+    [WriteConfined]
+    bool Remove(TKey key);
+      modifies this.*;
+      ensures result ==> old(ContainsKey(key)) && !ContainsKey(key);
+    
+    //[Pure][Reads(ReadsAttribute.Reads.Owned)]
+    bool TryGetValue(TKey key, out TValue? value);
+      ensures result == ContainsKey(key);
+  }
+}

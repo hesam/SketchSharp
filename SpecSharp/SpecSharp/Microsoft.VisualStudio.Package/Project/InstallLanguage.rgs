@@ -1,0 +1,76 @@
+HKCR
+{
+    ForceRemove .%SourceFileExtension% = s '%LanguageProgId%'
+    {
+        val 'Content Type' = s 'text/plain'
+    }
+    ForceRemove '%LanguageProgId%' = s '%LanguageShortName% Source File'
+    {
+        DefaultIcon = s '%Win32ResourcesDllPath%,%SourceFileIconId%'
+        ForceRemove shell
+        {
+            ForceRemove Open
+            {   
+                command = s '%DevEnvPath% /dde'
+                ddeexec = s '%OpenCommand%'
+                {
+                    application = s 'VisualStudio.%VsVersion%'
+                    topic = s 'system'
+                }
+            }
+        }
+    }
+}
+
+HKLM
+{
+ NoRemove Software 
+ { 
+  Microsoft 
+  { 
+   VisualStudio 
+   { 
+    %VsVersion% 
+    {
+      NoRemove Languages
+      {
+          NoRemove 'File Extensions'
+          {
+              ForceRemove .%SourceFileExtension% = s '%LanguageServiceGuid%'
+              {
+                  val Name = s '%LanguageShortName%'
+              }
+          }
+          NoRemove 'Language Services'
+          {
+              ForceRemove %LanguageShortName% = s '%LanguageServiceGuid%'
+              {
+                  val Package = s '%PackageGuid%'
+                  val LangResId = d 0
+                  val RequestStockColors = d %RequestStockColors%
+                  val QuickInfo = d 1
+                  val CodeSense = d 1
+                  val CodeSenseDelay = d %CodeSenseDelay%
+                  val CodeSenseFastOnLineChange = d 1
+                  val MatchBraces = d 1
+                  val MatchBracesAtCaret = d 0
+                  val ShowCompletion = d 1
+                  val ShowMatchingBrace = d 1
+                  val SortMemberList = d 1
+                  val MaxErrorMessages = d 30
+              }
+          }
+      }
+           
+      NoRemove Services
+      {
+          ForceRemove %LanguageServiceGuid% = s '%PackageGuid%'
+          {
+              val Name = s '%LanguageShortName% Language Service'
+          }
+      }   
+    } 
+   }
+  } 
+ }
+}

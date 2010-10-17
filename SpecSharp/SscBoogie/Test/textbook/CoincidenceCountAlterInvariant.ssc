@@ -1,0 +1,42 @@
+// CoincidenceCountAlterInvariant.ssc
+// Rosemary Monahan & Rustan Leino
+// 22th March 2007
+/* Given 2 integer arrays in monotomnically increasing order, find the number of values occurring in both 
+   sequences (Coincidence count, A Method of Programming, Dijkstra & Feijen)
+   Efficient version, Improved invariant.
+   See CoincidenceCountEfficient for an alternative version
+*/ 
+
+class CoincidenceCount
+{
+  public int Coincidence(int[]! f, int[]! g)
+    requires forall{int i in (0: f.Length), int j in (0: f.Length), i < j; f[i] < f[j]};
+    requires forall{int i in (0: g.Length), int j in (0: g.Length), i < j; g[i] < g[j]};
+    ensures result == count{int i in (0: f.Length), int j in (0: g.Length); f[i] == g[j]};
+  {  
+    int ct = 0;
+    int m = 0;
+    int n = 0; 
+
+    while (m < f.Length && n < g.Length)
+      invariant 0 <= m && m <= f.Length; 
+      invariant 0 <= n && n <= g.Length;
+      invariant m == f.Length || forall{int j in (0: n); g[j] < f[m]} ;
+      invariant n == g.Length || forall{int i in (0: m); f[i] < g[n]} ;
+      invariant ct + count{int i in (m: f.Length), int j in (n: g.Length); f[i] == g[j]} == 
+                count{int i in (0: f.Length), int j in (0: g.Length); f[i] == g[j]};
+    {          
+      if (f[m] < g[n]) {
+        m++;
+      } else if (g[n] < f[m]) {
+        n++;
+      } else {
+        assert f[m] == g[n];
+        ct++;
+        m++;
+        n++;
+      }
+    }
+    return ct; 
+  }
+}

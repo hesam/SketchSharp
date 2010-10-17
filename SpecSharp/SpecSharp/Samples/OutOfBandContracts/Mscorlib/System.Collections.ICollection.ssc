@@ -1,0 +1,42 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+
+namespace System.Collections
+{
+    public interface ICollection
+    {
+        int Count
+        {
+          get
+            ensures result >= 0;
+        }
+        
+        bool IsSynchronized
+        {
+          get;
+        }
+
+        object! SyncRoot
+        {
+          get;
+        }
+
+        void CopyTo (Array! array, int index)
+            requires array != null otherwise ArgumentNullException;
+            requires array.Rank == 1 otherwise ArgumentException;
+            requires index >= 0 otherwise ArgumentOutOfRangeException;
+            requires index < this.Count otherwise ArgumentOutOfRangeException;
+    }
+}

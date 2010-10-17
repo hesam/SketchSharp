@@ -1,0 +1,17 @@
+class Test
+{
+    static int Copy(int n)
+        requires 0 < n;
+    {
+        int m = 0;
+        int i = 0;
+        do
+            invariant m == i;
+        {
+            m = i;
+            i++;
+        }
+        while (i != n);
+        return m;
+    }
+}

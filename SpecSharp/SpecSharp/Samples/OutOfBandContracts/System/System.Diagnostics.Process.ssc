@@ -1,0 +1,279 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Diagnostics
+{
+
+    public class Process
+    {
+
+        public string MainWindowTitle
+        {
+          get;
+        }
+
+        public int ExitCode
+        {
+          get;
+        }
+
+        public System.ComponentModel.ISynchronizeInvoke SynchronizingObject
+        {
+          get;
+          set;
+        }
+
+        public bool EnableRaisingEvents
+        {
+          get;
+          set;
+        }
+
+        public int WorkingSet
+        {
+          get;
+        }
+
+        public ProcessModule! MainModule
+        {
+          get;
+        }
+
+        public int HandleCount
+        {
+          get;
+        }
+
+        public int PeakPagedMemorySize
+        {
+          get;
+        }
+
+        public DateTime StartTime
+        {
+          get;
+        }
+
+        public ProcessThreadCollection Threads
+        {
+          get;
+        }
+
+        public int PeakVirtualMemorySize
+        {
+          get;
+        }
+
+        public System.IO.StreamReader! StandardError
+        {
+          get;
+        }
+
+        public DateTime ExitTime
+        {
+          get;
+        }
+
+        public int PrivateMemorySize
+        {
+          get;
+        }
+
+        public int ProcessorAffinity
+        {
+          get;
+          set;
+        }
+
+        public int VirtualMemorySize
+        {
+          get;
+        }
+
+        public TimeSpan TotalProcessorTime
+        {
+          get;
+        }
+
+        public int PagedMemorySize
+        {
+          get;
+        }
+
+        public int Handle
+        {
+          get;
+        }
+
+        public TimeSpan UserProcessorTime
+        {
+          get;
+        }
+
+        public int MainWindowHandle
+        {
+          get;
+        }
+
+        public int NonpagedSystemMemorySize
+        {
+          get;
+        }
+
+        public bool HasExited
+        {
+          get;
+        }
+
+        public int Id
+        {
+          get;
+        }
+
+        public ProcessPriorityClass PriorityClass
+        {
+          get;
+          set;
+        }
+
+        public int MinWorkingSet
+        {
+          get;
+          set;
+        }
+
+        public bool Responding
+        {
+          get;
+        }
+
+        public System.IO.StreamReader! StandardOutput
+        {
+          get;
+        }
+
+        public int MaxWorkingSet
+        {
+          get;
+          set;
+        }
+
+        public int BasePriority
+        {
+          get;
+        }
+
+        public string ProcessName
+        {
+          get;
+        }
+
+        public ProcessStartInfo! StartInfo
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public TimeSpan PrivilegedProcessorTime
+        {
+          get;
+        }
+
+        public bool PriorityBoostEnabled
+        {
+          get;
+          set;
+        }
+
+        public int PeakWorkingSet
+        {
+          get;
+        }
+
+        public int PagedSystemMemorySize
+        {
+          get;
+        }
+
+        public System.IO.StreamWriter! StandardInput
+        {
+          get;
+        }
+
+        public string MachineName
+        {
+          get;
+        }
+
+        public ProcessModuleCollection Modules
+        {
+          get;
+        }
+
+        public bool WaitForInputIdle ();
+
+        public bool WaitForInputIdle (int milliseconds);
+
+        public void WaitForExit ();
+
+        public bool WaitForExit (int milliseconds);
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public void Kill ();
+
+        public static Process! Start (ProcessStartInfo! startInfo)
+            requires startInfo != null otherwise ArgumentNullException;
+            ensures result.IsNew;
+            ensures result.StandardInput.IsNew && result.StandardOutput.IsNew && result.StandardError.IsNew;
+
+        public static Process Start (string fileName, string arguments);
+
+        public static Process Start (string fileName);
+
+        public bool Start ();
+
+        public void Refresh ();
+
+        public static Process! GetCurrentProcess ();
+
+        public static Process[] GetProcesses (string machineName);
+
+        public static Process[] GetProcesses ();
+
+        public static Process[] GetProcessesByName (string processName, string machineName);
+
+        public static Process[] GetProcessesByName (string processName);
+
+        public static Process GetProcessById (int processId);
+
+        public static Process GetProcessById (int processId, string machineName);
+
+        public static void LeaveDebugMode ();
+
+        public static void EnterDebugMode ();
+
+        public void Close ();
+
+        public bool CloseMainWindow ();
+
+        public void remove_Exited (EventHandler value);
+
+        public void add_Exited (EventHandler value);
+
+        public Process ();
+    }
+}

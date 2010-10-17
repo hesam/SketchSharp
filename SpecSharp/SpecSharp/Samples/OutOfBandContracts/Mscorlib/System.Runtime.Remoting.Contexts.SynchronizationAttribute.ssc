@@ -1,0 +1,49 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Runtime.Remoting.Contexts
+{
+
+    public class SynchronizationAttribute
+    {
+
+        public bool Locked
+        {
+          get;
+          set;
+        }
+
+        public bool IsReEntrant
+        {
+          get;
+        }
+
+        public System.Runtime.Remoting.Messaging.IMessageSink GetClientContextSink (System.Runtime.Remoting.Messaging.IMessageSink nextSink);
+
+        public System.Runtime.Remoting.Messaging.IMessageSink GetServerContextSink (System.Runtime.Remoting.Messaging.IMessageSink nextSink);
+
+        public void GetPropertiesForNewContext (System.Runtime.Remoting.Activation.IConstructionCallMessage ctorMsg);
+
+        public bool IsContextOK (Context! ctx, System.Runtime.Remoting.Activation.IConstructionCallMessage! msg)
+            requires ctx != null otherwise ArgumentNullException;
+            requires msg != null otherwise ArgumentNullException;
+
+        public SynchronizationAttribute (int flag, bool reEntrant);
+
+        public SynchronizationAttribute (int flag);
+
+        public SynchronizationAttribute (bool reEntrant);
+
+        public SynchronizationAttribute ();
+    }
+}

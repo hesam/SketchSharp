@@ -1,0 +1,31 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Runtime.Remoting.Proxies
+{
+
+    public class ProxyAttribute
+    {
+
+        public void GetPropertiesForNewContext (System.Runtime.Remoting.Activation.IConstructionCallMessage msg);
+
+        public bool IsContextOK (System.Runtime.Remoting.Contexts.Context ctx, System.Runtime.Remoting.Activation.IConstructionCallMessage msg);
+
+        public RealProxy CreateProxy (System.Runtime.Remoting.ObjRef objRef, Type serverType, object serverObject, System.Runtime.Remoting.Contexts.Context serverContext)
+            requires serverContext == null otherwise System.Runtime.Remoting.RemotingException;
+
+        public MarshalByRefObject CreateInstance (Type serverType);
+
+        public ProxyAttribute ();
+    }
+}

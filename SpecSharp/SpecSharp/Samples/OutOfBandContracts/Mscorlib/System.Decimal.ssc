@@ -1,0 +1,257 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System
+{
+
+    public struct Decimal
+    {
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public TypeCode GetTypeCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool operator >= (Decimal d1, Decimal d2);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool operator > (Decimal d1, Decimal d2);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool operator <= (Decimal d1, Decimal d2);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool operator < (Decimal d1, Decimal d2);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool operator != (Decimal d1, Decimal d2);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool operator == (Decimal d1, Decimal d2);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal operator % (Decimal d1, Decimal d2);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal operator / (Decimal d1, Decimal d2);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal operator * (Decimal d1, Decimal d2);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal operator - (Decimal d1, Decimal d2);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal operator + (Decimal d1, Decimal d2);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal operator -- (Decimal d);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal operator ++ (Decimal d);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal operator - (Decimal d);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal operator + (Decimal d);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static explicit operator double (Decimal value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static explicit operator Single (Decimal value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static explicit operator UInt64 (Decimal value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static explicit operator Int64 (Decimal value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static explicit operator UInt32 (Decimal value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static explicit operator int (Decimal value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static explicit operator UInt16 (Decimal value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static explicit operator Int16 (Decimal value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static explicit operator Char (Decimal value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static explicit operator SByte (Decimal value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static explicit operator byte (Decimal value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static explicit operator Decimal (double value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static explicit operator Decimal (Single value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static implicit operator Decimal (UInt64 value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static implicit operator Decimal (Int64 value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static implicit operator Decimal (UInt32 value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static implicit operator Decimal (int value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static implicit operator Decimal (Char value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static implicit operator Decimal (UInt16 value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static implicit operator Decimal (Int16 value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static implicit operator Decimal (SByte value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static implicit operator Decimal (byte value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal Truncate (Decimal arg0);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public string ToString (IFormatProvider provider);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Single ToSingle (Decimal arg0);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static UInt64 ToUInt64 (Decimal d);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static UInt32 ToUInt32 (Decimal d);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static UInt16 ToUInt16 (Decimal value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Int64 ToInt64 (Decimal d);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static int ToInt32 (Decimal d);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static double ToDouble (Decimal arg0);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Int16 ToInt16 (Decimal value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static SByte ToSByte (Decimal value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static byte ToByte (Decimal value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal Subtract (Decimal arg0, Decimal arg1);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal Round (Decimal arg0, int arg1);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal Negate (Decimal d);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal Multiply (Decimal arg0, Decimal arg1);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal Remainder (Decimal arg0, Decimal arg1);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Int32[] GetBits (Decimal d);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal Parse (string s, System.Globalization.NumberStyles style, IFormatProvider provider);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal Parse (string s, IFormatProvider provider);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal Parse (string s, System.Globalization.NumberStyles style);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal Parse (string s);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public string ToString (string format, IFormatProvider provider);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public string ToString (string format);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public string ToString ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal Floor (Decimal arg0);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static bool Equals (Decimal d1, Decimal d2);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal Divide (Decimal arg0, Decimal arg1);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public int CompareTo (object value);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static int Compare (Decimal arg0, Decimal arg1);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public static Decimal Add (Decimal arg0, Decimal arg1);
+
+        public Decimal (int lo, int mid, int hi, bool isNegative, byte scale)
+            requires scale <= 28 otherwise ArgumentOutOfRangeException;
+
+        public Decimal (Int32[]! bits)
+            requires bits != null otherwise ArgumentNullException;
+            requires bits.Length == 4 otherwise ArgumentException;
+
+        public static Decimal FromOACurrency (Int64 cy);
+
+        public static Int64 ToOACurrency (Decimal value);
+
+        public Decimal (double arg0);
+
+        public Decimal (Single arg0);
+
+        public Decimal (UInt64 value);
+
+        public Decimal (Int64 value);
+
+        public Decimal (UInt32 value);
+
+        public Decimal (int value);
+    }
+}

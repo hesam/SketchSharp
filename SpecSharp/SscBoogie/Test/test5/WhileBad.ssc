@@ -1,0 +1,16 @@
+class Test
+{
+    static int Copy(int n)
+        ensures result == n;
+    {
+        int m = 0;
+        int i = 0;
+        while (i != n)
+            invariant m == i;
+        {
+            m = i;
+            m++;
+        }
+        return m;
+    }
+}

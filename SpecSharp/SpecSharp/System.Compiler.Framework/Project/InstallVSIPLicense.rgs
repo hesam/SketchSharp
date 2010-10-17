@@ -1,0 +1,7 @@
+HKCR
+{
+    NoRemove Licenses 
+    {
+      NoRemove '8F0A1B87-2108-4380-B64A-62836B960261' = s 'jkdsfjheryueriufdjdfnmfnmcvjnmcvjkfdkjdfs'
+    }
+}

@@ -1,0 +1,58 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Net
+{
+
+    public class CookieCollection
+    {
+
+        public bool IsReadOnly
+        {
+          get;
+        }
+
+        public object SyncRoot
+        {
+          get;
+        }
+
+        public bool IsSynchronized
+        {
+          get;
+        }
+
+        public Cookie this [int index]
+        {
+          get
+            requires index >= 0 otherwise ArgumentOutOfRangeException;
+        }
+
+        public int Count
+        {
+          get;
+        }
+
+        public System.Collections.IEnumerator GetEnumerator ();
+
+        public void CopyTo (Array array, int index);
+
+        public void Add (CookieCollection! cookies)
+            requires cookies != null otherwise ArgumentNullException;
+
+        public void Add (Cookie! cookie)
+            requires cookie != null otherwise ArgumentNullException;
+
+        public CookieCollection ();
+    }
+}

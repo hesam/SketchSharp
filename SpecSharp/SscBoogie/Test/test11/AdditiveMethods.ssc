@@ -1,0 +1,269 @@
+using Microsoft.Contracts;
+
+public class AdditiveMethods {
+  [Peer] AdditiveMethods amPeer;
+  [Rep] AdditiveMethods amRep;
+
+  public void M() {
+    if (amPeer != null) {
+      amPeer.M();
+      amPeer.Y();
+      amPeer.Z();
+    }
+  }
+
+  public void N() {
+    if (amRep != null) {
+      expose (this) {
+        amRep.M();
+        amRep.Y();
+        amRep.Z();
+      }
+    }
+  }
+
+  [Additive(false)]
+  public virtual void Y() {
+    M();
+    Z();
+  }
+
+  [Additive(true)]
+  public virtual void Z() {
+    M();  // error: expects peer consistency
+  }
+
+  [Additive(true)]
+  public virtual void X0() {
+    Y();  // error: expects peer consistency
+  }
+
+  [Additive(true)]
+  public virtual void X1() {
+    Z();  // error: expects peer consistency
+  }
+}
+
+public class Sub : AdditiveMethods {
+  [Additive(false)]
+  public override void Y() {
+    M();
+    base.Y();
+    additive expose (this) {  // error:  operation requires this.IsExposable
+    }
+  }
+
+  public void P() {
+    expose (this) {
+      M();  // error: expects peer consistency
+    }
+  }
+
+  public void Q() {
+    expose (this) {
+      base.Y();  // error
+    }
+  }
+
+  [Additive(true)]
+  public override void Z() {
+    additive expose (this) {
+      base.Z();
+    }
+    base.Z();  // error: expects 'this' to be exposable for the base class
+  }
+
+  [Additive(true)]
+  public override void X0() {
+    expose (this) {
+      base.X0();  // error: expects 'this' to be (additively) exposable for the base class
+    }
+  }
+
+  [NoDefaultContract]
+  public static void StartHere0(AdditiveMethods! a)
+    requires a.IsPeerConsistent;  modifies a.*;
+  {
+    a.M();
+    a.Y();
+    a.Z();
+  }
+
+  [NoDefaultContract]
+  public static void StartHere1(AdditiveMethods! a)
+    requires a.IsConsistent;
+  {
+    a.Z();
+    a.M();  // error: expecting peer consistency
+  }
+
+  [NoDefaultContract]
+  public static void StartHere2(AdditiveMethods! a)
+    requires a.IsConsistent;
+  {
+    a.Y();  // error: expecting peer consistency
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The following test rep/peer/none placed on methods
+// ---------------------------------------------------------------------------
+
+public class OwnedResults {
+  [Rep] T x;
+  [Peer] T y;
+
+#if TESTS_DESIGNED_FOR_CHECKING_DEFAULT_PEER_RESULT_OF_PURE_METHODS
+  [Pure]
+  public T M(bool b) {
+    if (b) {
+      return y;
+    } else {
+      return null;
+    }
+  }
+
+  [Confined]
+  public T P(bool b) {
+    if (b) {
+      return y;
+    } else {
+      return null;
+    }
+  }
+
+  [StateIndependent]
+  public T Q(bool b) {
+    if (b) {
+      return y;
+    } else {
+      return null;
+    }
+  }
+
+  [Pure]
+  public T Mx() {
+    return x;  // error: return value is supposed to be Peer
+  }
+
+  [Confined]
+  public T Px() {
+    return x;  // error: return value is supposed to be Peer
+  }
+
+  [StateIndependent]
+  public T Qx() {
+    return x;  // error: return value is supposed to be Peer
+  }
+
+  [Pure]
+  public T! My() {
+    return new T();  // error: return value is supposed to be Peer
+  }
+
+  [Confined]
+  public T Py() {
+    return y;
+  }
+#endif
+
+  [Pure] [Rep]
+  public T Mz() {
+    return x;
+  }
+
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  [Rep]
+  public T Pz() {
+    return x;
+  }
+
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  [Rep]
+  public T Pw() {
+    return y;  // error: return value is supposed to be Rep
+  }
+
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public T Qz(int k) {
+    switch (k) {
+      case 0:  return null;
+      case 1:  return new T();
+      case 2:  return x;
+      default:  return y;
+    }
+  }
+
+  [Rep]
+  [NoDefaultContract]  // don't require peer consistency of result
+  public T F0()
+    requires this.IsPeerConsistent;
+  {
+    return x;
+  }
+
+  [Peer]
+  public T F1() {
+    T t = new T();
+    Owner.AssignSame(t, this);
+    return t;
+  }
+
+  [NoDefaultContract]  // don't require peer consistency of result
+  public T F2(bool b)
+    requires this.IsPeerConsistent;
+  {
+    if (b) {
+      return x;
+    } else {
+      return y;
+    }
+  }
+
+  [NoDefaultContract]  // don't require peer consistency of result
+  public T F3()
+    requires this.IsPeerConsistent;
+  {
+    return F2(false);
+  }
+
+  [Peer] [Additive]
+  public virtual T F4()
+  {
+    return x;  // error: return value is supposed to be Peer
+  }
+
+  [Pure]
+  public static T! Static0() {
+    return new T();
+  }
+
+  [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+  public static T! Static1() {
+    return new T();
+  }
+
+  [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+  public static T! Static2() {
+    return new T();
+  }
+
+  [Rep]
+  [NoDefaultContract]  // don't require peer consistency of result
+  public T F5()
+    requires this.IsPeerConsistent;
+  {
+    return y;  // error: return value is supposed to be Rep
+  }
+
+  [NoDefaultContract]
+  public T Mm(bool b) {
+    if (b) {
+      return x;
+    } else {
+      return y;
+    }
+  }
+}
+
+public class T { }

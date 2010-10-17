@@ -1,0 +1,81 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Net
+{
+
+    public class CookieContainer
+    {
+
+        public int PerDomainCapacity
+        {
+          get;
+          set
+            requires value > 0 otherwise ArgumentOutOfRangeException;
+            requires value == 2147483647 otherwise ArgumentOutOfRangeException;
+        }
+
+        public int MaxCookieSize
+        {
+          get;
+          set
+            requires value > 0 otherwise ArgumentOutOfRangeException;
+        }
+
+        public int Capacity
+        {
+          get;
+          set
+            requires value > 0 otherwise ArgumentOutOfRangeException;
+        }
+
+        public int Count
+        {
+          get;
+        }
+
+        public void SetCookies (Uri! uri, string! cookieHeader)
+            requires uri != null otherwise ArgumentNullException;
+            requires cookieHeader != null otherwise ArgumentNullException;
+
+        public string GetCookieHeader (Uri! uri)
+            requires uri != null otherwise ArgumentNullException;
+
+        public CookieCollection GetCookies (Uri! uri)
+            requires uri != null otherwise ArgumentNullException;
+
+        public void Add (Uri! uri, CookieCollection! cookies)
+            requires uri != null otherwise ArgumentNullException;
+            requires cookies != null otherwise ArgumentNullException;
+
+        public void Add (Uri! uri, Cookie! cookie)
+            requires uri != null otherwise ArgumentNullException;
+            requires cookie != null otherwise ArgumentNullException;
+
+        public void Add (CookieCollection! cookies)
+            requires cookies != null otherwise ArgumentNullException;
+
+        public void Add (Cookie! cookie)
+            requires cookie != null otherwise ArgumentNullException;
+
+        public CookieContainer (int capacity, int perDomainCapacity, int maxCookieSize)
+            requires perDomainCapacity == 2147483647 || perDomainCapacity > 0 otherwise ArgumentException;
+            requires perDomainCapacity <= capacity otherwise ArgumentException;
+            requires maxCookieSize > 0 otherwise ArgumentException;
+
+        public CookieContainer (int capacity)
+            requires capacity > 0 otherwise ArgumentException;
+
+        public CookieContainer ();
+    }
+}

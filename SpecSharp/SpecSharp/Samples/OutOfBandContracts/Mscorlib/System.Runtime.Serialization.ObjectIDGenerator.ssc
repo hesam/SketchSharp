@@ -1,0 +1,28 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Runtime.Serialization
+{
+
+    public class ObjectIDGenerator
+    {
+
+        public Int64 HasId (object! obj, ref bool firstTime)
+            requires obj != null otherwise ArgumentNullException;
+
+        public Int64 GetId (object! obj, ref bool firstTime)
+            requires obj != null otherwise ArgumentNullException;
+
+        public ObjectIDGenerator ();
+    }
+}

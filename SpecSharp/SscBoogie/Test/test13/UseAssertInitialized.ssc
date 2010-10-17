@@ -1,0 +1,147 @@
+using Microsoft.Contracts;
+
+public class Car {
+  [Rep] Part![]! spares;
+
+  public Car()
+  {
+    spares = new Part![2];
+    spares[0] = new Part();
+    //    spares[1] = new Part();
+    NonNullType.AssertInitialized(spares);
+    NonNullType.AssertInitialized(spares);
+  }
+
+  public void M0(int[] a) {
+    NonNullType.AssertInitialized(a);  // error:  a might be null
+  }
+
+  public void M1(int[] a) {
+    NonNullType.AssertInitialized<int>(a);  // error:  a might be null
+  }
+
+  public void M2() {
+    Part[] a = new Part[1];
+    a[0] = new Part("yey");
+    NonNullType.AssertInitialized(a);  // we still generate all-elements-are-non-null check here, but the elements are non-null
+    a = new Part[1];
+    NonNullType.AssertInitialized(a);  // error (we still generate all-elements-are-non-null check here)
+  }
+
+  public void M3() {
+    Part[] a = new Part[1];
+    a[0] = new Part("yey");
+    NonNullType.AssertInitialized<Part>(a);  // fine, see M2
+    a = new Part[1];
+    NonNullType.AssertInitialized<Part>(a);  // error, see M2
+  }
+
+  public void M4() {
+    Part![] a = new Part![2];
+    a[1] = new Part("bye");
+    a[0] = new Part("hello");
+    NonNullType.AssertInitialized(a);  // fine
+  }
+
+  public void M5() {
+    Part![] a = new Part![2];
+    a[1] = new Part("bye");
+    a[0] = new Part("hello");
+    NonNullType.AssertInitialized<Part>(a);  // fine
+  }
+
+  public void M6() {
+    Part![] a = new Part![2];
+    a[1] = new Part("bye");
+    a[0] = new Part("hello");
+    NonNullType.AssertInitialized<Part!>(a);  // fine
+  }
+
+  public void M7() {
+    Part![] a = new Part![2];
+    a[1] = new Part("bye");
+    NonNullType.AssertInitialized(a);  // error
+  }
+
+  public void M8() {
+    Part![] a = new Part![2];
+    a[1] = new Part("bye");
+    NonNullType.AssertInitialized<Part>(a);  // error
+  }
+
+  public void M9() {
+    Part![] a = new Part![2];
+    a[1] = new Part("bye");
+    NonNullType.AssertInitialized<Part!>(a);  // error
+  }
+
+  public void P0(FinalPart![]! a, bool choice)
+    requires 10 <= a.Length;
+    modifies a[*];
+  {
+    FinalPart p;
+    if (choice) {
+      p = new FinalPart();
+    } else {
+      p = null;
+    }
+    a[2] = (!)p;  // error, p might be null
+  }
+
+#if WE_SHOULD_DISALLOW_SUCH_COVARIANT_ARRAY_ASSIGNMENTS
+  public void P1(FinalPart![]! a, bool choice)
+    requires 10 <= a.Length;
+    modifies a[*];
+  {
+    FinalPart[] b = a;  // error
+    FinalPart p = choice ? new FinalPart() : null;
+    b[2] = p;
+  }
+#endif
+
+#if IT_SEEMS_OUR_TREATMENT_OF_MULTIDIM_ARRAYS_IS_BROKEN_AND_UNSOUND
+  public void Q0() {
+    int[,] a = new int[20,50];
+    assert a.Rank == 2;
+
+    Part![,] b = new Part![1,1];
+    b[0,0] = new Part();
+    NonNullType.AssertInitialized(b);
+    assert b.Rank == 2;
+  }
+#endif
+
+  public void LoopInit0(int N)
+    requires 0 <= N;
+  {
+    Part![] a = new Part![N];
+    for (int n = 0; n < N; n++)
+      invariant n <= N;
+      invariant forall{int i in (0: n); a[i] != null};
+    {
+      a[n] = new Part();
+    }
+    NonNullType.AssertInitialized(a);
+  }
+
+  public void LoopInit1(int N)
+    requires 1 <= N;
+  {
+    Part![] a = new Part![N];
+    for (int n = 0; n < N-1; n++)
+      invariant n <= N-1;
+      invariant forall{int i in (0: n); a[i] != null};
+    {
+      a[n] = new Part();
+    }
+    NonNullType.AssertInitialized(a);  // error
+  }
+}
+
+public class Part {
+  public void MuckWith() { }
+  public Part() { }
+  public Part(string s) { }
+}
+
+public sealed class FinalPart : Part { }

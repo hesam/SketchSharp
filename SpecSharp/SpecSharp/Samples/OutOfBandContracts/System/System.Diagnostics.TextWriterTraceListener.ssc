@@ -1,0 +1,50 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Diagnostics
+{
+
+    public class TextWriterTraceListener
+    {
+
+        public System.IO.TextWriter Writer
+        {
+          get;
+          set;
+        }
+
+        public void WriteLine (string message);
+
+        public void Write (string message);
+
+        public void Flush ();
+
+        public void Close ();
+
+        public TextWriterTraceListener (string fileName, string name);
+
+        public TextWriterTraceListener (string fileName);
+
+        public TextWriterTraceListener (System.IO.TextWriter! writer, string name)
+            requires writer != null otherwise ArgumentNullException;
+
+        public TextWriterTraceListener (System.IO.TextWriter writer);
+
+        public TextWriterTraceListener (System.IO.Stream! stream, string name)
+            requires stream != null otherwise ArgumentNullException;
+
+        public TextWriterTraceListener (System.IO.Stream stream);
+
+        public TextWriterTraceListener ();
+    }
+}

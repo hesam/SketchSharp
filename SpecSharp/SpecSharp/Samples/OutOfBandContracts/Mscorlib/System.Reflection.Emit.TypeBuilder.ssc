@@ -1,0 +1,199 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Reflection.Emit
+{
+
+    public class TypeBuilder
+    {
+
+        public string FullName
+        {
+          get;
+        }
+
+        public Type ReflectedType
+        {
+          get;
+        }
+
+        public System.Reflection.Assembly Assembly
+        {
+          get;
+        }
+
+        public PackingSize PackingSize
+        {
+          get;
+        }
+
+        public Type UnderlyingSystemType
+        {
+          get;
+        }
+
+        public int Size
+        {
+          get;
+        }
+
+        public Type DeclaringType
+        {
+          get;
+        }
+
+        public RuntimeTypeHandle TypeHandle
+        {
+          get;
+        }
+
+        public TypeToken TypeToken
+        {
+          get;
+        }
+
+        public Type BaseType
+        {
+          get;
+        }
+
+        public string Name
+        {
+          get;
+        }
+
+        public Guid GUID
+        {
+          get;
+        }
+
+        public string Namespace
+        {
+          get;
+        }
+
+        public string AssemblyQualifiedName
+        {
+          get;
+        }
+
+        public System.Reflection.Module Module
+        {
+          get;
+        }
+
+        public void SetCustomAttribute (CustomAttributeBuilder! customBuilder)
+            requires customBuilder != null otherwise ArgumentNullException;
+
+        public void SetCustomAttribute (System.Reflection.ConstructorInfo! con, Byte[]! binaryAttribute)
+            requires con != null otherwise ArgumentNullException;
+            requires binaryAttribute != null otherwise ArgumentNullException;
+
+        public bool IsDefined (Type attributeType, bool inherit);
+
+        public Object[] GetCustomAttributes (Type! attributeType, bool inherit)
+            requires attributeType != null otherwise ArgumentNullException;
+
+        public Object[] GetCustomAttributes (bool inherit);
+
+        public bool IsSubclassOf (Type c);
+
+        public Type GetElementType ();
+
+        public bool IsAssignableFrom (Type c);
+
+        public System.Reflection.MemberInfo[] GetMembers (System.Reflection.BindingFlags bindingAttr);
+
+        public System.Reflection.EventInfo[] GetEvents (System.Reflection.BindingFlags bindingAttr);
+
+        public System.Reflection.InterfaceMapping GetInterfaceMap (Type interfaceType);
+
+        public System.Reflection.MemberInfo[] GetMember (string name, System.Reflection.MemberTypes type, System.Reflection.BindingFlags bindingAttr);
+
+        public Type GetNestedType (string name, System.Reflection.BindingFlags bindingAttr);
+
+        public Type[] GetNestedTypes (System.Reflection.BindingFlags bindingAttr);
+
+        public System.Reflection.PropertyInfo[] GetProperties (System.Reflection.BindingFlags bindingAttr);
+
+        public System.Reflection.EventInfo[] GetEvents ();
+
+        public System.Reflection.EventInfo GetEvent (string name, System.Reflection.BindingFlags bindingAttr);
+
+        public Type[] GetInterfaces ();
+
+        public Type GetInterface (string name, bool ignoreCase);
+
+        public System.Reflection.FieldInfo[] GetFields (System.Reflection.BindingFlags bindingAttr);
+
+        public System.Reflection.FieldInfo GetField (string name, System.Reflection.BindingFlags bindingAttr);
+
+        public System.Reflection.MethodInfo[] GetMethods (System.Reflection.BindingFlags bindingAttr);
+
+        public System.Reflection.ConstructorInfo[] GetConstructors (System.Reflection.BindingFlags bindingAttr);
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public object InvokeMember (string name, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, object target, Object[] args, System.Reflection.ParameterModifier[] modifiers, System.Globalization.CultureInfo culture, String[] namedParameters);
+
+        public void AddDeclarativeSecurity (System.Security.Permissions.SecurityAction action, System.Security.PermissionSet pset);
+
+        public TypeBuilder DefineNestedType (string name, System.Reflection.TypeAttributes attr, Type parent, PackingSize packSize);
+
+        public TypeBuilder DefineNestedType (string name, System.Reflection.TypeAttributes attr, Type parent, int typeSize);
+
+        public TypeBuilder DefineNestedType (string name, System.Reflection.TypeAttributes attr);
+
+        public TypeBuilder DefineNestedType (string name, System.Reflection.TypeAttributes attr, Type parent);
+
+        public TypeBuilder DefineNestedType (string name, System.Reflection.TypeAttributes attr, Type parent, Type[] interfaces);
+
+        public TypeBuilder DefineNestedType (string name);
+
+        public FieldBuilder DefineUninitializedData (string name, int size, System.Reflection.FieldAttributes attributes);
+
+        public FieldBuilder DefineInitializedData (string name, Byte[] data, System.Reflection.FieldAttributes attributes);
+
+        public FieldBuilder DefineField (string fieldName, Type type, System.Reflection.FieldAttributes attributes);
+
+        public void DefineMethodOverride (System.Reflection.MethodInfo methodInfoBody, System.Reflection.MethodInfo methodInfoDeclaration);
+
+        public Type CreateType ();
+
+        public ConstructorBuilder DefineDefaultConstructor (System.Reflection.MethodAttributes attributes);
+
+        public ConstructorBuilder DefineConstructor (System.Reflection.MethodAttributes attributes, System.Reflection.CallingConventions callingConvention, Type[] parameterTypes);
+
+        public ConstructorBuilder DefineTypeInitializer ();
+
+        public MethodBuilder DefinePInvokeMethod (string name, string dllName, string entryName, System.Reflection.MethodAttributes attributes, System.Reflection.CallingConventions callingConvention, Type returnType, Type[] parameterTypes, System.Runtime.InteropServices.CallingConvention nativeCallConv, System.Runtime.InteropServices.CharSet nativeCharSet);
+
+        public MethodBuilder DefinePInvokeMethod (string name, string dllName, System.Reflection.MethodAttributes attributes, System.Reflection.CallingConventions callingConvention, Type returnType, Type[] parameterTypes, System.Runtime.InteropServices.CallingConvention nativeCallConv, System.Runtime.InteropServices.CharSet nativeCharSet);
+
+        public EventBuilder DefineEvent (string name, System.Reflection.EventAttributes attributes, Type eventtype);
+
+        public PropertyBuilder DefineProperty (string name, System.Reflection.PropertyAttributes attributes, Type returnType, Type[] parameterTypes);
+
+        public MethodBuilder DefineMethod (string name, System.Reflection.MethodAttributes attributes, System.Reflection.CallingConventions callingConvention, Type returnType, Type[] parameterTypes);
+
+        public MethodBuilder DefineMethod (string name, System.Reflection.MethodAttributes attributes, Type returnType, Type[] parameterTypes);
+
+        public void AddInterfaceImplementation (Type! interfaceType)
+            requires interfaceType != null otherwise ArgumentNullException;
+
+        public void SetParent (Type! parent)
+            requires parent != null otherwise ArgumentNullException;
+    }
+}

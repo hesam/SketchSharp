@@ -1,0 +1,73 @@
+public class C
+{
+  public int X = 0;
+  public static C! Create()
+    ensures result.IsExposable;
+    ensures result.IsNew;
+  {
+    return new C();
+  }
+}
+
+public class Test
+{
+  public void M()
+  {
+     C! c = new C();
+     expose (c)
+     {
+       while (true)
+       {
+         c.X = 5;
+       }
+     }
+  }
+
+  public void N()
+  {
+     C! c = C.Create();
+     expose (c)
+     {
+       while (true)
+       {
+         c.X = 5;
+       }
+     }
+  }
+
+  public void O()
+  {
+    C! c = new C();
+    expose (c) { c.X = 5; }
+  }
+
+  public void P()
+  {
+    C! c = C.Create();
+    expose (c) { c.X = 5; }
+  }
+
+  public void Q()
+  {
+     C! c = new C();
+     while (true)
+     {
+       expose (c)
+       {
+         c.X = 5;
+       }
+     }
+  }
+
+  public void R()
+  {
+     C! c = C.Create();
+     while (true)
+     {
+       expose (c)
+       {
+         c.X = 5;
+       }
+     }
+  }
+}

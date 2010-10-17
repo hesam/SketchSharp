@@ -1,0 +1,8 @@
+struct S {
+    [Microsoft.Contracts.Pure] public bool Foo() { return true;}
+}
+
+class Test7
+{
+    static void Bar(S s) requires s.Foo(); {}
+}

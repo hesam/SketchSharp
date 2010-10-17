@@ -1,0 +1,12 @@
+public class Typeof {
+  void M() {
+    object t = typeof(Typeof);
+    assert t != null;
+    assert t is System.Type;  // good
+    assert t is object;  // good
+  }
+  void N() {
+    object t = typeof(Typeof);
+    assert t is string;  // error
+  }
+}

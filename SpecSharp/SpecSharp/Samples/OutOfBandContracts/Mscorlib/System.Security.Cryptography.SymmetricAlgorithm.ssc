@@ -1,0 +1,100 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security.Cryptography
+{
+
+    public class SymmetricAlgorithm
+    {
+
+        public int FeedbackSize
+        {
+          get;
+          set;
+        }
+
+        public KeySizes[] LegalBlockSizes
+        {
+          get;
+        }
+
+        public int BlockSize
+        {
+          get;
+          set;
+        }
+
+        public CipherMode Mode
+        {
+          get;
+          set
+            requires (int)value >= 1 otherwise CryptographicException;
+            requires 4 >= (int)value otherwise CryptographicException;
+        }
+
+        public int KeySize
+        {
+          get;
+          set;
+        }
+
+        public Byte[]! IV
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public Byte[]! Key
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public KeySizes[] LegalKeySizes
+        {
+          get;
+        }
+
+        public PaddingMode Padding
+        {
+          get;
+          set
+            requires (int)value >= 1 otherwise CryptographicException;
+            requires 3 >= (int)value otherwise CryptographicException;
+        }
+
+        public void GenerateIV ();
+
+        public void GenerateKey ();
+
+        public ICryptoTransform CreateDecryptor (Byte[] arg0, Byte[] arg1);
+
+        public ICryptoTransform CreateDecryptor ();
+
+        public ICryptoTransform CreateEncryptor (Byte[] arg0, Byte[] arg1);
+
+        public ICryptoTransform CreateEncryptor ();
+
+        public static SymmetricAlgorithm Create (string algName);
+
+        public static SymmetricAlgorithm Create ();
+
+        public bool ValidKeySize (int bitLength);
+
+        public void Clear ();
+
+        public SymmetricAlgorithm ();
+    }
+}

@@ -1,0 +1,289 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+namespace Microsoft.Boogie
+{
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Text;
+
+
+    
+    /// <summary>
+    /// Command line argument parsing
+    /// </summary>
+    public class CommandLineArguments
+    {
+
+        // unset by default, set with no arg
+        public delegate void SetBooleanArgument(bool argument);
+        // set by default, unset with no arg
+        public delegate void ClearBooleanArgument(bool argument);
+        public delegate void StringArgument(string argument);
+        public delegate void IntArgument(int argument);
+
+        private Hashtable! switches = new Hashtable();
+        private Hashtable! descriptions = new Hashtable();
+        private Hashtable! argumentNames = new Hashtable();
+        private ArrayList! switchOrder = new ArrayList();
+
+        public CommandLineArguments ()
+        {
+        }
+
+        public void AddBoolSwitch (string! name, SetBooleanArgument delegateCall, string description) 
+        {
+            switchOrder.Add(name);
+            switches.Add(name, delegateCall);
+            if (description != null) 
+            {
+                descriptions.Add(name, description);
+            }
+        }
+
+        public void AddBoolSwitch (string! name, ClearBooleanArgument delegateCall, string description) 
+        {
+            switchOrder.Add(name);
+            switches.Add(name, delegateCall);
+            if (description != null) 
+            {
+                descriptions.Add(name, description);
+            }
+        }
+
+        public void AddStringSwitch (string! name, StringArgument delegateCall, string argumentName, string description) 
+        {
+            switchOrder.Add(name);
+            switches.Add(name, delegateCall);
+            if (argumentName != null) 
+            {
+                argumentNames.Add(name, argumentName);
+            }
+            if (description != null) 
+            {
+                descriptions.Add(name, description);
+            }
+        }
+
+        public void AddIntSwitch (string! name, IntArgument delegateCall, string argumentName, string description) 
+        {
+            switchOrder.Add(name);
+            switches.Add(name, delegateCall);
+            if (argumentName != null) 
+            {
+                argumentNames.Add(name, argumentName);
+            }
+            if (description != null) 
+            {
+                descriptions.Add(name, description);
+            }
+        }
+
+        /// <summary>
+        /// Parses arguments according to setup options.
+        /// </summary>
+        /// <param name="args">The command line arguments</param>
+        /// <param name="errors">Returns true if there were unknown switches.</param>
+        /// <param name="textWriter">Textwriter for errors.</param>
+        /// <returns>Arguments that are not options (subsequence of original)</returns>
+        public string[]! Parse (string[]! args, out bool errors, TextWriter! textWriter) 
+          requires forall{int i in (0:args.Length); args[i] != null};
+          {
+            errors = false;
+            List<string!> nonoptions = new List<string!>();
+
+            for (int i=0; i<args.Length; i++)
+            {
+                try 
+                {
+                    string! arg = (!)args[i];
+
+                    if (arg.StartsWith("/") || arg.StartsWith("-")) 
+                    {
+                        string switchName;
+                        string switchRest = null;
+
+                        int equalsignpos = arg.IndexOf('=');
+                        if (equalsignpos < 0) 
+                        {
+                            // no equal sign
+                            switchName = arg.Substring(1);
+                        }
+                        else 
+                        {
+                            switchName = arg.Substring(1,equalsignpos-1);
+                            switchRest = arg.Substring(equalsignpos+1);
+                        }
+
+                        object dispatch = switches[switchName];
+
+                        if (dispatch == null) 
+                        {
+                            textWriter.WriteLine("unknown switch {0}", arg);
+                            errors = true;
+                            continue;
+                        }
+                        else 
+                        {
+                            SetBooleanArgument setBooleanArgumentMethod = dispatch as SetBooleanArgument;
+                            if (setBooleanArgumentMethod != null) 
+                            {
+                                if(switchRest != null) 
+                                {
+                                    // override default true arg.
+                                    setBooleanArgumentMethod(Boolean.Parse(switchRest));
+                                }
+                                else 
+                                {
+                                    setBooleanArgumentMethod(true);
+                                }
+                            }
+                            else 
+                            {
+                                ClearBooleanArgument clearBooleanArgumentMethod = dispatch as ClearBooleanArgument;
+                                if (clearBooleanArgumentMethod != null) 
+                                {
+                                    if(switchRest != null) 
+                                    {
+                                        // override default true arg.
+                                        clearBooleanArgumentMethod(Boolean.Parse(switchRest));
+                                    }
+                                    else 
+                                    {
+                                        clearBooleanArgumentMethod(false);
+                                    }
+                                }
+                                else 
+                                {
+                                    String stringArg;
+                                    if (switchRest != null) 
+                                    {
+                                        stringArg = switchRest;
+                                    }
+                                    else 
+                                    {
+                                        if (i + 1 < args.Length) 
+                                        {
+                                            i++;
+                                            stringArg = args[i];
+                                        }
+                                        else 
+                                        {
+                                            textWriter.WriteLine("switch {0} requires an argument", arg);
+                                            errors = true;
+                                            continue;
+                                        }
+                                    }
+                                    StringArgument stringArgMethod = dispatch as StringArgument;
+                                    if (stringArgMethod != null) 
+                                    {
+                                        stringArgMethod(stringArg);
+                                    }
+                                    else 
+                                    {
+                                        IntArgument intArgMethod = dispatch as IntArgument;
+                                        if (intArgMethod != null) 
+                                        {
+                                            try 
+                                            {
+                                                intArgMethod(Convert.ToInt32(stringArg));
+                                            }
+                                            catch (FormatException) 
+                                            {
+                                                textWriter.WriteLine("switch {0} requires an integer argument", arg);
+                                                errors = true;
+                                            }
+                                        }
+                                        else 
+                                        {
+                                            textWriter.WriteLine("unknown option type {0}, ignored.", dispatch.GetType().ToString());
+                                            errors = true;
+                                            continue;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else 
+                    {
+                        nonoptions.Add(arg);
+                    }
+                }
+                catch (NotImplementedException e) 
+                {
+                    textWriter.WriteLine("{0}", e.Message);
+                    errors = true;
+                }
+            }
+            return nonoptions.ToArray();
+        }
+
+
+        public void Display (TextWriter! textWriter) 
+        {
+            foreach (string! key in this.switchOrder) 
+            {
+                object val = this.switches[key];
+                string desc = (string)this.descriptions[key];
+
+                if (val is SetBooleanArgument) 
+                {
+                    if (desc == null) 
+                    {
+                        desc = "default is false";
+                    }
+                    textWriter.WriteLine("   -{0,-24} {1}", key, desc);
+                }
+                else if (val is ClearBooleanArgument)
+                {
+                    if (desc == null) 
+                    {
+                        desc = "default is true";
+                    }
+                    textWriter.WriteLine("   -{0,-24} {1}", key, desc);
+                }
+                else if (val is StringArgument)
+                {
+                    String argumentName = (String)this.argumentNames[key];
+                    if (argumentName == null) 
+                    {
+                        argumentName = "<arg>";
+                    }
+                    if (desc == null) 
+                    {
+                        desc = "";
+                    }
+                    StringBuilder sb = new StringBuilder();
+                    sb.AppendFormat("{0} {1}", key, argumentName);
+                    textWriter.WriteLine("   -{0,-24} {1}", sb.ToString(), desc);
+                }
+                else if (val is IntArgument)
+                {
+                    String argumentName = (String)this.argumentNames[key];
+                    if (argumentName == null) 
+                    {
+                        argumentName = "<arg>";
+                    }
+                    if (desc == null) 
+                    {
+                        desc = "";
+                    }
+                    StringBuilder sb = new StringBuilder();
+                    sb.AppendFormat("{0} {1}", key, argumentName);
+                    textWriter.WriteLine("   -{0,-24} {1}", sb.ToString(), desc);
+                }
+                else
+                {
+                    // ignore unknown option type.
+                }
+            }
+        }
+
+    }
+
+}

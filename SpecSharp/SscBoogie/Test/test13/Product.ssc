@@ -1,0 +1,20 @@
+// This file contains a test that requires the theorem prover to understand multiplication
+// at least as well as it understands uninterpreted functions.  As of now (January 2008),
+// Z3 does not, so this file is run with Simplify only.  However, we're promised support
+// for this in Z3 by March 2008, so then this method can be rolled into Summation.ssc again
+// and this file can be deleted.
+
+public class C {
+  public int Product(int[]! a)
+    ensures result == product{int i in (0: a.Length); a[i]};
+  {
+    int s = 1;
+    for (int n = 0; n < a.Length; n++)
+      invariant n <= a.Length;
+      invariant s == product{int i in (0: n); a[i]};
+    {
+      s *= a[n];
+    }
+    return s;
+  }
+}

@@ -1,0 +1,29 @@
+using Microsoft.Contracts;
+
+class Param {
+  public object! Get()
+    ensures Owner.New(result);
+  {
+    return new object();
+  }
+
+  public void Function(params object[]! arguments) {}
+
+  public void Caller0() {
+    object o1 = Get();
+    Function(o1);
+  }
+
+  public void Caller1() {
+    Function(Get());
+  }
+
+  public void Caller2() {
+    Function(Get(), Get());
+  }
+
+  public void Caller3() {
+    object o1 = Get();
+    Function(o1, Get());
+  }
+}

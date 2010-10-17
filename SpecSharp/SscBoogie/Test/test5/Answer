@@ -1,0 +1,127 @@
+
+-------------------- InitialValuesGood.ssc --------------------
+
+-------------------- InitialValuesBad.ssc --------------------
+InitialValuesBad.ssc(8,9): warning CS2663: Assertion might not hold: Value == 1
+
+-------------------- WhileGood.ssc --------------------
+
+-------------------- WhileBad.ssc --------------------
+WhileBad.ssc(9,23): warning CS2663: After loop iteration: Loop invariant might not hold: m == i
+WhileBad.ssc(10,9): warning CS2663:     (trace position)
+
+-------------------- DoWhileGood.ssc --------------------
+
+-------------------- DoWhileBad.ssc --------------------
+DoWhileBad.ssc(9,23): warning CS2663: After loop iteration: Loop invariant might not hold: m == i
+
+-------------------- Ensures.ssc --------------------
+Ensures.ssc(9,16): warning CS2663: Method Test.FooBad(), unsatisfied postcondition: result == 1
+
+-------------------- PureCall.ssc --------------------
+PureCall.ssc(86,7): warning CS2663: Assertion might not hold: cell.Value == 0
+PureCall.ssc(96,7): warning CS2663: Assertion might not hold: false
+PureCall.ssc(115,7): warning CS2663: Assertion might not hold: cell.FieldLikeProperty == y
+
+-------------------- StaticFields.ssc --------------------
+StaticFields.ssc(12,7): warning CS2663: Assertion might not hold: f == 10
+StaticFields.ssc(30,7): warning CS2663: Assertion might not hold: g == 20
+
+-------------------- Cast.ssc --------------------
+Cast.ssc(4,18): warning CS2663: Type cast might fail
+Cast.ssc(10,18): warning CS2663: Type cast might fail
+Cast.ssc(45,5): warning CS2663: Assertion might not hold: o0 != o1
+
+-------------------- BoxedInt.ssc --------------------
+BoxedInt.ssc(16,5): warning CS2663: Assertion might not hold: y == 6
+BoxedInt.ssc(22,5): warning CS2663: Unboxing cast might fail
+BoxedInt.ssc(52,12): warning CS0183: The given expression is always of the provided ('int') type
+BoxedInt.ssc(53,9): warning CS0183: The given expression is always of the provided ('int') type
+BoxedInt.ssc(56,14): warning CS0184: The given expression is never of the provided ('short') type
+BoxedInt.ssc(57,9): warning CS0184: The given expression is never of the provided ('short') type
+BoxedInt.ssc(60,12): warning CS0183: The given expression is always of the provided ('object') type
+BoxedInt.ssc(61,9): warning CS0183: The given expression is always of the provided ('object') type
+BoxedInt.ssc(64,14): warning CS0184: The given expression is never of the provided ('string') type
+BoxedInt.ssc(65,9): warning CS0184: The given expression is never of the provided ('string') type
+
+-------------------- DefinedExpressions.ssc --------------------
+DefinedExpressions.ssc(4,12): warning CS2663: division by zero
+DefinedExpressions.ssc(15,12): warning CS2663: division by zero
+
+-------------------- Finally.ssc --------------------
+Finally.ssc(7,15): warning CS2663: Method ReturnFinally.TryFinally0(), unsatisfied postcondition: x == 6
+Finally.ssc(17,15): warning CS2663: Method ReturnFinally.TryFinally1(), unsatisfied postcondition: x == 6
+Finally.ssc(54,5): warning CS2663: Object invariant possibly does not hold: 0 <= y
+Finally.ssc(52,14): warning CS2663:     (trace position)
+Finally.ssc(54,5): warning CS2663:     (trace position)
+Finally.ssc(76,7): warning CS2663: Object invariant possibly does not hold: 0 <= y
+Finally.ssc(72,15): warning CS2663:     (trace position)
+Finally.ssc(74,16): warning CS2663:     (trace position)
+Finally.ssc(76,7): warning CS2663:     (trace position)
+Finally.ssc(88,7): warning CS2663: Object invariant possibly does not hold: 0 <= y
+Finally.ssc(84,15): warning CS2663:     (trace position)
+Finally.ssc(86,16): warning CS2663:     (trace position)
+Finally.ssc(88,7): warning CS2663:     (trace position)
+Finally.ssc(100,7): warning CS2663: Object invariant possibly does not hold: 0 <= y
+Finally.ssc(96,15): warning CS2663:     (trace position)
+Finally.ssc(98,16): warning CS2663:     (trace position)
+Finally.ssc(100,7): warning CS2663:     (trace position)
+Finally.ssc(109,7): warning CS2663: Assertion might not hold: false
+Finally.ssc(117,7): warning CS2663: Assertion might not hold: false
+Finally.ssc(139,19): warning CS2663: Initially: Loop invariant might not hold: 0 <= x
+
+-------------------- Search.ssc --------------------
+Search.ssc(24,7): Error: Array index possibly below lower bound
+
+Spec# program verifier finished with 6 verified, 1 error
+-------------------- Search.ssc with inference --------------------
+
+-------------------- WhereMotivation.ssc with modifiesOnLoop:0 --------------------
+WhereMotivation.ssc(30,5): Error: Assertion might not hold: o is Types
+WhereMotivation.ssc(28,12): Related information:     (trace position)
+WhereMotivation.ssc(50,5): Error: Assertion might not hold: o is Types
+WhereMotivation.ssc(45,5): Related information:     (trace position)
+WhereMotivation.ssc(66,7): Error: Assertion might not hold: o is Types
+WhereMotivation.ssc(64,14): Related information:     (trace position)
+WhereMotivation.ssc(109,7): Error: Assertion might not hold: o is Types
+WhereMotivation.ssc(107,14): Related information:     (trace position)
+
+Spec# program verifier finished with 6 verified, 4 errors
+-------------------- WhereMotivation.ssc with modifiesOnLoop:2 --------------------
+WhereMotivation.ssc(109,7): Error: Assertion might not hold: o is Types
+WhereMotivation.ssc(107,14): Related information:     (trace position)
+
+Spec# program verifier finished with 9 verified, 1 error
+
+-------------------- AndNumbers.ssc --------------------
+Error: Method T.OrRangeBad(bool isA, bool isB), unsatisfied postcondition: result <= 3
+AndNumbers.ssc(44,3): Related information:     (trace position)
+
+Spec# program verifier finished with 4 verified, 1 error
+
+-------------------- Unsigned.ssc --------------------
+Unsigned.ssc(128,5): Error: Assertion might not hold: x == s
+
+Spec# program verifier finished with 13 verified, 1 error
+
+-------------------- ModifiesClauses.ssc --------------------
+ModifiesClauses.ssc(58,5): warning CS2663: Assertion might not hold: c.Field0 == 0
+ModifiesClauses.ssc(70,5): warning CS2663: Assertion might not hold: arr[0] == 42
+ModifiesClauses.ssc(86,5): warning CS2663: Assertion might not hold: d.Field2 == 0
+
+-------------------- PeerModifiesClauses.ssc --------------------
+PeerModifiesClauses.ssc(18,5): Error: Assertion might not hold: y == 20
+PeerModifiesClauses.ssc(26,5): Error: Assertion might not hold: w.x == 10
+PeerModifiesClauses.ssc(34,5): Error: Assertion might not hold: y == 20
+PeerModifiesClauses.ssc(43,5): Error: Assertion might not hold: wa.x == 10
+PeerModifiesClauses.ssc(49,5): Error: method invocation may violate the modifies clause of the enclosing method
+PeerModifiesClauses.ssc(78,7): Error: Assignment to field Wallet.x of non-exposed target object may break invariant: x == xx
+PeerModifiesClauses.ssc(85,34): Error: assignment to location may violate the modifies clause
+
+Spec# program verifier finished with 8 verified, 7 errors
+
+-------------------- TypeReconstruction --------------------
+TypeReconstruction.ssc(5,5): Error: Assertion might not hold: z == 0
+TypeReconstruction.ssc(5,5): Related information:     (trace position)
+
+Spec# program verifier finished with 1 verified, 1 error

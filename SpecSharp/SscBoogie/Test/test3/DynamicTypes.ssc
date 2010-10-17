@@ -1,0 +1,99 @@
+public class DynamicTypes {
+  [Microsoft.Contracts.NoDefaultContract]
+  public virtual object M()
+    ensures result.GetType() == this.GetType();
+  {
+    return this;
+  }
+
+  public object! N0()
+    ensures result.GetType() == typeof(Sub0);
+  {
+    return new Sub0();
+  }
+  public object N1()
+    ensures result.GetType() == typeof(Sub0);  // BOGUS:  why doesn't this produce a null type error?
+  {
+    return new Sub1();
+  }  // error: postcondition failure
+
+  public void P0()
+  {
+    object o = N0();
+    System.Type t0 = o.GetType();
+    System.Type t1 = typeof(Sub0);
+    assert t0 == t1;
+  }
+  public void P1()
+  {
+    object o = N0();
+    System.Type t0 = o.GetType();
+    System.Type t1 = typeof(Sub1);
+    assert t0 == t1;  // error
+  }
+  public void P2()
+  {
+    object o = N0();
+    System.Type t0 = o.GetType();
+    System.Type t1 = this.GetType();
+    assert t0 == t1;  // error
+  }
+}
+
+public class Sub0 : DynamicTypes {
+  public override object M()
+    ensures result.GetType() == this.GetType();  // BOGUS: postconditions should be inherited; should be no need to repeat them
+  {
+    return new Sub0();
+  }  // error: may not live up to postcondition
+}
+
+public class Sub1 : DynamicTypes {
+  public override object M()
+    ensures result.GetType() == this.GetType();  // BOGUS: postconditions should be inherited; should be no need to repeat them
+  {
+    return new SealedSub();
+  }  // error: does not live up to postcondition
+}
+
+public sealed class SealedSub : DynamicTypes {
+  public override object M()
+    ensures result.GetType() == this.GetType();  // BOGUS: postconditions should be inherited; should be no need to repeat them
+  {
+    return new SealedSub();
+  }
+}
+
+// ------------------------------------------------------------------------------------------------------------
+
+namespace MyTestSpace {
+
+  public class A {
+    public AIType! aitype = new AIType();
+
+    public void M(object! that)
+      requires this.GetType() == that.GetType();
+      requires aitype.GetType() != null;
+      requires aitype.GetType() == System.Type.GetType("MyTestSpace.A");
+      requires this.GetType() == typeof(A);
+    {
+      object t = this.GetType();
+      System.Type u = that.GetType();
+      assert t == u;
+      assert t != null;
+
+      object v = aitype.GetType();
+      assert v != null;
+      System.Type w = System.Type.GetType("MyTestSpace.A");
+      assert v == w || v != w;  // make sure types of BoogiePL variables match up, but Boogie doesn't know any more
+
+      System.Type x = typeof(A);
+      assert x != null;
+      assert x == w || x != w;  // make sure types of BoogiePL variables match up, but Boogie doesn't know any more
+      assert x == t;
+    }
+  }
+
+  public class AIType {}
+
+}

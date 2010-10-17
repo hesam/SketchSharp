@@ -1,0 +1,14 @@
+1. Open NonNullTypes.sln
+2. Double-click on NonNull.ssc in the Solution View or else the source code will *not* be visible!!
+3. Notice the red squigglies. Hover on the first one (under "fileName" in the call to the Uri constructor within the method FileNameToUri). This shows that the constructor has as a precondition that the argument cannot be null. This precondition is currently something only written in natural language in the SDK documentation and within the code itself. We have a provided a contract in Spec# for the class. We have a tool that mines the actual executables to heuristically look for preconditions. These preconditions can be manually added to (including adding postconditions, etc.) and then attached to the actual BCL. We call this process "out-of-band specifications".
+4. Fix the squiggly by adding a bang to the type of the argument in the method header for FileNameToUri: "FileNameToUri(string! fileName)".
+5. This removes that red squiggly and two new ones appear in the body of Main. Hover over the first one (under "str" in the call to FileNameToUri). This one shows a violation of a call to the method we just changed in step 4.
+6. Fix it by adding a bang to the type declaration of "str", i.e., make it "string! str;".
+7. This introduces a squiggly under the initialization of the local variable. Change the null to some non-null string.
+8. This introduces a squiggly on the line that assigns to "str" by a call to UriToFileName since that method does not say that its return value is non-null.
+9. Add a bang to the return type for UriToFileName, i.e., "string! UriToFileName(Uri uri)".
+10. The only remaining squiggly is under "uri.IsFile" on the first line of the method UriToFileName. Add a bang to the type of the parameter, i.e., "UriToFileName(Uri! uri)".
+11. This introduces a squiggly under the argument "uri" in the call to UriToFileName within Main. This is because the return value of FileNameToUri is not guaranteed to be non-null.
+12. Add a bang to the return type of FileNameToUri: "Uri! FileNameToUri(string! fileName)".
+
+It might be good to show a windiff of the before and after. All that ends up being changed are the signatures to show the intent that null is not a valid value and that the method guarantees the results aren't null.

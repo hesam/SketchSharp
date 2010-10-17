@@ -1,0 +1,63 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.CodeDom.Compiler
+{
+
+    public class TempFileCollection
+    {
+
+        public bool KeepFiles
+        {
+          get;
+          set;
+        }
+
+        public string TempDir
+        {
+          get;
+        }
+
+        public string BasePath
+        {
+          get;
+        }
+
+        public int Count
+        {
+          get;
+        }
+
+        public void Delete ();
+
+        public void CopyTo (String[] fileNames, int start);
+
+        public System.Collections.IEnumerator GetEnumerator ();
+
+        public void AddFile (string! fileName, bool keepFile)
+            requires fileName != null otherwise ArgumentException;
+            requires fileName.Length != 0 otherwise ArgumentException;
+
+        public string AddExtension (string! fileExtension, bool keepFile)
+            requires fileExtension != null otherwise ArgumentException;
+            requires fileExtension.Length != 0 otherwise ArgumentException;
+
+        public string AddExtension (string fileExtension);
+
+        public TempFileCollection (string tempDir, bool keepFiles);
+
+        public TempFileCollection (string tempDir);
+
+        public TempFileCollection ();
+    }
+}

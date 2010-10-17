@@ -1,0 +1,2153 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+namespace Microsoft.Boogie
+{
+  using System;
+  using System.Text;
+  using System.Diagnostics;
+  using System.Collections;
+  using System.Collections.Generic;
+  using Microsoft.Contracts;
+  using Cci = System.Compiler;
+  using Bpl = Microsoft.Boogie;
+
+  /// <summary>
+  /// Meant to be instantiated once per method that is to be translated.
+  /// </summary>
+  public partial class InstructionTranslator : System.Compiler.InstructionVisitor, ILocalVariableSink {
+  
+    #region Component-level connections
+    private Sink! sink;
+    private OwnershipModel! om;
+    #endregion
+    
+    private Cci.CfgBlock currentCfgBlock;
+    internal Cci.CfgBlock CurrentCfgBlock{
+      get { return this.currentCfgBlock; }
+      set { this.currentCfgBlock = value; }
+    }
+    private MethodSignature! methodSignature;
+    
+    internal Bpl.Implementation currentProcedure;
+
+    #region Locals
+    internal Cci.IMap/*<string,Cci.variable>*/! translatedLocals = new Cci.HashedMap();
+
+    internal int uniqueLocalIndex = 0;
+    internal void AddLocal (Bpl.LocalVariable! local)
+        requires this.translatedLocals[local.Name] == null;
+        requires this.currentProcedure != null;
+    {
+        this.currentProcedure.LocVars.Add(local);
+        this.translatedLocals[local.Name] = local;
+    }
+
+    internal Bpl.TypedIdent! MakeLocal (Bpl.Type! type)
+    {
+        Bpl.TypedIdent newVar = Sink.TypedIdent("temp"+(this.uniqueLocalIndex++), type);
+        AddLocal(new Bpl.LocalVariable(NoToken, newVar));
+        return newVar;
+    }
+
+    #endregion
+
+    internal Bpl.Block currentBlock;
+    private TypeAssignment typeAnalysis;
+
+    private Cci.IMap/*<string,Bpl.Variable>*/! translatedStackVariables = new Cci.HashedMap();
+    internal Cci.IMap/*<FlowedValue,Bpl.IdentifierExpr>*/ exposedTempMap;
+
+    
+    // just an abbreviation
+    private static Bpl.IToken! NoToken = Bpl.Token.NoToken; 
+
+    internal InstructionTranslator (Sink! s, MethodSignature! sig, TypeAssignment typeAnalysis){
+      this.sink = s;
+      this.methodSignature = sig;
+      this.om = s.om;
+      this.typeAnalysis = typeAnalysis;
+      this.translatedStackVariables = new Cci.HashedMap();
+      this.exposedTempMap = new Cci.HashedMap();
+    }
+    
+    protected override object DefaultVisit (
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+      // This is here for debugging purposes
+      // 
+
+      throw new System.NotImplementedException(
+        String.Format("statement does not yet have a translation:\n   {0}", 
+                    Cci.CodePrinter.StatementToString(statement))
+        );
+    }
+
+    protected override object VisitMethodEntry (
+      Cci.Method method, 
+      IEnumerable/*<Cci.Parameter>*/ parameters, 
+      Cci.Statement statement,
+      object nothingInteresting
+      ) 
+    {
+      return nothingInteresting;
+    }
+    
+    protected override object VisitNop (Cci.Statement statement, object nothingInteresting)
+    {
+        if (statement == null) return null;
+    
+        this.sink.Comment(statement, "nop");
+        return nothingInteresting;
+    }
+
+
+    protected override object VisitBranch (
+      Cci.Variable condition, 
+      Cci.Block target, 
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+        if (statement == null) return null;
+
+        assume this.currentBlock != null;
+        if (condition == null)
+        {
+            // unconditional branch
+            this.sink.Comment(statement, "branch");
+            // Should already be handled by this.sink.MakeBlock
+        }
+        else
+        {
+            assume this.currentCfgBlock != null && this.currentCfgBlock.Continuation == Cci.ContinuationKind.Conditional;
+
+            // Find the previously generated command, if it exists and has the form "condition := ..."
+            Bpl.AssignCmd prevGenerated = null;
+            if (this.currentBlock.Cmds.Length != 0) {
+              AssignCmd assign = this.currentBlock.Cmds.Last() as AssignCmd;
+              if (assign != null && assign.Lhss.Count == 1 && assign.Lhss[0] is SimpleAssignLhs) {
+                string lhsName = assign.Lhss[0].DeepAssignedIdentifier.Name;
+                string condName = condition.Name.Name;
+                if (lhsName.StartsWith(condName)) {
+                  if (lhsName.Length == condName.Length || (lhsName.Length == condName.Length + 1 && lhsName.StartsWith("stack"))) {
+                    prevGenerated = assign;
+                  }
+                }
+              }
+            }
+            // Reach into the target instruction stream and rip out the assignment to "condition".  We'd like to
+            // do this so that the RHS of that assignment does not sit around and cause the theorem prover to do
+            // some fruitless instantiation of the formulas-as-term functions definitions and the case splits that
+            // subsequently would entail.
+            if (prevGenerated != null) {
+              // remove the last command
+              this.currentBlock.Cmds.Remove();
+            }
+            
+            Bpl.Expr trueCondition;
+            if (prevGenerated != null) {
+              // use the Rhs of this assignment instead of "condition"
+              this.sink.Comment(statement, "branch");
+              trueCondition = prevGenerated.Rhss[0];
+              
+            } else {
+              // as a last resort, use "condition" (this is rare, but it happens, usually when short-circuit booleans are involved)
+              this.sink.Comment(statement, "branch (no expression improvement)");
+              trueCondition = this.TranslateLocal(condition, statement, Role.Use);
+            }
+
+            FlowedValue.Type conditionType = this.GetType(condition, statement, Role.Use);
+            if (conditionType.TypeTag == FlowedValue.Type.Tag.Ref
+                ||
+                conditionType.TypeTag == FlowedValue.Type.Tag.Array) {
+              trueCondition = Bpl.Expr.Neq(trueCondition, sink.Null);
+            }else if (conditionType.TypeTag == FlowedValue.Type.Tag.Int
+                     || conditionType.TypeTag == FlowedValue.Type.Tag.Nat){
+              trueCondition = Bpl.Expr.Neq(trueCondition, Bpl.Expr.Literal(0));
+            }
+            Bpl.Expr falseCondition = Bpl.Expr.Not(trueCondition);
+
+            string! trueBlockName = String.Format("true{0}to{1}",
+                this.currentCfgBlock.UniqueId, ((!)this.currentCfgBlock.TrueContinuation).UniqueId);
+            string! falseBlockName = String.Format("false{0}to{1}", 
+                this.currentCfgBlock.UniqueId, ((!)this.currentCfgBlock.FalseContinuation).UniqueId);
+
+            Bpl.Block blockWithTrueAssume = new Bpl.Block(
+                NoToken,
+                trueBlockName,
+                new Bpl.CmdSeq(Sink.Assume(trueCondition)),
+                null
+            );
+
+            Bpl.Block blockWithFalseAssume = new Bpl.Block(
+                NoToken,
+                falseBlockName,
+                new Bpl.CmdSeq(Sink.Assume(falseCondition)),
+                null
+            );
+
+            this.sink.AddBplBlock(this.currentCfgBlock, blockWithTrueAssume);
+            this.sink.AddBplBlock(this.currentCfgBlock, blockWithFalseAssume);
+
+            // We defer these calls to this.sink.MakeBlock until after the blocks with "assume"
+            // are added so that the former appear in the output before the latter.
+
+            Bpl.Block trueContinuation = this.sink.MakeBlock(this.currentCfgBlock.TrueContinuation);
+            Bpl.Block falseContinuation = this.sink.MakeBlock(this.currentCfgBlock.FalseContinuation);
+
+            blockWithTrueAssume.TransferCmd = new Bpl.GotoCmd(
+                NoToken, 
+                new Bpl.StringSeq(trueContinuation.Label),
+                new Bpl.BlockSeq(trueContinuation)
+            );
+
+            blockWithFalseAssume.TransferCmd = new Bpl.GotoCmd(
+                NoToken, 
+                new Bpl.StringSeq(falseContinuation.Label),
+                new Bpl.BlockSeq(falseContinuation)
+            );
+
+            this.currentBlock.TransferCmd = new Bpl.GotoCmd(NoToken,
+                new Bpl.StringSeq(trueBlockName, falseBlockName),
+                new Bpl.BlockSeq(blockWithTrueAssume, blockWithFalseAssume)
+            );
+        }
+        return nothingInteresting;
+    }
+
+
+    protected override object VisitSwitch (
+      Cci.Variable selector, 
+      Cci.BlockList targets, 
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+      if (selector == null || targets == null) { return null; }
+      if (statement == null) { return null; }
+      assume this.currentCfgBlock != null;
+      assume this.currentBlock != null;
+
+      this.sink.Comment(statement, "switch");
+      Bpl.Expr bplSelector = this.TranslateLocal(selector, statement, Role.Use);
+
+      Bpl.StringSeq! labelNames = new Bpl.StringSeq();
+      Bpl.BlockSeq! labelBlocks = new Bpl.BlockSeq();
+
+      for (int i=0; i<targets.Count; i++)
+      {
+        Cci.CfgBlock! target = (Cci.CfgBlock!) ((!) this.currentCfgBlock.SwitchTargets)[i];
+
+        Bpl.Expr assumeExpression = Bpl.Expr.Eq(bplSelector, Bpl.Expr.Literal(i));
+
+        string assumeBlockName = Sink.BlockName(target, "case" + "_" + this.currentCfgBlock.UniqueId + "_" + i.ToString() + "_");
+
+        Bpl.Block assumeBlock = new Bpl.Block(
+          NoToken,
+          assumeBlockName,
+          new Bpl.CmdSeq(Sink.Assume(assumeExpression)),
+          null
+          );
+
+        this.sink.AddBplBlock(this.currentCfgBlock, assumeBlock);
+
+        Bpl.Block bplTarget = this.sink.MakeBlock(target);
+
+        assumeBlock.TransferCmd = new Bpl.GotoCmd(
+          NoToken,
+          new Bpl.StringSeq(bplTarget.Label),
+          new Bpl.BlockSeq(bplTarget)
+          );
+
+        labelNames.Add(assumeBlock.Label);
+        labelBlocks.Add(assumeBlock);
+      }
+
+      Cci.CfgBlock defaultBranch = this.currentCfgBlock.DefaultBranch;
+      if (defaultBranch != null)
+      {
+        Bpl.Block defaultTarget = this.sink.MakeBlock(defaultBranch);
+        // emit: assume selector != any of the targets that were
+        // specified
+        if (targets.Count > 0){
+          Bpl.Expr assumeDefaultExpression =
+            Bpl.Expr.Neq(bplSelector, Bpl.Expr.Literal(0));
+          for (int i=1; i<targets.Count; i++)
+          {
+            assumeDefaultExpression = 
+              Bpl.Expr.And(assumeDefaultExpression,
+                           Bpl.Expr.Neq(bplSelector, Bpl.Expr.Literal(i)));
+          }
+          defaultTarget.Cmds.Add(Sink.Assume(assumeDefaultExpression));
+        }
+        labelNames.Add(defaultTarget.Label);
+        labelBlocks.Add(defaultTarget);
+      }
+
+      this.currentBlock.TransferCmd = new Bpl.GotoCmd(NoToken, labelNames, labelBlocks);
+      return nothingInteresting;
+    }
+
+    private bool IsOnExHeap(Cci.Variable/* ! */ maybePointer) {
+      bool onExHeap = false;
+      if (maybePointer == null) return false; 
+      Cci.OptionalModifier optionalModifier = maybePointer.Type as Cci.OptionalModifier;
+      while (optionalModifier != null && optionalModifier.Modifier!= null) {
+        if (optionalModifier.Modifier.Name.Name == "ExHeap") 
+          onExHeap = true;
+        optionalModifier = optionalModifier.ModifiedType as Cci.OptionalModifier;
+      }
+      
+      return onExHeap;
+    }
+    protected override object VisitLoadField (
+      Cci.Variable/* ! */ destination, 
+      Cci.Variable source, 
+      Cci.Field/* ! */ field, 
+      Cci.Statement/* ! */ statement,
+      object nothingInteresting
+      )
+    {
+        if (destination == null || field == null) { return null; }
+        if (statement == null) { return null; }
+        
+        assume this.currentBlock != null;
+        this.sink.Comment(statement, "load field");
+        Bpl.IdentifierExpr destExpr = this.TranslateLocal(destination, statement, Role.Def);
+          
+        this.sink.AddField(field);
+
+        if (field.IsStatic || source == null)
+        {
+            this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, this.sink.StaticFieldAccess(field, Prelude.HeapName)));
+        }
+        else
+        {
+            FlowedValue.Type! sourceType = GetType(source, statement, Role.Use);
+            
+            if (sourceType.TypeTag == FlowedValue.Type.Tag.Ref)
+            {
+                Bpl.IdentifierExpr! sourceExpr = this.TranslateLocal(source, statement, Role.Use);
+                Cci.Node n = source.SourceContext.StartLine > 0 ?
+                             (Cci.Node) source : (Cci.Node)statement;
+                this.currentBlock.Cmds.Add(AssertDerefOkay(sourceExpr, n));
+                // Before a more general solution to supporting exchange heap in Sing#,
+                // we translate exheap pointers to a rep struct as ExHeapStructGet, and bear
+                // with the fact that boogie translate exheap pointers' type to ref.
+                if (IsOnExHeap(source)) {
+                  this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, this.sink.FieldAccessExHeap(sourceExpr, field)));
+                }
+                else {
+                  this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, this.sink.FieldAccess(sourceExpr, field, Prelude.HeapName)));
+                }
+            }
+            else if (sourceType.IsAddrOf)
+            {
+                if (sourceType.Pointee is FlowedValue.VariablePointee)
+                {
+                    // We're getting a field of a struct that sits in a local variable V and the source is the address of V
+                    FlowedValue.VariablePointee! varRef = (FlowedValue.VariablePointee) sourceType.Pointee;
+                    assert varRef.Type is Cci.Struct;
+                    Bpl.Expr sourceExpr = this.TranslateLocal(varRef.Variable, sink.StructType);
+                    
+                    Bpl.Expr getExpr = this.sink.FieldAccess(sourceExpr, field, Prelude.HeapName); // $StructGet(src, S.f)
+                    this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, getExpr)); // dest := cast(..., T);
+                }
+                else if (sourceType.Pointee is FlowedValue.FieldPointee)
+                {
+                    // We're getting a field of a struct that sits in a field o.F and the source is the address of o.F
+                    FlowedValue.FieldPointee fieldRef = (FlowedValue.FieldPointee) sourceType.Pointee;
+                    assert fieldRef.Field.Type is Cci.Struct;
+                    if (fieldRef.SavedObject == null){
+                      this.sink.NotSupported(statement, "This statement was ignored, because an argument to the call is a pointer to a boxed variable. This is not yet supported.");
+                      return null;
+                    }
+                    // Generate something like this:   y := cast($StructGet(cast($Heap[temp0, C.s], elements), S.x), ref);
+                    Bpl.Expr structExpr = this.sink.FieldAccess(Sink.Expr(fieldRef.SavedObject), fieldRef.Field, Prelude.HeapName); // cast($Heap[temp0, C.s], elements)
+                    Bpl.Expr getExpr = this.sink.FieldAccess(structExpr, field, Prelude.HeapName); // $StructGet(..., S.x)
+                    this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, getExpr)); // y := cast(..., ref);
+                }
+                else
+                {
+                    throw new NotImplementedException("did not handle field indirection of sourceType " + sourceType.Pointee);
+                }
+            }
+            else if (sourceType.IsArg)
+            {
+                // We're getting a field of a struct whose address is the value of parameter sourceType.Parameter.
+                Cci.Parameter! param = sourceType.Parameter;
+                Bpl.Expr sourceExpr = this.TranslateLocal(param, sink.StructType);
+                
+                Bpl.Expr getExpr = this.sink.FieldAccess(sourceExpr, field, Prelude.HeapName); // $StructGet(src, S.f)
+                this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, getExpr)); // dest := cast(..., T);
+            }
+            else
+                this.sink.NotSupported(statement, "This statement was ignored because a ldfld with a source of type {0} is not yet supported.", sourceType);
+        }
+        return nothingInteresting;
+    }
+
+    void CheckAssignability(Bpl.Expr! rhs, Cci.TypeNode! lhsType, Cci.Statement! statement)
+      requires this.currentBlock != null;
+    {
+      if (Sink.IsEnumValueType(lhsType)) {
+        Bpl.Expr cond = sink.Function(Sink.BuiltinFunction.InRange, rhs, sink.TypeNameExpression(lhsType));
+
+        string extraInformation = "The value {0} is not a legal enum " + lhsType.FullName + " value.";
+        List<Bpl.Expr!> exprList = new List<Bpl.Expr!>();
+        exprList.Add(rhs);
+        EEDTemplate enhancedErrorData = new EEDTemplate(extraInformation, exprList);
+
+        this.currentBlock.Cmds.Add(AssertEnhanced(cond, statement, "Assignment to enum may be outside its range", enhancedErrorData));
+      }
+    }
+    
+    protected override object VisitStoreField ( // dest.field := source;  (where dest == null for static fields)
+      Cci.Variable destination, 
+      Cci.Field/* ! */ field, 
+      Cci.Variable/* ! */ source, 
+      Cci.Statement/* ! */ statement,
+      object nothingInteresting
+      )
+    {
+      if (source == null || field == null) { return null; }
+      if (statement == null) { return null; }
+      
+      assume this.currentBlock != null;
+      assert field.DeclaringType != null;
+
+      this.sink.Comment(statement, Sink.IsModelField(field) ? "store model field" : "store field");
+      this.sink.AddField(field);
+
+      Bpl.IdentifierExpr sourceExpr = this.TranslateLocal(source, statement, Role.Use);
+
+      if (destination == null) 
+      {
+        CheckAssignability(sourceExpr, field.Type, statement);
+        sink.AddType(field.DeclaringType);
+        Bpl.Expr! obj = sink.Function(Prelude.ClassRepresentative, sink.RefType, sink.TypeNameExpression(field.DeclaringType));
+        HeapAssign(NoToken, obj, sink.Expr(field), sourceExpr, statement, false);
+        this.currentBlock.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.IsHeap, sink.HeapExpr())));
+      }
+      else if (Sink.IsModelField(field))
+      {
+        // An actual update of a model field is expected to occur only in the CheckInvariant method emitted by the
+        // compiler.  We do the update, but leave off most preconditions and also leave off the "assume IsHeap($Heap)".
+        Bpl.IdentifierExpr destVar = this.TranslateLocal(destination, statement, Role.Use);
+                
+        this.currentBlock.Cmds.Add(AssertDerefOkay(destVar, statement));
+        CheckAssignability(sourceExpr, field.Type, statement);
+
+        //   $Heap[destVar, field] := sourceExpr;
+        IToken tok = Sink.makeTokenFromSourceContext(statement.SourceContext);
+        HeapAssign(tok, destVar, sink.Expr(field), sourceExpr, statement, false);
+      } 
+      else 
+      {
+        FlowedValue.Type! destType = GetType(destination, statement, Role.Use);
+        if (destType.TypeTag == FlowedValue.Type.Tag.Ref)
+        {
+          Bpl.IdentifierExpr destVar = this.TranslateLocal(destination, statement, Role.Use);
+          VisitStoreField_Aux(destVar, field, sourceExpr, statement);
+          return nothingInteresting;
+        }
+        else if (destType.IsAddrOf)
+        {
+          if (destType.Pointee is FlowedValue.VariablePointee)
+          {
+            FlowedValue.VariablePointee! varRef = (FlowedValue.VariablePointee) destType.Pointee;
+            assert varRef.Type is Cci.Struct;
+            Bpl.IdentifierExpr destVar = this.TranslateLocal(varRef.Variable, sink.StructType);
+            // dest := $StructSet(dest, S.f, src);
+            this.currentBlock.Cmds.Add(this.sink.Assign(destVar, sink.Function(Sink.BuiltinFunction.StructSet, destVar, sink.Expr(field), sourceExpr))); 
+          }
+          else if (destType.Pointee is FlowedValue.FieldPointee)
+          {
+            // We're setting a field of a struct that sits in a field o.F and the destination is the address of o.F
+            FlowedValue.FieldPointee! fieldRef = (FlowedValue.FieldPointee) destType.Pointee;
+            assert fieldRef.Field.Type is Cci.Struct;
+            if (fieldRef.SavedObject == null){
+              this.sink.NotSupported(statement, "This statement was ignored, because an argument to the call is a pointer to a boxed variable. This is not yet supported.");
+              return null;
+            }
+            // Generate something like this:  $Heap[temp0, C.s] := $StructSet(cast($Heap[temp0, C.s],elements), S.x, stack1o);
+            Bpl.Expr structExpr = this.sink.FieldAccess(Sink.Expr(fieldRef.SavedObject), fieldRef.Field, Prelude.HeapName); // cast($Heap[temp0, C.s],elements)
+            Bpl.Expr setExpr = sink.Function(Prelude.StructSetterName, sink.StructType, structExpr, sink.Expr(field), sourceExpr); // $StructSet(..., S.x, stack1o)
+            HeapAssign(NoToken, Sink.Expr(fieldRef.SavedObject), sink.Expr(fieldRef.Field), setExpr, statement, false); // $Heap[temp0, C.s] := ...;
+          }
+          else
+          {
+            throw new NotImplementedException("did not handle field indirection of destType " + (!)destType.Pointee);
+          }
+        }
+        else if (destType.IsArg)
+        {
+          // We're setting a field of a struct whose address is the value of parameter destType.Parameter
+          Cci.Parameter! param = (!) destType.Parameter;
+          Bpl.IdentifierExpr destVar = this.TranslateLocal(param, sink.StructType);
+          // dest := $StructSet(dest, S.f, src);
+          this.currentBlock.Cmds.Add(this.sink.Assign(destVar, sink.Function(Prelude.StructSetterName, sink.StructType, destVar, sink.Expr(field), sourceExpr))); 
+        }
+        else
+        {
+          this.sink.NotSupported(statement, "This statement was ignored because stfld instructions whose destination is of type {0} are not yet supported.", destType);
+        }
+
+        this.currentBlock.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.IsHeap, sink.HeapExpr())));
+      }
+
+      return nothingInteresting;
+    }
+
+    void VisitStoreField_Aux ( // dest.field := source;  (where dest == null for static fields)
+        Bpl.Expr! destExpr,
+        Cci.Field! field,
+        Bpl.Expr! sourceExpr,
+        Cci.Statement! statement)
+      requires this.currentBlock != null;
+      requires field.DeclaringType != null;
+    {
+      bool lite = CommandLineOptions.Clo.CheckingLevel < 1;
+              
+      this.currentBlock.Cmds.Add(AssertDerefOkay(destExpr, statement));
+      CheckAssignability(sourceExpr, field.Type, statement);
+          
+      // -----------------------------------
+      // 0. assert destExpr is not committed;
+      // -----------------------------------
+      Bpl.Expr nc = om.IsObjectWritable(destExpr);
+      this.currentBlock.Cmds.Add(Sink.Assert(nc, statement, "Target object of assignment is not allowed to be committed"));
+
+      // ----------------------------------------------
+      // 1. Perform any ownership assignment, if needed
+      // ----------------------------------------------
+      if (field.IsRep) {
+        // (mnemonic:  o.f = E;)
+        // assert E is not immutable;
+        // assert E == null || E.owner == (o,T) || E.ownerFrame == PlaceHolder;
+        // assert E != null && E.ownerFrame == PlaceHolder &&  // that is, E's owner will be changed
+        //        o is valid for T ==>
+        //          E and all its peers are valid;  // since the operation will turn E and its peers into committed
+        // assert E != null && E.ownerFrame == PlaceHolder &&  // that is, E's owner will be changed
+        //        o is valid for T ==>
+        //          E.owner != o.owner;  // this prevents a cycle in the ownership relation while
+        // call $UpdateOwnersForRep(o, T, E);
+        
+        this.sink.AssertNotImmutable(sourceExpr, field.Type, statement, "RHS might be immutable, and not allowed in rep fields");
+        
+        // E.owner == (o,T) || E.ownerFrame == PlaceHolder
+        Bpl.Expr appropriatePreviousOwner = Bpl.Expr.Or(
+          om.OwnerIs(sourceExpr, destExpr, sink.TypeNameExpression(field.DeclaringType), sink.HeapExpr()),
+          om.HasNoOwner(sourceExpr, sink.HeapExpr()));
+        // E.ownerFrame == PlaceHolder && o is valid for T
+        Bpl.Expr ownerWillChange_and_oIsValid = Bpl.Expr.And(
+          om.HasNoOwner(sourceExpr, sink.HeapExpr()),
+          Bpl.Expr.Not(om.IsExposed(destExpr, sink.TypeNameExpression(field.DeclaringType), sink.HeapExpr())));
+        if (!Sink.IsNonNullType(field.Type)) {
+          appropriatePreviousOwner = Bpl.Expr.Or(Bpl.Expr.Eq(sourceExpr, sink.Null), appropriatePreviousOwner);
+          ownerWillChange_and_oIsValid = Bpl.Expr.And(Bpl.Expr.Neq(sourceExpr, sink.Null), ownerWillChange_and_oIsValid);
+        }
+
+        this.currentBlock.Cmds.Add(Sink.Assert(appropriatePreviousOwner, statement, "illegal assignment to rep field, RHS may already have a different owner"));
+
+        Bpl.Expr cond = Bpl.Expr.Imp(ownerWillChange_and_oIsValid, om.IsPeerValid(sourceExpr));
+        this.currentBlock.Cmds.Add(Sink.Assert(cond, statement, "RHS and its peers must all be valid"));
+
+        cond = Bpl.Expr.Imp(ownerWillChange_and_oIsValid, om.EqualOwners(destExpr, sourceExpr, sink.HeapExpr(), false));
+        this.currentBlock.Cmds.Add(Sink.Assert(cond, statement, "when target object is valid, it is not allowed to have the same owner as RHS, because that would cause a cycle in the ownership relation"));
+        
+        UpdateOwnersFrameCondition(this.currentBlock.Cmds, sourceExpr,
+                                   destExpr, sink.TypeNameExpression(field.DeclaringType),
+                                   statement);
+
+        Bpl.Cmd c = new Bpl.CallCmd(
+          NoToken,
+          Prelude.UpdateOwnersForRepProcName,
+          new ExprSeq(destExpr, sink.TypeNameExpression(field.DeclaringType), sourceExpr),
+          new IdentifierExprSeq());
+        this.currentBlock.Cmds.Add(c);
+
+      } else if (field.IsPeer) {
+        // (mnemonic:  o.f = E;)
+        // assert E is not immutable;
+        // assert E == null || E.owner == (o,T) || E.ownerFrame == PlaceHolder;
+        // call $UpdateOwnersForPeer(o, T, E);
+        this.sink.AssertNotImmutable(sourceExpr, field.Type, statement, "RHS might be immutable, and not allowed in peer fields");
+        // TODO: optimization: if RHS is of a non-null type, the E==null disjunct and E!=null conjuncts in the following can be removed
+        Bpl.Expr cond = Bpl.Expr.Or(Bpl.Expr.Eq(sourceExpr, sink.Null),
+          Bpl.Expr.Or(
+            om.EqualOwners(sourceExpr, destExpr),
+            om.HasNoOwner(sourceExpr, sink.HeapExpr())));
+        this.currentBlock.Cmds.Add(Sink.Assert(cond, statement, "illegal assignment to peer field, target object and RHS may have different owners or an owner might not be exposed"));
+      
+        UpdateOwnersFrameCondition(this.currentBlock.Cmds, sourceExpr,
+                                   Bpl.Expr.Select(sink.HeapExpr(), sink.Clone(destExpr),
+                                                   sink.Fields.OwnerRef),
+                                   Bpl.Expr.Select(sink.HeapExpr(), sink.Clone(destExpr),
+                                                   sink.Fields.OwnerClassFrame),
+                                   statement);
+
+        Bpl.Cmd c = new Bpl.CallCmd(
+          NoToken,
+          Prelude.UpdateOwnersForPeerProcName,
+          new ExprSeq(destExpr, sourceExpr),
+          new IdentifierExprSeq());
+        this.currentBlock.Cmds.Add(c);
+
+#if SOON_FROZEN
+      } else if (field.IsFrozen) {
+        // (mnemonic:  o.f = E;)
+        // assert E == null || E.owner == [TheFreezer, PlaceHolder];
+        // assert E == null || o is peer valid;
+        // call $UpdateOwnersForRep(TheFreezer, FreezerClass, E);
+        // TODO
+#endif
+      }
+
+      // ... and for ElementsRep/Peer:
+      foreach (int pos in (!)Microsoft.SpecSharp.Util.FieldElementsRepPositions(field)) {
+        // if the type argument at pos is definitely immutable, we do not perform a transfer
+        bool isImmutable;
+        Cci.TypeNodeList templateArguments = field.Type.TemplateArguments;
+        if (0 <= pos && templateArguments != null && Sink.IsImmutable((!)templateArguments[pos], out isImmutable) && isImmutable)
+          continue;
+        
+        // $Heap[$ElementProxy(sourceExpr,pos), $ownerFrame] == PeerGroupPlaceholder
+        Bpl.Expr co = om.HasNoOwner(sink.ElementProxy(sourceExpr, Expr.Literal(pos)), sink.HeapExpr());
+
+        // sourceExpr == null
+        if (!Sink.IsNonNullType(field.Type))           
+          co = Bpl.Expr.Or(co, Expr.Eq(sourceExpr, sink.Null));          
+
+        // $Heap[$ElementProxy(sourceExpr, pos), $owner] == (destExpr, T)
+        co = Bpl.Expr.Or(co, om.OwnerIs(sink.ElementProxy(sourceExpr, Expr.Literal(pos)), destExpr, this.sink.TypeNameExpression(field.DeclaringType), sink.HeapExpr()));
+          
+        // assert sourceExpr == null ||
+        //        $Heap[$ElementProxy(sourceExpr,pos), $ownerFrame] == PeerGroupPlaceholder ||
+        //        $Heap[$ElementProxy(sourceExpr,pos), $owner] == (destExpr, T);
+        this.currentBlock.Cmds.Add(Sink.Assert(co, statement, "illegal assignment to ElementsRep field, elements may already have different owners"));
+        // call $UpdateOwnersForRep(destExpr, T, $ElementProxy(sourceExpr));
+
+        UpdateOwnersFrameCondition(this.currentBlock.Cmds, sink.ElementProxy(sourceExpr, Expr.Literal(pos)),
+                                   destExpr, sink.TypeNameExpression(field.DeclaringType),
+                                   statement);
+
+        Bpl.Cmd cmdo = new Bpl.CallCmd(
+          NoToken,
+          Prelude.UpdateOwnersForRepProcName,
+          new ExprSeq(destExpr, sink.TypeNameExpression(field.DeclaringType), sink.ElementProxy(sourceExpr, Expr.Literal(pos))),
+          new IdentifierExprSeq());
+        this.currentBlock.Cmds.Add(cmdo);
+      }
+      foreach (int pos in (!)Microsoft.SpecSharp.Util.FieldElementsPeerPositions(field)) {
+        // if the type argument at pos is definitely immutable, we do not perform a transfer
+        bool isImmutable;
+        Cci.TypeNodeList templateArguments = field.Type.TemplateArguments;
+        if (0 <= pos && templateArguments != null && Sink.IsImmutable((!)templateArguments[pos], out isImmutable) && isImmutable)
+          continue;
+
+        // $Heap[$ElementProxy(sourceExpr,pos), $ownerFrame] == PeerGroupPlaceholder
+        Bpl.Expr co = om.HasNoOwner(sink.ElementProxy(sourceExpr, Expr.Literal(pos)), sink.HeapExpr());
+
+        // sourceExpr == null
+        if (!Sink.IsNonNullType(field.Type))           
+          co = Bpl.Expr.Or(co, Expr.Eq(sourceExpr, sink.Null));
+
+        // $Heap[$ElementProxy(sourceExpr,pos), $owner] == $Heap[destExpr, $owner]
+        co = Bpl.Expr.Or(co, om.EqualOwners(sink.ElementProxy(sourceExpr, Expr.Literal(pos)), destExpr));
+          
+        // assert sourceExpr == null ||
+        //        $Heap[$ElementProxy(sourceExpr,pos), $ownerFrame] == PeerGroupPlaceholder ||
+        //        $Heap[$ElementProxy(sourceExpr,pos), $owner] == $Heap[destExpr, $owner];
+        this.currentBlock.Cmds.Add(Sink.Assert(co, statement, "illegal assignment to ElementsPeer field, elements may have different owners"));
+        // call $UpdateOwnersForPeer(destExpr, $ElementProxy(sourceExpr,pos));
+
+        UpdateOwnersFrameCondition(this.currentBlock.Cmds, sink.ElementProxy(sourceExpr, Expr.Literal(pos)),
+                                   Bpl.Expr.Select(sink.HeapExpr(), sink.Clone(destExpr),
+                                                   sink.Fields.OwnerRef),
+                                   Bpl.Expr.Select(sink.HeapExpr(), sink.Clone(destExpr),
+                                                   sink.Fields.OwnerClassFrame),
+                                   statement);
+
+        Bpl.Cmd cmdo = new Bpl.CallCmd(
+          NoToken,
+          Prelude.UpdateOwnersForPeerProcName,
+          new ExprSeq(destExpr, sink.ElementProxy(sourceExpr, Expr.Literal(pos))),
+          new IdentifierExprSeq());
+        this.currentBlock.Cmds.Add(cmdo);
+      }
+      
+      // ----------------------------------------------------------------------------------------------
+      // 2. ownership assignments are done, so get ready for update by checking the other preconditions
+      // ----------------------------------------------------------------------------------------------
+      // TODO: Here, we change the heap because the assertions we are about the blurt out need to talk about
+      // the heap after the update.  A possibly nicer way to do this would be to use an update expression
+      // Heap[o,f:=E] for these asserts, and to leave the heap update for section 4 below.
+      // First, havoc exposeVersion since there may not have been an explicit expose block required around this update
+      Bpl.IdentifierExpr expVerTemp = Sink.Expr(this.MakeLocal(this.sink.ExposeVersionType));
+      this.currentBlock.Cmds.Add(Sink.Havoc(expVerTemp));
+      HeapAssign(NoToken, destExpr, sink.Fields.ExposeVersion, expVerTemp, statement,
+                 // we skip checking the modifies clause at this point
+                 // (unless ModifiesDefault == 0) because violations would
+                 // be detected anyway when performing the actual store operation
+                 CommandLineOptions.Clo.ModifiesDefault != 0);
+
+      // Then, update the field.  (By first updating exposeVersion and then the field gives better error messages since,
+      // in cases observed, the Z3 model will show the most recent field update.)
+      if (field.IsStrictReadonly) {
+        //   assume $Heap[destExpr, field] == sourceExpr;
+        this.currentBlock.Cmds.Add(Sink.Assume(Bpl.Expr.Eq(this.sink.FieldAccess(destExpr, field, Prelude.HeapName), sourceExpr)));
+      } else {
+        //   $Heap[destExpr, field] := sourceExpr;
+        IToken tok = Sink.makeTokenFromSourceContext(statement.SourceContext);
+        HeapAssign(tok, destExpr, sink.Expr(field), sourceExpr, statement, false);
+      }
+      
+      // It would be unsound to assume the heap satisfies IsHeap at this time.  But we do want the assertions below
+      // to be able to use some of the axioms, like the axioms that define pure-method functions.  Thus, we assume
+      // IsPreHeap here, and do the full IsHeap below.
+      this.currentBlock.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.IsPreHeap, sink.HeapExpr())));
+
+      bool isAdditiveField;
+      Cci.TypeNode baseType = field.DeclaringType.BaseType;
+      if (baseType == null) {
+        assert field.DeclaringType.Equals(Cci.SystemTypes.Object);
+        // if field is of type System.Object, we say the field is additive
+        isAdditiveField = true;
+      } else if (Sink.IsAdditive(field)) {
+        isAdditiveField = true;
+      } else { // we know that the field is not additive
+        isAdditiveField = false;
+      }
+      if (isAdditiveField) {
+        // assert !(o.inv <: T);  (note, this implies "o is not committed", which we have already checked above; no biggie, probably)
+        Bpl.Expr cond = om.IsAdditivelyExposed(destExpr, field.DeclaringType);
+        this.currentBlock.Cmds.Add(Sink.Assert(cond, statement, "Assignment to additive field " + field.FullName + " requires the target object to be additively exposed"));
+        
+      } else {
+        ExpressionTranslator expTran = new ExpressionTranslator(sink,destExpr,null,null,null);
+        Bpl.Expr isExposedForT = om.IsExposed(destExpr, sink.TypeNameExpression(field.DeclaringType), sink.HeapExpr());
+        
+        // for each invariant Inv_{T,i} in class T that mentions f:
+        //   assert !(o.inv <: T) || o.localinv == BaseClass(T) || Inv_{T,i}(Heap[o,f:=E], o);
+        Cci.TypeNode type = field.DeclaringType;
+        if (type.Contract != null && type.Contract.InvariantCount > 0) {
+          Cci.InvariantList invariants = type.Contract.Invariants;
+          assert invariants != null;
+
+          foreach (Cci.Invariant inv in invariants) {
+            if (inv != null && inv.Condition != null && ExpressionMentionsField(inv.Condition, field)) {
+              Bpl.Expr e = expTran.TranslateExpression(inv.Condition, Prelude.HeapName);
+              Bpl.Expr c = Bpl.Expr.Or(isExposedForT, e);
+              this.currentBlock.Cmds.Add(Sink.Assert(c, statement, "Assignment to field " + field.FullName + " of non-exposed target object may break invariant: " + inv.SourceContext.SourceText));
+            }
+          }
+        }
+        
+        #region for each modelfield(contract) mfC in which field occurs: if mfC.DeclaringType == field.DeclaringType, then check that the object is unpacked or that the satisfies clauses still hold.
+        // for each satisfies clause MF_{F,i} in class T that mentions f:
+        //   assert !(o.inv <: T) || o.localinv == BaseClass(T) || MF_{T,i}(Heap[o,f:=E], o);
+        IFieldInfo fi = this.sink.assemblyInfo.GetFieldInfo(field);
+        if (fi != null) {                       
+          foreach (Cci.ModelfieldContract mfC in fi.DependentMfCs) {
+            if (mfC == null) {
+              continue;
+            }
+            //if X.f occurs in Y.mfC, then Y == X or Y owns X. if Y owns X, then Y is unpacked (as update X.f only allowed when X is not committed).
+            //Let mfC be declared in C, and f in D. If C <: D, then f is additive, then Y is unpacked (update of additive field)                
+            //If D <: C, then X != Y, as a satisfies clause (like an invariant) may not mention fields of subtypes. Then Y is unpacked (as Y owns X).                
+            if (mfC.DeclaringType != field.DeclaringType) {
+              continue;
+            }
+            //If C == D, then require object is unpacked  OR  assignment maintains satisifies clauses of mfC.
+            //TODO: can be optimized, can ignore contract when occurrence of shape r.f'.field (then Y unpacked, see reasoning above)
+            //assert thisReplacement == null;
+            foreach (Cci.Expression satClause in ((!)mfC.SatisfiesList)) {                  
+              if (satClause != null && ExpressionMentionsField(satClause, field)) {
+                Bpl.Expr e = expTran.TranslateExpression(satClause, Prelude.HeapName);
+                Bpl.Expr c = Bpl.Expr.Or(isExposedForT, e);
+                this.currentBlock.Cmds.Add(Sink.Assert(c, statement, "Assignment to field " + field.FullName + " of non-exposed target object may break satisfies clause " + satClause.SourceContext.SourceText + " of modelfield " + ((!)mfC.DeclaringType).Name.Name + "." + ((!)mfC.Modelfield).Name.Name));
+              }
+            }
+          }
+        }
+        #endregion
+      }
+      
+      // ----------------------------------------------------------
+      // 3. check visibility-based invariants and satisfies clauses
+      // ----------------------------------------------------------
+      // TODO: review this section
+      if (sink.assemblyInfo.MayBeInvariantConstrained(field)) {
+        // add preconditions for visibility based invariants
+        IFieldInfo fi = sink.assemblyInfo.GetFieldInfo(field);
+        if (fi != null) {
+          for (int i = 0; i < fi.VisibilityUseCount; i++) {
+            Cci.TypeNode! cl;
+            Cci.Expression! e;
+            Cci.Quantifier[]! qs;
+            fi.GetVisibilityUse(i, out cl, out e, out qs);
+            // We check that any object $o whose cl-frame depends on the heap location destExpr.field is
+            // sufficiently unpacked.
+            // emit: assert (forall $o, qsVars ::
+            //                    qsVarRanges &&
+            //                    $o != null && $o.allocated && $typeof($o) <: cl && e[this/$o] == destExpr
+            //                ==> !($o.inv <: cl) || $o.localinv == immediate-base-class-of(cl))
+            // where "e[this/$o]" refers to "e" with occurrences of "this" replaced by "$o".
+            Bpl.Variable oVar = Sink.BoundVar("$o", sink.RefType);
+            Bpl.Expr o = Sink.Ident(oVar);
+            
+            Bpl.Expr c0 = Bpl.Expr.Neq(o, sink.Null);
+            Bpl.Expr c1 = sink.IsAllocatedOfRef(o);
+            Bpl.Expr c2 = Bpl.Expr.Subtype(sink.Function(Sink.BuiltinFunction.Typeof, o), sink.TypeNameExpression(cl));
+            
+            int start;
+            ExpressionTranslator exprTran = new ExpressionTranslator(sink,o,null,null,null);
+            exprTran.RegisterBoundVariables(null, out start, qs);
+            Bpl.Expr translated_e = exprTran.TranslateExpression(e, Prelude.HeapName);
+            Bpl.Expr c3 = Bpl.Expr.Eq(translated_e, destExpr);
+            exprTran.UnRegisterBoundVariables(qs);
+            
+            Bpl.Expr cc = Bpl.Expr.And(c0, Bpl.Expr.And(c1, Bpl.Expr.And(c2, c3)));
+            Bpl.Expr d = om.IsExposed(o, sink.TypeNameExpression(cl), sink.HeapExpr(Prelude.HeapName));
+            
+            VariableSeq! vs = new VariableSeq(oVar);
+            Bpl.Expr body = Bpl.Expr.Imp(cc, d);
+            foreach (Cci.Quantifier! q in qs) {
+              bool universal;
+              body = new ExpressionTranslator(this.sink,null,null,this.methodSignature.currentParamMap,this.methodSignature.PreStateParamMap).TranslateQuantifierPieces(q, vs, body, Prelude.HeapName, null, out universal);
+            }
+            
+            if (!lite){
+              Bpl.Expr q = new Bpl.ForallExpr(NoToken, vs, body);
+              string msg = String.Format("Assignment to field {0} may violate a visibility-based invariant declared in class {1}", field.FullName, cl.FullName);
+              this.currentBlock.Cmds.Add(Sink.Assert(q, statement, msg));
+            }
+          }
+        }
+      }
+      
+      // --------------------------------
+      // 4. finally, do the update itself
+      // --------------------------------
+      // TODO:  Do the assignment here (currently, it happens at the beginning of section 2 above), and
+      // use an update expression Heap[f:=E] as the heap in the translation of the invariants and satisfies clauses above.
+      
+      // We now have a consistent heap again, so we do:
+      //   assume IsHeap($Heap);
+      this.currentBlock.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.IsHeap, sink.HeapExpr())));
+    }
+
+    /// <summary>
+    /// Returns false is "e" is independent of all "f" coordinates in the heap.  Returns true if there may be a dependence.
+    /// </summary>
+    bool ExpressionMentionsField(Cci.Expression! e, Cci.Field! f)
+    {
+      LookForFieldVisitor l4f = new LookForFieldVisitor(f);
+      l4f.VisitExpression(e);
+      return l4f.FoundFieldDependence;
+    }
+
+    protected override object VisitInitObj (Cci.Variable addr, Cci.TypeNode valueType, Cci.Statement statement, object nothingInteresting)
+    {
+      if (addr == null || valueType == null || statement == null) { return null; }
+
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "initobj");
+
+      if (valueType is Cci.TypeParameter){
+        // emit: *addr = null;
+        this.DoStoreIndirect(addr, sink.Null, valueType, statement);
+      }else{
+        Bpl.IdentifierExpr zero = Sink.Expr(this.MakeLocal(sink.StructType));
+        // emit:  havoc zero;  assume ZeroInit(zero, valueType);
+        this.currentBlock.Cmds.Add(Sink.Havoc(zero));
+        this.sink.AddType(valueType);
+        this.currentBlock.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.ZeroInit, zero, sink.TypeNameExpression(valueType))));
+
+        // emit:  *addr = zero;
+        this.DoStoreIndirect(addr, zero, valueType, statement);
+      }
+
+      return nothingInteresting;
+    }
+
+
+    protected override object VisitLoadElement (
+      Cci.Variable destination, 
+      Cci.Variable source, 
+      Cci.Variable index, 
+      Cci.TypeNode elementType,
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+      if (statement == null) { return null; }
+      if (destination == null || source == null || index == null) { return null; }
+        
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "load element");
+      FlowedValue.Type! arrayType = this.GetType(source, statement, Role.Use);
+      assume arrayType.IsArray;
+      Bpl.Type elType = sink.Convert((!) arrayType.ElementType);  // KRML: do we need an AddType(arrayType.ElementType) here?
+
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(destination, statement, Role.Def);
+      Bpl.IdentifierExpr sourceExpr = this.TranslateLocal(source, statement, Role.Use);
+      Bpl.IdentifierExpr indexExpr = this.TranslateLocal(index, statement, Role.Use);
+
+      this.currentBlock.Cmds.Add(AssertDerefOkay(sourceExpr, source));
+
+      this.currentBlock.Cmds.Add(AssertLowerBoundOkay(indexExpr, index));
+
+      this.currentBlock.Cmds.Add(AssertUpperBoundOkay(sourceExpr, indexExpr, index));
+
+      this.currentBlock.Cmds.Add(
+        this.sink.Assign(
+          destExpr, 
+          sink.ArrayGet(sourceExpr, elType, indexExpr, Prelude.HeapName)
+        ));
+
+      return nothingInteresting;
+    }
+
+
+
+    protected override object VisitStoreElement (
+      Cci.Variable destination, 
+      Cci.Variable index, 
+      Cci.Variable source, 
+      Cci.TypeNode elementType,
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+      if (destination == null || source == null || index == null) { return null; }
+      if (statement == null) { return null; }
+      assume this.currentBlock != null;
+      bool lite = CommandLineOptions.Clo.CheckingLevel < 1;
+        
+      this.sink.Comment(statement, "store element");
+      FlowedValue.Type arrayType = this.GetType(destination, statement, Role.Use);
+      assume arrayType.IsArray;
+      Bpl.Type elType = sink.Convert(arrayType.ElementType);
+
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(destination, statement, Role.Use);
+      Bpl.IdentifierExpr sourceExpr = this.TranslateLocal(source, statement, Role.Use);
+      Bpl.IdentifierExpr indexExpr = this.TranslateLocal(index, statement, Role.Use);
+
+      this.currentBlock.Cmds.Add(AssertDerefOkay(destExpr, destination));
+
+      this.currentBlock.Cmds.Add(AssertLowerBoundOkay(indexExpr, index));
+
+      this.currentBlock.Cmds.Add(AssertUpperBoundOkay(destExpr, indexExpr, index));
+
+      if (elType.Equals(sink.RefType)) {
+        this.currentBlock.Cmds.Add(this.ArrayCovarianceAssertion(destExpr, sourceExpr, statement));
+      }
+
+      if (arrayType.ElementType.IsEnum) {
+        CheckAssignability(sourceExpr, arrayType.ElementType.EnumType, statement);
+      }
+      
+      // Array elements can be assigned to without unpacking the array.
+      // However, we still require that the array object not be committed.
+      Bpl.Expr c = om.IsObjectWritable(destExpr);
+      this.currentBlock.Cmds.Add(Sink.Assert(c, statement, "Target array of assignment is not allowed to be committed"));
+
+      // If we have an array of reference types, we have to consider ownership
+      // We do not perform a transfer is the elementType is potentially immutable
+      bool isImmutable;
+      if (elType.Equals(sink.RefType) && Sink.IsImmutable((!)elementType, out isImmutable) && !isImmutable && !lite) {
+      // The rhs expression must be null or un-owned, or have the right owner
+        c = Bpl.Expr.Eq(sourceExpr, sink.Null);
+        c = Bpl.Expr.Or(c, om.HasNoOwner(sourceExpr, sink.HeapExpr()));
+        c = Bpl.Expr.Or(c, om.EqualOwners(sourceExpr, sink.ElementProxy(destExpr, Expr.Literal(-1))));
+        this.currentBlock.Cmds.Add(Sink.Assert(c, statement, "illegal assignment to array element, RHS may already have a different owner"));
+ 
+        // We then transfer the rhs to the owner of ElementProxy (may be a nop)
+        UpdateOwnersFrameCondition(this.currentBlock.Cmds, sourceExpr,
+                                   Bpl.Expr.Select(sink.HeapExpr(),
+                                                   sink.Clone(sink.ElementProxy(destExpr, Expr.Literal(-1))),
+                                                   sink.Fields.OwnerRef),
+                                   Bpl.Expr.Select(sink.HeapExpr(),
+                                                   sink.Clone(sink.ElementProxy(destExpr, Expr.Literal(-1))),
+                                                   sink.Fields.OwnerClassFrame),
+                                   statement);
+
+        Bpl.Cmd cmd = new Bpl.CallCmd(
+          NoToken,
+          Prelude.UpdateOwnersForPeerProcName,
+          new ExprSeq(sink.ElementProxy(destExpr, Expr.Literal(-1)), sourceExpr),
+          new IdentifierExprSeq());
+        this.currentBlock.Cmds.Add(cmd);
+      }
+            
+      ArrayAssign(NoToken, destExpr, elType, indexExpr, sourceExpr, statement);
+      this.currentBlock.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.IsHeap, sink.HeapExpr())));
+      return nothingInteresting;
+    }
+    
+    protected override object VisitAssertion (Cci.Assertion assertion, object arg)
+    {
+        assert false;  // We don't expect any Cci.Assertion nodes at this time of the translation
+    }
+    
+    protected override object VisitCall (
+      Cci.Variable destination, 
+      Cci.Variable receiver, 
+      Cci.Method callee, 
+      Cci.ExpressionList/*<Variable>*/ arguments, 
+      bool isVirtualCall,
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+        if (callee == null || statement == null) { return null; }
+        
+        if (arguments == null) { arguments = new Cci.ExpressionList(); }
+        
+#if ROB_DEBUG    
+    System.IO.TextWriter W = new System.IO.StreamWriter(@"\temp\funs.txt", true);
+    W.WriteLine(callee.FullName); W.Close();
+#endif    
+    
+        if ( ! HandleSpecialCaseMethods(destination, receiver, callee, arguments, statement)) 
+        { 
+            Cci.Variable[] actuals = new Cci.Variable[arguments.Count];
+            for (int i=0; i<arguments.Count; i++)
+            {
+                actuals[i] = (Cci.Variable) arguments[i];
+            }
+            
+            this.sink.AddProcedure(callee, isVirtualCall && callee.IsVirtual);
+            
+            Cci.Node nodeToBlame = statement;
+            Cci.ExpressionStatement expStmt = statement as Cci.ExpressionStatement;
+            if (expStmt != null)
+            {
+                Cci.MethodCall mc = expStmt.Expression as Cci.MethodCall;
+                if (mc != null && mc.SourceContext.Document != null) { nodeToBlame = mc; }
+            }
+            
+            HandleCall(destination, receiver, callee, isVirtualCall,
+                new MethodParameters(callee.Parameters), callee.ReturnType, actuals, statement, nodeToBlame);
+        }
+        return nothingInteresting;
+    }
+
+    protected override object VisitConstrainedCall (
+      Cci.Variable destination, 
+      Cci.Variable receiver, 
+      Cci.Method callee, 
+      Cci.ExpressionList/*<Variable>*/ arguments, 
+      Cci.TypeNode constraint,
+      Cci.Statement statement, 
+      object nothingInteresting
+      )
+    {
+        if (callee == null || statement == null) { return null; }
+        
+        if (arguments == null) { arguments = new Cci.ExpressionList(); }
+        
+#if ROB_DEBUG    
+    System.IO.TextWriter W = new System.IO.StreamWriter(@"\temp\funs.txt", true);
+    W.WriteLine(callee.FullName); W.Close();
+#endif    
+    
+        if ( ! HandleSpecialCaseMethods(destination, receiver, callee, arguments, statement)) 
+        { 
+            Cci.Variable[] actuals = new Cci.Variable[arguments.Count];
+            for (int i=0; i<arguments.Count; i++)
+            {
+                actuals[i] = (Cci.Variable) arguments[i];
+            }
+            
+            this.sink.AddProcedure(callee, true);
+            
+            Cci.Node nodeToBlame = statement;
+            Cci.ExpressionStatement expStmt = statement as Cci.ExpressionStatement;
+            if (expStmt != null)
+            {
+                Cci.MethodCall mc = expStmt.Expression as Cci.MethodCall;
+                if (mc != null && mc.SourceContext.Document != null) { nodeToBlame = mc; }
+            }
+            
+            HandleCall(destination, receiver, callee, true,
+                new MethodParameters(callee.Parameters), callee.ReturnType, actuals, statement, nodeToBlame);
+        }
+        return nothingInteresting;
+    }
+
+
+    protected override object VisitCallIndirect (
+        Cci.Variable destination, 
+        Cci.Variable callee, 
+        Cci.Variable receiver, 
+        Cci.Variable[] actuals, 
+        Cci.FunctionPointer fp, 
+        Cci.Statement statement, 
+        object nothingInteresting
+        )
+    {
+        if (fp == null || actuals == null) { return null; }
+        if (statement == null) { return null; }
+        
+        this.sink.NotSupported(statement, "This statement was ignored because calli instructions are not yet supported.");
+//        Comment(statement, "call indirect");
+//        HandleCall(destination, receiver, UniqueProcedureName(fp), 
+//            new FunctionPointerParameters(fp), fp.ReturnType, actuals, statement, fp);
+        return nothingInteresting;
+    }
+    
+    
+    
+    protected override object VisitReturn (
+      Cci.Variable returnValue, 
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+        if (statement == null) { return null; }
+        
+        assume this.currentBlock != null;
+        this.sink.Comment(statement, "return");
+        assume sink.copyBackCommands != null;
+        foreach (Bpl.Cmd cmd in sink.copyBackCommands)
+        {
+            this.currentBlock.Cmds.Add(cmd);
+        }
+
+        if (returnValue != null)
+        {
+            Bpl.Expr returnExpr = this.TranslateLocal(returnValue, statement, Role.Use);
+
+            this.currentBlock.Cmds.Add(this.sink.Assign(Sink.Ident(Prelude.ResultVariableName, returnExpr.ShallowType), returnExpr));
+        }
+
+        //Console.WriteLine("RETURN from block {0}", block.Label);
+        this.currentBlock.TransferCmd = new Bpl.ReturnCmd(NoToken);
+        return nothingInteresting;
+    }
+
+    protected override object VisitLoadNull (
+        Cci.Variable destination, 
+        Cci.Literal source, 
+        Cci.Statement statement, 
+        object nothingInteresting
+        ) 
+    {
+        if (statement == null || destination == null || source == null) { return null; }
+    
+        assume this.currentBlock != null;
+        Bpl.IdentifierExpr destExpr = this.TranslateLocal(destination, statement, Role.Def);
+        this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, sink.Null));
+        return nothingInteresting;
+    }
+
+
+    
+    protected override object VisitLoadConstant ( // dest := literal;
+      Cci.Variable destination, 
+      Cci.Literal source, 
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+      if (destination == null || source == null) { return null; }
+      if (statement == null) { return null; }
+        
+      assume this.currentBlock != null;
+      object literal = source.Value;
+      this.sink.Comment(statement, "load constant " + Sink.PrintableConstant(literal));  // we print the raw literal
+
+      FlowedValue.Type! flowedType = GetType(destination, statement, Role.Def);
+      switch (flowedType.TypeTag) {
+        case FlowedValue.Type.Tag.Zero:
+        case FlowedValue.Type.Tag.One:
+        case FlowedValue.Type.Tag.Bool:
+          if (literal is int) {
+            literal = ((int)literal != 0); // convert int to boolean
+          }
+          break;
+        case FlowedValue.Type.Tag.Nat:
+          if (literal is int) {
+            literal = (uint)(int)literal; // convert signed bit pattern to unsigned integer
+          } else if (literal is long) {
+            literal = (ulong)(long)literal; // convert signed bit pattern to unsigned integer
+          }
+          break;
+        default:
+          break;
+      }
+
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(destination, statement, Role.Def);
+
+      this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, this.sink.Literal(literal)));
+      return nothingInteresting;
+    }
+
+
+    protected override object VisitLoadToken ( // dest := token;
+      Cci.Variable destination, 
+      object token, 
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+        if (destination == null || token == null) { return null; }
+        if (statement == null) { return null; }
+        
+        assume this.currentBlock != null;
+        this.sink.Comment(statement, "load token");
+        Bpl.IdentifierExpr destExpr = this.TranslateLocal(destination, statement, Role.Def);
+
+        // We don't model the value of LdToken
+        this.currentBlock.Cmds.Add(Sink.Havoc(destExpr));
+        Cci.TypeNode tokenType = (Cci.TypeNode)token;
+        this.sink.AddType(tokenType);
+        this.currentBlock.Cmds.Add(Sink.Assume(
+            sink.Function(Sink.BuiltinFunction.IsTokenForType, destExpr, sink.TypeNameExpression(tokenType))));
+        return nothingInteresting;
+    }
+
+
+    protected override object VisitIsInstance ( // dest := source AS type;
+      Cci.Variable dest, 
+      Cci.Variable source, 
+      Cci.TypeNode type, 
+      Cci.Statement statement, 
+      object nothingInteresting
+      )
+    {
+        if (statement == null) { return null; }
+        if (dest == null || source == null || type == null) { return null; }
+
+        assume this.currentBlock != null;
+        this.sink.Comment(statement, "is instance");
+        Bpl.IdentifierExpr destExpr = this.TranslateLocal(dest, statement, Role.Def);
+        Bpl.IdentifierExpr sourceExpr = this.TranslateLocal(source, statement, Role.Use);
+        this.sink.AddType(type);
+        if (sink.Convert(type).Equals(sink.RefType)) {
+            // emit:  dest := $As(source, T);
+            Bpl.Expr! b = sink.Function(Sink.BuiltinFunction.As, sourceExpr, sink.TypeNameExpression(type));
+            this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, b));
+        } else {
+            // emit:  dest := BoxTester(source, T);
+            Bpl.Expr! b = sink.Function(Sink.BuiltinFunction.BoxTester, sourceExpr, sink.TypeNameExpression(type));
+            this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, b));
+        }
+
+        return nothingInteresting;
+    }
+
+
+
+    protected override object VisitBinaryOperator ( // dest := operand1 op operand2
+      Cci.NodeType @operator, 
+      Cci.Variable destination, 
+      Cci.Variable operand1, 
+      Cci.Variable operand2, 
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+      if (statement == null) { return null; }
+      if (destination == null || operand1 == null || operand2 == null) { return null; }
+        
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "binary operator");
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(destination, statement, Role.Def);
+      Bpl.IdentifierExpr lefthandSide = this.TranslateLocal(operand1, statement, Role.Use);
+      Bpl.IdentifierExpr righthandSide = this.TranslateLocal(operand2, statement, Role.Use);
+      
+      FlowedValue.Type! destType = this.GetType(destination, statement, Role.Def);
+      Type resultType = sink.Convert(destType);
+
+      // check that the operation is defined
+      // TODO: we should do this more generally, and we also need to do it for serialized expressions
+      switch (@operator) {
+        case Cci.NodeType.Div: case Cci.NodeType.Div_Un:
+        case Cci.NodeType.Rem: case Cci.NodeType.Rem_Un:
+          if (resultType.IsInt) {
+            Cmd asrt = Sink.Assert(Bpl.Expr.Neq(righthandSide, Bpl.Expr.Literal(0)), statement, "division by zero");
+            this.currentBlock.Cmds.Add(asrt);
+          }
+          break;
+        default:
+          break;      
+      }
+
+      Bpl.Expr! binaryExpression = 
+        new ExpressionTranslator(this.sink,null,null,this.methodSignature.currentParamMap,this.methodSignature.PreStateParamMap).TranslateBinaryExpr(@operator, lefthandSide, righthandSide, resultType, sink.Convert(operand1.Type));
+      this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, binaryExpression));
+
+      return nothingInteresting;
+    }
+
+    protected override object VisitUnaryOperator ( // dest := op operand;
+      Cci.NodeType @operator, 
+      Cci.Variable destination, 
+      Cci.Variable operand, 
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+      if (statement == null) { return null; }
+      if (destination == null || operand == null) { return null; }
+        
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "unary operator");
+      FlowedValue.Type opType = GetType(operand, statement, Role.Use);
+      
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(destination, statement, Role.Def);
+      Bpl.IdentifierExpr bplOperand = this.TranslateLocal(operand, statement, Role.Use);
+
+      // check that the operation is defined
+      switch (@operator) {
+        case Cci.NodeType.Ldlen:
+          Cmd asrt = Sink.Assert(Bpl.Expr.Neq(bplOperand, sink.Null), statement, "array reference might be null");
+          this.currentBlock.Cmds.Add(asrt);
+          break;
+        default:
+          break;      
+      }
+      
+      Bpl.Expr unaryExpression = new ExpressionTranslator(this.sink,null,null,this.methodSignature.currentParamMap,this.methodSignature.PreStateParamMap).TranslateUnaryExpr(@operator, bplOperand, sink.Convert(opType), operand.Type, destination.Type);
+      this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, unaryExpression));
+
+      return nothingInteresting;
+    }
+
+    protected override object VisitCopy ( // dest := source; 
+      Cci.Variable destination, 
+      Cci.Variable source, 
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+      if (statement == null) { return null; }
+      if (destination == null || source == null) { return null; }
+        
+      assume this.currentBlock != null;
+      Bpl.FlowedValue.Type! sourceType = GetType(source, statement, Role.Use);
+      if (!sourceType.IsSingleton){
+        this.sink.Comment(statement, "copy");
+        Bpl.IdentifierExpr destExpr = this.TranslateLocal(destination, statement, Role.Def);
+        Bpl.Expr sourceExpr = this.TranslateLocal(source, statement, Role.Use);
+        if (Sink.IsIntegralType(source.Type) && Sink.IsIntegralType(destination.Type)) {
+          sourceExpr = new ExpressionTranslator(this.sink,null,null,this.methodSignature.currentParamMap,this.methodSignature.PreStateParamMap).IntConversion(sourceExpr, source.Type, destination.Type);
+        }
+
+        CheckAssignability(sourceExpr, destination.Type, statement);
+        this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, sourceExpr));
+      }
+      return nothingInteresting;
+    }
+
+
+
+    protected override object VisitCastClass ( // dest := (type) source;
+      Cci.Variable destination, 
+      Cci.TypeNode type, 
+      Cci.Variable source, 
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+        if (statement == null) { return null; }
+        if (destination == null || source == null || type == null ) { return null; }
+        
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "castclass");
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(destination, statement, Role.Def);
+      Bpl.Expr sourceExpr = this.TranslateLocal(source, statement, Role.Use);
+
+      // emit:  assert $Is(source, type); 
+      this.sink.AddType(type);
+      Bpl.Expr c = sink.Function(Sink.BuiltinFunction.Is, sourceExpr, sink.TypeNameExpression(type));
+      this.currentBlock.Cmds.Add(Sink.Assert(c, statement, "Type cast might fail"));
+      // emit:  destExpr := sourceExpr;
+      this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, sourceExpr));
+      return nothingInteresting;
+    }
+
+    // NOTE: For now, we'll mimic call-by-reference
+    // through call-by-copy-result.
+
+    protected override object VisitLoadIndirect ( // destintation := *((type*)source);
+      Cci.Variable destination, 
+      Cci.Variable pointer, 
+      Cci.TypeNode type, 
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+        if (destination == null || pointer == null) { return null; }
+        if (statement == null) { return null; }
+        
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "load indirect");
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(destination, statement, Role.Def);
+
+      FlowedValue.Type ptrType = GetType(pointer, statement, Role.Use);
+      if (ptrType.IsAddrOf)
+      {
+        FlowedValue.Pointee pointee = ptrType.Pointee;
+        if (pointee is FlowedValue.VariablePointee)
+        {
+          FlowedValue.VariablePointee v = (FlowedValue.VariablePointee) pointee;
+          Bpl.Expr pointeeExpr = this.TranslateLocal(v.Variable, sink.Convert((!) v.Type));
+          this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, pointeeExpr));
+        }
+        else if (pointee is FlowedValue.BoxedPointee)
+        {
+          FlowedValue.BoxedPointee boxed = (FlowedValue.BoxedPointee) pointee;
+          Bpl.IdentifierExpr pointerExpr = this.TranslateLocal(pointer, sink.Convert( (!) boxed.Type));
+          this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, pointerExpr));
+        }
+      }
+      else if (ptrType.IsArg)
+      {
+        this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, this.TranslateLocal(ptrType.Parameter, sink.Convert(ptrType.PointeeType))));
+      }
+      else
+      {
+        //assume false;
+        this.currentBlock.Cmds.Add(new Bpl.CommentCmd("FIXME - broken load indirect"));
+      }
+      return nothingInteresting;
+    }
+
+
+    protected override object VisitStoreIndirect ( // *((type*)pointer) := source;
+      Cci.Variable pointer, 
+      Cci.Variable source, 
+      Cci.TypeNode type, 
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+      if (source == null || pointer == null || type == null) { return null; }
+      if (statement == null) { return null; }
+        
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "store indirect");
+      Bpl.IdentifierExpr sourceExpr = this.TranslateLocal(source, statement, Role.Use);
+      this.DoStoreIndirect(pointer, sourceExpr, type, statement);
+      return nothingInteresting;
+    }
+    
+    protected override object VisitNewArray ( // dest := new type[size];
+      Cci.Variable destination, 
+      Cci.TypeNode type, 
+      Cci.Variable elementCount, 
+      Cci.Statement statement, 
+      object nothingInteresting
+      )
+    {
+      if (destination == null || elementCount == null) { return null; }
+      if (statement == null) { return null; }
+        
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "new array");
+      Bpl.IdentifierExpr destExprActual = TranslateLocal(destination, statement, Role.Def);
+      Bpl.IdentifierExpr countExpr = this.TranslateLocal(elementCount, statement, Role.Use);
+
+      // Check the argument to be non-negative
+      this.currentBlock.Cmds.Add(Sink.Assert(Bpl.Expr.Le(Bpl.Expr.Literal(0), countExpr), statement, "Array size possibly negative"));
+
+      // havoc destination
+      // To do that, create a new temporary variable without a "where" clause (since the actual destination may have
+      // a "where" clause, which dissasterously might include something that says the variable is allocated).
+      Bpl.LocalVariable tempDestVar = new Bpl.LocalVariable(NoToken, MakeLocal(sink.RefType));
+      Bpl.IdentifierExpr destExpr = Sink.Ident(tempDestVar);
+      this.currentBlock.Cmds.Add(Sink.Havoc(destExpr));
+
+      // sink.Assume: destination.allocated == false && $ArrayLength(destination) == elementCount
+      Bpl.Expr notAllocatedBefore = Bpl.Expr.Eq(sink.Allocated(destExpr, Prelude.HeapName), Bpl.Expr.False);
+      Bpl.Expr goodLength = Bpl.Expr.Eq(sink.ArrayLength(destExpr), countExpr);
+      this.currentBlock.Cmds.Add(Sink.Assume(Sink.And(notAllocatedBefore, goodLength)));
+      if (CommandLineOptions.Clo.MethodologySelection == CommandLineOptions.Methodology.Boogie) {
+        // sink.Assume: $ElementProxy(destination,-1).allocated == false && $ElementProxy(destination) != destination && $ElementProxy(destination) != null
+        notAllocatedBefore = Bpl.Expr.Eq(sink.Allocated(sink.ElementProxy(destExpr, Expr.Literal(-1)), Prelude.HeapName), Bpl.Expr.False);
+        Bpl.Expr freshProxy = Bpl.Expr.Neq(sink.ElementProxy(destExpr, Expr.Literal(-1)), destExpr);
+        Bpl.Expr nonnullProxy = Bpl.Expr.Neq(sink.ElementProxy(destExpr, Expr.Literal(-1)), sink.Null);
+        
+        this.currentBlock.Cmds.Add(Sink.Assume(Sink.And(notAllocatedBefore, freshProxy, nonnullProxy)));
+      }
+      // sink.Assume: destination is not null and has appropriate array type
+      this.sink.AddType((!)type);
+      this.currentBlock.Cmds.Add(Sink.Assume(Bpl.Expr.Neq(destExpr, sink.Null)));
+      int rank = 1;  // BUGBUG, this doesn't seem good; is it?
+      bool elementTypeIsNonNull;
+      Bpl.Expr arrayTypeExpr = ArrayTypeExpr(type, rank, out elementTypeIsNonNull);
+      if (elementTypeIsNonNull) {
+        // assume NonNullRefArrayRaw(dest, elementType, rank)
+        this.currentBlock.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.NonNullRefArrayRaw, destExpr, sink.TypeNameExpression(type), sink.IntegerLiteral(rank))));
+      } else {
+        // assume $typeof(dest) == RefArray(elementType, rank) or IntArray(elementType, rank) or ValueArray(elementType, rank)
+        this.currentBlock.Cmds.Add(Sink.Assume(Bpl.Expr.Eq(sink.Function(Sink.BuiltinFunction.Typeof, destExpr), arrayTypeExpr)));
+      }
+
+      if (CommandLineOptions.Clo.MethodologySelection == CommandLineOptions.Methodology.Boogie) {
+        // sink.Assume: destination.owner == (destination,PeerGroupPlaceholder)
+        this.currentBlock.Cmds.Add(Sink.Assume(om.UnownedPeerGroupSingleton(destExpr, sink.HeapExpr(), false)));
+        // sink.Assume: $ElementProxy(destination).owner == ($ElementProxy(destination),PeerGroupPlaceholder)
+        this.currentBlock.Cmds.Add(Sink.Assume(om.UnownedPeerGroupSingleton(sink.ElementProxy(destExpr, Expr.Literal(-1)), sink.HeapExpr(), false)));
+        // Assume: destination.$inv == typeof(destination) && $localinv == typeof(destination) && destination.$writable == true;
+        Bpl.Expr! isFullyValid = om.IsFullyValid(destExpr);
+        this.currentBlock.Cmds.Add(Sink.Assume(isFullyValid));
+      }
+      
+      // sink.Assume: (forall i: int :: destination[i] == ZeroEquivalentElement);
+      Bpl.Type elType = sink.Convert(type);
+      Bpl.Variable iVar = Sink.BoundVar("$i", Bpl.Type.Int);
+      Bpl.Expr i = Sink.Ident(iVar);
+      Bpl.Expr aSubI = sink.ArrayGet(destExpr, elType, i, Prelude.HeapName);
+      Bpl.Expr z = this.sink.ZeroEquiv(elType);
+      this.currentBlock.Cmds.Add(Sink.Assume(new Bpl.ForallExpr(NoToken, new Bpl.VariableSeq(iVar), Bpl.Expr.Eq(aSubI, z))));
+
+      // destination.allocated := true
+      HeapAssign(NoToken, destExpr, sink.Fields.Allocated, Bpl.Expr.True, statement, true);
+
+      if (CommandLineOptions.Clo.MethodologySelection == CommandLineOptions.Methodology.Boogie) {
+        // we call object's constructor to get all the free properties for $ElementProxy
+        sink.AddProcedure((!)((!)Cci.CoreSystemTypes.Object).GetConstructor());
+        Bpl.ExprSeq inParams = new Bpl.ExprSeq();
+        inParams.Add(sink.ElementProxy(destExpr, Expr.Literal(-1)));
+        this.currentBlock.Cmds.Add(new Bpl.CallCmd(
+          NoToken, 
+          "System.Object..ctor", 
+          inParams, 
+          new Bpl.IdentifierExprSeq()
+        ));
+      }
+      
+      if (CommandLineOptions.Clo.MethodologySelection == CommandLineOptions.Methodology.VisibleState) {
+        // assume (forall $CT: name :: { $Inv($Heap, temp0, $CT) } $typeof(temp0) <: $CT ==> $Inv($Heap, temp0, $CT));
+        Bpl.BoundVariable tVar = new Bpl.BoundVariable(Token.NoToken, new Bpl.TypedIdent(Token.NoToken, "$CT", sink.TypeType));
+        Bpl.Expr t = Sink.Ident(tVar);
+        Bpl.Expr typeRange = Bpl.Expr.Subtype(sink.Function(Sink.BuiltinFunction.Typeof, destExpr), t);
+        Bpl.Expr inv = sink.Function(Sink.BuiltinFunction.TheInvariant, sink.HeapExpr(), destExpr, t);
+        Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new ExprSeq(inv));
+        Bpl.Expr q = new Bpl.ForallExpr(NoToken, new VariableSeq(tVar), tr, Bpl.Expr.Imp(typeRange, inv));
+        this.currentBlock.Cmds.Add(Sink.Assume(q));
+      }
+
+      // dest := tempDest;
+      this.currentBlock.Cmds.Add(Cmd.SimpleAssign(NoToken, destExprActual, destExpr));
+      
+      // assume IsHeap($Heap)
+      this.currentBlock.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.IsHeap, sink.HeapExpr())));
+      return nothingInteresting;
+    }
+
+
+
+    protected override object VisitNewObject ( // dest := new type;
+      Cci.Variable destination, 
+      Cci.TypeNode type, 
+      Cci.Statement statement,
+      object nothingInteresting
+      ) 
+    {
+      if (type == null || destination == null) { return null; }
+      if (statement == null) { return null; }
+      
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "new object");
+      this.sink.AddType(type);
+      bool isStruct = Sink.IsStruct(type);
+
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(destination, statement, Role.Def);
+      // havoc dest;
+      this.currentBlock.Cmds.Add(Sink.Havoc(destExpr));
+
+      // set the ElementProxy
+      if (CommandLineOptions.Clo.MethodologySelection == CommandLineOptions.Methodology.Boogie) {
+        Cci.TypeNodeList templateArguments = type.TemplateArguments;
+        if (templateArguments != null) {
+          for (int i = 0; i < templateArguments.Count; i++) {
+            Cci.TypeNode ithArgument = (!)templateArguments[i];
+            if (ithArgument.IsTemplateParameter && translatedStackVariables["this"] != null) {
+              // the i-th type argument is itself a type parameter. If it comes from the enclosing class, we use the same ElementProxy
+              Cci.ITypeParameter! tp = (!)(ithArgument as Cci.ITypeParameter);
+              if (tp.DeclaringType != null) {
+                int pos = tp.ParameterListIndex;
+                // sink.Assume: $ElementProxy(destination,i) == $ElementProxy(this,pos)
+
+                Bpl.Expr e0 = sink.ElementProxy(destExpr, Expr.Literal(i), isStruct);
+                Bpl.Variable thVar = (Bpl.Variable!)translatedStackVariables["this"];
+                Bpl.Expr e1 = sink.ElementProxy(Bpl.Expr.Ident(thVar), Expr.Literal(pos), thVar.TypedIdent.Type.Equals(sink.StructType));
+                this.currentBlock.Cmds.Add(Sink.Assume(Bpl.Expr.Eq(e0, e1)));
+              }
+            } else if (ithArgument.IsReferenceType) {
+              // the i-th type parameter is instantiated with a reference type. So create an ElementProxy for this variable
+              // sink.Assume: $ElementProxy(destination,i).allocated == false && $ElementProxy(destination,i) != null && $ElementProxy(destination,i) != destination 
+              Bpl.Expr notAllocatedBefore = Bpl.Expr.Eq(sink.Allocated(sink.ElementProxy(destExpr, Expr.Literal(i), isStruct), Prelude.HeapName), Bpl.Expr.False);
+              Bpl.Expr nonnullProxy = Bpl.Expr.Neq(sink.ElementProxy(destExpr, Expr.Literal(i), isStruct), sink.Null);
+              if (isStruct) {
+                this.currentBlock.Cmds.Add(Sink.Assume(Sink.And(notAllocatedBefore, nonnullProxy)));
+              } else {
+                Bpl.Expr freshProxy = Bpl.Expr.Neq(sink.ElementProxy(destExpr, Expr.Literal(i), isStruct), destExpr);
+                this.currentBlock.Cmds.Add(Sink.Assume(Sink.And(notAllocatedBefore, nonnullProxy, freshProxy)));
+              }
+              // sink.Assume: $ElementProxy(destination,i).owner == ($ElementProxy(destination,i),PeerGroupPlaceholder)
+              this.currentBlock.Cmds.Add(Sink.Assume(om.UnownedPeerGroupSingleton(sink.ElementProxy(destExpr, Expr.Literal(i), isStruct), sink.HeapExpr(), false)));                  
+
+              // we call object's constructor to get all the free properties for $ElementProxy
+              sink.AddProcedure((!)((!)Cci.CoreSystemTypes.Object).GetConstructor());
+              Bpl.ExprSeq inParams = new Bpl.ExprSeq();
+              inParams.Add(sink.ElementProxy(destExpr, Expr.Literal(i), isStruct));
+              this.currentBlock.Cmds.Add(new Bpl.CallCmd(
+                NoToken, 
+                "System.Object..ctor", 
+                inParams, 
+                new Bpl.IdentifierExprSeq()
+              ));
+            }
+          }
+        }
+      }
+
+      if (isStruct)
+      {
+        // Historical note:  We used to also emit a type assumption using $Is here:
+        //   assume $Is(dest, <type>);
+        // but we now use $Is only for reference types.  If some such assumption is needed
+        // (which I'm not sure it is), we'll need to add it here.
+      }
+      else
+      {
+        // assume $Heap[dest, $allocated] == false;
+        Bpl.Expr cond = Bpl.Expr.Eq(sink.Allocated(destExpr, Prelude.HeapName), Bpl.Expr.False);
+        // assume dest != null;
+        cond = Bpl.Expr.And(cond, DerefOkay(destExpr));
+        // assume $typeof(dest) == <type>;
+        cond = Bpl.Expr.And(cond, Bpl.Expr.Eq(sink.Function(Sink.BuiltinFunction.Typeof, destExpr), sink.TypeNameExpression(type)));
+        this.currentBlock.Cmds.Add(Sink.Assume(cond));
+        // assume destination.owner == (destination,PeerGroupPlaceholder);
+        this.currentBlock.Cmds.Add(Sink.Assume(om.UnownedPeerGroupSingleton(destExpr, sink.HeapExpr(), false))); 
+      }
+
+      return nothingInteresting;
+    }
+
+
+
+    protected override object VisitRethrow ( // rethrow;
+      Cci.Statement statement, 
+      object nothingInteresting
+      )
+    {
+        if (statement == null) { return null; }
+        
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "rethrow");
+      this.currentBlock.Cmds.Add(Sink.Assume(Bpl.Expr.False));
+      return nothingInteresting;
+    }
+
+
+
+
+    protected override object VisitThrow ( // throw variable;
+      Cci.Variable variable, 
+      Cci.Statement statement,
+      object nothingInteresting
+      )
+    {
+        if (variable == null) { return null; }
+        if (statement == null) { return null; }
+        
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "throw");
+      Bpl.Expr exnExpr = this.TranslateLocal(variable, statement, Role.Use);
+
+      this.currentBlock.Cmds.Add(AssertDerefOkay(exnExpr, statement));
+      this.currentBlock.Cmds.Add(Sink.Assume(Bpl.Expr.False));
+      //block.TransferCmd = new Bpl.GotoCmd(NoToken, new Bpl.StringSeq());
+      return nothingInteresting;
+    }
+
+
+    protected override object VisitBox ( // dest := BOX source  (source has type type)
+      Cci.Variable dest, 
+      Cci.Variable source, 
+      Cci.TypeNode type, 
+      Cci.Statement statement, 
+      object nothingInteresting
+      )
+    {
+        if (dest == null || source == null || type == null) { return null; }
+        if (statement == null) { return null; }
+        
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "box");
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(dest, statement, Role.Def);
+      Bpl.IdentifierExpr sourceExpr = this.TranslateLocal(source, statement, Role.Use);
+      
+      switch (DetermineTypeSpace(type)) {
+        case TypeSpace.ValueType:
+        {
+          // emit:  havoc dest;
+          this.currentBlock.Cmds.Add(Sink.Havoc(destExpr));
+          // emit:  assume Box(source,dest) == dest;
+          Bpl.Expr bx = sink.Function(Sink.BuiltinFunction.Box, sourceExpr, destExpr);
+          this.currentBlock.Cmds.Add(Sink.Assume(Bpl.Expr.Eq(bx, destExpr)));
+          // emit:  assume UnboxedType(dest) == type;
+          sink.AddType(type);
+          Bpl.Expr ty = sink.TypeNameExpression(type);
+          this.currentBlock.Cmds.Add(Sink.Assume(Bpl.Expr.Eq(sink.Function(Sink.BuiltinFunction.UnboxedType, destExpr), ty)));
+          // emit:  assume IsNotNull(dest, System.Object);
+          Bpl.Expr c = sink.Function(Sink.BuiltinFunction.IsNotNull, destExpr, sink.TypeNameExpression((!)Cci.SystemTypes.Object));
+          this.currentBlock.Cmds.Add(Sink.Assume(c));
+          // emit:  assume IsAllocated($Heap, dest);
+          //this.currentBlock.Cmds.Add(Sink.Assume(sink.Function(Prelude.IsAllocated, sink.HeapExpr(), destExpr)));
+          this.currentBlock.Cmds.Add(Sink.Assume(sink.IsAllocatedOfRef(destExpr.Name)));
+          // emit:  assume dest.IsPeerConsistent;
+          this.currentBlock.Cmds.Add(Sink.Assume(om.IsPeerConsistent(destExpr, true)));
+          break;
+        }
+        
+        case TypeSpace.ReferenceType:
+        {
+          // emit:  destExpr := sourceExpr;
+          this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, sourceExpr));
+          // emit:  assume UnboxedType(dest) == $typeof(dest);
+          this.currentBlock.Cmds.Add(Sink.Assume(Bpl.Expr.Eq(sink.Function(Sink.BuiltinFunction.UnboxedType, destExpr), sink.Function(Sink.BuiltinFunction.Typeof, destExpr))));
+          break;
+        }
+
+        case TypeSpace.Undetermined:
+        {
+          assert type is Cci.ITypeParameter;
+          // Here, we'd like to follow the ValueType case above if the instantiation of the type parameter is
+          // a value type and follow the ReferenceType case above if the instantiation of the type parameter is
+          // a reference type.  However, in this translation, we'll just do as much as is known to hold for both
+          // cases.  It is possible that we need to improve this in the future.
+          
+          // emit:  havoc dest;
+          this.currentBlock.Cmds.Add(Sink.Havoc(destExpr));
+          // emit:  assume Box(source,dest) == dest;
+          Bpl.Expr bx = sink.Function(Sink.BuiltinFunction.Box, sourceExpr, destExpr);
+          this.currentBlock.Cmds.Add(Sink.Assume(Bpl.Expr.Eq(bx, destExpr)));
+          // emit:  assume UnboxedType(dest) == type;
+          sink.AddType(type);
+          Bpl.Expr ty = sink.TypeNameExpression(type);
+          this.currentBlock.Cmds.Add(Sink.Assume(Bpl.Expr.Eq(sink.Function(Sink.BuiltinFunction.UnboxedType, destExpr), ty)));
+          break;
+        }
+        
+        default:
+          assert false;  // unexpected enum value
+      }
+      
+      return nothingInteresting;
+    }
+
+    protected override object VisitUnbox ( // dest := UNBOX source   (source has type type)
+      Cci.Variable dest, 
+      Cci.Variable source, 
+      Cci.TypeNode type, 
+      Cci.Statement statement, 
+      object nothingInteresting
+      )
+    {
+      if (statement == null) { return null; }
+      if (dest == null || source == null || type == null) { return null; }
+        
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "unbox");
+      // The semantics of UNBOX is that it returns an unmanaged pointer
+      // to the boxed value. However, in BPL, we pretend that it evaluates
+      // to the boxed value itself. Hence, when choosing a type for the 
+      // destination local, we choose the type based on the type of the 
+      // boxed value.
+      //
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(dest, sink.Convert(type));
+      Bpl.IdentifierExpr sourceExpr = this.TranslateLocal(source, statement, Role.Use);
+      // emit:  assert UnboxedType(source) == type;
+      sink.AddType(type);
+      Bpl.Expr c = Bpl.Expr.Eq(sink.Function(Sink.BuiltinFunction.UnboxedType, sourceExpr), sink.TypeNameExpression(type));
+      this.currentBlock.Cmds.Add(Sink.Assert(c, statement, "Unboxing cast might fail"));
+      // emit:  dest := cast(Unbox(source), bplType);
+      this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, sink.FunctionSpecial(Sink.BuiltinFunction.Unbox, sink.Convert(type), sourceExpr)));
+      return nothingInteresting;
+    }
+
+    protected override object VisitUnboxAny ( // dest := UNBOX.ANY source   (source has type type)
+      Cci.Variable dest, 
+      Cci.Variable source, 
+      Cci.TypeNode type, 
+      Cci.Statement statement, 
+      object nothingInteresting
+      )
+    {
+      if (statement == null) { return null; }
+      if (dest == null || source == null || type == null) { return null; }
+        
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, string.Format("unbox any ({0})", type));
+      this.sink.AddType(type);
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(dest, sink.Convert(type));
+      Bpl.IdentifierExpr sourceExpr = this.TranslateLocal(source, statement, Role.Use);
+      
+      switch (DetermineTypeSpace(type)) {
+        case TypeSpace.ValueType:
+        {
+          // emit:  assert UnboxedType(source) <: type;
+          Bpl.Expr c = Bpl.Expr.Subtype(sink.Function(Sink.BuiltinFunction.UnboxedType, sourceExpr), sink.TypeNameExpression(type));
+          this.currentBlock.Cmds.Add(Sink.Assert(c, statement, "Unboxing cast might fail"));
+          // emit:  dest := cast(Unbox(source), bplType);
+          this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, sink.FunctionSpecial(Sink.BuiltinFunction.Unbox, sink.Convert(type), sourceExpr)));
+          break;
+        }
+
+        case TypeSpace.ReferenceType:
+        {
+          // the operation is the same as a castclass
+          // emit:  assert $Is(source, type); 
+          Bpl.Expr c = sink.Function(Sink.BuiltinFunction.Is, sourceExpr, sink.TypeNameExpression(type));
+          this.currentBlock.Cmds.Add(Sink.Assert(c, statement, "Unboxing cast might fail"));
+          // emit:  destExpr := sourceExpr;
+          this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, sourceExpr));
+          break;
+        }
+
+        case TypeSpace.Undetermined:
+        {
+          assert type is Cci.ITypeParameter;
+          // Here, we'd like to follow the ValueType case above if the instantiation of the type parameter is
+          // a value type and follow the ReferenceType case above if the instantiation of the type parameter is
+          // a reference type.  However, in this translation, we'll just do as much as is known to hold for both
+          // cases.  It is possible that we need to improve this in the future.
+          
+          // emit:  assert UnboxedType(source) <: type;
+          Bpl.Expr c = Bpl.Expr.Subtype(sink.Function(Sink.BuiltinFunction.UnboxedType, sourceExpr), sink.TypeNameExpression(type));
+          this.currentBlock.Cmds.Add(Sink.Assert(c, statement, "Unboxing cast might fail"));
+          // emit:  dest := cast(Unbox(source), bplType);
+          this.currentBlock.Cmds.Add(this.sink.Assign(destExpr, sink.FunctionSpecial(Sink.BuiltinFunction.Unbox, sink.Convert(type), sourceExpr)));
+          break;
+        }
+
+        default:
+          assert false;  // unexpected enum value
+      }
+
+      return nothingInteresting;
+    }
+
+
+    protected override object VisitLoadAddress (  // dest := & source;
+      Cci.Variable dest, 
+      Cci.Variable source, 
+      Cci.Statement statement, 
+      object nothingInteresting
+      )
+    {
+      if (dest == null || statement == null) { return null; }
+
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "load address");
+      Bpl.IdentifierExpr destExpr = this.TranslateLocalAllowNonResolvedAddrOf(dest, statement, Role.Def);
+      this.currentBlock.Cmds.Add(Sink.Havoc(destExpr));
+      return nothingInteresting;
+    }
+
+
+
+    protected override object VisitSizeOf  ( // dest := sizeof(valueType);
+        Cci.Variable dest, 
+        Cci.TypeNode valueType, 
+        Cci.Statement statement, 
+        object nothingInteresting
+        )
+    {
+      if (statement == null) { return null; }
+      if (dest == null || valueType == null) { return null; }
+        
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "sizeof");
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(dest, statement, Role.Def);
+      this.currentBlock.Cmds.Add(Sink.Havoc(destExpr));
+      this.currentBlock.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.SizeIs, sink.TypeNameExpression(valueType), destExpr)));
+      return nothingInteresting;
+    }
+    
+    
+    
+    protected override object VisitLoadFieldAddress ( // dest := & source.field;
+        Cci.Variable dest, 
+        Cci.Variable source, 
+        Cci.Field field, 
+        Cci.Statement statement, 
+        object nothingInteresting
+        )
+    {
+        if (statement == null) { return null; }
+        if (dest == null || field == null) { return null; }
+        
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "load field address");
+      // This should only happen before passing a field as a ref parameter.
+      // The code for handling this is in VisitCall. Here we just ensure
+      // that the receiver (if any) is nonnull and save away the source, if any.
+      this.sink.AddField(field);
+
+      if (source != null) 
+      {
+        Bpl.FlowedValue.Type! sourceType = GetType(source, statement, Role.Use);
+        if (sourceType.IsAddrOf || sourceType.IsArg)
+        {
+          this.sink.NotSupported(statement, "This statement was ignored because ldflda instructions whose source is a pointer are not yet supported.");
+          return nothingInteresting;
+        }
+        Bpl.Type! bplSourceType = sink.Convert(sourceType);
+        Bpl.Expr sourceExpr = this.TranslateLocal(source, bplSourceType);
+        if (bplSourceType.Equals(sink.RefType))
+        {
+          this.currentBlock.Cmds.Add(AssertDerefOkay(sourceExpr, statement));
+        }
+
+        FlowedValue.Type fieldPtr = GetType(dest, statement, Role.Def);
+        assume fieldPtr.IsAddrOf;
+        FlowedValue.FieldPointee fieldPointee = fieldPtr.Pointee as FlowedValue.FieldPointee;
+        assume fieldPointee != null;
+        
+        fieldPointee.SavedObject = this.MakeLocal(bplSourceType);
+        this.currentBlock.Cmds.Add(this.sink.Assign(Sink.Expr(fieldPointee.SavedObject), sourceExpr));
+      }
+      return nothingInteresting;
+    }
+
+
+    protected override object VisitLoadElementAddress ( // dest := & (array[index]);
+        Cci.Variable destination, 
+        Cci.Variable source, 
+        Cci.Variable index, 
+        Cci.TypeNode elementType,
+        Cci.Statement statement, 
+        object nothingInteresting
+        )
+    {
+        if (statement == null) { return null; }
+        if (destination == null || source == null || index == null) { return null; }
+        
+      assume this.currentBlock != null;  
+      this.sink.Comment(statement, "load element address");
+      // This should only happen before passing an element as a ref parameter.
+      // The code for handling this is in VisitCall. Here we check that the
+      // element exists and save away the array and index into fresh locals.
+      
+      Bpl.Expr sourceExpr = this.TranslateLocal(source, statement, Role.Use);
+      Bpl.Expr indexExpr = this.TranslateLocal(index, statement, Role.Use);
+
+      this.currentBlock.Cmds.Add(AssertDerefOkay(sourceExpr, statement));
+
+      this.currentBlock.Cmds.Add(AssertLowerBoundOkay(indexExpr, statement));
+
+      this.currentBlock.Cmds.Add(AssertUpperBoundOkay(sourceExpr, indexExpr, statement));
+        
+      FlowedValue.Type destType = GetType(destination, statement, Role.Def);
+      assume destType.IsAddrOf;
+      FlowedValue.ElementPointee eltPtr = destType.Pointee as FlowedValue.ElementPointee;
+      assume eltPtr != null;
+      
+      eltPtr.SavedArray = this.MakeLocal(sink.RefType);
+      eltPtr.SavedIndices = new Bpl.TypedIdent[1];
+      eltPtr.SavedIndices[0] = this.MakeLocal(Bpl.Type.Int);
+      this.currentBlock.Cmds.Add(this.sink.Assign(Sink.Expr(eltPtr.SavedArray), sourceExpr));
+      this.currentBlock.Cmds.Add(this.sink.Assign(Sink.Expr( (!) eltPtr.SavedIndices[0]), indexExpr));
+      return nothingInteresting;
+    }
+
+
+
+    protected override object VisitLoadFunction ( // dest := & source.method
+        Cci.Variable dest, 
+        Cci.Variable source, 
+        Cci.Method method, 
+        Cci.Statement statement, 
+        object nothingInteresting
+        )
+    {
+        if (statement == null) { return null; }
+        if (dest == null) { return null; }
+        
+      this.sink.Comment(statement, "load function");
+      // In Boogie, we'll believe the contract on the delegate, so we don't
+      // care about which particular method this delegate invokes.
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(dest, statement, Role.Def);
+      assume this.currentBlock != null;
+      this.currentBlock.Cmds.Add(Sink.Havoc(destExpr));
+      return nothingInteresting;
+    }
+
+
+
+    protected override object VisitMakeRefAny (
+        Cci.Variable dest, 
+        Cci.Variable source, 
+        Cci.TypeNode type, 
+        Cci.Statement statement, 
+        object nothingInteresting
+        )
+    {
+        if (statement == null) { return null; }
+        if (dest == null) { return null; }
+        
+      this.sink.Comment(statement, "make ref any");
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(dest, statement, Role.Def);
+      assume this.currentBlock != null;
+      this.currentBlock.Cmds.Add(Sink.Havoc(destExpr));
+      return nothingInteresting;
+    }
+    
+    
+    #region For now, we don't do anything interesting with RefAny values
+    
+    protected override object VisitRefAnyType (
+        Cci.Variable dest, 
+        Cci.Variable source, 
+        Cci.Statement statement, 
+        object nothingInteresting
+        )
+    {
+        if (statement == null) { return null; }
+        if (dest == null) { return null; }
+        
+      this.sink.Comment(statement, "ref any type");
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(dest, statement, Role.Def);
+      assume this.currentBlock != null;
+      this.currentBlock.Cmds.Add(Sink.Havoc(destExpr));
+      return nothingInteresting;
+    }
+    
+    
+    
+    protected override object VisitRefAnyValue (
+        Cci.Variable dest, 
+        Cci.Variable source, 
+        Cci.TypeNode type, 
+        Cci.Statement statement, 
+        object nothingInteresting
+        )
+    {
+        if (statement == null) { return null; }
+        if (dest == null) { return null; }
+        
+      this.sink.Comment(statement, "ref any value");
+      Bpl.IdentifierExpr destExpr = this.TranslateLocal(dest, statement, Role.Def);
+      assume this.currentBlock != null;
+      this.currentBlock.Cmds.Add(Sink.Havoc(destExpr));
+      return nothingInteresting;
+    }
+    
+    #endregion
+    
+    
+    
+
+    #region Nothing interesting to translate for these statements
+
+    protected override object VisitArgumentList (Cci.Variable dest, Cci.Statement statement, object nothingInteresting)
+    {
+        if (statement == null) { return null; }
+        
+      this.sink.Comment(statement, "arglist");
+      return nothingInteresting;
+    }
+    
+    protected override object VisitBreak (Cci.Statement statement, object nothingInteresting)
+    {
+        if (statement == null) { return null; }
+        
+      this.sink.Comment(statement, "break");
+      return nothingInteresting;
+    }
+    
+    protected override object VisitCatch (Cci.Variable var, Cci.TypeNode type, Cci.Statement statement, object nothingInteresting)
+    {
+        if (statement == null) { return null; }
+        if (type == null) { return null; }
+
+      this.sink.Comment(statement, "catch " + type.FullName);
+      return nothingInteresting;
+    }
+    
+    protected override object VisitFilter (Cci.Variable dest, Cci.Statement statement, object nothingInteresting)
+    {
+        if (statement == null) { return null; }
+        
+      this.sink.Comment(statement, "filter");
+      return nothingInteresting;
+    }
+    
+    protected override object VisitEndFilter (Cci.Variable code, Cci.Statement statement, object nothingInteresting)
+    {
+        if (statement == null) { return null; }
+        
+      this.sink.Comment(statement, "end filter");
+      return nothingInteresting;
+    }
+    
+    protected override object VisitUnwind (Cci.Statement statement, object nothingInteresting)
+    {
+        if (statement == null) { return null; }
+        
+      this.sink.Comment(statement, "unwind");
+      return nothingInteresting;
+    }
+    
+    #endregion
+
+
+
+    #region Unverifiable instructions to ignore for now
+    
+    
+    protected override object VisitCopyBlock ( // copy size bytes from srcaddr to destaddr
+        Cci.Variable destaddr, 
+        Cci.Variable srcaddr, 
+        Cci.Variable size, 
+        Cci.Statement statement, 
+        object nothingInteresting
+        )
+    {
+        if (statement == null) { return null; }
+        
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "copy block");
+      this.currentBlock.Cmds.Add(Sink.Havoc(sink.HeapExpr()));
+      return nothingInteresting;
+    }
+    
+    
+    
+    protected override object VisitInitializeBlock ( // copy size copies of value to addr
+        Cci.Variable addr, 
+        Cci.Variable val, 
+        Cci.Variable size, 
+        Cci.Statement statement, 
+        object nothingInteresting
+        )
+    {
+      if (statement == null) { return null; }
+      
+      assume this.currentBlock != null;
+      this.sink.Comment(statement, "initialize block");
+      this.currentBlock.Cmds.Add(Sink.Havoc(sink.HeapExpr()));
+      return nothingInteresting;
+    }
+
+    #endregion
+
+
+  } // end class
+}

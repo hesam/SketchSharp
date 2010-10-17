@@ -1,0 +1,1789 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+namespace Microsoft.Boogie
+{
+  using System;
+  using System.Text;
+  using System.Diagnostics;
+  using System.Collections;
+  using System.Collections.Generic;
+  using Microsoft.Contracts;
+  using Cci = System.Compiler;
+  using Bpl = Microsoft.Boogie;
+
+  public interface ILocalVariableSink {
+    Bpl.LocalVariable! TranslateLocal (Bpl.TypedIdent! ident, Cci.TypeNode! variableType);
+  }
+
+  public partial class InstructionTranslator : System.Compiler.InstructionVisitor, ILocalVariableSink {
+    enum TypeSpace { ValueType, ReferenceType, Undetermined }
+    private void HandleCall (
+      Cci.Variable destination, 
+      Cci.Variable receiver, 
+      Cci.Method! callee,
+      bool isVirtualCall,
+      ParameterInfo! parameters,
+      Cci.TypeNode! calleeReturnType,
+      Cci.Variable[]! arguments,
+      Cci.Statement! statement,
+      Cci.Node! callNode
+      )
+      requires this.currentBlock != null;
+    {
+        sink.Comment(statement, "call");
+        
+        FlowedValue.Type receiverType = null;
+        Bpl.ExprSeq inParams = new Bpl.ExprSeq();
+        Bpl.IdentifierExprSeq outParams = new Bpl.IdentifierExprSeq();
+        Bpl.CmdSeq postCmds = new Bpl.CmdSeq();
+                
+        bool isPure = callee.IsPure || callee.IsConfined || callee.IsStateIndependent;
+        
+        if (receiver != null) 
+        {
+            if (sink.Convert((!)callee.DeclaringType).Equals(sink.RefType))
+            {
+                Bpl.Expr receiverExpr = TranslateLocal(receiver, sink.RefType);
+                currentBlock.Cmds.Add(AssertDerefOkay(receiverExpr, statement));
+                inParams.Add(receiverExpr); 
+            }
+            else
+            {
+                receiverType = GetType(receiver, statement, Role.Use);
+                bool usedAsOutParam = !isPure && Sink.IsStruct(callee.DeclaringType);
+                Bpl.IdentifierExpr bplReceiver = TryTranslateActual(receiver, receiverType, statement, postCmds, usedAsOutParam);
+                if (bplReceiver == null)
+                  return;
+                inParams.Add(bplReceiver);
+                if (usedAsOutParam) {
+                  outParams.Add(bplReceiver);
+                }
+            }
+        }
+
+        Bpl.IdentifierExpr destExpr = null;
+        if (destination != null)
+        {
+            destExpr = TranslateLocal(destination, statement, Role.Def);
+            outParams.Add(destExpr);
+        }
+        
+        // Separate the in and out parameters. 
+        // We also need to look for fields being passed by reference
+        // so that the call has the appropriate side effect on fields.
+        //
+        int actualCount = callee.IsVarArg ? (callee.Parameters == null ? 0 : callee.Parameters.Count) : arguments.Length;
+        for (int i=0; i<actualCount; i++)
+        {
+            Cci.Variable actual = (!) arguments[i];
+            FlowedValue.Type actualType = GetType(actual, statement, Role.Use);
+            bool usedAsOutParam = parameters.IsOutParameter(i) && !isPure;
+            Bpl.IdentifierExpr bplActual = TryTranslateActual(actual, actualType, statement, postCmds, usedAsOutParam);
+            if (bplActual == null)
+              return;
+            
+            if (parameters.IsInParameter(i)) { inParams.Add(bplActual); }
+            if (usedAsOutParam) { outParams.Add(bplActual); }
+        }
+        bool isBaseCall = !isVirtualCall && callee.IsVirtual && ((!)receiver).Type != callee.DeclaringType;
+        MethodSignature.AddSpecialParametersActual(false, isPure, callee, inParams, isBaseCall);
+
+        DrawAttention(inParams);
+
+        MethodCallFrameCondition(currentBlock.Cmds, callee, inParams, callNode);
+
+        IToken tok = Sink.makeTokenFromSourceContext(statement.SourceContext);
+        Bpl.CallCmd call = new Bpl.CallCmd(
+            tok,
+            Sink.UniqueProcedureName(callee, isVirtualCall && callee.IsVirtual),
+            inParams,
+            outParams);
+        call.ErrorData = statement;
+        currentBlock.Cmds.Add(call);
+        
+        // after a call to base or sibling constructor from a NotDelayed constructor we add: $Heap[this, $NonNullFieldsAreInitialized] := true;
+        if(sink.currentMethod is Cci.InstanceInitializer && 
+           callee is Cci.InstanceInitializer && 
+           receiver != null && receiver.Name.ToString() == "this" &&
+           sink.currentMethod.GetAttribute(System.Compiler.ExtendedRuntimeTypes.NotDelayedAttribute) != null){
+          HeapAssign(NoToken, (!)inParams[0], sink.Fields.NonNullFieldsAreInitialized, Bpl.Expr.True, null, true);
+          currentBlock.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.IsHeap, sink.HeapExpr())));
+        }
+        
+        if (!isPure)
+        {
+          currentBlock.Cmds.AddRange(postCmds);
+        }
+    }
+    /// <summary>
+    /// This method blurts out some assume statements whose only purpose is to utter expressions that the theorem
+    /// prover might want to use to trigger various quantifiers.
+    /// </summary>
+    void DrawAttention(Bpl.ExprSeq! ee)
+      requires currentBlock != null;
+    {
+      if (CommandLineOptions.Clo.OwnershipModelEncoding != CommandLineOptions.OwnershipModelOption.Trivial) {  // $ownerRef is not included in the trivial ownership model
+        foreach (Bpl.Expr! e in ee) {
+          if (e.Type != null && e.Type.Equals(sink.RefType)) {
+            // assume Utter($Heap[e, $ownerRef]);
+            Bpl.Expr eDotOwnerRef = Bpl.Expr.Select(sink.HeapExpr(), e, sink.Fields.OwnerRef);
+            currentBlock.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.Utter, eDotOwnerRef)));
+          }
+        }
+      }
+    }
+    private Bpl.IdentifierExpr! TranslateLocal (
+      Cci.Variable! variable, 
+      Cci.Statement! statement,
+      Role role
+      )
+    {
+      return TranslateLocal(variable, LookupType(variable, statement, role, false));
+    }
+    private Bpl.Type! LookupType (
+      Cci.Variable! variable, 
+      Cci.Statement! statement,
+      Role role,
+      bool allowVariablePointee
+      )
+    {
+        FlowedValue.Type! flowedType = GetType(variable, statement, role);
+        
+        Bpl.Type type;
+        if (flowedType.TypeTag == FlowedValue.Type.Tag.AddrOf)
+        {
+            FlowedValue.Pointee pe = flowedType.Pointee;
+            assert pe is FlowedValue.MethodPointee || (allowVariablePointee && pe is FlowedValue.VariablePointee);
+            if (pe is FlowedValue.MethodPointee) {
+              type = Bpl.Type.Int;
+            } else {
+              type = sink.RefType;
+            }
+        }
+        else 
+        { 
+            type = sink.Convert(flowedType);
+        }
+        
+        return type;
+    }
+    private FlowedValue.Type! GetType (
+      Cci.Variable! var, 
+      Cci.Statement! statement,
+      Role role
+      )
+      requires this.typeAnalysis != null;
+    {
+      return this.typeAnalysis.GetType(var, statement, role);
+    }
+    
+    Bpl.LocalVariable! ILocalVariableSink.TranslateLocal (Bpl.TypedIdent! ident, Cci.TypeNode! variableType)
+    {
+      return TranslateLocalHelper(ident, variableType, this.sink.Convert(variableType));
+    }
+    
+    Bpl.LocalVariable! TranslateLocalHelper (Bpl.TypedIdent! ident, Cci.TypeNode! variableType, Bpl.Type! translatedType)
+    {
+      Bpl.LocalVariable newVar = (Bpl.LocalVariable) this.translatedLocals[ident.Name];
+      if (newVar == null)
+      {
+          //HS D
+          newVar = IsHole(ident.Name) ? new Bpl.Hole(NoToken, ident) : new Bpl.LocalVariable(NoToken, ident);  
+          newVar.TypedIdent.WhereExpr = Bpl.Expr.And(sink.TypeAssumption(ident.Name, variableType, translatedType), sink.IsAllocated(newVar.TypedIdent));
+          this.AddLocal(newVar);
+      }
+      else if ( ! Sink.SameType(ident.Type, newVar.TypedIdent.Type))
+      {
+
+        // Sometimes, there are two locals with the same name, but different types.
+        // For example, the same local might be introduced in both the 'then' and 'else'
+        // branches of a conditonal. Here we have to change the names of one of them.
+        ident.Name += "$" + ident.Type.ToString();
+        newVar = (Bpl.LocalVariable) this.translatedLocals[ident.Name];
+        if (newVar == null)
+        {
+          newVar = new Bpl.LocalVariable(NoToken, ident);
+          newVar.TypedIdent.WhereExpr = Bpl.Expr.And(sink.TypeAssumption(ident.Name, variableType, translatedType), sink.IsAllocated(newVar.TypedIdent));
+          this.AddLocal(newVar);
+        }
+      }
+      return newVar;
+    }
+      
+      // HS D
+      //HACK FIXME
+      bool IsHole(String! name) 
+      {
+          return name.Length >= 2 && name.Substring(0,2).Equals("?!");
+      }
+    
+    private Bpl.IdentifierExpr! TranslateLocal (
+      Cci.Variable! variable, 
+      Bpl.Type! translatedType
+      )
+    {
+
+
+        Bpl.LocalVariable newVar = null;
+        
+        string varName = (variable.Name != null && variable.Name.Name != null && ((!)variable.Name.Name).Length > 0) ? 
+            variable.Name.Name :
+            "local" + variable.UniqueKey;
+    
+        if (variable is Cci.StackVariable)
+        {
+            string! suffix = SimpleTypeSuffix(translatedType);
+            string! newName = varName + suffix ;
+            
+            newVar = (Bpl.LocalVariable) this.translatedStackVariables[newName];
+            if (newVar == null)
+            {
+                newVar = new Bpl.LocalVariable(
+                    NoToken, 
+                    Sink.TypedIdent(newName, translatedType));
+                this.AddLocal(newVar);
+                this.translatedStackVariables[newName] = newVar;
+            }
+        }
+        else // a local
+        {
+            Bpl.TypedIdent ident = Sink.Convert(variable, translatedType);
+            newVar = TranslateLocalHelper(ident, variable.Type, translatedType);
+        }
+
+        return Sink.Ident(newVar);
+    }
+    private Bpl.IdentifierExpr TranslateLocalAllowNonResolvedAddrOf (
+      Cci.Variable! variable, 
+      Cci.Statement! statement,
+      Role role
+      )
+    {
+      return TranslateLocal(variable, LookupType(variable, statement, role, true));
+    }
+    private string! SimpleTypeSuffix (Bpl.Type! type)
+    {
+      if (type.IsBool) {
+        return "b";
+      } else if (type.IsInt) {
+        return "i";
+      } else if (type.Equals(sink.RefType)) {
+        return "o";
+      } else if (type.Equals(sink.TypeType)) {
+        return "n";
+      } else if (type.Equals(sink.RealType)) {
+        return "r";
+      } else if (type.Equals(sink.StructType)) {
+        return "s";
+      } else if (type.IsCtor && type.AsCtor.Decl.Name == "Elements") {  // hm, maybe we need something more advanced here, but there may be a need for several stack variables; then again, how is this EVER used, because the CLR doesn't have any Elements types?  --KRML
+        return "a";
+      } else {
+        assert false;  // this "type" is not really "simple"
+      }
+    }
+    internal static Bpl.AssertCmd! AssertEnhanced (Bpl.Expr! condition, Cci.Node! errorNode, string! errorMessage, MiningStrategy enhancedErrorData)
+    {
+        Bpl.AssertCmd! cmd = Sink.Assert(condition, errorNode, errorMessage);
+        cmd.ErrorDataEnhanced = enhancedErrorData;
+        return cmd;
+    }
+    internal Bpl.AssertCmd! AssertDerefOkay (Bpl.Expr! targetExpr, Cci.Node! errorNode)
+    {
+        return Sink.Assert(DerefOkay(targetExpr), errorNode, "Possible null dereference");
+    }
+
+    internal void AddPackCmd (Bpl.Block! block, string! variableName, Cci.TypeNode! type, Cci.Node! contextNode)
+    {
+      bool lite = CommandLineOptions.Clo.CheckingLevel < 1;
+      bool typeIsNonNull;
+      type = Sink.StripOptionalModifiers(type, out typeIsNonNull);
+      Bpl.IdentifierExpr var = Sink.Ident(variableName, sink.RefType);
+ 
+      // assert o != null
+      block.Cmds.Add(AssertDerefOkay(var, contextNode));
+      
+      if (!lite){
+        Cci.TypeNode baseType = type.BaseType;
+        if (baseType == null) {
+          assert type == Cci.SystemTypes.Object;
+          // The requested operation is "pack o as System.Object", which we translate as
+          // having the precondition that the object is already in the desired post-state
+          // (except we ignore $writable).
+          block.Cmds.Add(Sink.Assert(
+            om.IsExposable(var, type, false), 
+            contextNode,
+            "To pack the System.Object frame, the object must be exposable for System.Object"
+            ));
+          return;
+
+        } else {
+      
+          // assert o.inv == base(T) && o.localinv == $typeof(o)
+          block.Cmds.Add(Sink.Assert(
+            om.IsExposable(var, baseType, false), 
+            contextNode,
+            "When packing a frame, the base class frame must be exposable"
+            ));
+        }
+      }
+      
+      // assert Inv_T(o,$Heap)
+      if (type.Contract != null && type.Contract.InvariantCount > 0) {
+        Cci.InvariantList invariants = type.Contract.Invariants;
+        assert invariants != null;
+
+        foreach (Cci.Invariant inv in invariants) {
+          if (inv != null && inv.Condition != null) {
+            Bpl.Expr e = new ExpressionTranslator(this.sink,var,null,null,null).TranslateExpression(inv.Condition, Prelude.HeapName);
+            string errorText = inv.SourceContext.SourceText;
+            if (errorText == null){
+              assume this.sink.currentMethod != null;
+              errorText = this.sink.currentMethod.FullName;
+            }
+            block.Cmds.Add(Sink.Assert(e, contextNode, "Object invariant possibly does not hold: " + errorText));
+          }
+        }
+      }
+
+      
+      this.AddModelFieldsUpdateOnPack(block, var, type);
+            
+      // assert that all objects owned by [o,T] are fully valid
+      if (lite)
+        block.Cmds.Add(Sink.Assume(om.PeerGroupIsFullyValid(var, sink.TypeNameExpression(type))));
+      else
+        block.Cmds.Add(Sink.Assert(om.PeerGroupIsFullyValid(var, sink.TypeNameExpression(type)), contextNode, "All of the object's owned components must be fully valid"));
+
+      // o.inv := T 
+      om.AdditivelyPack(var, type, block.Cmds);
+      
+      block.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.IsHeap, sink.HeapExpr())));
+    }
+
+    private void AddUnpackCmd (Bpl.Block! block, string! variableName, Cci.TypeNode! type, Cci.Node! contextNode)
+    {
+      bool typeIsNonNull;
+      type = Sink.StripOptionalModifiers(type, out typeIsNonNull);
+      Bpl.IdentifierExpr var = Sink.Ident(variableName, sink.RefType);
+
+      // assert o != null
+      block.Cmds.Add(AssertDerefOkay(var, contextNode));
+
+      // We don't allow strings to be unpacked (for that would make one of our axioms, the one that says that strings
+      // are always peer consistent, be unsound).  Ideally, this would be checked already in the compiler, but we'll
+      // insert a check here for now.
+      if (type == Cci.SystemTypes.String) {
+        block.Cmds.Add(Sink.Assert(Bpl.Expr.False, contextNode, "strings are not allowed to be exposed"));
+        return;
+      }
+
+      // We don't allow objects to be unpacked since there is no value we could assign to inv
+      // Ideally, this would be checked already in the compiler, but we'll insert a check here for now.
+      if (type == Cci.SystemTypes.Object) {
+        block.Cmds.Add(Sink.Assert(Bpl.Expr.False, contextNode, "Additive expose is not allowed at System.Object"));
+        return;
+      }
+      
+      // We don't allow an object to be packed or unpacked at an immutable type. 
+      bool isImmutable;
+      if (Sink.IsImmutable(type, out isImmutable) && isImmutable) {
+        block.Cmds.Add(Sink.Assert(Bpl.Expr.False, contextNode, "Objects of Immutable types are not allowed to be exposed"));
+        return;
+      }
+      
+      // assert o.writable && o.inv == T && o.localinv == $typeof(o)
+      block.Cmds.Add(Sink.Assert(om.IsExposable(var, type), contextNode, "Object might not be exposable"));
+      
+      assert type.BaseType != null; // at this point, we know we are not dealing with 'object'
+      // o.inv := S 
+      om.AdditivelyUnpack(var, type, block.Cmds);
+  
+      // havoc o.exposeVersion
+      Bpl.IdentifierExpr expVerTemp = Sink.Expr(this.MakeLocal(sink.ExposeVersionType));
+      block.Cmds.Add(Sink.Havoc(expVerTemp));
+      HeapAssign(block.Cmds,
+                 NoToken, var, sink.Fields.ExposeVersion, expVerTemp,
+                 contextNode, false);
+        
+      block.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.IsHeap, sink.HeapExpr())));
+    }    
+    
+    private void AddLocalPackCmd (Bpl.Block! block, string! variableName, Cci.TypeNode! type, Cci.Node! contextNode)
+    {
+      bool typeIsNonNull;
+      type = Sink.StripOptionalModifiers(type, out typeIsNonNull);
+      Bpl.IdentifierExpr var = Sink.Ident(variableName, sink.RefType);
+
+      // assert o != null
+      block.Cmds.Add(AssertDerefOkay(var, contextNode));
+
+      // We don't allow interfaces to be locally packed or unpacked. We could insert a compiler check for this.
+      if (type is Cci.Interface) {
+        block.Cmds.Add(Sink.Assert(Bpl.Expr.False, contextNode, "Interfaces are not allowed to be locally packed"));
+        return;
+      }
+      
+      // We don't allow an object to be locally unpacked at an immutable type.
+      bool isImmutable;
+      if (Sink.IsImmutable(type, out isImmutable) && isImmutable) {
+        block.Cmds.Add(Sink.Assert(Bpl.Expr.False, contextNode, "Immutable objects are not allowed to be locally packed"));
+        return;
+      }
+
+      Cci.TypeNode baseType = type.BaseType;
+      if (baseType == null) {
+        assert type == Cci.SystemTypes.Object;
+        // We don't allow System.Object to be locally unpacked or packed. We could insert a compiler check for this.
+        block.Cmds.Add(Sink.Assert(Bpl.Expr.False, contextNode, "System.Object is not allowed to be locally packed"));
+        return;
+
+      } else {
+        // assert o.localinv == base(T)
+        block.Cmds.Add(Sink.Assert(
+          om.IsLocallyExposed(var, type, sink.HeapExpr()), 
+          contextNode,
+          "When locally packing a frame, it must be locally unpacked" // rustan said this would never happen
+          ));
+      }
+      
+      // assert Inv_T(o,$Heap)
+      if (type.Contract != null && type.Contract.InvariantCount > 0) {
+        Cci.InvariantList invariants = type.Contract.Invariants;
+        assert invariants != null;
+
+        foreach (Cci.Invariant inv in invariants) {
+          if (inv != null && inv.Condition != null) {
+            Bpl.Expr e = new ExpressionTranslator(this.sink,var,null,null,null).TranslateExpression(inv.Condition, Prelude.HeapName);
+            
+            block.Cmds.Add(Sink.Assert(e, contextNode, "Object invariant possibly does not hold: " + inv.SourceContext.SourceText));
+          }
+        }
+      }
+
+      this.AddModelFieldsUpdateOnPack(block, var, type);
+      
+      // assert that all objects owned by [o,T] are fully valid
+      block.Cmds.Add(Sink.Assert(om.PeerGroupIsFullyValid(var, sink.TypeNameExpression(type)), contextNode, "All of the object's owned components must be fully valid"));
+
+      // o.localinv := typeof(o) 
+      om.LocallyPack(var, type, block.Cmds);
+        
+      block.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.IsHeap, sink.HeapExpr())));
+    }
+    
+    private void AddLocalUnpackCmd (Bpl.Block! block, string! variableName, Cci.TypeNode! type, Cci.Node! contextNode)
+    {
+      bool typeIsNonNull;
+      type = Sink.StripOptionalModifiers(type, out typeIsNonNull);
+      Bpl.IdentifierExpr var = Sink.Ident(variableName, sink.RefType);
+
+      // assert o != null
+      block.Cmds.Add(AssertDerefOkay(var, contextNode));
+
+      // We don't allow interfaces to be locally unpacked. We could insert a compiler check for this.
+      if (type is Cci.Interface) {
+        block.Cmds.Add(Sink.Assert(Bpl.Expr.False, contextNode, "Local expose is not allowed at an interface"));
+        return;
+      }
+
+      // We don't allow an object to be locally unpacked at an immutable type.
+      bool isImmutable;
+      if (Sink.IsImmutable(type, out isImmutable) && isImmutable) {
+        block.Cmds.Add(Sink.Assert(Bpl.Expr.False, contextNode, "Objects of Immutable types are not allowed to be exposed"));
+        return;
+      }
+
+      // assert !o.committed &&  o.inv <: T  &&  o.localinv = typeof(o)
+      block.Cmds.Add(Sink.Assert(om.IsLocalExposable(var, type, true), contextNode, "Object might not be locally exposable"));
+      
+      Cci.TypeNode baseType = type.BaseType;
+      if (baseType == null) {
+        assert type == Cci.SystemTypes.Object;
+        // We don't allow System.Object to be locally unpacked. We could insert a compiler check for this.
+        block.Cmds.Add(Sink.Assert(Bpl.Expr.False, contextNode, "Local expose is not allowed at System.Object"));
+        return;
+        
+      } else { 
+      
+        // o.localinv := S 
+        om.LocallyUnpack(var, type, block.Cmds);
+      }
+      // havoc o.exposeVersion
+      Bpl.IdentifierExpr expVerTemp = Sink.Expr(this.MakeLocal(this.sink.ExposeVersionType));
+      block.Cmds.Add(Sink.Havoc(expVerTemp));
+      HeapAssign(block.Cmds,
+                 NoToken, var, sink.Fields.ExposeVersion, expVerTemp,
+                 contextNode, false);
+
+      block.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.IsHeap, sink.HeapExpr())));
+    }
+    ///<summary>
+    ///Update modelfields for 'pack var as type' in block 'block'.     
+    ///</summary>
+    private void AddModelFieldsUpdateOnPack(Bpl.Block! block, Bpl.IdentifierExpr var, Cci.TypeNode! type)
+      requires var != null;
+    {  
+    //for every modelfield f that is defined in the class for which o is packed,
+    //havoc temp; assume satExpr => temp = o.f; o.f = temp;
+    //where temp is a fresh local variable and satExpr is the conjunction of all satisfies clauses of f, including inherited ones if f is overriding.
+    //Note that these include the satisfiesclauses that belong to an interface modelfield that is implemented by f.    
+    //Note that the witness is separately checked for admissibility.       
+                    
+      if (type.Contract == null) return;  
+      foreach (Cci.ModelfieldContract! mfC in (!)type.Contract.ModelfieldContracts) {
+        //1. create and add fresh local variable (temp)                            
+        Bpl.Type! mfType = this.sink.Convert((!)mfC.ModelfieldType);
+        Bpl.TypedIdent! tempIdent = Sink.TypedIdent("temp"+(this.uniqueLocalIndex++), mfType);
+        Bpl.LocalVariable tempVar = new Bpl.LocalVariable(NoToken, tempIdent);
+        this.AddLocal(tempVar);
+        
+        //2. Havoc the temp variable
+        Bpl.IdentifierExpr tempExpr = new IdentifierExpr(Token.NoToken, tempVar);                
+        Cmd hav = Sink.Havoc(tempExpr);
+        block.Cmds.Add(hav);
+        
+        //4. Create satExpr
+        Bpl.Expr satExpr = new Bpl.LiteralExpr(Token.NoToken, true);
+        ExpressionTranslator expTran = new ExpressionTranslator(sink,var,null,null,null);
+        for (Cci.ModelfieldContract currentMfC = mfC; currentMfC != null; currentMfC = currentMfC.NearestOverriddenContract) {
+          foreach (Cci.Expression satClause in (!)currentMfC.SatisfiesList) {
+            if (satClause == null) continue;        
+            //assert this.thisReplacement == null;
+            //this.thisReplacement = var;
+            Bpl.Expr satConjunct = expTran.TranslateExpression(satClause, Prelude.HeapName);          
+            //this.thisReplacement = null;                
+            satExpr = Bpl.NAryExpr.And(satExpr, satConjunct);  
+          }
+        }                
+      
+        //5. Assume satExpr => temp = o.f; (i.e., the value of the modelfield is unchanged if its satisfies clauses still hold)
+        Cci.Field mf = mfC.Modelfield as Cci.Field;
+        assert (mf != null);
+        Bpl.Expr of = Bpl.Expr.Select(this.sink.HeapExpr(), var, this.sink.Expr(mf)); //o.f         
+        Bpl.Expr assume1 = Bpl.NAryExpr.Imp(satExpr, Bpl.NAryExpr.Eq(tempExpr, of)); //E => temp = o.f
+        block.Cmds.Add(Sink.Assume(assume1));
+        
+        //6. o.f = temp;
+        HeapAssign(block.Cmds, NoToken, var, this.sink.Expr(mf), tempExpr, type, true);
+      } //end foreach
+      
+    }   
+    
+    private Bpl.IdentifierExpr TryTranslateActual (Cci.Variable! actual, FlowedValue.Type! actualType, Cci.Statement! statement, Bpl.CmdSeq! postCmds, bool usedAsOutParam)
+      requires this.currentBlock != null;
+    {
+        Bpl.IdentifierExpr bplActual;
+        if (actualType.IsAddrOf)
+        {
+            if (actualType.Pointee is FlowedValue.VariablePointee)
+            {
+                FlowedValue.VariablePointee! varRef = (FlowedValue.VariablePointee) actualType.Pointee;
+                bplActual = TranslateLocal(varRef.Variable, sink.Convert(varRef.Variable.Type));
+            }
+            else if (actualType.Pointee is FlowedValue.FieldPointee)
+            {
+                FlowedValue.FieldPointee! fieldRef = (FlowedValue.FieldPointee) actualType.Pointee;
+                if (!fieldRef.Field.IsStatic && fieldRef.SavedObject == null){
+                  this.sink.NotSupported(statement, "This statement was ignored, because an argument to the call is a pointer to a boxed variable. This is not yet supported.");
+                  return null;
+                }
+                Bpl.Expr! target = fieldRef.Field.IsStatic ? sink.Null : (Bpl.Expr) Sink.Expr((!)fieldRef.SavedObject);
+                Bpl.Type fieldType = sink.Convert( (!) fieldRef.Type);
+                bplActual = actual is Cci.StackVariable ? 
+                    Sink.Expr(this.MakeLocal(fieldType)) :
+                    TranslateLocal(actual, fieldType);
+                this.sink.AddField(fieldRef.Field);
+                // temp := ref/out-parameter;
+                currentBlock.Cmds.Add(this.sink.Assign(bplActual, this.sink.FieldAccess(target, fieldRef.Field, Prelude.HeapName)));
+
+                if (usedAsOutParam) {
+                  // ref/out-parameter := temp;
+
+                  // The following will spew out commands to this.currentBlock.Cmds.  But we want them in postCmds.  The simplest
+                  // way to achieve that (because lots of routines write their commands to this.currentBlock.Cmds) seems to be to
+                  // let the commands rest there for a moment and then move them into postCmds.
+                  int n = this.currentBlock.Cmds.Length;
+                  this.sink.Comment(statement, "store field (actual ref/out parameter)");
+                  this.VisitStoreField_Aux(target, fieldRef.Field, bplActual, statement);
+                  for (int i = n; i < this.currentBlock.Cmds.Length; i++) {
+                    postCmds.Add(this.currentBlock.Cmds[i]);
+                  }
+                  this.currentBlock.Cmds.Truncate(n);
+                }
+            }
+            else if (actualType.Pointee is FlowedValue.ElementPointee)
+            {
+                FlowedValue.ElementPointee! eltRef = (FlowedValue.ElementPointee)actualType.Pointee;
+                Bpl.Type eltType = sink.Convert(eltRef.ElementType);
+                bplActual = actual is Cci.StackVariable ?
+                    Sink.Expr(this.MakeLocal(eltType)) :
+                    TranslateLocal(actual, eltType);
+                Bpl.IdentifierExpr array = Sink.Expr((!)eltRef.SavedArray);
+                if (eltType.Equals(sink.RefType)) {
+                  postCmds.Add(ArrayCovarianceAssertion(array, bplActual, statement));
+                }
+                Bpl.IdentifierExpr[] indices = new Bpl.IdentifierExpr[((!)eltRef.SavedIndices).Length];
+                for (int i=0; i<eltRef.SavedIndices.Length; i++) { indices[i] = Sink.Expr( (Bpl.TypedIdent!) eltRef.SavedIndices[i]); }
+                currentBlock.Cmds.Add(this.sink.Assign(bplActual, sink.ArrayGet(array, eltType, indices, Prelude.HeapName)));
+                ArrayAssign(postCmds, NoToken, array, eltType, indices, bplActual, statement);
+                postCmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.IsHeap, sink.HeapExpr())));
+            }
+            else if (actualType.Pointee is FlowedValue.MethodPointee)
+            {
+                bplActual = TranslateLocal(actual, statement, Role.Use);
+            }
+            else if (actualType.Pointee is FlowedValue.BoxedPointee)
+            {
+                this.sink.NotSupported(statement, "This statement was ignored, because an argument to the call is a pointer to a boxed variable. This is not yet supported.");
+                return null;
+            }
+            else
+            {
+                throw new NotImplementedException("method call with actual of pointing to " + actualType);
+            }
+        }
+        else if (actualType.IsArg)
+        {
+            Bpl.Type type = sink.Convert(actualType.PointeeType);
+            bplActual = TranslateLocal(actual, type);
+            postCmds.Add(this.sink.Assign(Sink.Ident(actualType.Parameter.Name.Name, type), bplActual));
+        }
+        else
+        {
+            bplActual = TranslateLocal(actual, statement, Role.Use);
+        }
+        assert bplActual != null;
+        return bplActual;
+    }
+    /// <summary>
+    /// Do the work of *((type*)addr) := source;
+    /// This routine may be called even if "statement" is not a StoreIndirect statement.
+    /// </summary>
+    private void DoStoreIndirect (Cci.Variable! addr, Bpl.Expr! sourceExpr, Cci.TypeNode! type, Cci.Statement! statement)
+      requires this.currentBlock != null;
+    {
+      FlowedValue.Type ptrType = GetType(addr, statement, Role.Use);
+      Bpl.IdentifierExpr pointeeExpr = null;
+      Cci.TypeNode lhsType = null;
+      if (ptrType.IsAddrOf)
+      {
+        FlowedValue.Pointee pointee = ptrType.Pointee;
+        if (pointee is FlowedValue.VariablePointee)
+        {
+          FlowedValue.VariablePointee! v = (FlowedValue.VariablePointee) pointee;
+          pointeeExpr = TranslateLocal(v.Variable, sink.Convert((!) v.Type));
+          lhsType = pointee.Type;
+        }
+      }
+      else if (ptrType.IsArg)
+      {
+        pointeeExpr = TranslateLocal(ptrType.Parameter, sink.Convert(ptrType.PointeeType));
+        lhsType = ptrType.Parameter.Type;
+      }
+      else
+      {
+        assume false;
+      }
+      
+      if (lhsType != null) {
+        CheckAssignability(sourceExpr, lhsType, statement);
+      }
+      if (pointeeExpr != null) {
+        currentBlock.Cmds.Add(this.sink.Assign(pointeeExpr, sourceExpr));
+      }
+    }
+
+    private Bpl.Expr! ArraySet (Bpl.Expr! array, Bpl.Type! elementType, Bpl.Expr! index, Bpl.Expr! @value, string! heapName)
+    {
+      return ArraySet(array, elementType, new Bpl.Expr[] { index }, @value, heapName);
+    }
+
+    private Bpl.Expr! ArraySet (Bpl.Expr! array, Bpl.Type! elementType, Bpl.Expr[]! indices, Bpl.Expr! @value, string! heapName)
+      requires indices.Length >= 1;
+    {
+      return sink.Function(Sink.BuiltinFunction.ArraySet, sink.Elements(array, sink.HeapExpr(heapName), elementType), sink.ArrayIndex(array, indices), @value);
+    }
+    
+    private Bpl.Expr! ArrayDimLength (Bpl.Expr array, Bpl.Expr dimension)
+    {
+      return sink.Function(Sink.BuiltinFunction.DimLength, array, dimension);
+    }
+
+    private Bpl.Expr! DerefOkay (Bpl.Expr! pointer)
+    {
+      return Bpl.Expr.Neq(pointer, sink.Null);
+    }
+
+    private Bpl.AssertCmd! AssertLowerBoundOkay (Bpl.Expr! index, Cci.Node! errorNode)
+    {
+      string extraInformation = "The used index {0} is below the lower bound.";
+      List<Bpl.Expr!> exprList = new List<Bpl.Expr!>();
+      exprList.Add(index);
+      EEDTemplate enhancedErrorData = new EEDTemplate(extraInformation, exprList);
+      return AssertEnhanced(Bpl.Expr.Le(Bpl.Expr.Literal(0), index), errorNode, "Array index possibly below lower bound", enhancedErrorData);
+    }
+
+
+    private Bpl.AssertCmd! AssertUpperBoundOkay (Bpl.Expr! array, Bpl.Expr! index, Cci.Node! errorNode)
+    {
+      string extraInformation = "The index is {0} but the length of the array is {1}.";
+      List<Bpl.Expr!> exprList = new List<Bpl.Expr!>();
+      exprList.Add(index);
+      exprList.Add(sink.ArrayLength(array));
+      EEDTemplate enhancedErrorData = new EEDTemplate(extraInformation, exprList);
+      return AssertEnhanced(Bpl.Expr.Lt(index, sink.ArrayLength(array)), errorNode, "Array index possibly above upper bound", enhancedErrorData);
+    }
+
+    private Bpl.AssertCmd? ArrayCovarianceAssertion (Bpl.Expr! destArray, Bpl.Expr! rhs, Cci.Statement! statement) {
+      // co-variant check:  assert rhs == null || $typeof(rhs) <: $ElementType($typeof(destArray));
+      Bpl.Expr arrayElType = sink.Function(Sink.BuiltinFunction.ElementType, sink.Function(Sink.BuiltinFunction.Typeof, destArray));
+      Bpl.Expr typeTest = Bpl.Expr.Subtype(sink.Function(Sink.BuiltinFunction.Typeof, rhs), arrayElType);
+      Bpl.Expr cond = Bpl.Expr.Or(Bpl.Expr.Eq(rhs, sink.Null), typeTest);
+      return Sink.Assert(cond, statement, "RHS might not be a subtype of the element type of the array being assigned");
+    }
+    private Bpl.Expr! ArrayTypeExpr (Cci.TypeNode! elementType, int rank, out bool isNonNull) {
+      Sink.BuiltinFunction op;
+      isNonNull = false;
+      bool inn;
+      if (Sink.IsReferenceType(elementType, out inn)) {
+        isNonNull = inn;
+        if (isNonNull) {
+          op = Sink.BuiltinFunction.NonNullRefArray;
+        } else {
+          op = Sink.BuiltinFunction.RefArray;
+        }
+      } else if (Sink.IsIntegralType(elementType)) {
+        op = Sink.BuiltinFunction.IntArray;
+      } else {
+        op = Sink.BuiltinFunction.ValueArray;
+      }
+      return sink.Function(op, sink.TypeNameExpression(elementType), sink.IntegerLiteral(rank));
+    }
+
+    /// <summary>
+    /// This method is a helper for RecoverAssertionExpression.
+    /// At this time, the IL instruction that sets a stack variable to the string argument would have just
+    /// been processed and translated into a BoogiePL statement.  We want to recover that string and
+    /// delete the statement.
+    /// </summary>
+    string! RecoverStringFromLastAssignmentInCurrentBlock(Cci.Expression! arg) 
+      requires this.currentBlock != null;
+      requires this.sink.currentMethod != null;
+    {
+      AssignCmd assign = (AssignCmd!)currentBlock.Cmds.Last();  // we expect to see:  stack0o := $stringLiteral<n>;
+      assert assign.Lhss.Count == 1 && assign.Lhss[0] is SimpleAssignLhs;
+      assert assign.Lhss[0].DeepAssignedIdentifier.Name
+               .StartsWith(((Cci.StackVariable!)arg).Name.Name);  // Lhs==stack0o, arg[0]==stack0
+      IdentifierExpr ie = (IdentifierExpr)assign.Rhss[0];
+      string text = sink.stringBank.GetString(ie);
+      // Finally, remove the Load Constant instruction and the sink.Comment instruction that preceded it, and decrement the usage
+      // count for this string literal in the string bank
+      currentBlock.Cmds.Remove();
+      CommentCmd c = (CommentCmd)currentBlock.Cmds.Last();
+      assert c != null;
+      currentBlock.Cmds.Remove();
+      sink.stringBank.RetireLiteral(ie);
+      return text;
+    }
+    
+    /// <summary>
+    /// This method is a helper for HandleSpecialCaseMethods.  It decodes assert statements,
+    /// assume statements, and loop invariants.
+    /// The 
+    /// </summary>
+    void RecoverAssertionExpression(Cci.ExpressionList! arguments, out Bpl.Expr! expr, out string! s) 
+      requires this.currentBlock != null;
+      requires this.sink.currentMethod != null;
+      requires arguments.Count == 1 || arguments.Count == 2;
+      requires forall{Cci.Expression e in arguments; e != null};
+    {
+      if (arguments.Count == 2){
+        // then the last two statements in the current this.currentBlock should be a sink.Comment instruction
+        // and an assignment of a string to a stack variable
+        Cci.Expression eprime = arguments[1];
+        assert eprime != null; // needed because the non-null checker doesn't understand the precondition
+        s = RecoverStringFromLastAssignmentInCurrentBlock(eprime);
+      }else{
+        s = "";
+      }
+      
+      // At this time, the IL instruction that sets a stack variable to the string argument would have just
+      // been processed and translated into a BoogiePL statement.  We now want to replace that BoogiePL
+      // statement with an assert/assume statement.  (We can't keep the assignment statement, because then
+      // boogie's VC generation won't see the assert statement as a loop invariant.)
+      Cci.Expression e = arguments[0];
+      assert e != null; // needed because the non-null checker doesn't understand the precondition
+      string conditionText = RecoverStringFromLastAssignmentInCurrentBlock(e);
+
+      Cci.IContractDeserializer! deserializer = (!)Cci.ContractDeserializerContainer.ContractDeserializer;
+      if (this.sink.currentMethod != null && this.sink.currentMethod.DeclaringType != null
+        && this.sink.currentMethod.DeclaringType.DeclaringModule != null){
+        deserializer.CurrentAssembly = this.sink.currentMethod.DeclaringType.DeclaringModule;
+      }else{
+        deserializer.CurrentAssembly = null;
+      }
+      if (sink.errorHandler != null && sink.errorHandler.Errors != null){
+        deserializer.ErrorList = sink.errorHandler.Errors;
+      }
+      Cci.Expression condition = (!)deserializer.ParseContract(this.sink.currentMethod, conditionText, null);
+
+      expr = new ExpressionTranslator(this.sink,null,null,this.methodSignature.currentParamMap,this.methodSignature.PreStateParamMap,this).TranslateExpression(condition, Prelude.HeapName);
+      return;
+    }
+    void TranslateAs2OpInstr (Sink.BuiltinFunction fn, bool checkForNonNull, Cci.Variable! destination, Cci.Variable! receiver, Cci.Statement! statement, string! comment)
+      requires currentBlock != null;
+    {
+      sink.Comment(statement, comment);
+      Bpl.IdentifierExpr destExpr = TranslateLocal(destination, statement, Role.Def);
+      Bpl.IdentifierExpr receiverExpr = TranslateLocal(receiver, statement, Role.Use);
+
+      if (checkForNonNull) {
+        // TODO:  In most (all?) cases where "checkForNull" is passed in as true, the type checker
+        // should already have checked for non-null (and inserted an implicit cast if it couldn't
+        // determine that the argument really is non-null).  Thus, this parameter is probably not
+        // ever needed.
+        currentBlock.Cmds.Add(AssertDerefOkay(receiverExpr, statement));
+      }
+
+      Bpl.Cmd cmd = Cmd.SimpleAssign(NoToken, destExpr, sink.Function(fn, receiverExpr));
+      currentBlock.Cmds.Add(cmd);
+    }
+
+    private void EmitNullCheck (Cci.Variable! argument, Cci.Statement! statement, string! errorMessage) 
+      requires this.currentBlock != null;
+    {
+      //Bpl.IdentifierExpr destExpr = TranslateLocal(destination, statement, Role.Def);
+      Bpl.IdentifierExpr argExpr = TranslateLocal(argument, statement, Role.Use);
+      currentBlock.Cmds.Add(Sink.Assert(DerefOkay(argExpr), statement, errorMessage));
+      //currentBlock.Cmds.Add(new Bpl.SimpleAssignCmd(NoToken, destExpr, argExpr));
+    }
+    
+    private bool HandleSpecialCaseMethods (
+      Cci.Variable destination, 
+      Cci.Variable receiver, 
+      Cci.Method! callee, 
+      Cci.ExpressionList/*<Variable>*/! arguments, 
+      Cci.Statement! statement
+      )
+      requires this.currentBlock != null;
+      requires this.exposedTempMap != null;
+    {
+        Cci.ArrayType arrayType = callee.DeclaringType as Cci.ArrayType;
+        if (arrayType != null)
+        {
+            // Multidimensional arrays are encoded as classes (which the JIT compiler produces)
+            // with special methods for getting an element, getting an element's address, and 
+            // setting an element. We translate those methods here in a way similar to the code
+            // in LoadElement, LoadElementAddress, and StoreElement.
+            //
+            if (callee == arrayType.Getter || callee == arrayType.Setter || callee == arrayType.Address)
+            {
+                int rank = arrayType.Rank;
+
+                sink.Comment(statement, String.Format("array {1} rank {0}", rank, callee == arrayType.Setter ? "setter" : "getter"));
+            
+                FlowedValue.Type destType = null;
+                Bpl.IdentifierExpr destExpr = null;
+                    
+                if (destination != null) 
+                { 
+                    destType = GetType(destination, statement, Role.Def);
+                    if (!destType.IsSingleton)
+                      destExpr = TranslateLocal(destination, statement, Role.Def); 
+                }
+                
+                assert receiver != null;
+                
+                Bpl.IdentifierExpr receiverExpr = TranslateLocal(receiver, statement, Role.Use);
+                Bpl.Expr[] indices = new Bpl.Expr[rank];
+                for (int i=0; i<rank; i++)
+                {
+                    indices[i] = TranslateLocal( (Cci.Variable!)arguments[i], statement, Role.Use);
+                }
+                Bpl.Expr theValue = null;  // indicating "not used"
+                if (rank != arguments.Count) {
+                    assert arguments.Count == rank + 1;
+                    assert callee == arrayType.Setter;  // I think this happens only in the array setter case
+                    theValue = TranslateLocal( (Cci.Variable!)arguments[rank], statement, Role.Use);
+                } else {
+                    assert callee != arrayType.Setter;  // I think this never happens in the array setter case
+                }
+
+                currentBlock.Cmds.Add(AssertDerefOkay(receiverExpr, statement));  // KRML: this is not needed, since the compiler explicitly puts in an ImplicitNullCheck when a null check is needed
+
+                for (int i=0; i<rank; i++)
+                {
+                    currentBlock.Cmds.Add(Sink.Assert(Bpl.Expr.Le(Bpl.Expr.Literal(0), (!) indices[i]),
+                        statement, "Array index possibly below lower bound"));
+                        
+                    currentBlock.Cmds.Add(Sink.Assert(Bpl.Expr.Lt( (!) indices[i], ArrayDimLength(receiverExpr, Bpl.Expr.Literal(i))), 
+                        statement, "Array index possibly above upper bound"));
+                }
+
+                if (callee == arrayType.Getter)
+                {
+                    Bpl.Type elType = sink.Convert(arrayType.ElementType);
+                    Bpl.Expr element = sink.Function(Sink.BuiltinFunction.ArrayGet, sink.Elements(receiverExpr, sink.HeapExpr(), elType), sink.ArrayIndex(receiverExpr, indices));
+                    assert destExpr != null;
+                    currentBlock.Cmds.Add(sink.Assign(destExpr, element));
+                }
+                else if (callee == arrayType.Setter)
+                {
+                    assert theValue != null;
+                    Bpl.Type elType = sink.Convert(arrayType.ElementType);
+                    ArrayAssign(currentBlock.Cmds, NoToken,
+                                receiverExpr, elType, indices, theValue, statement);
+                    currentBlock.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.IsHeap, sink.HeapExpr())));
+                }
+                else if (callee == arrayType.Address)
+                {
+                    assert destType != null;
+                    assert destType.IsAddrOf;
+                    FlowedValue.ElementPointee eltPtr = destType.Pointee as FlowedValue.ElementPointee;
+                    assume eltPtr != null;
+                
+                    eltPtr.SavedArray = this.MakeLocal(sink.RefType);
+                    this.currentBlock.Cmds.Add(sink.Assign(Sink.Expr(eltPtr.SavedArray), receiverExpr));
+                    
+                    eltPtr.SavedIndices = new Bpl.TypedIdent[rank];
+                    for (int i=0; i<rank; i++)
+                    {
+                        eltPtr.SavedIndices[i] = this.MakeLocal(Bpl.Type.Int);
+                        this.currentBlock.Cmds.Add(sink.Assign(Sink.Expr((!) eltPtr.SavedIndices[i]), (!) indices[i]));
+                    }
+                }
+                return true;
+            }
+        }
+        
+        string fullName = callee.FullName;
+        assume fullName != null;
+        
+        if (fullName.StartsWith("Microsoft.Contracts.NonNullType.AssertNotNullGeneric")) {
+          fullName = "Microsoft.Contracts.NonNullType.AssertNotNull(System.Object)";
+        } else if (fullName.StartsWith("Microsoft.Contracts.NonNullType.AssertNotNullImplicitGeneric")) {
+          fullName = "Microsoft.Contracts.NonNullType.AssertNotNullImplicit(System.Object)";
+        } else if (fullName.StartsWith("Microsoft.Contracts.NonNullType.AssertInitialized")) {
+          fullName = "Microsoft.Contracts.NonNullType.AssertInitialized(System.Array)";
+        }
+
+        switch (fullName)
+        {    
+            case "System.String.get_Length":
+                assert destination != null && receiver != null;
+                TranslateAs2OpInstr(Sink.BuiltinFunction.StringLength, true, destination, receiver, statement, "string length");
+                return true;
+                
+            case "System.Array.get_Length":
+                assert destination != null && receiver != null;
+                TranslateAs2OpInstr(Sink.BuiltinFunction.ArrayLength, true, destination, receiver, statement, "array length");
+                return true;
+                
+            case "System.Array.get_Rank":
+                assert destination != null && receiver != null;
+                TranslateAs2OpInstr(Sink.BuiltinFunction.ArrayRank, true, destination, receiver, statement, "array rank");
+                return true;
+
+            case "System.Object.GetType":
+            {
+                sink.Comment(statement, "System.Object.GetType");
+                assert destination != null && receiver != null;
+                Bpl.IdentifierExpr destExpr = TranslateLocal(destination, statement, Role.Def);
+                Bpl.IdentifierExpr receiverExpr = TranslateLocal(receiver, statement, Role.Use);
+
+                Bpl.Cmd cmd = Cmd.SimpleAssign(
+                    NoToken,
+                    destExpr,
+                    this.sink.TypeObject(sink.Function(Sink.BuiltinFunction.Typeof, receiverExpr)));
+                currentBlock.Cmds.Add(cmd);
+                return true;
+            }
+
+            case "System.Array.GetLength(System.Int32)":
+            {
+                sink.Comment(statement, "array getlength");
+                assert destination != null && receiver != null;
+                Bpl.IdentifierExpr destExpr = TranslateLocal(destination, statement, Role.Def);
+                Bpl.IdentifierExpr receiverExpr = TranslateLocal(receiver, statement, Role.Use);
+                Bpl.Expr dim = TranslateLocal( (Cci.Variable!)arguments[0], statement, Role.Use);
+
+                currentBlock.Cmds.Add(AssertDerefOkay(receiverExpr, statement));
+
+                Bpl.Cmd cmd = Cmd.SimpleAssign(
+                    NoToken,
+                    destExpr,
+                    sink.Function(Sink.BuiltinFunction.DimLength, receiverExpr, dim));
+                currentBlock.Cmds.Add(cmd);
+                return true;
+            }
+            
+            case "System.Array.GetUpperBound(System.Int32)":
+            case "System.Array.GetLowerBound(System.Int32)":
+            {
+                sink.Comment(statement, "array bound");
+                assert destination != null && receiver != null;
+                Bpl.IdentifierExpr destExpr = TranslateLocal(destination, statement, Role.Def);
+                Bpl.IdentifierExpr receiverExpr = TranslateLocal(receiver, statement, Role.Use);
+                Bpl.Expr rank = TranslateLocal( (Cci.Variable!)arguments[0], statement, Role.Use);
+
+                currentBlock.Cmds.Add(AssertDerefOkay(receiverExpr, statement));
+
+                Sink.BuiltinFunction f = fullName == "System.Array.GetUpperBound(System.Int32)" ? Sink.BuiltinFunction.ArrayUBound : Sink.BuiltinFunction.ArrayLBound;
+                Bpl.Cmd cmd = Cmd.SimpleAssign(
+                    NoToken,
+                    destExpr,
+                    sink.Function(f, receiverExpr, rank));
+                currentBlock.Cmds.Add(cmd);
+                return true;
+            }
+            
+            case "System.Type.GetTypeFromHandle(System.RuntimeTypeHandle)":
+            {
+                sink.Comment(statement, "statically resolved GetTypeFromHandle call");
+                FlowedValue.Type flowedType = GetType((Cci.Variable!) arguments[0], statement, Role.Use);
+                Bpl.IdentifierExpr! destExpr = TranslateLocal((!) destination, statement, Role.Def);
+                if (flowedType.IsTypeToken)
+                {
+                    // We can statically resolve the call
+                    currentBlock.Cmds.Add(Cmd.SimpleAssign(NoToken, destExpr, sink.TypeObject(sink.TypeNameExpression(flowedType.TToken))));
+                    return true;
+                }
+                return false;
+            }
+
+            case "Microsoft.Contracts.NonNullType.AssertNotNullImplicit(System.Object)":
+            {
+                //assert destination != null;
+                assert arguments.Count == 1;
+                EmitNullCheck((Cci.Variable!)arguments[0], statement, "Use of possibly-null value where non-null value is expected");
+                return true;
+            }
+            case "Microsoft.Contracts.NonNullType.AssertNotNull(System.Object)":
+            {
+                //assert destination != null;
+                assert arguments.Count == 1;
+                EmitNullCheck((Cci.Variable!)arguments[0], statement, "Cast to non-null type may fail");
+                return true;
+            }
+            case "Microsoft.Contracts.NonNullType.AssertInitialized(System.Array)":  // this name stands for a bunch of methods, see the .StartsWith if statement above, just before the switch
+            {
+                sink.Comment(statement, "call NonNullType.AssertInitialized"); 
+                assert arguments.Count == 1;
+                Bpl.IdentifierExpr a = TranslateLocal((Cci.Variable!)arguments[0], statement, Role.Use);
+                // assert a != null;
+                currentBlock.Cmds.Add(Sink.Assert(DerefOkay(a), statement, "Argument to Microsoft.Contracts.NonNullType.AssertInitialized must not be null"));
+                
+                if (callee.TemplateArguments != null && callee.TemplateArguments.Count == 1) {
+                  Cci.TypeNode elementType = callee.TemplateArguments[0];
+                  bool isNonNullType;
+                  if (elementType != null && Sink.IsReferenceType(elementType, out isNonNullType)) {
+                    // Note, we can't rely on isNonNullType to be true, because the programmer might have explicitly written the possibly-null element type
+                    // as the type instantiation of the AssertInitialized call.  Thus, we assume the element type to be a non-null type, because there is
+                    // never a reason for a programmer to use AssertInitialized unless the array has a non-null element type.  If our assumption is wrong,
+                    // the worst that will happen is that we perform the non-null element check anyhow (harmless--if it fails, the programmer gets a clue
+                    // that AssertInitialized wasn't needed after all); we emit the type assumption only if isNonNullType is true (which it will be in the
+                    // common case where the programmer didn't provide the type instantiation explicitly and uses AssertInitialized properly, and it's
+                    // probably not a big completeness problem in the unusual case that we would omit this assumption).
+                    
+                    // assert (forall $i: int :: 0 <= $i && $i < $ArrayLength(a) ==> a[$i] != null);
+                    Bpl.BoundVariable iVar = Sink.BoundVar("$i", Bpl.Type.Int);
+                    Bpl.Expr i = Sink.Ident(iVar);
+                    Bpl.Expr range = Bpl.Expr.And(Bpl.Expr.Le(Bpl.Expr.Literal(0), i), Bpl.Expr.Lt(i, sink.ArrayLength(a)));
+                    Bpl.Expr q = new Bpl.ForallExpr(NoToken, new Bpl.VariableSeq(iVar), Bpl.Expr.Imp(range, Bpl.Expr.Neq(sink.ArrayGet(a, sink.RefType, i, sink.HeapExpr()), sink.Null)));
+                    currentBlock.Cmds.Add(Sink.Assert(q, statement, "Elements of array argument to Microsoft.Contracts.NonNullType.AssertInitialized must all be non-null"));
+                    if (isNonNullType) {
+                      // assume $typeof(a) == NonNullRefArray(elementType, rank)
+                      bool elementTypeIsNonNull;
+                      int rank = 1;  // BUGBUG, this doesn't seem good; is it?
+                      this.currentBlock.Cmds.Add(Sink.Assume(Bpl.Expr.Eq(sink.Function(Sink.BuiltinFunction.Typeof, a), ArrayTypeExpr(elementType, rank, out elementTypeIsNonNull))));
+                    }
+                  }
+                }
+                return true;
+            }
+                        
+            case "Microsoft.Contracts.AssertHelpers.Sink.Assume(System.Boolean)":
+            {
+                sink.Comment(statement, "assume");
+                for (int i=0; i<arguments.Count; i++)
+                {
+                    Bpl.Expr renamed = TranslateLocal( (Cci.Variable!)arguments[i], statement, Role.Use);
+                    currentBlock.Cmds.Add(Sink.Assume(renamed));
+                }
+                return true;
+            }
+
+            case "Microsoft.Contracts.AssertHelpers.AssertLoopInvariant(System.Boolean)":
+            {
+                // This Cci.MethodCall is always accompanied by a Cci.Assertion
+                // and the latter is translated into an assertion in VisitAssertion
+                // so we can ignore this call.
+                return true;
+            }
+            
+            case "Microsoft.Contracts.AssertHelpers.Sink.Assert(System.Boolean)":
+            case "System.Diagnostics.Debug.Sink.Assert(System.Boolean)":
+            {
+                sink.Comment(statement, "assert"); 
+                for (int i=0; i<arguments.Count; i++)
+                {
+                    Bpl.Expr renamed = TranslateLocal( (Cci.Variable!)arguments[i], statement, Role.Use);
+                    currentBlock.Cmds.Add(Sink.Assert(renamed, statement, "Assertion might not hold"));
+                }
+                return true;
+            }
+            
+            case "Microsoft.Contracts.AssertHelpers.LoopInvariant(System.String,System.String)":
+            {
+              Bpl.Expr! cond;
+              string! s;
+              RecoverAssertionExpression(arguments, out cond, out s);
+              sink.Comment(statement, "serialized LoopInvariant");
+              List<MiningStrategy> msList = new List<MiningStrategy>();
+              if (cond is Bpl.QuantifierExpr) {
+                Bpl.QuantifierExpr q = (Bpl.QuantifierExpr) cond;
+                VariableSeq! varSeq = q.Dummies;
+                object[] vars = varSeq.elems;
+                if (vars != null) {
+                  for (int i = 0; i < varSeq.Length; i++) {
+                    Bpl.Variable x = (Bpl.Variable) vars[i];
+                    assert x != null;
+                    string reason = "The value of the bound var "+ x + " is: {0}";
+                    List<Bpl.Expr!> l = new List<Bpl.Expr!>();
+                    l.Add(new Bpl.IdentifierExpr(Token.NoToken, x.ToString(), sink.RefType));
+                    EEDTemplate eed = new EEDTemplate(reason, l);
+                    msList.Add(eed);
+                  }
+                }
+              }
+              AssertCmd assertCmd = Sink.Assert(cond, statement, "Loop invariant might not hold: " + s);
+              if (msList.Count > 0) {
+                assertCmd.ErrorDataEnhanced = new ListOfMiningStrategies(msList);
+              }
+              currentBlock.Cmds.Add(assertCmd);
+              return true;
+            }
+            case "Microsoft.Contracts.AssertHelpers.AssertStatement(System.String,System.String)":
+            {
+              Bpl.Expr! cond;
+              string! s;
+              RecoverAssertionExpression(arguments, out cond, out s);
+              sink.Comment(statement, "serialized AssertStatement");
+              currentBlock.Cmds.Add(Sink.Assert(cond, statement, "Assertion might not hold: " + s));
+              return true;
+            }
+            case "Microsoft.Contracts.AssertHelpers.AssumeStatement(System.String)":
+            {
+              Bpl.Expr! cond;
+              string! s;
+              RecoverAssertionExpression(arguments, out cond, out s);
+              sink.Comment(statement, "serialized AssumeStatement");
+              currentBlock.Cmds.Add(Sink.Assume(cond));
+              return true;
+            }
+            
+            case "Microsoft.Contracts.Guard.StartWritingFrame(optional(Microsoft.Contracts.NonNullType) System.Object,optional(Microsoft.Contracts.NonNullType) System.Type)":
+            {
+                sink.Comment(statement, "classic unpack");
+                Bpl.IdentifierExpr! targetObject = TranslateLocal((Cci.Variable!) arguments[0], statement, Role.Use);
+                FlowedValue.Type targetTypeFlowedType = GetType((Cci.Variable!) arguments[1], statement, Role.Use);
+                assume targetTypeFlowedType.TypeTag == FlowedValue.Type.Tag.TyObj;
+                Cci.TypeNode! targetType = targetTypeFlowedType.TToken;
+                AddUnpackCmd(currentBlock, targetObject.Name, targetType, statement);
+                return true;
+            }
+
+            case "Microsoft.Contracts.Guard.EndWritingFrame(optional(Microsoft.Contracts.NonNullType) System.Object,optional(Microsoft.Contracts.NonNullType) System.Type)":
+            {
+                sink.Comment(statement, "classic pack");
+                Bpl.IdentifierExpr! targetObject = TranslateLocal((Cci.Variable!) arguments[0], statement, Role.Use);
+                FlowedValue.Type targetTypeFlowedType = GetType((Cci.Variable!) arguments[1], statement, Role.Use);
+                assume targetTypeFlowedType.TypeTag == FlowedValue.Type.Tag.TyObj;
+                Cci.TypeNode! targetType = targetTypeFlowedType.TToken;
+                AddPackCmd(currentBlock, targetObject.Name, targetType, statement);
+                return true;
+            }       
+       
+            // local unpack, reciever is targetobject, targettype as parameter
+            case "Microsoft.Contracts.Guard.StartWritingAtTransitively(optional(Microsoft.Contracts.NonNullType) System.Type)": 
+            {
+                sink.Comment(statement, "local unpack");
+                assert receiver != null;     
+                FlowedValue.Type receiverFlowedType = GetType(receiver, statement, Role.Use);
+                assume receiverFlowedType.IsTypeToken;
+                Bpl.IdentifierExpr idexpr = (Bpl.IdentifierExpr) this.exposedTempMap[receiverFlowedType];
+                assume idexpr != null;
+                FlowedValue.Type targetFlowedType = GetType((Cci.Variable!) arguments[0], statement, Role.Use);
+                assume targetFlowedType.TypeTag == FlowedValue.Type.Tag.TyObj;
+                Cci.TypeNode! targetType = targetFlowedType.TToken;
+                AddLocalUnpackCmd(currentBlock, idexpr.Name, targetType, statement);        
+                return true;
+            }
+            
+            // local pack, reciever is targetobject, targettype as parameter
+            case "Microsoft.Contracts.Guard.EndWritingAtTransitively(optional(Microsoft.Contracts.NonNullType) System.Type)": 
+            {
+                sink.Comment(statement, "local pack");
+                assert receiver != null;     
+                FlowedValue.Type receiverFlowedType = GetType(receiver, statement, Role.Use);
+                assume receiverFlowedType.IsTypeToken;
+                Bpl.IdentifierExpr idexpr = (Bpl.IdentifierExpr) this.exposedTempMap[receiverFlowedType];
+                assume idexpr != null;
+                FlowedValue.Type targetFlowedType = GetType((Cci.Variable!) arguments[0], statement, Role.Use);
+                assume targetFlowedType.TypeTag == FlowedValue.Type.Tag.TyObj;
+                Cci.TypeNode! targetType = targetFlowedType.TToken;
+                AddLocalPackCmd(currentBlock, idexpr.Name, targetType, statement); 
+                return true;
+            }
+            
+            case "Microsoft.Contracts.Guard.StartWritingAtNop(optional(Microsoft.Contracts.NonNullType) System.Object,optional(Microsoft.Contracts.NonNullType) System.Type)":
+            {
+                sink.Comment(statement, "local unpack");
+                Bpl.IdentifierExpr! targetObject = TranslateLocal((Cci.Variable!) arguments[0], statement, Role.Use);
+                FlowedValue.Type targetTypeFlowedType = GetType((Cci.Variable!) arguments[1], statement, Role.Use);
+                assume targetTypeFlowedType.TypeTag == FlowedValue.Type.Tag.TyObj;
+                Cci.TypeNode! targetType = targetTypeFlowedType.TToken;
+                AddLocalUnpackCmd(this.currentBlock, targetObject.Name, targetType, statement);
+                return true;
+            }
+
+            case "Microsoft.Contracts.Guard.EndWritingAtNop(optional(Microsoft.Contracts.NonNullType) System.Object,optional(Microsoft.Contracts.NonNullType) System.Type)":
+            {
+                sink.Comment(statement, "local pack");
+                Bpl.IdentifierExpr! targetObject = TranslateLocal((Cci.Variable!) arguments[0], statement, Role.Use);
+                FlowedValue.Type targetTypeFlowedType = GetType((Cci.Variable!) arguments[1], statement, Role.Use);
+                assume targetTypeFlowedType.TypeTag == FlowedValue.Type.Tag.TyObj;
+                Cci.TypeNode! targetType = targetTypeFlowedType.TToken;
+                AddLocalPackCmd(this.currentBlock, targetObject.Name, targetType, statement);
+                return true;
+            }       
+            
+            // classic unpack, reciever is targetobject (and reciever's type is targettype)
+            case "Microsoft.Contracts.Guard.StartWritingTransitively": 
+            {
+                sink.Comment(statement, "classic unpack");
+                assert receiver != null;
+                FlowedValue.Type flowedType = GetType(receiver, statement, Role.Use);
+                assume flowedType.IsTypeToken;
+                Cci.TypeNode packType = flowedType.TToken;
+                Bpl.IdentifierExpr idexpr = (Bpl.IdentifierExpr) this.exposedTempMap[flowedType];
+                assume idexpr != null;
+                AddUnpackCmd(this.currentBlock, idexpr.Name, packType, statement);
+                return true;
+            }
+            
+            case "Microsoft.Contracts.Guard.EndWriting": // Pack at the end of a constructor
+            case "Microsoft.Contracts.Guard.EndWritingTransitively":  // Pack
+            {
+                sink.Comment(statement, "classic pack");
+                assert receiver != null;
+                FlowedValue.Type flowedType = GetType(receiver, statement, Role.Use);
+                assume flowedType.IsTypeToken;
+                Cci.TypeNode packType = flowedType.TToken;
+                Bpl.IdentifierExpr idexpr = (Bpl.IdentifierExpr) this.exposedTempMap[flowedType];
+                assume idexpr != null;
+                AddPackCmd(this.currentBlock, idexpr.Name, packType, statement);
+                return true;
+            }
+
+            case "Microsoft.Contracts.Guard.AcquireForWriting(Microsoft.Contracts.ThreadConditionDelegate)":
+            {
+                sink.Comment(statement, "acquire");
+                assert receiver != null;
+                FlowedValue.Type flowedType = GetType(receiver, statement, Role.Use);
+                assume flowedType.IsTypeToken;
+                Bpl.IdentifierExpr idexpr = (Bpl.IdentifierExpr) this.exposedTempMap[flowedType];
+                assume idexpr != null;
+                this.currentBlock.Cmds.Add(Sink.Assert(om.IsLockProtected(idexpr), statement, "The object being acquired must be lock-protected."));
+                // Havoc all non-writable objects
+                this.VisitCall(null, null, ((!)Cci.SystemTypes.Guard).GetMethod(Cci.Identifier.For("NoOp")), null, false, new Cci.ExpressionStatement(), null);
+                this.currentBlock.Cmds.Add(Sink.Assume(om.IsConsistent(idexpr, true, sink.HeapExpr())));
+                return true;
+            }
+            
+            case "Microsoft.Contracts.Guard.ReleaseForWriting":
+            {
+                sink.Comment(statement, "release");
+                assert receiver != null;
+                FlowedValue.Type flowedType = GetType(receiver, statement, Role.Use);
+                assume flowedType.IsTypeToken;
+                Bpl.IdentifierExpr idexpr = (Bpl.IdentifierExpr) this.exposedTempMap[flowedType];
+                assume idexpr != null;
+                this.currentBlock.Cmds.Add(Sink.Assert(om.IsLockProtected(idexpr), statement, "The object being released must be lock-protected."));
+                this.currentBlock.Cmds.Add(Sink.Assert(om.IsConsistent(idexpr, true, sink.HeapExpr()), statement, "The object being released must be consistent."));
+                // TODO: set the owner to something that makes this object appear committed
+                return true;
+            }
+            
+            case "Microsoft.Contracts.Guard.ShareLockProtected(optional(Microsoft.Contracts.NonNullType) System.Object)":
+            {
+                sink.Comment(statement, "ShareLockProtected");
+                Bpl.IdentifierExpr! targetObject = TranslateLocal((Cci.Variable!) arguments[0], statement, Role.Use);
+                this.currentBlock.Cmds.Add(Sink.Assert(om.IsConsistent(targetObject, true, sink.HeapExpr()), statement, "The object being shared must be consistent."));
+                this.currentBlock.Cmds.Add(Sink.Assert(om.IsUnshared(targetObject), statement, "The object being shared must be unshared."));
+                // TODO: set the owner to something that makes this object appear committed
+                om.Share(targetObject, this.currentBlock.Cmds);
+                this.currentBlock.Cmds.Add(Sink.Assume(sink.Function(Sink.BuiltinFunction.IsHeap, sink.HeapExpr())));
+                return true;
+            }
+            
+            case "Microsoft.Contracts.GuardThreadStart.#ctor(System.Object,System.IntPtr)":
+            {
+                sink.Comment(statement, "GuardThreadStart creation");
+                Bpl.IdentifierExpr! targetObject = TranslateLocal((Cci.Variable!)arguments[0], statement, Role.Use);
+                FlowedValue.Type flowedType = GetType((Cci.Variable!)arguments[1], statement, Role.Use);
+                Cci.Method! targetMethod = (!)((FlowedValue.MethodPointee!) flowedType.Pointee).Method;
+                this.currentBlock.Cmds.Add(Sink.Assert(om.IsConsistent(targetObject, true, sink.HeapExpr()), statement, "The target object of a thread creation must be consistent."));
+                this.currentBlock.Cmds.Add(Sink.Assert(om.IsUnshared(targetObject), statement, "The target object of a thread creation must be unshared."));
+                // TODO: set the owner to something that makes this object appear committed
+                Cci.MethodContract targetMethodContract = targetMethod.Contract;
+                if (targetMethodContract != null)
+                {
+                    Cci.RequiresList targetMethodRequires = targetMethodContract.Requires;
+                    if (targetMethodRequires != null)
+                    {
+                        if (targetMethodRequires.Count > 0)
+                        {
+                            // TODO: the following is really an error that should have been reported earlier (by the
+                            // compiler, say), rather than being treated as something "not supported" here.
+                            sink.NotSupported(statement, "The target method of a thread creation must not have requires clauses.");
+                        }
+                    }
+                }
+                return true;
+            }
+            
+            case "Microsoft.Contracts.Guard.CreateThreadStartForOwn(Microsoft.Contracts.GuardThreadStart)":
+            {
+                sink.Comment(statement, "Ownership-transfering ThreadStart creation");
+                // TODO: Generate assertions
+                return true;
+            }
+            
+            case "System.Threading.Monitor.Enter(System.Object)":
+            {
+                sink.Comment(statement, "lock enter");
+                // translate as: SKIP
+                return true;
+            }
+            
+            case "System.Threading.Monitor.Exit(System.Object)":
+            {
+                sink.Comment(statement, "lock exit");
+                // translate as: SKIP
+                return true;
+            }
+
+            case "Microsoft.Contracts.Owner.Assign(optional(Microsoft.Contracts.NonNullType) System.Object,optional(Microsoft.Contracts.NonNullType) System.Object,optional(Microsoft.Contracts.NonNullType) System.Type)":
+            {
+              sink.Comment(statement, "Owner.Assign");
+              assert arguments.Count == 3;
+              // translate as:
+              //   assert arg0.$ownerFrame == $PeerGroupPlaceholder;
+              //   assert not $IsImmutable($typeof(arg0)); // needed, because we have an axiom that says immutable objects belong to singleton peer groups
+              //   assert $typeof(arg1) <: TypeName(arg2);
+              //   arg1 must be exposed (locally or additively) unless arg0 is peer consistent
+              //   assert (!(arg1.$inv <: TypeName(arg2) && arg1.localinv != TypeName(arg2))) || IsPeerConsistent(arg0);   // The second disjunct has tpo be removed once we permit quantification over all owned objects;
+              //   call $SetOwner(arg0, arg1, TypeName(arg2));
+              Bpl.Expr! subject = TranslateLocal((Cci.Variable!)arguments[0], statement, Role.Use);
+              Bpl.Expr! owner = TranslateLocal((Cci.Variable!)arguments[1], statement, Role.Use);
+              Bpl.Expr! frame = sink.Function(Sink.BuiltinFunction.TypeName, TranslateLocal((Cci.Variable!)arguments[2], statement, Role.Use));
+              
+              Bpl.Expr cond = om.HasNoOwner(subject, sink.HeapExpr());
+              currentBlock.Cmds.Add(Sink.Assert(cond, statement, "assigning an owner requires the subject to be un-owned"));
+            
+              this.sink.AssertNotImmutable(subject, statement, "the subject might be immutable, and its owner is not allowed to be assigned");
+                      
+              cond = Bpl.Expr.Subtype(sink.Function(Sink.BuiltinFunction.Typeof, owner), frame);
+              currentBlock.Cmds.Add(Sink.Assert(cond, statement, "the specified owner frame must be a supertype of the allocated type of the specified owner reference"));
+
+              cond = Bpl.Expr.Or(om.IsExposed(owner, frame, sink.HeapExpr(Prelude.HeapName)), om.IsPeerConsistent(subject, false));
+              currentBlock.Cmds.Add(Sink.Assert(cond, statement, "the specified owner reference must be exposed for the specified owner frame"));
+
+              om.SetOwner(subject, owner, frame, this.currentBlock.Cmds);
+              return true;
+            }
+            
+            case "Microsoft.Contracts.Owner.AssignSame(optional(Microsoft.Contracts.NonNullType) System.Object,optional(Microsoft.Contracts.NonNullType) System.Object)":
+            {
+              sink.Comment(statement, "Owner.AssignSame");
+              assert arguments.Count == 2;
+              // translate as:
+              //   assert arg0.$ownerFrame == $PeerGroupPlaceholder;
+              //   assert not $IsImmutable($typeof(arg0)); 
+              //   assert not $IsImmutable($typeof(arg1)); 
+              //   assert IsObjectWritable(arg1) || IsPeerConsistent(arg0);   // The second disjunct has tpo be removed once we permit quantification over all owned objects
+              //   call $SetOwner(arg0, arg1.$ownerRef, arg1.$ownerFrame);
+              Bpl.Expr! subject = TranslateLocal((Cci.Variable!)arguments[0], statement, Role.Use);
+              Bpl.Expr! peer = TranslateLocal((Cci.Variable!)arguments[1], statement, Role.Use);
+              
+              Bpl.Expr cond = om.HasNoOwner(subject, sink.HeapExpr());
+              currentBlock.Cmds.Add(Sink.Assert(cond, statement, "assigning an owner requires the subject to be un-owned"));
+              
+              this.sink.AssertNotImmutable(subject, statement, "the subject might be immutable, and its owner is not allowed to be assigned");
+              this.sink.AssertNotImmutable(peer, statement, "the given peer object might be immutable, and its owner is not allowed to be assigned");
+              
+              cond = Expr.Or(om.IsObjectWritable(peer), om.IsPeerConsistent(subject, false));
+              currentBlock.Cmds.Add(Sink.Assert(cond, statement, "the specified peer object must not be committed or the subject must be peer consistent"));
+              
+              om.SetSameOwner(subject, peer, currentBlock.Cmds);
+              return true;
+            }
+            case "Microsoft.Contracts.Owner.ElementProxy(optional(Microsoft.Contracts.NonNullType) System.Object)":
+            {
+              sink.Comment(statement, "Owner.ElementProxy");
+              assert arguments.Count == 1;
+              // translate as:
+              //   dest := $ElementProxy(arg0,pos);
+              
+		      Bpl.Expr! subject = TranslateLocal((Cci.Variable!)arguments[0], statement, Role.Use);
+              List<int>! positions = (!)Microsoft.SpecSharp.Util.ElementsPositions(((Cci.Variable!)arguments[0]).Type);
+              int pos = (positions.Count > 0) ? positions[0] : -5;
+              Bpl.IdentifierExpr! destExpr = TranslateLocal((!) destination, statement, Role.Def);		      
+              currentBlock.Cmds.Add(sink.Assign(destExpr, sink.ElementProxy(subject, Bpl.Expr.Literal(pos))));
+              return true;
+            }
+            case "Microsoft.Contracts.Owner.ElementProxy(optional(Microsoft.Contracts.NonNullType) System.Object,System.Int32)":
+            {
+              sink.Comment(statement, "Owner.ElementProxy");
+              assert arguments.Count == 2;
+              // translate as:
+              //   dest := $ElementProxy(arg0,arg1);
+              
+		      Bpl.Expr! subject = TranslateLocal((Cci.Variable!)arguments[0], statement, Role.Use);
+		      Bpl.Expr! pos = TranslateLocal((Cci.Variable!)arguments[1], statement, Role.Use);
+              Bpl.IdentifierExpr! destExpr = TranslateLocal((!) destination, statement, Role.Def);		      
+              currentBlock.Cmds.Add(sink.Assign(destExpr, sink.ElementProxy(subject, pos)));
+
+              return true;
+            }
+            case "Microsoft.Contracts.Owner.ElementAssign(optional(Microsoft.Contracts.NonNullType) System.Object[],optional(Microsoft.Contracts.NonNullType) System.Object,optional(Microsoft.Contracts.NonNullType) System.Type)":
+            {
+              sink.Comment(statement, "Owner.ElementAssign");
+              assert arguments.Count == 3;
+              // translate as (for each pos):
+              //   assert $typeof(arg1) <: TypeName(arg2);
+              //   assert !(arg1.$inv <: TypeName(arg2) && arg1.localinv != TypeName(arg2));  // arg1 must be exposed (locally or additively)              
+              //   assert $ElementProxy(arg0,pos).$ownerFrame == $PeerGroupPlaceholder;
+              //   call $SetOwner($ElementProxy(arg0,pos), arg1, TypeName(arg2));
+              
+		      Bpl.Expr! owner = TranslateLocal((Cci.Variable!)arguments[1], statement, Role.Use);
+     		  Bpl.Expr! frame = sink.Function(Sink.BuiltinFunction.TypeName, TranslateLocal((Cci.Variable!)arguments[2], statement, Role.Use));
+
+              Bpl.Expr cond = Bpl.Expr.Subtype(sink.Function(Sink.BuiltinFunction.Typeof, owner), frame);
+              currentBlock.Cmds.Add(Sink.Assert(cond, statement, "the specified owner frame must be a supertype of the allocated type of the specified owner reference"));
+
+              cond = om.IsExposed(owner, frame, sink.HeapExpr(Prelude.HeapName));
+              currentBlock.Cmds.Add(Sink.Assert(cond, statement, "the specified owner reference must be exposed for the specified owner frame"));
+
+              foreach (int pos in (!)Microsoft.SpecSharp.Util.ElementsPositions(((Cci.Variable!)arguments[0]).Type)) {                                          
+				  Bpl.Expr! subject = sink.ElementProxy(TranslateLocal((Cci.Variable!)arguments[0], statement, Role.Use), Expr.Literal(pos));	              
+				  cond = om.HasNoOwner(subject, sink.HeapExpr());
+				  currentBlock.Cmds.Add(Sink.Assert(cond, statement, "assigning an owner requires the subject to be un-owned"));	                                  
+				  om.SetOwner(subject, owner, frame, this.currentBlock.Cmds);
+              }
+              return true;
+            }
+            
+            case "Microsoft.Contracts.Owner.ElementAssignSame(optional(Microsoft.Contracts.NonNullType) System.Object[],optional(Microsoft.Contracts.NonNullType) System.Object)":
+            {
+              sink.Comment(statement, "Owner.ElementAssignSame");
+              assert arguments.Count == 2;
+              // translate as:
+              //   assert not $IsImmutable($typeof(arg1)); 
+              //   assert IsObjectWritable(arg1);
+              //   assert $ElementProxy(arg0,pos).$ownerFrame == $PeerGroupPlaceholder;
+              //   call $SetOwner($ElementProxy(arg0,pos), arg1.$ownerRef, arg1.$ownerFrame);
+              Bpl.Expr! peer = TranslateLocal((Cci.Variable!)arguments[1], statement, Role.Use);
+              this.sink.AssertNotImmutable(peer, statement, "the given peer object might be immutable, and its owner is not allowed to be assigned");
+              Bpl.Expr cond = om.IsObjectWritable(peer);
+              currentBlock.Cmds.Add(Sink.Assert(cond, statement, "the specified peer object must not be committed"));
+
+              foreach (int pos in (!)Microsoft.SpecSharp.Util.ElementsPositions(((Cci.Variable!)arguments[0]).Type)) {                                          
+				Bpl.Expr! subject = sink.ElementProxy(TranslateLocal((Cci.Variable!)arguments[0], statement, Role.Use), Expr.Literal(pos));              
+                cond = om.HasNoOwner(subject, sink.HeapExpr());
+                currentBlock.Cmds.Add(Sink.Assert(cond, statement, "assigning an owner requires the subject to be un-owned"));                           
+                om.SetSameOwner(subject, peer, currentBlock.Cmds);
+              }
+              return true;
+            }
+
+            case "Microsoft.Contracts.Contract.RewriterRequires(System.Boolean)":
+            {
+                sink.Comment(statement, "assume");
+                for (int i=0; i<arguments.Count; i++)
+                {
+                    Bpl.Expr renamed = TranslateLocal( (Cci.Variable!)arguments[i], statement, Role.Use);
+                    currentBlock.Cmds.Add(Sink.Assume(renamed));
+                }
+                return true;
+            }
+            case "Microsoft.Contracts.Contract.RewriterEnsures(System.Boolean)":
+            {
+                sink.Comment(statement, "assert");
+                for (int i=0; i<arguments.Count; i++)
+                {
+                    Bpl.Expr renamed = TranslateLocal( (Cci.Variable!)arguments[i], statement, Role.Use);
+                    currentBlock.Cmds.Add(Sink.Assert(renamed,statement,"Postcondition not true"));
+                }
+                return true;
+            }
+        }
+
+        if (callee.CciKind == Cci.CciMemberKind.FrameGuardGetter)
+        {
+            sink.Comment(statement, "FrameGuard processing");
+            assume destination != null && receiver != null;
+            Bpl.IdentifierExpr idexpr = TranslateLocal(receiver, statement, Role.Use);
+            FlowedValue.Type ty = GetType(destination, statement, Role.Def);
+            assume ty.IsTypeToken;
+            Bpl.TypedIdent temp = this.MakeLocal(sink.RefType);
+            Bpl.IdentifierExpr tempId = Sink.Ident(temp.Name, sink.RefType);
+            currentBlock.Cmds.Add(Cmd.SimpleAssign(NoToken, tempId, idexpr));
+            this.exposedTempMap.Add(ty, tempId);
+            return true;
+        }
+        return false;
+    }
+    
+    private static TypeSpace DetermineTypeSpace (Cci.TypeNode! type) {
+      if (type is Cci.ITypeParameter) {
+        Cci.TypeParameterFlags flags = ((Cci.ITypeParameter)type).TypeParameterFlags;
+        bool v = (flags & Cci.TypeParameterFlags.ValueTypeConstraint) == Cci.TypeParameterFlags.ValueTypeConstraint;
+        bool r = (flags & Cci.TypeParameterFlags.ReferenceTypeConstraint) == Cci.TypeParameterFlags.ReferenceTypeConstraint;
+        if (v && !r) {
+          return TypeSpace.ValueType;
+        } else if (!v && r) {
+          return TypeSpace.ReferenceType;
+        }
+      } else if (type.IsValueType) {
+        return TypeSpace.ValueType;
+      } else if (type.IsObjectReferenceType) {
+        return TypeSpace.ReferenceType;
+      }
+      return TypeSpace.Undetermined;
+    }
+
+    // ---------------------------------------------------------------------------------------
+
+    // Generate an assignment to the heap, together with all necessary checks,
+    // and add it to this.currentBlock.Cmds
+    private void HeapAssign(IToken! tok,
+                            Bpl.Expr! obj, Bpl.Expr! field, Bpl.Expr! rhs,
+                            Cci.Node errorNode,
+                            bool skipModifiesCheck)
+        requires this.currentBlock != null;
+        requires skipModifiesCheck || errorNode != null; {
+      HeapAssign(this.currentBlock.Cmds, tok, obj, field, rhs, errorNode, skipModifiesCheck);
+    }
+
+    private void HeapAssign(Bpl.CmdSeq! cmds,
+                            IToken! tok,
+                            Bpl.Expr! obj, Bpl.Expr! field, Bpl.Expr! rhs,
+                            Cci.Node errorNode,
+                            bool skipModifiesCheck)
+        requires skipModifiesCheck || errorNode != null; {
+      if (!skipModifiesCheck &&
+          CommandLineOptions.Clo.LocalModifiesChecks &&
+          CommandLineOptions.Clo.CheckingLevel >= 2) {
+        sink.Comment((!)errorNode, "frame condition");
+        Bpl.Expr! modifiesCond =
+          Bpl.Expr.Not(this.methodSignature.AssignmentToFieldIsForbidden(obj, field));
+        cmds.Add(Sink.Assert(modifiesCond, errorNode,
+                             "assignment to location may violate the modifies clause"));
+      }
+      cmds.Add(Cmd.MapAssign(tok, sink.HeapExpr(), obj, field, rhs));
+    }
+
+    // Generate an assignment to an array, together with all necessary checks,
+    // and add it to this.currentBlock.Cmds
+    private void ArrayAssign(IToken! tok,
+                             Bpl.Expr! obj, Type! elType, Bpl.Expr! index,
+                             Bpl.Expr! rhs,
+                             Cci.Node! errorNode)
+      requires this.currentBlock != null; {
+      ArrayAssign(this.currentBlock.Cmds, tok, obj, elType,
+                  new Bpl.Expr[] { index }, rhs, errorNode);
+    }
+
+    private void ArrayAssign(Bpl.CmdSeq! cmds,
+                             IToken! tok,
+                             Bpl.Expr! obj, Type! elType, Bpl.IdentifierExpr! index,
+                             Bpl.Expr! rhs,
+                             Cci.Node! errorNode) {
+      ArrayAssign(cmds, tok, obj, elType, new Bpl.Expr[] { index }, rhs, errorNode);
+    }
+
+    private void ArrayAssign(Bpl.CmdSeq! cmds,
+                             IToken! tok,
+                             Bpl.Expr! obj, Type! elType,
+                             Bpl.Expr[]! indices,
+                             Bpl.Expr! rhs,
+                             Cci.Node! errorNode) {
+      if (CommandLineOptions.Clo.LocalModifiesChecks &&
+          CommandLineOptions.Clo.CheckingLevel >= 2) {
+        sink.Comment((!)errorNode, "frame condition");
+        Bpl.Expr! modifiesCond =
+          Bpl.Expr.Not(this.methodSignature.AssignmentToArrayIsForbidden(obj, elType, indices));
+        cmds.Add(Sink.Assert(modifiesCond, (!)errorNode,
+                             "assignment to array location may violate the modifies clause"));
+      }
+      cmds.Add(Cmd.MapAssign(tok, sink.HeapExpr(), obj, sink.Fields.Elements(elType),
+                             ArraySet(obj, elType, indices, rhs, Prelude.HeapName)));
+    }
+
+    // ---------------------------------------------------------------------------------------
+
+    private void MethodCallFrameCondition(Bpl.CmdSeq! cmds, Cci.Method! callee,
+                                          Bpl.ExprSeq! actualInParams,
+                                          Cci.Node! errorNode) {
+      if (!CommandLineOptions.Clo.LocalModifiesChecks ||
+          CommandLineOptions.Clo.CheckingLevel < 2)
+        return;
+
+      MethodSignature! calleeSig = sink.MethodRep[callee];
+      
+      // define the mappping from the formal in-parameters (including
+      // the receiver) to the actual parameters, everything after the
+      // translation to Boogie
+      IDictionary<string!, Bpl.Expr!>! inParamMapping = new Dictionary<string!, Bpl.Expr!> ();
+
+      assert actualInParams.Length == calleeSig.InParameters.Length;
+
+      for (int i = 0; i < actualInParams.Length; ++i)
+        inParamMapping.Add(((!)calleeSig.InParameters[i]).ToString(),
+                           (!)actualInParams[i]);
+
+      CalleeFrameChecker! checker = new CalleeFrameChecker(calleeSig, sink, inParamMapping);
+      
+      Bpl.ExprSeq! frameConds = methodSignature.MapUnmodifiableLocations(checker, true);
+      foreach (Bpl.Expr! cond in frameConds)
+        cmds.Add(Sink.Assert(cond, (!)errorNode,
+                             "method invocation may violate the modifies clause of the enclosing method"));
+    }
+
+    private class CalleeFrameChecker : MethodSignature.UnmodifiableLocationChecker {
+      private readonly CalleeFrameConditionSubstituter! subst;
+      private readonly MethodSignature! calleeSig;
+      private readonly Sink! sink;
+
+      public CalleeFrameChecker(MethodSignature! calleeSig, Sink! sink,
+                                IDictionary<string!, Bpl.Expr!>! inParamMapping) {
+        this.calleeSig = calleeSig;
+        this.sink = sink;
+        this.subst = new CalleeFrameConditionSubstituter(inParamMapping);
+      }
+
+      public Bpl.Expr! CheckFieldLocation(Bpl.Expr! obj, Bpl.Expr! field,
+                                          Bpl.TypeVariableSeq! unifiableTypeVars) {
+        Bpl.Expr! res = calleeSig.AssignmentToFieldIsForbidden(obj, field, unifiableTypeVars);
+        return subst.VisitExpr(res);
+      }
+
+      public Bpl.Expr! CheckArrayLocation(Bpl.Expr! obj, Type! elType, Bpl.Expr! index,
+                                          Bpl.ExprSeq! triggers) {
+        triggers.Truncate(0);
+        Bpl.Expr! res = calleeSig.AssignmentToArrayIsForbidden(obj, elType, new Bpl.Expr[] { index });
+        return subst.VisitExpr(res);
+      }
+    }
+
+    private class CalleeFrameConditionSubstituter : Duplicator {
+      private readonly IDictionary<string!, Bpl.Expr!>! mapping;
+
+      public CalleeFrameConditionSubstituter(IDictionary<string!, Bpl.Expr!>! mapping) {
+        base();
+        this.mapping = mapping;
+      }
+
+      public override Bpl.Expr! VisitIdentifierExpr(Bpl.IdentifierExpr! node)
+      {
+        Bpl.Expr res;
+        if (mapping.TryGetValue(node.Name, out res))
+          return (!)res;
+        return base.VisitIdentifierExpr(node);
+      }      
+
+      // old-expressions are simply removed, because the pre-state of
+      // the callee is the current state
+      public override Expr! VisitOldExpr(OldExpr! node) {
+        return VisitExpr(node.Expr);
+      }
+    }
+
+    // ---------------------------------------------------------------------------------------
+
+    private void UpdateOwnersFrameCondition(Bpl.CmdSeq! cmds, 
+                                            Bpl.Expr! modifiedPeerGroup,
+                                            Bpl.Expr! targetOwner,
+                                            Bpl.Expr! targetClassFrame,
+                                            Cci.Node! errorNode) {
+      if (!CommandLineOptions.Clo.LocalModifiesChecks ||
+          CommandLineOptions.Clo.CheckingLevel < 2)
+        return;
+
+      Bpl.Expr! res =
+        // first possibility: the modified peer group is null
+        Bpl.Expr.Eq(sink.Clone(modifiedPeerGroup), sink.Null);
+
+      res = Bpl.Expr.Or(res,
+        // second possibility: the owner/classframe is unchanged
+        Bpl.Expr.And(
+        Bpl.Expr.Eq(Bpl.Expr.Select(sink.HeapExpr(), sink.Clone(modifiedPeerGroup),
+                                    sink.Fields.OwnerRef),
+                    sink.Clone(targetOwner)),
+        Bpl.Expr.Eq(Bpl.Expr.Select(sink.HeapExpr(), sink.Clone(modifiedPeerGroup),
+                                    sink.Fields.OwnerClassFrame),
+                    sink.Clone(targetClassFrame))));
+
+      // third possibility: changing the owner of this peer group is allowed
+      UpdateOwnerChecker! checker = new UpdateOwnerChecker(sink, modifiedPeerGroup);
+      
+      Bpl.ExprSeq! frameConds = methodSignature.MapUnmodifiableLocations(checker, false);
+      assert frameConds.Length == 1;
+      
+      res = Bpl.Expr.Or(res, (!)frameConds[0]);
+      cmds.Add(Sink.Assert(res, (!)errorNode,
+                           "assigning the owner of this object may violate the modifies clause"));
+    }
+
+    private class UpdateOwnerChecker : MethodSignature.UnmodifiableLocationChecker {
+      private readonly Bpl.Expr! modifiedPeerGroup;
+      private readonly Sink! sink;
+
+      public UpdateOwnerChecker(Sink! sink, Bpl.Expr! modifiedPeerGroup) {
+        this.sink = sink;
+        this.modifiedPeerGroup = modifiedPeerGroup;
+      }
+
+      public Bpl.Expr! CheckFieldLocation(Bpl.Expr! obj, Bpl.Expr! field,
+                                          Bpl.TypeVariableSeq! unifiableTypeVars) {
+        // PR: is the following code dependent on the used ownership model?
+
+        Bpl.Expr! cond = Bpl.Expr.Not(sink.Clone(sink.om.IsOwnerField(field)));
+
+        cond = Bpl.Expr.Or(cond,
+               Bpl.Expr.Neq(Bpl.Expr.Select(sink.HeapExpr(), sink.Clone(obj),
+                                            sink.Fields.OwnerRef),
+                            Bpl.Expr.Select(sink.HeapExpr(), sink.Clone(modifiedPeerGroup),
+                                            sink.Fields.OwnerRef)));
+        cond = Bpl.Expr.Or(cond,
+               Bpl.Expr.Neq(Bpl.Expr.Select(sink.HeapExpr(), sink.Clone(obj),
+                                            sink.Fields.OwnerClassFrame),
+                            Bpl.Expr.Select(sink.HeapExpr(), sink.Clone(modifiedPeerGroup),
+                                            sink.Fields.OwnerClassFrame)));
+
+        return cond;
+      }
+
+      public Bpl.Expr! CheckArrayLocation(Bpl.Expr! obj, Type! elType, Bpl.Expr! index,
+                                          Bpl.ExprSeq! triggers) {
+        assert false;
+      }
+    }
+
+  } // end class
+}

@@ -1,0 +1,91 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security.Policy
+{
+
+    public class PolicyLevel
+    {
+
+        public System.Collections.IList NamedPermissionSets
+        {
+          get;
+        }
+
+        public System.Collections.IList FullTrustAssemblies
+        {
+          get;
+        }
+
+        public CodeGroup! RootCodeGroup
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string StoreLocation
+        {
+          get;
+        }
+
+        public string Label
+        {
+          get;
+        }
+
+        public void FromXml (System.Security.SecurityElement! e)
+            requires e != null otherwise ArgumentNullException;
+
+        public System.Security.SecurityElement ToXml ();
+
+        public CodeGroup ResolveMatchingCodeGroups (Evidence! evidence)
+            requires evidence != null otherwise ArgumentNullException;
+
+        public PolicyStatement Resolve (Evidence! evidence)
+            requires evidence != null otherwise ArgumentNullException;
+
+        public System.Security.NamedPermissionSet GetNamedPermissionSet (string! name)
+            requires name != null otherwise ArgumentNullException;
+
+        public System.Security.NamedPermissionSet ChangeNamedPermissionSet (string! name, System.Security.PermissionSet! pSet)
+            requires name != null otherwise ArgumentNullException;
+            requires pSet != null otherwise ArgumentNullException;
+
+        public System.Security.NamedPermissionSet RemoveNamedPermissionSet (string! name)
+            requires name != null otherwise ArgumentNullException;
+
+        public System.Security.NamedPermissionSet RemoveNamedPermissionSet (System.Security.NamedPermissionSet! permSet)
+            requires permSet != null otherwise ArgumentNullException;
+
+        public void AddNamedPermissionSet (System.Security.NamedPermissionSet permSet);
+
+        public void Reset ();
+
+        public void Recover ();
+
+        public void RemoveFullTrustAssembly (StrongNameMembershipCondition! snMC)
+            requires snMC != null otherwise ArgumentNullException;
+
+        public void RemoveFullTrustAssembly (StrongName! sn)
+            requires sn != null otherwise ArgumentNullException;
+
+        public void AddFullTrustAssembly (StrongNameMembershipCondition! snMC)
+            requires snMC != null otherwise ArgumentNullException;
+
+        public void AddFullTrustAssembly (StrongName! sn)
+            requires sn != null otherwise ArgumentNullException;
+
+        public static PolicyLevel CreateAppDomainLevel ();
+    }
+}

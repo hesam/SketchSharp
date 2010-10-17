@@ -1,0 +1,415 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+using Microsoft.Contracts;
+
+namespace Microsoft.Boogie
+{
+  using System;
+  using System.Collections;
+  using System.Collections.Generic;
+  using Cci = System.Compiler;
+  using Bpl = Microsoft.Boogie;
+
+  public class PreTranslationVisitor : Cci.StandardVisitor, IAssemblyInformation
+  {
+    private Cci.TrivialHashtable! VisitedMethods = new Cci.TrivialHashtable();
+
+    public class FieldInfo : IFieldInfo {
+      Cci.Field! field;
+      public bool UsedInInvariantOrModelfield;
+      protected Cci.ModelfieldContractList! dependentMfCs = new Cci.ModelfieldContractList();
+      //A list of the modelfieldcontracts that have a satisifies clause in which field occurs.
+      public Cci.ModelfieldContractList! DependentMfCs {
+        get {return dependentMfCs;}            
+      }
+      
+      public FieldInfo(Cci.Field! field) {
+        this.field = field;
+        // base();
+      }
+      
+      /// <summary>
+      /// Record the fact that this field is used in a field selection "e.field" in a subexpression of
+      /// either an invariant, or a modelfield satisfies clause, in class "cl".  The subexpression is enclosed in the "qs" quantifiers.
+      /// </summary>
+      public void RecordVisibilityUse(Cci.TypeNode! cl, Cci.Expression! e, [Captured] Cci.Quantifier[]! qs)
+        requires forall{int i in (0:qs.Length); qs[i] != null};
+      {
+        if (visibilityUses == null) {
+          visibilityUses = new List<VisibilityUse>();
+        }
+        visibilityUses.Add(new VisibilityUse(cl, e, qs));
+      }
+      
+      [Pure] public int VisibilityUseCount {
+        get {
+          return visibilityUses == null ? 0 : visibilityUses.Count;
+        }
+      }
+      
+      public void GetVisibilityUse(int i, out Cci.TypeNode! cl, out Cci.Expression! e, out Cci.Quantifier[]! enclosingQuantifiers)
+      {
+        assert 0 <= i && i < VisibilityUseCount;  // follows from inherited precondition
+        VisibilityUse pu = ((!)visibilityUses)[i];
+        cl = (!)pu.cl;
+        e = (!)pu.e;
+        enclosingQuantifiers = (!)pu.qs;
+      }
+      
+      struct VisibilityUse {
+        public Cci.TypeNode cl;
+        public Cci.Expression e;
+        public Cci.Quantifier[] qs;
+        public VisibilityUse(Cci.TypeNode! cl, Cci.Expression! e, /*captured*/ Cci.Quantifier[]! qs)
+          requires forall{int i in (0:qs.Length); qs[i] != null};
+        {
+          this.cl = cl;
+          this.e = e;
+          this.qs = qs;
+        }
+      }
+      List<VisibilityUse>? visibilityUses;
+    }
+    
+    public  PreTranslationVisitor(){}
+    public  PreTranslationVisitor(Cci.Module module){
+      this.module = module;
+    }
+    
+    public List<Cci.TypeNode!>? GetAllSubtypes(Cci.TypeNode! ty) {
+      if (ty.IsSealed) {
+        return new List<Cci.TypeNode!>();
+      }
+      List<Cci.TypeNode!>? subtypes;
+      if (internalTypes.TryGetValue(ty, out subtypes)) {
+        return subtypes;
+      } else {
+        return null;
+      }
+    }
+    
+    Dictionary<Cci.TypeNode!, List<Cci.TypeNode!>!>! internalTypes = new Dictionary<Cci.TypeNode!, List<Cci.TypeNode!>!>();  // ... and their direct subtypes
+    Dictionary<Cci.Field!, FieldInfo!>! fields = new Dictionary<Cci.Field!, FieldInfo!>();
+    Cci.TypeNode currentlyVisitingInvariantIn = null;
+    Cci.ModelfieldContract currentlyVisitingMfC = null;
+    
+    Cci.Module module;
+    public override Cci.AssemblyNode VisitAssembly(Cci.AssemblyNode assembly){
+      if (assembly == null) return null;
+      this.VisitModule(assembly);
+      // don't visit assembly.ModuleAttributes
+      // don't visit assembly.SecurityAttributes
+      return assembly;
+    }
+    public override Cci.Module VisitModule (Cci.Module module) {
+      if (module == null) { return null; }
+
+      // record the module
+      assume this.module == null;  // one PreTranslationVisitor is intended for just (zero or) one module
+      this.module = module;
+      
+      // don't visit module.Attributes
+      module.Types = this.VisitTypeNodeList(module.Types);
+      return module;
+    }
+    
+    public override Cci.TypeNode VisitTypeNode (Cci.TypeNode type)
+    {
+      if (type == null) { return null; }
+      assume module != null;
+      
+      if (type is Cci.Struct || type is Cci.Class || type is Cci.Interface) {
+        AddType(type);
+        // don't visit the attributes and other things, just the members
+        foreach (Cci.Member member in type.Members) {
+          if (member is Cci.TypeNode || member is Cci.Field) {
+            this.Visit(member);
+          }else if (member is Cci.Method){
+            this.VisitMethod((Cci.Method)member);
+          }
+        }
+      }
+      return type;
+    }
+    
+    /// Returns a list of the type's subtypes recorded so far, or null if type
+    /// is not an internal or all-internal-constructors type.
+    List<Cci.TypeNode!> AddType(Cci.TypeNode! type)
+      requires type is Cci.Struct || type is Cci.Class || type is Cci.Interface;
+    {
+      List<Cci.TypeNode!>? subtypes;
+      if (internalTypes.TryGetValue(type, out subtypes)) {
+        assert subtypes != null;
+        // already added
+        return subtypes;
+      }
+      
+      Cci.TypeNode savedCurrentlyVisitingInvariantIn = currentlyVisitingInvariantIn;
+      Cci.ModelfieldContract savedCurrentlyVisitingMfC = currentlyVisitingMfC;
+
+      // ----- visit the expressions in invariants, so we pick up the usage of fields
+      
+      if (type.Contract != null && type.Contract.InvariantCount != 0) {
+        assert type is Cci.Class || type is Cci.Struct;
+        currentlyVisitingInvariantIn = /*(Cci.Class)*/type;
+        foreach (Cci.Invariant inv in type.Contract.Invariants) {
+          this.VisitInvariant(inv);
+        }
+        currentlyVisitingInvariantIn = savedCurrentlyVisitingInvariantIn;
+      }
+
+      
+      // ----- visit satisifies-clauses of modelfields, so we pick up the usage of fields
+      
+      if (type.Contract != null) {
+        foreach (Cci.ModelfieldContract! mfC in (!)type.Contract.ModelfieldContracts) {
+          //assert type is Cci.Class;  //because interface modelfieldcontracts are not serialized (and thus not deserialized)
+          currentlyVisitingMfC = mfC;
+          foreach (Cci.Expression satClause in (!)mfC.SatisfiesList) {
+            this.VisitExpression(satClause);
+          }
+          currentlyVisitingMfC = savedCurrentlyVisitingMfC;
+        }          
+      }
+                                      
+      // ----- record internal types
+      // Note: a public class can have an internal super-interface, and we also want to be sure to record this relation.
+
+      // add superinterfaces
+      foreach (Cci.Interface! superinterface in type.Interfaces) {
+        if (!superinterface.IsVisibleOutsideAssembly) {
+          List<Cci.TypeNode!> s = AddType(superinterface);
+          if (s != null) {
+            s.Add(type);
+          }
+        }
+      }
+
+      // add superclass, if any
+      if (type.BaseType != null) {
+        List<Cci.TypeNode!> s = AddType(type.BaseType);
+        if (s != null) {
+          s.Add(type);
+        }
+      }
+      
+      if (type.IsVisibleOutsideAssembly) {
+        if (type is Cci.Class) {
+          if (type == Cci.SystemTypes.Array) {
+            // we can never know the complete set of subtypes for System.Array
+            return null;
+          }
+          foreach (Cci.Member m in type.Members) {
+            if (m is Cci.InstanceInitializer && m.IsVisibleOutsideAssembly) {
+              // we only care about keeping track of internal and all-internal-constructors types,
+              // but this type is visible outside the assembly and it has a constructor that is
+              // visible outside the assembly
+              return null;
+            }
+          }
+        } else {
+          // this is a non-class type that is visible outside the assembly, so we can't know all its subtypes
+          return null;
+        }
+      }
+
+      // enable subtypes to list themselves as such
+      subtypes = new List<Cci.TypeNode!>();
+      internalTypes.Add(type, subtypes);
+      return subtypes;
+    }
+    
+    public override Cci.Method VisitMethod(Cci.Method method){
+      if (method == null) return null;
+      if (this.VisitedMethods[method.UniqueKey] != null){
+        return method;
+      }
+      if (method.OverridesBaseClassMember){
+        if (method.DeclaringType != null){
+          Cci.Method overridden = method.DeclaringType.FindNearestOverriddenMethod(method);
+          if (overridden != null ){
+            this.VisitMethod(overridden);
+          }
+        }
+      }
+      if (method.Contract == null){
+        method.Contract = new Cci.MethodContract(method);
+      }
+      Cci.MethodContract contract = method.Contract;
+      
+      //
+      // Inherit contracts from interface methods that this
+      // method implements
+      //
+      Cci.MethodList mlist = method.ImplementedInterfaceMethods;
+      if (mlist != null){
+        for (int i = 0, n = mlist.Count; i < n; i++){
+         Cci.Method ifaceMethod = mlist[i];
+         if (ifaceMethod == null) continue;
+         contract.CopyFrom(ifaceMethod.Contract);
+        }
+      }
+      mlist = method.ImplicitlyImplementedInterfaceMethods;
+      if (mlist != null){
+        for (int i = 0, n = mlist.Count; i < n; i++){
+         Cci.Method ifaceMethod = mlist[i];
+         if (ifaceMethod == null) continue;
+         contract.CopyFrom(ifaceMethod.Contract);
+        }
+      }
+      // Inherit contracts from (all) overridden methods
+      if (method.OverridesBaseClassMember){
+        if (method.DeclaringType != null){
+          Cci.Method overridden = method.DeclaringType.FindNearestOverriddenMethod(method);
+          if (overridden != null ){
+            contract.CopyFrom(overridden.Contract);
+          }
+        }
+      }
+//    Cci.Method overriddenMethod = method.OverriddenMethod;
+//    if (overriddenMethod != null){
+//      contract.CopyFrom(overriddenMethod.Contract);
+//    }
+      this.VisitedMethods[method.UniqueKey] = method;
+      return method; // Don't visit the code!!
+    }
+
+    public override Cci.Field VisitField (Cci.Field field) {
+      if (field == null) { return null; }
+      assume module != null;
+      
+      AddField(field);
+      return field;
+    }
+    
+    FieldInfo! AddField(Cci.Field! field) {
+      FieldInfo? fi;
+      if (fields.TryGetValue(field, out fi)) {
+        return (!)fi;  //field has been added already
+      }
+      fi = new FieldInfo(field);
+      fields.Add(field, fi);
+      return fi;
+    }
+    
+    public override Cci.Expression VisitMemberBinding(Cci.MemberBinding binding) {
+      assume module != null;
+      assume !((currentlyVisitingInvariantIn != null) && (this.currentlyVisitingMfC != null));  // we only intend to visit the expressions inside invariants, and satisifies clauses of modelfields; this will let us know if we're accidentally visiting something else
+      if (binding == null) { return null; }
+      if (currentlyVisitingInvariantIn == null && currentlyVisitingMfC == null){
+        // then we got here without meaning to, this method only does things for invariants and model-field satisfies clauses
+        return binding;
+      }
+      
+      if (binding.TargetObject == null) {
+        // this is a static field; we just ignore it for this analysis, since we don't support invariants over static fields (yet)
+      } else {
+        Cci.Member fm = binding.BoundMember;
+        if (fm is Cci.Field) {
+          Cci.Field f = (Cci.Field)fm;
+          FieldInfo fi = AddField(f);
+          fi.UsedInInvariantOrModelfield = true;
+
+          Cci.Expression t = binding.TargetObject;
+          if (currentlyVisitingInvariantIn != null) {
+            assert this.currentlyVisitingMfC == null;
+            if (VisibilityBasedTarget(t)) {
+              fi.RecordVisibilityUse(currentlyVisitingInvariantIn, t, enclosingQuantifiers.ToArray());              
+            }                
+          } else {
+            assert this.currentlyVisitingMfC != null;                
+            fi.DependentMfCs.Add(this.currentlyVisitingMfC);
+            if (VisibilityBasedTarget(t)) {
+              fi.RecordVisibilityUse(((!)currentlyVisitingMfC.DeclaringType), t, enclosingQuantifiers.ToArray());                                
+            }
+          }
+        }
+      }
+      return base.VisitMemberBinding(binding);
+    }
+
+    /// <summary>
+    /// Return whether or not "targetObject" is a visibility-based target object, that is, if
+    /// an occurrence of "targetObject.F" in an invariant is allowed only on the grounds of
+    /// visibility.  "targetObject" is NOT visibility based if it is "this" or if it has the
+    /// form "this.P.F0.F1.F2..." where "P" is a rep field.
+    /// </summary>
+    bool VisibilityBasedTarget(Cci.Expression! targetObject) {
+      if (targetObject is Cci.This || targetObject is Cci.ImplicitThis) {
+        return false;
+      }
+      Cci.Field f = null;
+      while (targetObject is Cci.MemberBinding) {
+        Cci.MemberBinding mb = (Cci.MemberBinding)targetObject;
+        targetObject = (!)mb.TargetObject;
+        f = mb.BoundMember as Cci.Field;
+      }
+      if (f != null && f.IsRep) {
+        if (targetObject is Cci.This || targetObject is Cci.ImplicitThis) {
+          return false;
+        }
+      }
+      return true;
+    }
+    
+    List<Cci.Quantifier!>! enclosingQuantifiers = new List<Cci.Quantifier!>();
+    
+    public override Cci.Expression VisitQuantifier(Cci.Quantifier q) {
+      if (q == null) { return null; }
+      
+      int n = enclosingQuantifiers.Count;
+      enclosingQuantifiers.Add(q);
+      Cci.Expression e = base.VisitQuantifier(q);
+      assert enclosingQuantifiers.Count == n + 1;
+      enclosingQuantifiers.RemoveAt(n);
+      return e;
+    }
+
+    public IFieldInfo GetFieldInfo(Cci.Field! field) {
+      FieldInfo? fi;
+      if (fields.TryGetValue(field, out fi)) {
+        return fi;
+      } else {
+        return null;
+      }
+    }
+    
+    public void DebugPrint() {
+      Console.WriteLine("DEBUG: PreTranslationVisitor: ----- begin");
+      foreach (Cci.TypeNode! t in internalTypes.Keys) {
+        Console.WriteLine("DEBUG: PreTranslationVisitor: internal type {0}", t.FullName);
+        foreach (Cci.TypeNode s in internalTypes[t]) {
+          Console.WriteLine("                                    subtype {0}", s.FullName);
+        }
+      }
+      foreach (Cci.Field! f in fields.Keys) {
+        FieldInfo! fi = fields[f];
+        Console.WriteLine("DEBUG: PreTranslationVisitor: field {0}{1}", f.FullName, fi.UsedInInvariantOrModelfield ? " [UsedInInv]" : "");
+        for (int i = 0; i < fi.VisibilityUseCount; i++) {
+          Cci.TypeNode! cl;
+          Cci.Expression! e;
+          Cci.Quantifier[]! enclosingQuantifiers;
+          fi.GetVisibilityUse(i, out cl, out e, out enclosingQuantifiers);
+          Console.WriteLine("DEBUG: used in invariant class {0} for object {1}", cl, e);  // TODO: it would also be good to print enclosingQuantifiers
+        }
+      }
+      Console.WriteLine("DEBUG: PreTranslationVisitor: ----- end");
+    }
+    
+    ///<summary>if field is known not to occur in (1) an invariant and (2) a modelfield satisfies clause, then result == false, else result == true.</summary>
+    public bool MayBeInvariantConstrained(Cci.Field! field) {
+      FieldInfo? fi;
+      if ((!field.IsVisibleOutsideAssembly || field.IsPeer) && ((!)field.DeclaringType).DeclaringModule == module && fields.TryGetValue(field, out fi)) {
+        // we have exact information about whether or not the field is mentioned in an object invariant
+        return ((!)fi).UsedInInvariantOrModelfield;
+      } else {
+        // the information we gathered does not allow us to conclude that the field is NOT used in any invariant
+        return true;
+      }
+    }
+  } // PreTranslationVisitor
+
+}

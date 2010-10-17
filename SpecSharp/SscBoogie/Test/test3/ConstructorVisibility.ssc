@@ -1,0 +1,51 @@
+public abstract class Expr {
+  internal Expr() { }
+}
+
+public class Literal : Expr {
+  int x;
+  public Literal(int x) {
+    this.x = x;
+  }
+}
+
+public class BinaryExpr : Expr {
+  int opcode;
+  Expr! arg0;
+  Expr! arg1;
+  public BinaryExpr(int opcode, Expr! e0, Expr! e1) {
+    this.opcode = opcode;
+    this.arg0 = e0;
+    this.arg1 = e1;
+  }
+}
+
+public class UnaryExpr : Expr {
+  int opcode;
+  Expr! arg;
+  public UnaryExpr(int opcode, Expr! e) {
+    this.opcode = opcode;
+    this.arg = e;
+  }
+}
+
+public class Visitor {
+  public virtual void VisitLiteral(Literal! lit) { }
+  public virtual void VisitUnaryExpr(UnaryExpr! e) { }
+  public virtual void VisitBinaryExpr(BinaryExpr! e) { }
+  public virtual void VisitExpr(Expr! e) {
+    if (e is Literal) {
+      VisitLiteral((Literal)e);
+    } else if (e is UnaryExpr) {
+      VisitUnaryExpr((UnaryExpr)e);
+    } else if (e is BinaryExpr) {
+      VisitBinaryExpr((BinaryExpr)e);
+    } else {
+      // if we really have covered all the cases, then we should never get here
+      assert false;
+    }
+  }
+  public void M() {
+    assert false;  // error (we include this test for Boogie to see its axioms for the types above might perhaps be unsound)
+  }
+}

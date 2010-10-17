@@ -1,0 +1,36 @@
+class Recursion0
+{
+  public void SomeIterations(int y)
+  {
+    int v = 3;
+    int factorial = fact(v);
+
+    assert factorial >= 0;   
+  }
+
+  private int fact(int i)
+    requires i >= 0;
+    ensures result >= 0;
+  {
+    int returnValue;
+
+    if(i == 0)
+      returnValue = 0;
+    else 
+      returnValue = i * fact(i-1);
+    
+    assert returnValue >= 0; // Z3 v.2 actually figures this out, regardless of what's inferred
+
+    return returnValue;  
+  }
+
+  private void M(int i)
+    requires i >= 0;
+  {
+    int x = fact(5);
+    while (i < 100) {
+      x = fact(5);
+    }
+    assert x >= 0;  // error: nothing is known about x here, since the abstract domain does not understand the "assume result >= 0" (in the postcondition of the call)
+  }
+}

@@ -1,0 +1,53 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Security
+{
+
+    public class CodeAccessPermission
+    {
+
+        public bool IsSubsetOf (IPermission arg0);
+
+        public IPermission Intersect (IPermission arg0);
+
+        public IPermission Copy ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public void FromXml (SecurityElement arg0);
+
+        public SecurityElement ToXml ();
+
+        public IPermission Union (IPermission other)
+            requires other == null otherwise NotSupportedException;
+
+        public void PermitOnly ();
+
+        public void Deny ();
+
+        public void Assert ();
+
+        public void Demand ();
+
+        public static void RevertAll ();
+
+        public static void RevertPermitOnly ();
+
+        public static void RevertDeny ();
+
+        public static void RevertAssert ();
+    }
+}

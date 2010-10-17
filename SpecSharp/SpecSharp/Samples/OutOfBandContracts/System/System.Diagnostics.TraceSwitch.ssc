@@ -1,0 +1,50 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Diagnostics
+{
+
+    public class TraceSwitch
+    {
+
+        public TraceLevel Level
+        {
+          get;
+          set
+            requires (int)value >= 0 otherwise ArgumentException;
+            requires (int)value <= 4 otherwise ArgumentException;
+        }
+
+        public bool TraceWarning
+        {
+          get;
+        }
+
+        public bool TraceError
+        {
+          get;
+        }
+
+        public bool TraceInfo
+        {
+          get;
+        }
+
+        public bool TraceVerbose
+        {
+          get;
+        }
+
+        public TraceSwitch (string displayName, string description);
+    }
+}

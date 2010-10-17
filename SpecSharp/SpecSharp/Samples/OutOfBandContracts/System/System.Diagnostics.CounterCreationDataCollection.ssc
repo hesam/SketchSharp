@@ -1,0 +1,50 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Diagnostics
+{
+
+    public class CounterCreationDataCollection
+    {
+
+        public CounterCreationData this [int index]
+        {
+          get;
+          set;
+        }
+
+        public void Remove (CounterCreationData value);
+
+        public void Insert (int index, CounterCreationData value);
+
+        public int IndexOf (CounterCreationData value);
+
+        public void CopyTo (CounterCreationData[] array, int index);
+
+        public bool Contains (CounterCreationData value);
+
+        public void AddRange (CounterCreationDataCollection! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public void AddRange (CounterCreationData[]! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public int Add (CounterCreationData value);
+
+        public CounterCreationDataCollection (CounterCreationData[] value);
+
+        public CounterCreationDataCollection (CounterCreationDataCollection value);
+
+        public CounterCreationDataCollection ();
+    }
+}

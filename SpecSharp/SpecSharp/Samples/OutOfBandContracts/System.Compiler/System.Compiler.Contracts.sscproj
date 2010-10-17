@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VisualStudioProject>
+  <XEN ProjectType="Local"
+     SchemaVersion="1.0"
+     Name="System.Compiler.Contracts"
+     ProjectGuid="fbca6915-0e33-4a64-ab9e-afc976e89275"
+    >
+    <Build>
+      <Settings ApplicationIcon=""
+         AssemblyName="System.Compiler.Contracts"
+         OutputType="Library"
+         RootNamespace="OutOfBandContracts"
+         StartupObject=""
+         StandardLibraryLocation=""
+         TargetPlatform="v2"
+         TargetPlatformLocation=""
+         ShadowedAssembly="..\..\..\System.Compiler\bin\System.Compiler.dll"
+         NoStandardLibraries="True"
+        >
+        <Config Name="Debug"
+           AllowUnsafeBlocks="False"
+           BaseAddress="285212672"
+           CheckForOverflowUnderflow="False"
+           ConfigurationOverrideFile=""
+           DefineConstants="DEBUG;TRACE"
+           DocumentationFile=""
+           DebugSymbols="True"
+           FileAlignment="4096"
+           IncrementalBuild="True"
+           Optimize="False"
+           OutputPath="bin"
+           RegisterForComInterop="False"
+           RemoveIntegerChecks="false"
+           TreatWarningsAsErrors="False"
+           WarningLevel="4"
+           />
+        <Config Name="Release"
+           AllowUnsafeBlocks="False"
+           BaseAddress="285212672"
+           CheckForOverflowUnderflow="False"
+           ConfigurationOverrideFile=""
+           DefineConstants="TRACE;DEBUG"
+           DocumentationFile=""
+           DebugSymbols="False"
+           FileAlignment="4096"
+           IncrementalBuild="false"
+           Optimize="True"
+           OutputPath="bin"
+           RegisterForComInterop="False"
+           RemoveIntegerChecks="false"
+           TreatWarningsAsErrors="False"
+           WarningLevel="4"
+           />
+      </Settings>
+      <References>
+        <Reference Name="System.Compiler"
+             AssemblyName="System.Compiler"
+             Private="true"
+             HintPath="..\..\..\System.Compiler\bin\System.Compiler.dll"
+             />
+        <Reference Name="mscorlib"
+             AssemblyName="mscorlib"
+             Private="false"
+             HintPath="..\..\..\WINDOWS\Microsoft.NET\Framework\v2.0.50215\mscorlib.dll"
+             />
+        <Reference Name="System.Compiler.Runtime"
+             AssemblyName="System.Compiler.Runtime"
+             Private="true"
+             HintPath="..\..\..\System.Compiler.Runtime\bin\System.Compiler.Runtime.dll"
+             />
+      </References>
+    </Build>
+    <Files>
+      <Include>
+        <File RelPath="System.Compiler.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+      </Include>
+    </Files>
+  </XEN>
+</VisualStudioProject>

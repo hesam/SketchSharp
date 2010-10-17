@@ -1,0 +1,561 @@
+public class C {
+  public int Sum(int[]! a)
+    ensures result == sum{int i in (0: a.Length); a[i]};
+  {
+    int s = 0;
+    for (int n = 0; n < a.Length; n++)
+      invariant n <= a.Length;
+      invariant s == sum{int i in (0: n); a[i]};
+    {
+      s += a[n];
+    }
+    return s;
+  }
+
+  public int Count(int[]! a)
+    ensures result == count{int i in (0: a.Length); a[i] > 0};
+  {
+    int s = 0;
+    for (int n = 0; n < a.Length; n++)
+      invariant n <= a.Length;
+      invariant s == count{int i in (0: n); a[i] > 0};
+    {
+      if (a[n] > 0) {
+        s++;
+      }
+    }
+    return s;
+  }
+#if Z3_supports_multiplication_Otherwise_see_Product_ssc
+  public int Product(int[]! a)
+    ensures result == product{int i in (0: a.Length); a[i]};
+  {
+    int s = 1;
+    for (int n = 0; n < a.Length; n++)
+      invariant n <= a.Length;
+      invariant s == product{int i in (0: n); a[i]};
+    {
+      s *= a[n];
+    }
+    return s;
+  }
+#endif
+  public int Min(int[]! a)
+    ensures result == min{int i in (0: a.Length); a[i]};
+  {
+    int s = int.MaxValue;
+    for (int n = 0; n < a.Length; n++)
+      invariant n <= a.Length;
+      invariant s == min{int i in (0: n); a[i]};
+    {
+      s = a[n] < s ? a[n] : s;
+    }
+    return s;
+  }
+
+  public int Max(int[]! a)
+    ensures result == max{int i in (0: a.Length); a[i]};
+  {
+    int s = int.MinValue;;
+    for (int n = 0; n < a.Length; n++)
+      invariant n <= a.Length;
+      invariant s == max{int i in (0: n); a[i]};
+    {
+      if (s < a[n]) {
+        s = a[n];
+      }
+    }
+    return s;
+  }
+
+  // --------------------------------------------------------------------------------------
+
+  public int M0(int[]! a, bool b, int x)
+    // use "b" as the degenerate pre-binder filter
+    ensures result == sum{b, int i in (0: a.Length); a[i]};
+    requires x < sum{b, int i in (0: a.Length); a[i]};  // tests that an appropriate cast around the $IfThenElse is generated
+  {
+    if (b) {
+      return Sum(a);
+    } else {
+      return 0;
+    }
+  }
+
+  public int M1(int[]! a)
+    // use a degenerate term
+    ensures result == sum{int i in (0: a.Length); 5};
+  {
+    int s = 0;
+    for (int n = 0; n < a.Length; n++)
+      invariant n <= a.Length;
+      invariant s == sum{int i in (0: n); 5};
+    {
+      s += 5;
+    }
+    return s;
+  }
+
+  public int M2(int[,]! a)
+    ensures result == sum{int i in (0: a.GetLength(0)), int j in (0: a.GetLength(1)); a[i,j]};
+  {
+    int s = 0;
+    for (int m = 0; m < a.GetLength(0); m++)
+      invariant m <= a.GetLength(0);
+      invariant s == sum{int i in (0: m), int j in (0: a.GetLength(1)); a[i,j]};
+    {
+      for (int n = 0; n < a.GetLength(1); n++)
+        invariant n <= a.GetLength(1);
+        invariant s ==
+          sum{int i in (0: m), int j in (0: a.GetLength(1)); a[i,j]} + sum{int j in (0: n); a[m,j]};
+      {
+        s += a[m,n];
+      }
+    }
+    return s;
+  }
+
+  public void M3(int[]! a, int x, int y)
+    requires a.Length == 209;
+    requires x == sum{int i in (0: 10), int j in (100: 200); a[i+j]};
+    requires y == sum{int i in (0: 10); sum{int j in (100: 200); a[i+j]}};
+  {
+    assert x == y;
+  }
+
+  public int M4(int[]! a, object r)
+    ensures result == sum{int i in (0: a.Length), r != null; a[i]};
+  {
+    int s = 0;
+    for (int n = 0; n < a.Length; n++)
+      invariant n <= a.Length;
+      invariant s == sum{int i in (0: n), r != null; a[i]};
+    {
+      if (r != null) {
+        s += a[n];
+      }
+    }
+    return s;
+  }
+
+  public int M5(int[,]! a, bool b)
+    ensures result == sum{b,
+                          int i in (0: a.GetLength(0)), i % 2 == 0, b;
+                          sum{int j in (0: a.GetLength(1)), i < j, j < 100; a[i,j]}};
+  {
+    if (!b) {
+      return 0;
+    }
+    int s = 0;
+    for (int m = 0; m < a.GetLength(0); m++)
+      invariant m <= a.GetLength(0);
+      invariant s == sum{int i in (0: m), i % 2 == 0, b,
+                         int j in (0: a.GetLength(1)), i < j, j < 100;
+                         a[i,j]};
+    {
+      if (m % 2 == 0) {
+        for (int n = 0; n < a.GetLength(1); n++)
+          invariant n <= a.GetLength(1);
+          invariant s ==
+            sum{int i in (0: m), i % 2 == 0, b, int j in (0: a.GetLength(1)), i < j, j < 100; a[i,j]} +
+            sum{int j in (0: n), m < j, j < 100; a[m,j]};
+        {
+          if (n < 100 && m < n) {
+            s += a[m,n];
+          }
+        }
+      }
+    }
+    return s;
+  }
+
+  // M6 is like M5, but with one little error
+  public int M6(int[,]! a, bool b)
+    ensures result == sum{b,
+                          int i in (0: a.GetLength(0)), i % 2 == 0, b,
+                          int j in (0: a.GetLength(1)), i < j, j < 100; a[i,j]};
+  {
+    if (!b) {
+      return 0;
+    }
+    int s = 0;
+    for (int m = 0; m < a.GetLength(0); m++)
+      invariant m <= a.GetLength(0);
+      invariant s == sum{int i in (0: m), i % 2 == 0, b,
+                         int j in (0: a.GetLength(1)), i < j, j < 100;
+                         a[i,j]};
+    {
+      if (m % 2 == 0) {
+        for (int n = 0; n < a.GetLength(1); n++)
+          invariant n <= a.GetLength(1);
+          invariant s ==  // error: loop invariant is not maintained
+            sum{int i in (0: m), i % 2 == 0, b, int j in (0: a.GetLength(1)), i < j, j < 100; a[i,j]} +
+            sum{int j in (0: n), m < j, j <= /* should be < to be correct */ 100; a[m,j]};
+        {
+          if (n < 100 && m < n) {
+            s += a[m,n];
+          }
+        }
+      }
+    }
+    return s;
+  }
+
+  public void M7(int[,]! a, int x, int y)
+    // in the following nesting of "count" quantifiers, all but the inner quantifier needs to be
+    // turned into a "sum" quantifier
+    requires x == count{int i in (0: a.GetLength(0)), int j in (0: a.GetLength(1)); a[i,j] > 0};
+    requires y == sum{int i in (0: a.GetLength(0)); count{int j in (0: a.GetLength(1)); a[i,j] > 0}};
+  {
+    assert x == y;
+  }
+
+  // The test in this method is really just to make sure that the quantifiers translate into
+  // well-formed BoogiePL expressions
+  public int M8a(int[]! a)
+    ensures forall{int k in (0: a.Length);
+                      a[k] + result ==
+                      sum{int h in (0: a.Length), forall{int i in (0: a.Length); a[h] <= a[i] + k}; 5}};
+  {
+    return 0;  // error
+  }
+
+  // The test in this method is really just to make sure that the quantifiers translate into
+  // well-formed BoogiePL expressions
+  public int M8b(int[]! a)
+    ensures forall{int k in (0: a.Length), exists{int j in (0: a.Length); a[j] == k};
+                      a[k] + result ==
+                      sum{int h in (0: a.Length), forall{int i in (0: a.Length); a[h] <= a[i] + k}; 5}};
+  {
+    return 0;  // error
+  }
+
+  // --------------------------------------------------------------------------------------
+
+  void P0(int[]! a, int[]! b, int x, int y)
+    requires x == sum{int i in (0: a.Length); a[i]};  // these two summations are supposed to end up
+    requires y == sum{int j in (0: b.Length); b[j]};  // using the same sum# function
+  {
+    if (a == b) {
+      assert x == y;
+    }
+
+    int s = 0;
+    for (int n = 0; n < a.Length; n++)
+      invariant s == sum{int i in (0: n); a[i]};
+    {
+      s += a[n];
+    }
+
+    s = 0;
+    for (int n = 0; n < b.Length; n++)
+      invariant s == sum{int i in (0: n); b[i]};
+    {
+      s += b[n];
+    }
+  }
+
+  void P1(int[]! a, int[]! b, int x, int y)
+    requires x == sum{int i in (0: a.Length); a[i]};
+    requires y == sum{int j in (0: b.Length); b[j]};
+  {
+    assert x == y;  // error: no reason to think these will be equal
+  }
+
+  void P2(int K, int L, int x, int y, int xx, int yy)
+    requires x == sum{int i in (0: K); xx};  // these two summations are supposed to end up
+    requires y == sum{int j in (0: L); yy};  // using the same sum# function
+  {
+    if (K == L && xx == yy) {
+      assert x == y;
+    }
+
+    int s = 0;
+    for (int n = 0; n < K; n++)
+      invariant s == sum{int i in (0: n); xx};
+    {
+      s += xx;
+    }
+
+    s = 0;
+    for (int n = 0; n < L; n++)
+      invariant s == sum{int i in (0: n); yy};
+    {
+      s += yy;
+    }
+  }
+
+  void P3(int K, int L, int x, int y, int xx, int yy, bool pp, bool qq)
+    requires x == sum{int i in (0: K), pp; xx};  // these two summations are supposed to end up
+    requires y == sum{int j in (0: L), pp/*qq does not work because of a problem with BoogiePL bool's, though Z3 has special handling that actually makes it work*/; yy};  // using the same sum# function
+  {
+    if (K == L && (pp <==> qq) && xx == yy) {
+      assert x == y;
+    }
+
+    int s = 0;
+    for (int n = 0; n < K; n++)
+      invariant s == sum{int i in (0: n), pp; xx};
+    {
+      if (pp) {
+        s += xx;
+      }
+    }
+
+    s = 0;
+    for (int n = 0; n < L; n++)
+      invariant s == sum{int i in (0: n), qq; yy};
+    {
+      s += qq ? yy : 0;
+    }
+  }
+
+  // --------------------------------------------------------------------------------------
+
+  public int Filter0(int[]! a)
+    ensures result == sum{int i in (0: a.Length); i % 2 == 0 ? a[i] : 0};
+  {
+    int s = 0;
+    for (int n = 0; n < a.Length; n++)
+      invariant n <= a.Length;
+      invariant s == sum{int i in (0: n); i % 2 == 0 ? a[i] : 0};
+    {
+      if (n % 2 == 0) {
+        s += a[n];
+      }
+    }
+    return s;
+  }
+
+  public int Filter1(int[]! a)
+    ensures result == sum{int i in (0: a.Length), i % 2 == 0; a[i]};
+  {
+    int s = 0;
+    for (int n = 0; n < a.Length; n++)
+      invariant n <= a.Length;
+      invariant s == sum{int i in (0: n), i % 2 == 0; a[i]};
+    {
+      if (n % 2 == 0) {
+        s += a[n];
+      }
+    }
+    return s;
+  }
+
+  public int Filter2(int[]! a)
+    requires a.Length % 2 == 0;
+    ensures result == sum{int i in (0: a.Length), i % 2 == 0; a[i]};
+  {
+    int s = 0;
+    for (int n = 0; n < a.Length; n += 2)
+      invariant n % 2 == 0;
+      invariant n <= a.Length;
+      invariant s == sum{int i in (0: n), i % 2 == 0; a[i]};
+    {
+      s += a[n];
+      assert s == sum{int i in (0: n+1), i % 2 == 0; a[i]};
+    }
+    return s;
+  }
+
+  // --------------------------------------------------------------------------------------
+
+  public void Unit0(int[]! a, int k)
+    requires a.Length <= 10;
+  {
+    // empty ranges
+    assert sum{int i in (5: a.Length-5); a[i]} == 0;
+    assert count{int i in (0: a.Length-20); a[i] == 100} == 0;
+    assert product{int i in (k: k-3); a[i]} == 1;
+    assert min{int i in (0: 0); a[i]} == int.MaxValue;
+    assert max{int i in (int.MaxValue: int.MinValue+1); a[i]} == int.MinValue;
+  }
+
+  public void Unit1(int[]! a, int k)
+    requires forall{int i in (0: a.Length); a[i] < k};
+  {
+    // filters that evaluate to false
+    assert sum{int i in (0: a.Length), a[i] == k; 15} == 0;
+    assert count{int i in (0: a.Length), i < 0; a[i] < k} == 0;
+    assert product{int i in (0: 10), k == k+1; 10} == 1;
+    assert min{k == 100, int i in (0: a.Length), a[i] == 102; a[i]} == int.MaxValue;
+    assert max{int i in (0: a.Length), 2*a.Length <= i; a[i]} == int.MinValue;
+  }
+
+  public void Unit2(int[]! a, int k)
+    requires forall{int i in (0: a.Length); a[i] < k};
+  {
+    // all terms evaluate to a neutral element
+    assert sum{int i in (0: a.Length), a[i] != k; 0} == 0;
+    assert count{int i in (0: a.Length), a[i] % 2 == 0; a[i] == 3} == 0;
+    assert product{int i in (0: a.Length), a[i] == 1; a[i]} == 1;
+    assert min{k == 100, int i in (0: a.Length), int.MaxValue <= a[i]; a[i]} == int.MaxValue;
+    assert max{int i in (0: a.Length), a[i] == int.MinValue; a[i]} == int.MinValue;
+  }
+
+#if ZERO_AND_EXTREME_BOUND_AXIOMS_ARE_INCLUDED
+  public void Zero0(int[]! a, int[]! b, int[]! c)
+    requires exists{int i in (0: a.Length); a[i] == 0};
+    requires exists{int i in (0: b.Length); b[i] == int.MinValue};
+    requires exists{int i in (0: c.Length); c[i] == int.MaxValue};
+  {
+    assert product{int i in (0: a.Length); a[i]} == 0;
+    assert min{int i in (0: b.Length); b[i]} == int.MinValue;
+    assert max{int i in (0: c.Length); c[i]} == int.MaxValue;
+  }
+
+  public void ExtremeBound0(int[]! a, int k)
+    requires 0 <= k && k < a.Length;
+  {
+    assert min{int i in (0: a.Length); a[i]} <= a[k];
+    assert a[k] <= max{int i in (0: a.Length); a[i]};
+  }
+
+  public void ExtremeBound1(int[]! a)
+    requires exists{int i in (0: a.Length); a[i] == 0};
+  {
+    assert min{int i in (0: a.Length); a[i]} <= 0;
+    assert 0 <= max{int i in (0: a.Length); a[i]};
+  }
+
+  public void ExtremeBound2(int[]! a)
+    requires exists{int i in (0: a.Length); a[i] == 0};
+  {
+    assert min{int i in (0: a.Length); a[i]} <= -2;  // error
+  }
+
+  public void ExtremeBound3(int[]! a)
+    requires forall{int i in (0: a.Length); a[i] == 0};
+  {
+    assert 0 <= max{int i in (0: a.Length); a[i]};  // error (a.Length could be 0)
+  }
+#endif
+
+  public int SameTerms0(int[]! a, int[]! b, int s)
+    requires s == sum{int i in (0: a.Length), a[i] % 2 == 0; a[i]};
+    requires a.Length == b.Length;
+    requires forall{int i in (0: a.Length); a[i] % 2 == b[i] % 2};
+    requires forall{int i in (0: a.Length); b[i] % 2 == 0 ==> a[i] == b[i]};
+    ensures result == sum{int i in (0: a.Length), b[i] % 2 == 0; b[i]};
+  {
+    return s;
+  }
+
+  public int SameTerms1(int[]! a, int[]! b, int s)
+    requires s == count{int i in (0: a.Length), 0 <= a[i]; b[i] < 100};
+    requires a.Length <= b.Length;
+    requires a != b;
+    modifies a[*], b[*];
+    ensures result == count{int i in (0: a.Length), 0 <= a[i]; b[i] < 100};
+  {
+    for (int n = 0; n < a.Length; n++)
+      invariant s == count{int i in (0: a.Length), 0 <= a[i]; b[i] < 100};
+    {
+      if (0 <= a[n]) {
+        a[n] &= 10;
+      } else {
+        b[n] -= 25;
+      }
+    }
+    return s;
+  }
+
+  // --------------------------------------------------------------------------------------
+
+  public int SplitRange(int[]! a, int k, int mx)
+    requires 0 <= k;
+    requires mx == max{int i in (k: a.Length); a[i]};
+    ensures result == max{int i in (0: a.Length); a[i]};
+  {
+    int s = int.MinValue;
+    for (int n = 0; n < min{k, a.Length}; n++)
+      invariant 0 <= n && n <= a.Length && n <= k;
+      invariant s == max{int i in (0: n); a[i]};
+    {
+      if (s < a[n]) {
+        s = a[n];
+      }
+    }
+    return max{s, mx};
+  }
+
+  // The following test also needs the split-range axiom, unless we also implement an
+  // inductive axiom that applies to the range (lo-1: hi).
+  public int ReverseSum(int[]! a)
+    ensures result == sum{int i in (0: a.Length); a[i]};
+  {
+    int s = 0;
+    for (int n = a.Length; 0 < n; )
+      invariant 0 <= n && n <= a.Length;
+      invariant s == sum{int i in (n: a.Length); a[i]};
+    {
+      n--;
+      // the following assert is needed as a lemma that triggers the split-range axiom
+      assert a[n] == sum{int i in (n: n+1); a[i]};
+      s += a[n];
+    }
+    return s;
+  }
+
+  public void PlusOverMin0(int[]! a, int[]! b, int x, int y, int D)
+    requires a.Length == b.Length;
+    requires forall{int i in (0: a.Length); a[i] + D == b[i]};
+    requires x == min{int i in (0: a.Length); a[i]};
+    requires y == min{int i in (0: b.Length); b[i]};
+  {
+    assert a.Length != 0 ==> x + D == y;
+    assert x + D == y;  // error (if range is empty)
+  }
+
+  public void PlusOverMax1(int[]! a, int x, int y, int D)
+    requires x == max{int i in (0: a.Length), a[i] % 2 == 0; a[i] + 0};
+    requires y == max{int i in (0: a.Length), a[i] % 2 == 0; a[i] + D};
+  {
+    assert a.Length != 0 && a[0] % 2 == 0 ==> x + D == y;
+    assert a.Length != 0 ==> x + D == y;  // error (if there is no even number in the array)
+  }
+
+  public void PlusOverMin2(int N, int x, int y, int D)
+    requires 5 + D == 7;
+    requires x == min{int i in (0: N); 5};
+    requires y == min{int i in (0: N); 7};
+  {
+    assert 0 < N ==> x + D == y;
+  }
+
+  // --------------------------------------------------------------------------------------
+
+  public int Display0(int a, int b, int c)
+    ensures result == a + c + b;
+  {
+    int r = sum{a, b, c};
+    int z = sum{3};
+    assert sum{2+1} == 3 && z == 3;
+    assert count{a < 0, a == 0, a > 0} == 1;
+    assert product{5, a, 2, b, 0, c} == 0;
+    int p = product{5, a};
+    assert 5 * a == p;
+    assert min{a, b} <= max{a, b};
+    assert sum{a, b} == sum{min{a, b}, max{a, b}};
+    return r;
+  }
+
+  public void Display1(int a, int b, int c)
+  {
+    if (forall{0 <= a, 0 <= b}) {
+      assert 0 <= a + b;
+      assert 0 <= a && 0 <= b;
+    }
+    if (exists{a == b + c, b == c + a, c == a + b}) {
+      assert exists{a - c <= b, b - a <= c, c - b <= a};
+    }
+    assert exists{a < 0, a == 0, a > 0};
+    assert exists unique{a < 0, a == 0, a > 0};
+    assert exists{a <= 0, a >= 0};
+  }
+
+  public void Display2(int a, int b, int c)
+  {
+    assert exists unique{a <= 0, a >= 0};  // error
+  }
+}

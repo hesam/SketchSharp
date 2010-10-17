@@ -1,0 +1,61 @@
+public class InitObj {
+  S ss;
+  BigS bs;
+
+  S M(ref S s0, ref BigS bs0, int choice) {
+    S result;
+    if (choice == 0) {
+      s0 = new S();
+      result = s0;
+    } else if (choice == 1) {
+      bs0.s = new S();
+      result = bs0.s;
+
+    } else if (choice == 2) {
+      S s1 = new S();
+      result = s1;
+    } else if (choice == 3) {
+      BigS bs1;
+      bs1.s = new S();
+      result = bs1.s;
+
+    } else if (choice == 3) {
+      this.ss = new S();
+      result = this.ss;
+    } else if (choice == 4) {
+      this.bs.s = new S();
+      result = this.bs.s;
+
+    } else {
+      result = new S();
+    }
+
+#if Prelude_function_ZeroInit_is_axiomatized
+    assert result.x == 0;
+#endif
+
+    return result;
+  }
+}
+
+public struct BigS
+{
+  public S s;
+}
+
+public struct S
+{
+  public int x;
+  public float d;
+  public object o;
+  public string[] a;
+  public LittleS ls;
+}
+
+public struct LittleS
+{
+  public int x;
+  public float d;
+  public object o;
+  public string[] a;
+}

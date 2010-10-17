@@ -1,0 +1,2853 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+namespace Microsoft.Boogie
+{
+  using System;
+  using System.Text;
+  using System.Diagnostics;
+  using System.Collections;
+  using System.Collections.Generic;
+  using Microsoft.Contracts;
+  using Microsoft.Basetypes;
+  using Cci = System.Compiler;
+  using Bpl = Microsoft.Boogie;
+
+  /// <summary>
+  /// Should be instantiated once per assembly to be translated.
+  /// </summary>
+  public class Sink {
+      // just an abbreviation
+    private static Bpl.IToken! NoToken = Bpl.Token.NoToken; 
+  
+    class VirtualWrapper
+    {
+      public Cci.Method! method;
+      public VirtualWrapper(Cci.Method! method)
+      {
+        this.method = method;
+        // base();
+      }
+      [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+      public override bool Equals(object other)
+      {
+        return other is VirtualWrapper && ((VirtualWrapper) other).method == this.method;
+      }
+      [Pure][Reads(ReadsAttribute.Reads.Owned)]
+      public override int GetHashCode()
+      {
+        return method.GetHashCode() ^ unchecked((int) 0xfedcba98);
+      }
+    }
+  
+    internal readonly StringBank! stringBank = new StringBank(this);
+    internal Cci.ErrorHandler! errorHandler;
+    internal IAssemblyInformation! assemblyInfo;
+
+    internal MethodRepository! MethodRep { get {
+      return (!)MethodRepAttr;
+    }}
+    internal MethodRepository MethodRepAttr;
+
+    private Cci.IMap/*<Cci.Method,Procedure>*/! declaredProcedures = new Cci.HashedMap();
+    internal Cci.IMutableSet/*<Cci.Method>*/! translatedMethodsInContracts = new Cci.HashSet();  // set of unique-names of pure or specially treated methods
+    internal OwnershipModel! om;
+    private InstructionTranslator instructionTranslator;
+    internal InstructionTranslator InstructionTranslator {
+      get { return this.instructionTranslator; }
+      set { this.instructionTranslator = value; }
+    }
+//    private MethodSignature! methodSignature;
+//    internal MethodSignature MethodSignature {
+//      get { return this.methodSignature; }
+//      set { this.methodSignature = value; }
+//    }
+
+
+    // A translation unit-wide cache for summation functions generated for quantifiers.
+    internal List<ExpressionTranslator.TemplateInfo>! summationTemplates = new List<ExpressionTranslator.TemplateInfo>(); //used in Quantifiers.ssc
+
+
+    // Reset for every translated method.
+    // REVIEW: Do these state variables need to be encapsulated within methods?
+    internal Cci.Method currentMethod;
+    internal Cci.CfgBlock currentBlock;
+    internal Cci.IMap/*<Cci.Block,Bpl.Block>*/! blockTranslation = new Cci.HashedMap();
+    internal IDictionary<Cci.Block!,IList<Bpl.Block!>!>! blockTranslationAll = new Dictionary<Cci.Block!,IList<Bpl.Block!>!>();
+    // mapping of BPL blocknames to SSC source code nodes, used for error reporting
+    internal IDictionary<String!,Cci.CfgBlock!>! blockNameToSourceNodeMap = new Dictionary<String!,Cci.CfgBlock!>();
+    internal List<Bpl.Cmd!> copyBackCommands;
+    
+    
+
+    // Global to whole translation.
+    internal List<Bpl.Declaration!>! toplevelDeclarations = new List<Bpl.Declaration!>();
+    internal ArrayList/*<Bpl.Declaration>*/! earlyDeclarations = new ArrayList();
+    private Cci.IMap/*<Cci.Field,Bpl.Variable>*/! translatedStaticFields = new Cci.HashedMap();
+    private Cci.IMap/*<Cci.Field,Bpl.Constant!>*/! instanceFields = new Cci.HashedMap();
+    private Cci.IMap/*<Cci.TypeNode,Bpl.Constant!>*/! typesToBeDeclared = new Cci.HashedMap();
+    internal Hashtable/*<Bpl.Implementation!,Cci.Method!>*/! implementationOrigins = new Hashtable();
+    private static Cci.IMap/*<string,Bpl.Constant?>*/! numberConsts;
+
+
+    public Sink(IAssemblyInformation! assemblyInfo, Cci.ErrorHandler! errorHandler,
+                // the prelude is passed so that type synonyms can be looked up
+                Bpl.ResolutionContext! standardRC){
+      this.errorHandler = errorHandler;
+      this.assemblyInfo = assemblyInfo;
+
+      base(); // here because of strict-read-only field and associated rule [MAF revisit this?]
+
+      numberConsts = new Cci.HashedMap();
+      
+      // OwnershipModel can be instantiated as one of multiple special OwnershipModels
+      switch (CommandLineOptions.Clo.OwnershipModelEncoding) {
+        case CommandLineOptions.OwnershipModelOption.Standard:
+          this.om = new StandardOwnershipModel(this);
+          break;
+        case CommandLineOptions.OwnershipModelOption.Experimental:
+          this.om = new ExperimentalOwnershipModel(this);
+          break;
+        case CommandLineOptions.OwnershipModelOption.Trivial:
+          this.om = new TrivialOwnershipModel(this);
+          break;
+        default:
+          assert false;
+      }
+
+      RefType = PreludeType("ref", standardRC);
+      TypeType = PreludeType("TName", standardRC);
+      RealType = PreludeType("real", standardRC);
+      StructType = PreludeType("struct", standardRC);
+      ExposeVersionType = PreludeType("exposeVersionType", standardRC);
+      NondetType = PreludeType("NondetType", standardRC);
+      ActivityType = PreludeType("ActivityType", standardRC);
+      if (CommandLineOptions.Clo.MethodologySelection != CommandLineOptions.Methodology.VisibleState) {
+        sharingMode = PreludeType("SharingMode", standardRC);
+      }
+      HeapType = PreludeType("HeapType", standardRC);
+
+      FieldTypeDecl = (!)standardRC.LookUpType("Field");
+      ElementsTypeDecl = (!)standardRC.LookUpType("Elements");
+    }
+
+    private static Bpl.Type! PreludeType(string! name, Bpl.ResolutionContext! standardRC) {
+      Bpl.Type! unresolved = new Bpl.UnresolvedTypeIdentifier(NoToken, name);
+      return unresolved.ResolveType(standardRC);
+    }
+
+    // Types used in the translation (these are defined in PRELUDE.bpl)
+   
+    internal readonly Bpl.Type! RefType;
+    private readonly Bpl.TypeCtorDecl! FieldTypeDecl;
+    internal Bpl.Type! FieldType(Type! argType)
+    {
+      return new Bpl.CtorType(NoToken, FieldTypeDecl, new TypeSeq(argType));
+    }
+    internal readonly Bpl.Type! TypeType;
+    internal readonly Bpl.Type! RealType;
+    private readonly Bpl.TypeCtorDecl! ElementsTypeDecl;
+    internal Bpl.Type! ElementsType(Type! argType)
+    {
+      return new Bpl.CtorType(NoToken, ElementsTypeDecl, new TypeSeq(argType));
+    }
+    internal readonly Bpl.Type! StructType;
+    internal readonly Bpl.Type! ExposeVersionType;
+    internal readonly Bpl.Type! NondetType;
+    internal readonly Bpl.Type! ActivityType;
+    private readonly Bpl.Type sharingMode;
+    internal Bpl.Type! SharingMode {
+      get {
+        assume sharingMode != null;  // this method should be called only if CommandLineOptions.Clo.MethodologySelection != CommandLineOptions.Methodology.VisibleState
+        return sharingMode;
+    } }
+    internal readonly Bpl.Type! HeapType;
+
+    internal Bpl.IdentifierExpr! HeapExpr (string! heapName) {
+      return Bpl.Expr.Ident(heapName, HeapType);
+    }
+    internal Bpl.IdentifierExpr! HeapExpr () {
+      return HeapExpr(Prelude.HeapName);
+    }
+
+
+    internal void NotSupported (Cci.Node! offendingNode, string! message, params object[]! arguments){
+      this.errorHandler.HandleError(offendingNode, Cci.Error.GenericWarning, string.Format(message, arguments));
+    }
+    /// <summary>
+    /// Returns the expression heap[target, $exposeVersion].
+    /// </summary>
+    internal Bpl.Expr! ExposeVersion (Bpl.Expr! target, Bpl.Expr! heap)
+    {
+      return Bpl.Expr.Select(heap, target, Fields.ExposeVersion);
+    }
+    internal Bpl.Expr! SharingModeField()
+    {
+      return Bpl.Expr.Ident("$sharingMode", FieldType(SharingMode));
+    }
+    /// <summary>
+    /// Returns an expression corresponding to a zero-equivalent value for the given BoogiePL type.
+    /// Only expressions of type ref, bool, int, and real get meaningful returns from this method
+    /// (but other expressions still return something that will pass the BoogiePL type checker).
+    /// </summary>
+    internal Bpl.Expr! ZeroEquiv (Bpl.Type! ty) {    
+      if (ty.IsBool) {
+        return Bpl.Expr.False;
+      } else if (ty.IsInt) {
+        return IntegerLiteral(0);
+      } else if (ty.Equals(RefType)) {
+        return Null;
+      } else if (ty.Equals(RealType)) {
+        return RealLiteral(0.0);
+      } else if (ty.Equals(StructType)) {
+        return new Bpl.IdentifierExpr(NoToken, "$ZeroStruct", StructType);
+      } else {
+        // The following probably won't be useful to a caller, but we do it nonetheless, because it allows
+        // this routine to be called when there was some error in the translation and we're trying to recover
+        // somewhat gracefully.
+        assert false;
+      }
+    }
+    private Bpl.Expr! NotNullExpression (string! name)
+    {
+      return Bpl.Expr.Neq(Sink.Ident(name, RefType), Null);
+    }
+    
+    
+    /// <summary>
+    /// Returns an expression that denotes "$IsNotNull(name, type)".
+    /// This method will declare the type in the target code.
+    /// </summary>
+    internal Bpl.Expr! NotNull (string! name, Cci.TypeNode! type)
+    {
+      return Function(Sink.BuiltinFunction.IsNotNull, Sink.Ident(name, RefType), TypeNameExpression(type));
+    }
+
+    /// <summary>
+    /// Returns an expression that denotes "$IsNotNull(e, type)".
+    /// This method will declare the type in the target code.
+    /// </summary>
+    internal Bpl.Expr! NotNull (Expr! e, Cci.TypeNode! type)
+    {
+      AddType(type);
+      return Function(Sink.BuiltinFunction.IsNotNull, e, TypeNameExpression(type));
+    }
+
+
+    internal Bpl.IdentifierExpr! Expr (Cci.Field! field)
+    {
+      AddField(field);
+      return this.FieldIdent(field);
+    }
+    
+    private Bpl.IdentifierExpr! Expr (Cci.Method! method)
+    {
+      return Sink.Ident(UniqueProcedureName(method), this.Convert(method.ReturnType));
+    }
+    private string! UniqueProcedureName (Cci.FunctionPointer! fp)
+    {
+        return (string!) fp.FullName; // FIXME - do we need to do better than this?
+    }
+    internal static string! UniqueProcedureName (Cci.Method! method)
+    {
+      return UniqueProcedureName(method, false);
+    }
+    
+    internal static string! UniqueProcedureName (Cci.Method! method, bool virtualSignature)
+    {
+      StringBuilder name = new StringBuilder();
+      name.Append(Sink.CanonicalTypeName((!)method.DeclaringType));
+      name.Append(".");
+      
+      name.Append(Sink.CleanUpName(NameOf(method.Name)));
+      
+      // We need to use generic parameter types in the procedure
+      // name due to name overloading in IL.
+      Cci.TypeNodeList genericParameters = method.TemplateParameters;
+      if (genericParameters != null && genericParameters.Count > 0){
+        name.Append("$");
+        for (int i=0; i<genericParameters.Count; i++)
+        {
+          if (i > 0) name.Append("$");
+          Cci.TypeNode genericType = genericParameters[i];
+          if (genericType == null) { continue; }
+          name.Append(Sink.CanonicalTypeName(genericType));
+        }
+      }
+      
+      // If the method is an explicit operator, then it can
+      // be overloaded on the return type, so need to include that!
+      if (method.IsStatic && method.IsSpecialName &&
+          method.HasCompilerGeneratedSignature &&
+          method.Name.Name == "op_Explicit"){
+        name.Append("$");
+        name.Append(Sink.CanonicalTypeName(method.ReturnType));
+      }
+      
+      Cci.ParameterList parameters = method.Parameters;
+      if (parameters != null && parameters.Count > 0)
+      {
+        // We need to use parameter types in the procedure
+        // name due to name overloading in IL.
+        name.Append("$");
+        for (int i=0; i<parameters.Count; i++)
+        {
+          if (i > 0) name.Append("$");
+          Cci.Parameter param = parameters[i];
+          if (param == null) { continue; }
+          name.Append(Sink.CanonicalTypeName(param.Type));
+        }
+      }
+      if (virtualSignature)
+      {
+        name.Append("$.Virtual.$");
+      }
+      if (method.IsVarArg)
+      {
+        name.Append("$.__arglist.$");
+      }
+      return (!) name.ToString();
+    }
+
+    #region Blocks
+    public static IToken! makeTokenFromSourceContext (System.Compiler.SourceContext sc) {
+      Token tok = new Token(sc.StartLine,sc.StartColumn);
+      System.Compiler.Document scd = sc.Document;
+      if (scd != null) {
+        tok.filename = scd.Name;
+      }
+      return tok;
+    }
+    internal Bpl.Block! MakeBlock (Cci.CfgBlock! block)
+    {
+      Bpl.Block result = this.blockTranslation[block] as Bpl.Block;
+      if (result == null)
+      {
+        Bpl.StringSeq succLabels = new Bpl.StringSeq();
+        foreach (Cci.CfgBlock! succ in Translator.NonContractSuccessors(block))
+        {
+          succLabels.Add(Sink.BlockName(succ, "block"));
+        }
+        Bpl.TransferCmd transferCmd;
+        if (succLabels.Length != 0) {
+          transferCmd = new Bpl.GotoCmd(NoToken, succLabels);
+        } else {
+          transferCmd = new Bpl.ReturnCmd(NoToken);
+        }
+        
+        IToken tok = makeTokenFromSourceContext(block.SourceContext);
+        result = new Bpl.Block(
+          tok, 
+          Sink.BlockName(block, "block"),
+          new Bpl.CmdSeq(),
+          transferCmd
+          );
+
+        if (block.Continuation == Cci.ContinuationKind.Throw)
+        {
+          result.Cmds.Add(Assume(Bpl.Expr.False));
+        }
+
+        AddBplBlock(block, result);
+        this.blockTranslation[block] = result;
+      }
+
+      return result;
+    }
+    internal void AddBplBlock (Cci.CfgBlock! cciBlk, Bpl.Block! bplBlk)
+      requires this.InstructionTranslator != null && this.InstructionTranslator.currentProcedure != null;
+    {
+      if (bplBlk.Label != null && bplBlk.Label != "entry") {
+        Cci.Node node = cciBlk.BeginSourceContext();
+        if (node != null && node.SourceContext.Document != null 
+            && node.SourceContext.Document.Name != null) {
+          //HACK: Sometimes the pair (bplBlk.Label, cciBlk) is already present, and the program crashed.
+          //It will still crash if the label is there and maps to another block, but in that case somethings seems even more wrong...let it crash
+          System.Compiler.CfgBlock valueForLabel = null;
+          if (blockNameToSourceNodeMap.ContainsKey(bplBlk.Label))
+            valueForLabel = blockNameToSourceNodeMap[bplBlk.Label];
+          if (valueForLabel != cciBlk)
+            blockNameToSourceNodeMap.Add(bplBlk.Label, cciBlk);
+        }
+      }
+      this.InstructionTranslator.currentProcedure.Blocks.Add(bplBlk);
+      if (!blockTranslationAll.ContainsKey(cciBlk))
+      {
+        blockTranslationAll.Add(cciBlk, new List<Bpl.Block!>());
+      }
+      blockTranslationAll[cciBlk].Add(bplBlk);
+    }
+    #endregion
+
+
+   #region Comments    
+    internal static Bpl.CommentCmd! MakeComment (Cci.Node! statement, string! c) 
+    {
+       string! text = "----- " + c;
+       if (statement.SourceContext.Document != null) 
+       {
+            string! docName = (!)statement.SourceContext.Document.Name;
+            docName = (!)System.IO.Path.GetFileName(docName);
+            text += String.Format("  ----- {0}({1},{2})", 
+                docName, 
+                statement.SourceContext.StartLine, 
+                statement.SourceContext.StartColumn);
+        }
+        return new Bpl.CommentCmd(text); 
+    }
+    internal void Comment (Cci.Node! statement, string! c) 
+      requires this.InstructionTranslator != null && this.InstructionTranslator.currentBlock != null;
+    {
+      this.InstructionTranslator.currentBlock.Cmds.Add(MakeComment(statement, c));
+    }
+    #endregion
+
+    #region Arrays
+    internal Bpl.Expr! ArrayGet (Bpl.Expr! array, Bpl.Type! elementType, Bpl.Expr! index, string! heapName)
+    {
+      return ArrayGet(array, elementType, new Bpl.Expr[] { index }, HeapExpr(heapName));
+    }
+    
+    internal Bpl.Expr! ArrayGet (Bpl.Expr! array, Bpl.Type! elementType, Bpl.Expr! index, Bpl.Expr! heap)
+    {
+      return ArrayGet(array, elementType, new Bpl.Expr[] { index }, heap);
+    }
+    
+    internal Bpl.Expr! ArrayGet (Bpl.Expr! array, Bpl.Type! elementType, Bpl.Expr[]! indices, string! heapName) {
+      return ArrayGet(array, elementType, indices, HeapExpr(heapName));
+    }
+    
+    internal Bpl.Expr! ArrayGet (Bpl.Expr! array, Bpl.Type! elementType, Bpl.Expr[]! indices, Bpl.Expr! heap)
+      requires indices.Length >= 1;
+    {
+      Bpl.Expr element = Function(Sink.BuiltinFunction.ArrayGet, Elements(array, heap, elementType), ArrayIndex(array, indices));
+      return element;
+    }
+    #endregion    
+    
+    #region Fields
+    internal void AddField (Cci.Field! field)
+    {
+      if (this.instanceFields.Contains(field)) {
+        return;
+      }
+
+      string cleanName = Sink.CleanUpName(Sink.FullName(field));
+      Bpl.Type fieldType = this.Convert(field.Type);
+      // emit:  const field: name;
+      Bpl.Constant fieldConst = new Bpl.Constant(
+        NoToken,
+        Sink.TypedIdent(cleanName, FieldType(fieldType))
+      );
+      this.instanceFields.Add(field, fieldConst);
+
+      // Static or Not Static
+      // emit:  axiom IsStaticField(field) && !IncludeInMainFrameCondition(field)
+      //   or:  axiom !IsStaticField(field) && IncludeInMainFrameCondition(field)
+      {
+        Bpl.Expr! ax = Function(Sink.BuiltinFunction.IsStaticField, Sink.IdentWithClean(fieldConst));
+        this.earlyDeclarations.Add(new Bpl.Axiom(NoToken, field.IsStatic ? ax : Bpl.Expr.Not(ax)));
+        ax = Function(Sink.BuiltinFunction.IncludeInMainFrameCondition, Sink.IdentWithClean(fieldConst));
+        this.earlyDeclarations.Add(new Bpl.Axiom(NoToken, field.IsStatic ? Bpl.Expr.Not(ax) : ax));
+      }
+      
+      // emit:  axiom $IncludedInModifiesStar(field)
+      {
+        Bpl.Expr ax = Function(Sink.BuiltinFunction.IncludedInModifiesStar, Sink.IdentWithClean(fieldConst));
+        this.earlyDeclarations.Add(new Bpl.Axiom(NoToken, ax));
+      }
+
+      if (field.IsRep) {
+        // for rep fields, emit:  axiom AsRepField(f,C) = f
+        Bpl.Expr! ax = Bpl.Expr.Eq(Function(Sink.BuiltinFunction.AsRepField, Sink.IdentWithClean(fieldConst), TypeNameExpression((!)field.DeclaringType)), Sink.IdentWithClean(fieldConst));
+        this.earlyDeclarations.Add(new Bpl.Axiom(NoToken, ax));
+      } else if (field.IsPeer) {
+        // for peer fields, emit:  axiom AsPeerField(f) = f
+        Bpl.Expr! ax = Bpl.Expr.Eq(Function(Sink.BuiltinFunction.AsPeerField, Sink.IdentWithClean(fieldConst)), Sink.IdentWithClean(fieldConst));
+        this.earlyDeclarations.Add(new Bpl.Axiom(NoToken, ax));
+      }
+
+      foreach (int pos in (!)Microsoft.SpecSharp.Util.FieldElementsRepPositions(field)) {
+        // for ElementsRep fields, emit:  axiom AsElementsRepField(f,C,pos) = f
+        Bpl.Expr! ax = Bpl.Expr.Eq(Function(Sink.BuiltinFunction.AsElementsRepField, Sink.IdentWithClean(fieldConst), TypeNameExpression((!)field.DeclaringType), Bpl.Expr.Literal(pos)), Sink.IdentWithClean(fieldConst));
+        this.earlyDeclarations.Add(new Bpl.Axiom(NoToken, ax));
+      }
+      foreach (int pos in (!)Microsoft.SpecSharp.Util.FieldElementsPeerPositions(field)) {
+        // for peer fields, emit:  axiom AsElementsPeerField(f,pos) = f
+        Bpl.Expr! ax = Bpl.Expr.Eq(Function(Sink.BuiltinFunction.AsElementsPeerField, Sink.IdentWithClean(fieldConst), Bpl.Expr.Literal(pos)), Sink.IdentWithClean(fieldConst));
+        this.earlyDeclarations.Add(new Bpl.Axiom(NoToken, ax));
+      }
+
+
+      if (field.DeclaringType is Cci.Class) {
+        // emit:  axiom DeclType(field) == C;
+        AddType(field.DeclaringType);
+        Bpl.Expr ax = Bpl.Expr.Eq(
+          Function(Sink.BuiltinFunction.DeclType, FieldIdent(cleanName, fieldType)),
+          TypeNameExpression(field.DeclaringType));
+        this.earlyDeclarations.Add(new Bpl.Axiom(NoToken, ax));
+
+        if (!IsImpossibleType(field.Type)) {
+          bool isNonNull;
+          Cci.TypeNode stype = Sink.StripOptionalModifiers(field.Type, out isNonNull);
+          Bpl.Type bt = this.Convert(stype);
+          if (bt.IsInt) {
+            // emit:  axiom AsRangeField(field, T) == field;
+            ax = Bpl.Expr.Eq(
+                Function(Sink.BuiltinFunction.AsRangeField, FieldIdent(cleanName, fieldType), TypeNameExpression(stype)),
+                FieldIdent(cleanName, fieldType));
+            this.earlyDeclarations.Add(new Bpl.Axiom(NoToken, ax));
+          } else if (bt.Equals(RefType)) {
+            if (!isNonNull) {
+              // emit:  axiom AsRefField(field, T) == field;
+              ax = Bpl.Expr.Eq(
+                  Function(Sink.BuiltinFunction.AsRefField, FieldIdent(cleanName, fieldType), TypeNameExpression(stype)),
+                  FieldIdent(cleanName, fieldType));
+              this.earlyDeclarations.Add(new Bpl.Axiom(NoToken, ax));
+            } else {
+              // emit:  axiom AsNonNullRefField(field, T) == field;
+              ax = Bpl.Expr.Eq(
+                  Function(Sink.BuiltinFunction.AsNonNullRefField, FieldIdent(cleanName, fieldType), TypeNameExpression(stype)),
+                  FieldIdent(cleanName, fieldType));
+              this.earlyDeclarations.Add(new Bpl.Axiom(NoToken, ax));
+            }
+          }
+        }
+      }
+
+      if (field.IsStrictReadonly)
+      {
+        // emit:  function ##field(ref) returns (T);
+        string funName = "##" + Sink.SanitizeIdentifier(Sink.CleanUpName(Sink.FullName(field)));
+        Bpl.Function fun = new Bpl.Function(NoToken, funName,
+          new Bpl.VariableSeq(new Bpl.Formal(NoToken, new Bpl.TypedIdent(NoToken, "", RefType), true)),
+          new Bpl.Formal(NoToken, new Bpl.TypedIdent(NoToken, "", fieldType), true));
+        this.earlyDeclarations.Add(fun);
+        
+        // A strict-readonly field is a function of the reference, that is, it is independent of the heap:
+        // axiom (forall h, r :: { h[r,field] }  IsHeap(h) ==> h[r,field] == ##field(r));
+        Bpl.Variable littleHVar = Sink.BoundVar("$heap", HeapType);              // h
+        Bpl.Expr littleHExpr = Sink.Ident(littleHVar);
+        Bpl.Variable littleRVar = Sink.BoundVar("$r", RefType);                  // r
+        Bpl.Expr littleRExpr = Sink.Ident(littleRVar);
+        
+        Bpl.Expr isHeap = Function(Sink.BuiltinFunction.IsHeap, littleHExpr);   // IsHeap(h)
+        Bpl.Expr rDotField = FieldAccess(littleRExpr, field, (!)littleHVar.Name); // h[r,field]
+        Bpl.Expr funAppliedToR = Function(funName, fieldType, littleRExpr);    // ##field(r)
+
+        Bpl.Expr q = new Bpl.ForallExpr(NoToken,
+          new Bpl.VariableSeq(littleHVar, littleRVar),
+          new Trigger(NoToken, true, new ExprSeq(rDotField)),
+          Bpl.Expr.Imp(isHeap, Bpl.Expr.Eq(rDotField, funAppliedToR)));
+        this.earlyDeclarations.Add(new Bpl.Axiom(NoToken, q, "strict-readonly field is a function of the reference"));
+      }
+        
+      AddType(field.Type);
+    }
+     ///<summary>
+    /// Assumes that an AddField(field) has been performed.
+    ///</summary>
+    internal Bpl.Expr! FieldAccess (Bpl.Expr! obj, Cci.Field! field, string! heapName)
+    {
+      if (field.DeclaringType is Cci.Struct) {
+        return Function(Sink.BuiltinFunction.StructGet, obj, Expr(field));
+      } else {
+        return Bpl.Expr.Select(HeapExpr(heapName), obj, Expr(field));
+      }
+    }
+    
+    internal Bpl.Expr! FieldAccessExHeap (Bpl.Expr! obj, Cci.Field! field)
+    {
+        return Function(Sink.BuiltinFunction.ExHeapStructGet, obj, Expr(field));
+    }  
+    ///<summary>
+    /// For a static field f declared in a class C, returns the expression:  heapName[ClassRepr(T), f]
+    /// Returns the expression:  heapName[ClassRepr(
+    /// Assumes that an AddField(field) has been performed.
+    ///</summary>
+    internal Bpl.Expr! StaticFieldAccess (Cci.Field! field, string! heapName)
+      requires field.IsStatic;
+    {
+//      assert !(field.DeclaringType is Cci.Struct);  // follows from the fact that the field is static
+      AddType((!)field.DeclaringType);
+      Bpl.Expr! obj = Function(Sink.BuiltinFunction.ClassRepr, TypeNameExpression(field.DeclaringType));
+      return Bpl.Expr.Select(HeapExpr(heapName), obj, Expr(field));
+    }
+
+    internal Bpl.Expr! ElementProxy (Bpl.Expr obj, Bpl.Expr position)
+    {
+      return Function(Sink.BuiltinFunction.ElementProxy, obj, position);
+    }
+    internal Bpl.Expr! ElementProxy (Bpl.Expr obj, Bpl.Expr position, bool isStruct)
+    {
+      if (isStruct)
+        return Function(Sink.BuiltinFunction.ElementProxyStruct, obj, position);
+      else
+        return Function(Sink.BuiltinFunction.ElementProxy, obj, position);
+    }
+
+   #endregion
+
+    #region Assumptions
+    internal static Bpl.AssumeCmd! Assume (Bpl.Expr! expression)
+    {
+      return new Bpl.AssumeCmd(NoToken, expression);
+    }
+    #endregion
+    
+    #region Assertions
+    internal static Bpl.AssertCmd! Assert (Bpl.Expr! condition, Cci.Node! errorNode, string! errorMessage)
+    {
+        Bpl.AssertCmd! cmd = new Bpl.AssertCmd(Bpl.Token.NoToken, condition);
+        cmd.ErrorData = new Translator.ErrorPair(errorNode,errorMessage);
+        return cmd;
+    }
+    internal Bpl.Cmd! Assign (Bpl.IdentifierExpr! lhs, Bpl.Expr! rhs)
+    {
+      return Cmd.SimpleAssign(NoToken, lhs, rhs);
+    }
+    internal static Bpl.Cmd! Havoc (Bpl.IdentifierExpr ident)
+    {
+      return new Bpl.HavocCmd(NoToken, new IdentifierExprSeq(ident));
+    }
+    
+    /// <summary>
+    /// Emit the assertion: assert not $IsImmutable($typeof(e));
+    /// </summary>
+    internal void AssertNotImmutable (Bpl.Expr! e, Cci.Node! errorNode, string! errorMessage) 
+      requires this.InstructionTranslator != null && this.InstructionTranslator.currentBlock != null;
+    {
+      this.InstructionTranslator.currentBlock.Cmds.Add(Assert(Bpl.Expr.Not(Function(Sink.BuiltinFunction.IsImmutable, Function(Sink.BuiltinFunction.Typeof, e))), errorNode, errorMessage));
+    }
+
+    /// <summary>
+    /// For field update f = e, and if f is of System.Object or interface, emit the assertion:  
+    ///   assert e == null || not $IsImmutable($typeof(e));
+    /// but exclude "e == null ||" if "type" is a non-null type.
+    /// </summary>
+    internal void AssertNotImmutable (Bpl.Expr! e, Cci.TypeNode! type, Cci.Node! errorNode, string! errorMessage) 
+      requires this.InstructionTranslator != null && this.InstructionTranslator.currentBlock != null;
+    {
+      bool isNonNull;
+      type = Sink.StripOptionalModifiers(type, out isNonNull);
+
+      Bpl.Expr cond;      
+      if (type == Cci.SystemTypes.Object || type is Cci.Interface) {
+        cond = Bpl.Expr.Not(Function(Sink.BuiltinFunction.IsImmutable, Function(Sink.BuiltinFunction.Typeof, e)));
+      } else {
+        cond = null;
+      }
+      if (cond != null) {
+        if (!isNonNull) {
+          cond = Bpl.Expr.Or(Bpl.Expr.Eq(e, Null), cond);
+        }
+        this.InstructionTranslator.currentBlock.Cmds.Add(Assert(cond, errorNode, errorMessage));
+      }
+                 
+    }
+    #endregion
+    [Pure]
+    internal static bool IsInstrumentationCode (Cci.CfgBlock! block)
+    {
+        if (block.ExceptionHandler != null)
+        {
+            for (Cci.CfgBlock handler = block.ExceptionHandler; handler != null; handler = handler.ExceptionHandler)
+            {
+                Cci.Catch catchStmt = handler[0] as Cci.Catch;
+                if (catchStmt == null) { continue; }
+                Cci.TypeNode exnType = catchStmt.Type;
+                if (exnType == null) { continue; }
+                if (Equals(exnType.FullName, "Microsoft.Contracts.ContractMarkerException"))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    internal static bool IsInParameter (Cci.Parameter! parameter) { return ((parameter.Flags & Cci.ParameterFlags.Out) == 0) || !(parameter.Type is Cci.Reference); }
+    internal static bool IsOutParameter (Cci.Parameter! parameter) { return ((parameter.Flags & Cci.ParameterFlags.Out) > 0) || parameter.Type is Cci.Reference; }
+
+
+
+
+    /// <summary>
+    /// Returns ArrayIndex(a, N, i[N], ArrayIndex(a, N-1, i[N-1], ... ArrayIndex(a, 1, i[1], i[0]) ... )).
+    /// </summary>
+    internal Bpl.Expr! ArrayIndex (Bpl.Expr! arrayReference, Bpl.Expr[]! indices)
+      requires indices.Length >= 1;
+    {
+        Bpl.Expr! ind = (!)indices[0];
+        for (int i = 1; i < indices.Length; i++) {
+          // ind := ArrayIndex(array, i, indices[i], ind)
+          ind = Function(Sink.BuiltinFunction.ArrayIndex, arrayReference, Bpl.Expr.Literal(i), indices[i], ind);
+        }
+        return ind;
+    }
+
+    /// <summary>
+    /// Returns an expression that denotes the (possibly-null version of) "type".  That is, if
+    /// "type" denotes the Spec# type "T!", this method returns an expression that represents the
+    /// type "T".
+    /// Requires that AddType(type) has already been called.
+    /// </summary>
+    internal Bpl.Expr! TypeNameExpression (Cci.TypeNode! type)
+    {
+      bool isNotNullType;
+      type = Sink.StripOptionalModifiers(type, out isNotNullType);
+
+      Cci.ArrayType atype = type as Cci.ArrayType;
+      if (atype != null)
+      {
+        Sink.BuiltinFunction f;
+        bool isNonNull;
+        if (Sink.IsReferenceType(atype.ElementType, out isNonNull)) {
+          if (isNonNull) {
+            f = Sink.BuiltinFunction.NonNullRefArray;
+          } else {
+            f = Sink.BuiltinFunction.RefArray;
+          }
+        } else if (Sink.IsIntegralType(atype.ElementType)) {
+          f = Sink.BuiltinFunction.IntArray;
+        } else {
+          f = Sink.BuiltinFunction.ValueArray;
+        }
+        return Function(
+          f,
+          TypeNameExpression(atype.ElementType),
+          IntegerLiteral(atype.Rank));
+      }
+
+      Cci.Pointer ptype = type as Cci.Pointer;
+      if (ptype != null)
+      {
+        return Function(
+          Sink.BuiltinFunction.ArrayPtr, 
+          TypeNameExpression(ptype.ElementType));
+      }
+
+      Cci.Reference rtype = type as Cci.Reference;
+      if (rtype != null)
+      {
+        return Function(
+          Sink.BuiltinFunction.ArrayPtr, 
+          TypeNameExpression(rtype.ElementType));
+      }
+
+      return Sink.Ident(Sink.FullName(type), TypeType);
+    }
+
+    internal Bpl.Expr! TypeAssumption (string! varName, Cci.TypeNode! type, Bpl.Type! translatedType)
+    {
+      return TypeAssumption(Sink.Ident(varName, translatedType), type);
+    }
+    
+    
+    internal Bpl.Expr! TypeAssumption (Bpl.Expr! expr, Cci.TypeNode! type)
+    {
+      return TypeAssumption(expr, type, false);
+    }
+
+    internal Bpl.Expr! TypeAssumption (Bpl.Expr! expr, Cci.TypeNode! type, bool forceNonNullForReferenceTypes)
+    {
+      this.AddType(type);
+      bool isNotNull;
+      if (IsImpossibleType(type)) {
+        return Bpl.Expr.True;
+      } 
+      
+      bool isReferenceType = Sink.IsReferenceType(type, out isNotNull);
+      bool isOnExHeap = Sink.IsOnExHeap(type);
+      if (isReferenceType || isOnExHeap) {
+        if (isNotNull) {
+          type = Sink.StripOptionalModifiers(type, out isNotNull);
+          assert isNotNull;
+          return Function(Sink.BuiltinFunction.IsNotNull, expr, TypeNameExpression(type));
+        } else if (forceNonNullForReferenceTypes) {
+          return Function(Sink.BuiltinFunction.IsNotNull, expr, TypeNameExpression(type));
+        } else {
+          return Function(Sink.BuiltinFunction.Is, expr, TypeNameExpression(type));
+        }
+      } else if (Sink.IsIntegralType(type) || Sink.IsEnumValueType(type)) {
+        return Function(Sink.BuiltinFunction.InRange, expr, TypeNameExpression(type));
+      } else {
+        if (isNotNull) {
+        }
+        return Bpl.Expr.True;
+      }
+    }
+
+    /// <summary>
+    /// A type is "impossible" iff there is provably never any instance of it.
+    /// </summary>
+    internal bool IsImpossibleType (Cci.TypeNode! type)
+    {
+      bool isNonNull;
+      type = Sink.StripOptionalModifiers(type, out isNonNull);
+      if (!isNonNull) {
+        // only non-null types can be impossible
+        return false;
+      }
+
+      if (!(type.IsReferenceType || type is Cci.ITypeParameter)) {
+        // only reference types can be impossible
+        return false;
+      }
+      
+      return IsImpossibleTypeAux(type);
+    }
+
+    internal bool IsImpossibleTypeAux (Cci.TypeNode! type)
+    {
+      if (!(type is Cci.Class || type is Cci.Interface)) {
+        // only class and interface types (not array types, not delegate types) can be impossible
+        return false;
+      }
+
+      List<Cci.TypeNode!> subtypes = this.assemblyInfo.GetAllSubtypes(type);
+      if (subtypes == null) {
+        // we have no bound on the number of possible subtypes, so there is a possibility
+        // that there would be (perhaps in an assembly that we don't know about) a subtype
+        // of "type" that has instances.
+        return false;
+      }
+      
+      if (type is Cci.Class && !type.IsAbstract) {
+        // there may be instances of this class itself
+        return false;
+      }
+      
+      // the type is impossible iff all of its subtypes are
+      return forall{Cci.TypeNode sub in subtypes; IsImpossibleTypeAux(sub)};
+    }
+
+    internal static bool IsAdditive (Cci.Member! member)
+      requires member is Cci.Field || member is Cci.Method;
+    {
+      if (member is Cci.Field && ((Cci.Field)member).IsPrivate) {
+        return false;  // private fields can never be mentioned in subclass invariants, so they are non-additive
+      }
+      
+      Cci.AttributeNode attr = member.GetAttribute(Cci.SystemTypes.AdditiveAttribute);
+      if (attr == null) {
+        // no Additive attribute means the member is not additive
+        return false;
+      } else {
+        return GetAttributeValue(attr);
+      }
+    }
+   
+    internal static bool IsAdditiveReturn (Cci.Method! method)
+    {
+      if (method.ReturnAttributes != null) {
+        foreach (Cci.AttributeNode! attr in method.ReturnAttributes) {
+          if (attr.Type == Cci.SystemTypes.AdditiveAttribute) {
+            return GetAttributeValue(attr);
+          }
+        }
+      }
+      // no Additive attribute means the return value is not additive
+      return false;
+    }
+    
+    internal static bool IsAdditive (Cci.Parameter! param)
+    {
+      Cci.AttributeNode attr = param.GetAttribute(Cci.SystemTypes.AdditiveAttribute);
+      if (attr == null) {
+        // no Additive attribute means the parameter is not additive
+        return false;
+      } else {
+        return GetAttributeValue(attr);
+      }
+    }
+    
+    internal static bool IsInside (Cci.Parameter! param)
+    {
+      return IsInsideA((!)param.Attributes);
+    }
+    
+    internal static bool IsInside (Cci.Method! method)
+    {
+      return IsInsideA((!)method.Attributes);
+    }
+    
+    internal static bool IsInsideReturn (Cci.Method! method)
+    {
+      if (method.ReturnAttributes == null) {
+        return false;
+      } else {
+        return IsInsideA(method.ReturnAttributes);
+      }
+    }
+    
+    static bool IsInsideA (Cci.AttributeList! alist)
+    {
+      foreach (Cci.AttributeNode attr in alist) {
+        if (attr == null) continue;
+        if (attr.Type == Cci.SystemTypes.InsideAttribute) {
+          return GetAttributeValue(attr);
+        }
+      }
+      return false;
+    }
+    
+    public static bool IsModelField (Cci.Field! field)
+      ensures field.IsModelfield ==> result;  // see comment below
+    {
+      // Note, Cci.Field.IsModelfield seems not to give the right value when the Spec# program has
+      // been read from a binary.  Thus, we instead look for the presence of a [Modelfield] attribute.
+      return field.GetAttribute(Cci.SystemTypes.ModelfieldAttribute) != null;
+    }
+   
+    /// <summary>
+    /// This method expects "attr" to denote an attribute that may have one parameter, of type bool.
+    /// It returns the value of that boolean parameter, or "true" if the attribute does not specify
+    /// any parameter.
+    /// </summary>
+    static bool GetAttributeValue (Cci.AttributeNode! attr)
+    {
+      bool val = true; 
+      Cci.MemberBinding binding = attr.Constructor as Cci.MemberBinding;
+      if (binding != null) {
+        Cci.InstanceInitializer ctor = binding.BoundMember as Cci.InstanceInitializer;
+        if (ctor != null) {
+          Cci.ExpressionList exprs = attr.Expressions;
+          if (exprs != null && exprs.Count > 0) {
+            if (ctor.Parameters != null && ctor.Parameters.Count == 1) {
+              Cci.Expression arg = exprs[0];
+              Cci.Literal lit = arg as Cci.Literal;
+              if (lit != null && lit.Value is bool) {
+                val = (bool)lit.Value;
+              }
+            }
+          }
+        }
+      }
+      return val;
+    }
+    public enum BuiltinFunction {
+      Typeof,
+      IsHeap,
+      IsPreHeap,
+      IsAllocated,
+      ValueArray,
+      IntArray,
+      RefArray,
+      NonNullRefArray,
+      NonNullRefArrayRaw,
+      DeclType,
+      ClassRepr,
+      StructGet,
+      StructSet,
+      BaseClass,
+      AsDirectSubClass,
+      IncludedInModifiesStar,
+      AsImmutable,
+      AsInterface,
+      AsMutable,
+      IsImmutable,
+      IsMemberlessType,
+      TypeName,
+      UnboxedType,
+      StringLength,
+      As,
+      BoxTester,
+      StringIsInterned,
+      IsNotNull,
+      IncludeInMainFrameCondition,
+      HeapSucc,
+      IsStaticField,
+      Box,
+      Unbox,
+      BoxFunc,
+      AllocFunc,
+      NewInstance,
+      MeldNondets,
+      ArrayGet,
+      ArraySet,
+      ArrayIndex,
+      ArrayPtr,
+      Is,
+      InRange,
+      IsTokenForType,
+      ArrayLength,
+      DimLength,
+      AsRepField,
+      AsPeerField,
+      AsElementsRepField,
+      AsElementsPeerField,
+      AsRangeField,
+      AsRefField,
+      AsNonNullRefField,
+      ZeroInit,
+      ZeroInitStruct,
+      ElementType,
+      ElementProxy,
+      ElementProxyStruct,
+      ArrayLBound,
+      ArrayUBound,
+      ArrayRank,
+      TypeObject,
+      SizeIs,
+      Min,
+      Max,
+      TheInvariant,
+      InvExclusion,
+      KnownClass,
+      IsValueType,
+      ExHeapStructGet,
+      ExHeapStructSet,
+      IfThenElse,
+      Utter,
+    }
+    
+    internal Bpl.NAryExpr! Function (BuiltinFunction f, params Bpl.Expr[]! args)
+    {
+      switch (f) {
+        case BuiltinFunction.Typeof:
+          assert args.Length == 1;
+          return Function(Prelude.TypeOfFunctionName, TypeType, args);
+        case BuiltinFunction.IsHeap:
+          assert args.Length == 1;
+          return Function("IsHeap", Bpl.Type.Bool, args);
+        case BuiltinFunction.IsPreHeap:
+          assert args.Length == 1;
+          return Function("IsPreHeap", Bpl.Type.Bool, args);
+        case BuiltinFunction.IsAllocated:
+          assert args.Length == 2;
+          return Function(Prelude.IsAllocated, Bpl.Type.Bool, args);
+        case BuiltinFunction.ValueArray:
+          assert args.Length == 2;
+          return Function(Prelude.ValueArrayFunctionName, TypeType, args);
+        case BuiltinFunction.IntArray:
+          assert args.Length == 2;
+          return Function(Prelude.IntArrayFunctionName, TypeType, args);
+        case BuiltinFunction.NonNullRefArray:
+          assert args.Length == 2;
+          return Function(Prelude.NonNullRefArrayFunctionName, TypeType, args);
+        case BuiltinFunction.NonNullRefArrayRaw:
+          assert args.Length == 3;
+          return Function("NonNullRefArrayRaw", Bpl.Type.Bool, args);
+        case BuiltinFunction.RefArray:
+          assert args.Length == 2;
+          return Function(Prelude.RefArrayFunctionName, TypeType, args);
+        case BuiltinFunction.DeclType:
+          assert args.Length == 1;
+          return Function(Prelude.DeclType, TypeType, args);
+        case BuiltinFunction.ClassRepr:
+          assert args.Length == 1;
+          return Function(Prelude.ClassRepresentative, RefType, args);
+        case BuiltinFunction.StructGet:
+          {
+            assert args.Length == 2;
+            Bpl.CtorType fieldCtor = ((!)args[1]).ShallowType.AsCtor;
+            assert fieldCtor.Decl.Name == "Field";
+            Bpl.Type fieldType = fieldCtor.Arguments[0];
+            return Function(Prelude.StructGetterName, fieldType, args);
+          }
+        case BuiltinFunction.StructSet:
+          assert args.Length == 3;
+          return Function(Prelude.StructSetterName, StructType, args);
+        case BuiltinFunction.ExHeapStructGet:
+          { // we expect the following declaration:  function ExHeapStructGet<a>(ref, Field a) returns (a);
+            assert args.Length == 2;
+            Bpl.CtorType fieldCtor = ((!)args[1]).ShallowType.AsCtor;
+            assert fieldCtor.Decl.Name == "Field";
+            Bpl.Type fieldType = fieldCtor.Arguments[0];
+            return Function(Prelude.ExHeapPtrStructGetterName, fieldType, args);
+          }
+        case BuiltinFunction.ExHeapStructSet:
+          assert args.Length == 3;
+          return Function(Prelude.ExHeapPtrStructSetterName, RefType, args);    
+        case BuiltinFunction.BaseClass:
+          assert args.Length == 1;
+          return Function(Prelude.BaseClassFunctionName, TypeType, args);
+        case BuiltinFunction.AsDirectSubClass:
+          assert args.Length == 2;
+          return Function(Prelude.AsDirectSubClass, TypeType, args);
+        case BuiltinFunction.IncludedInModifiesStar:
+          assert args.Length == 1;
+          return Function(Prelude.IncludedInModifiesStar, Bpl.Type.Bool, args);
+        case BuiltinFunction.AsImmutable:
+          assert args.Length == 1;
+          return Function(Prelude.AsImmutableFunction, TypeType, args);
+        case BuiltinFunction.AsInterface:
+          assert args.Length == 1;
+          return Function(Prelude.AsInterfaceFunction, TypeType, args);
+        case BuiltinFunction.AsMutable:
+          assert args.Length == 1;
+          return Function(Prelude.AsMutableFunction, TypeType, args);
+        case BuiltinFunction.IsImmutable:
+          assert args.Length == 1;
+          return Function(Prelude.IsImmutableFunction, Bpl.Type.Bool, args);
+        case BuiltinFunction.IsMemberlessType:
+          assert args.Length == 1;
+          return Function(Prelude.IsMemberlessTypeName, Bpl.Type.Bool, args);
+        case BuiltinFunction.TypeName:
+          assert args.Length == 1;
+          return Function(Prelude.TypeNameFunctionName, TypeType, args);
+        case BuiltinFunction.UnboxedType:
+          assert args.Length == 1;
+          return Function(Prelude.UnboxedTypeFunctionName, TypeType, args);
+        case BuiltinFunction.StringLength:
+          assert args.Length == 1;
+          return Function(Prelude.StringLengthName, Bpl.Type.Int, args);
+        case BuiltinFunction.As:
+          assert args.Length == 2;
+          return Function(Prelude.AsFunction, RefType, args);
+        case BuiltinFunction.BoxTester:
+          assert args.Length == 2;
+          return Function(Prelude.BoxTesterFunction, RefType, args);
+        case BuiltinFunction.StringIsInterned:
+          assert args.Length == 2;
+          return Function(Prelude.StringIsInternedName, RefType, args);
+        case BuiltinFunction.IsNotNull:
+          assert args.Length == 2;
+          return Function(Prelude.IsNotNullPredicate, Bpl.Type.Bool, args);
+        case BuiltinFunction.IncludeInMainFrameCondition:
+          assert args.Length == 1;
+          return Function(Prelude.IncludeInMainFrameCondition, Bpl.Type.Bool, args);
+        case BuiltinFunction.HeapSucc:
+          assert args.Length == 2;
+          return Function(Prelude.HeapSucc, Bpl.Type.Bool, args);
+        case BuiltinFunction.IsStaticField:
+          assert args.Length == 1;
+          return Function(Prelude.IsStaticField, Bpl.Type.Bool, args);
+        case BuiltinFunction.Box:
+          assert args.Length == 2;
+          return Function(Prelude.BoxFunctionName, RefType, args);
+        case BuiltinFunction.Unbox:
+          assert false;  // for Unbox, use FunctionSpecial
+        case BuiltinFunction.BoxFunc:
+          assert args.Length == 2;
+          return Function("BoxFunc", RefType, args);
+        case BuiltinFunction.AllocFunc:
+          assert args.Length == 1;
+          return Function("AllocFunc", RefType, args);
+        case BuiltinFunction.NewInstance:
+          assert args.Length == 3;
+          return Function("NewInstance", RefType, args);
+        case BuiltinFunction.MeldNondets:
+          assert args.Length == 2;
+          return Function("MeldNondets", NondetType, args);
+        case BuiltinFunction.ArrayGet:
+          {
+            assert args.Length == 2;
+            Bpl.CtorType fieldCtor = ((!)args[0]).ShallowType.AsCtor;
+            assert fieldCtor.Decl.Name == "Elements";
+            Bpl.Type elType = fieldCtor.Arguments[0];
+            return Function("ArrayGet", elType, args);
+          }
+        case BuiltinFunction.ArraySet:
+          assert args.Length == 3;
+          return Function("ArraySet", ((!)args[0]).ShallowType, args);
+        case BuiltinFunction.ArrayIndex:
+          assert args.Length == 4;
+          return Function(Prelude.ArrayIndex, Bpl.Type.Int, args);
+        case BuiltinFunction.ArrayPtr:
+          assert args.Length == 1;
+          return Function(Prelude.ArrayFunctionNamePtr, TypeType, args);
+        case BuiltinFunction.Is:
+          assert args.Length == 2;
+          return Function(Prelude.IsFunction, Bpl.Type.Bool, args);
+        case BuiltinFunction.InRange:
+          assert args.Length == 2;
+          return Function(Prelude.InRange, Bpl.Type.Bool, args);
+        case BuiltinFunction.IsTokenForType:
+          assert args.Length == 2;
+          return Function(Prelude.TypeTokenFunctionName, Bpl.Type.Bool, args);
+        case BuiltinFunction.ArrayLength:
+          assert args.Length == 1;
+          return Function(Prelude.ArrayLengthName, Bpl.Type.Int, args);
+        case BuiltinFunction.DimLength:
+          assert args.Length == 2;
+          return Function(Prelude.ArrayDimLengthName, Bpl.Type.Int, args);
+        case BuiltinFunction.AsRepField:
+          assert args.Length == 2;
+          return Function(Prelude.AsRepField, FieldType(RefType), args);
+        case BuiltinFunction.AsPeerField:
+          assert args.Length == 1;
+          return Function(Prelude.AsPeerField, FieldType(RefType), args);
+        case BuiltinFunction.AsElementsRepField:
+          assert args.Length == 3;
+          return Function(Prelude.AsElementsRepField, FieldType(RefType), args);
+        case BuiltinFunction.AsElementsPeerField:
+          assert args.Length == 2;
+          return Function(Prelude.AsElementsPeerField, FieldType(RefType), args);
+        case BuiltinFunction.AsRangeField:
+          assert args.Length == 2;
+          return Function(Prelude.AsRangeField, FieldType(Bpl.Type.Int), args);
+        case BuiltinFunction.AsRefField:
+          assert args.Length == 2;
+          return Function(Prelude.AsRefField, FieldType(RefType), args);
+        case BuiltinFunction.AsNonNullRefField:
+          assert args.Length == 2;
+          return Function(Prelude.AsNonNullRefField, FieldType(RefType), args);
+        case BuiltinFunction.ZeroInit:
+          assert args.Length == 2;
+          return Function(Prelude.ZeroInit, Bpl.Type.Bool, args);
+        case BuiltinFunction.ZeroInitStruct:
+          assert args.Length == 1;
+          return Function(Prelude.ZeroInitStruct, StructType, args);
+        case BuiltinFunction.ElementType:
+          assert args.Length == 1;
+          return Function(Prelude.ElementTypeName, TypeType, args);
+        case BuiltinFunction.ElementProxy:
+          assert args.Length == 2;
+          return Function(Prelude.ElementProxy, RefType, args);
+        case BuiltinFunction.ElementProxyStruct:
+          assert args.Length == 2;
+          return Function(Prelude.ElementProxyStruct, TypeType, args);
+        case BuiltinFunction.ArrayLBound:
+          assert args.Length == 2;
+          return Function(Prelude.ArrayLBoundName, Bpl.Type.Int, args);
+        case BuiltinFunction.ArrayUBound:
+          assert args.Length == 2;
+          return Function(Prelude.ArrayUBoundName, Bpl.Type.Int, args);
+        case BuiltinFunction.ArrayRank:
+          assert args.Length == 1;
+          return Function(Prelude.ArrayRankName, Bpl.Type.Int, args);
+        case BuiltinFunction.TypeObject:
+          assert args.Length == 1;
+          return Function(Prelude.TypeObjectFunctionName, RefType, args);
+        case BuiltinFunction.SizeIs:
+          assert args.Length == 2;
+          return Function(Prelude.SizeIsFunctionName, Bpl.Type.Bool, args);
+        case BuiltinFunction.Min:
+          assert args.Length == 2;
+          return Function("#min", Bpl.Type.Int, args);
+        case BuiltinFunction.Max:
+          assert args.Length == 2;
+          return Function("#max", Bpl.Type.Int, args);
+        case BuiltinFunction.TheInvariant:
+          assert args.Length == 3;
+          return Function("$Inv", Bpl.Type.Bool, args);
+        case BuiltinFunction.InvExclusion:
+          assert args.Length == 1;
+          return Function("$InvExclusion", Bpl.Type.Bool, args);
+        case BuiltinFunction.KnownClass:
+          assert args.Length == 1;
+          return Function("$KnownClass", Bpl.Type.Bool, args);
+        case BuiltinFunction.IsValueType:
+          assert args.Length == 1;
+          return Function("$IsValueType", Bpl.Type.Bool, args);
+        case BuiltinFunction.IfThenElse:
+          assert args.Length == 3;
+          return Function(Prelude.IfThenElse, ((!)args[1]).ShallowType, args);
+        case BuiltinFunction.Utter:
+          assert args.Length == 1;
+          return Function("$Utter", Bpl.Type.Bool, args);
+        default:
+          assert false;  // unexpected enum value
+      }
+    }
+    internal Bpl.NAryExpr! FunctionSpecial (BuiltinFunction f, Bpl.Type! resultType, params Bpl.Expr[]! args)
+    {
+      switch (f) {
+        case BuiltinFunction.Unbox:
+          assert args.Length == 1;
+          return Bpl.Expr.CoerceType(NoToken, Function(Prelude.UnboxFunctionName, resultType, args), resultType);
+        default:
+          assert false;  // unexpected enum value
+      }
+    }
+    
+    public Bpl.NAryExpr! Function (string! function, Bpl.Type! returnType, params Bpl.Expr[]! args)
+    {
+      return new Bpl.NAryExpr(
+        NoToken,
+        new Bpl.FunctionCall(Ident(function, returnType)),
+        new Bpl.ExprSeq(args)
+        );
+    }
+
+    public Bpl.NAryExpr! Function (string! function, Bpl.Type! returnType, List<Bpl.Expr!>! args)
+    {
+      Bpl.Expr[] aa = new Bpl.Expr[args.Count];
+      int i = 0;
+      foreach (Bpl.Expr e in args) {
+        aa[i] = e;
+        i++;
+      }
+      return new Bpl.NAryExpr(
+        NoToken,
+        new Bpl.FunctionCall(Ident(function, returnType)),
+        new Bpl.ExprSeq(aa)
+        );
+    }
+
+    public static Bpl.Token Token (string! value)
+    {
+      Bpl.Token token = new Bpl.Token();
+      token.val = value;
+      return token;
+    }
+    
+    public static Bpl.IdentifierExpr! IdentWithClean (string! id, Type! type)
+    {
+      return Bpl.Expr.Ident(id, type);
+    }
+    
+    public static Bpl.IdentifierExpr! IdentWithClean (Bpl.Variable! v)
+    {
+      //*** Note, we only use the name of the variable, leaving the IdentifierExpr unresolved.
+      //*** The translator only generates unresolved names, which get resolved in a separate pass.
+      return IdentWithClean((!)v.Name, v.TypedIdent.Type);
+    }
+    
+    public Bpl.IdentifierExpr! FieldIdent (Cci.Field! field)
+    {
+      return FieldIdent(Sink.CleanUpName(Sink.FullName(field)), Convert(field.Type));
+    }
+    
+    public Bpl.IdentifierExpr! FieldIdent (string! fieldName, Type! fieldType) {
+      return Bpl.Expr.Ident(fieldName, FieldType(fieldType));
+    }
+
+    public class BuiltinFields {
+      Sink! sink;
+      internal BuiltinFields([Delayed] Sink! sink) {
+        this.sink = sink;
+      }
+      
+      private Bpl.IdentifierExpr! Id(string! fieldName, Type! fieldType) {
+        return Bpl.Expr.Ident(fieldName, sink.FieldType(fieldType));
+      }
+      
+      public Bpl.IdentifierExpr! ValidFor { get {
+        return Id(Prelude.ValidFor, new Bpl.MapType(NoToken, new TypeVariableSeq(), new TypeSeq(sink.TypeType), Bpl.Type.Bool));
+      }}
+      public Bpl.IdentifierExpr! OwnerRef { get {
+        return Id(Prelude.OwnerRefName, sink.RefType);
+      }}
+      public Bpl.IdentifierExpr! OwnerClassFrame { get {
+        return Id(Prelude.OwnerClassFrameName, sink.TypeType);
+      }}
+      public Bpl.IdentifierExpr! Inv { get {
+        return Id(Prelude.InvFieldName, sink.TypeType);
+      }}
+      public Bpl.IdentifierExpr! LocalInv { get {
+        return Id(Prelude.LocalInv, sink.TypeType);
+      }}
+      public Bpl.IdentifierExpr! ExposeVersion { get {
+        return Id(Prelude.ExposeVersionFieldName, sink.ExposeVersionType);
+      }}
+      public Bpl.IdentifierExpr! Allocated { get {
+        return Id(Prelude.AllocatedName, Bpl.Type.Bool);
+      }}
+      public Bpl.IdentifierExpr! NonNullFieldsAreInitialized { get {
+        return Id(Prelude.NonNullFieldsAreInitialized, Bpl.Type.Bool);
+      }}
+      public Bpl.IdentifierExpr! FirstConsistentOwner { get {
+        return Id(Prelude.FirstConsistentOwner, sink.RefType);
+      }}
+      public Bpl.IdentifierExpr! Elements(Bpl.Type! elementType) {
+        string fieldName;
+        if (elementType.IsBool) {
+          fieldName = "$elementsBool";
+        } else if (elementType.IsInt) {
+          fieldName = "$elementsInt";
+        } else if (elementType.Equals(sink.RefType)) {
+          fieldName = "$elementsRef";
+        } else if (elementType.Equals(sink.RealType)) {
+          fieldName = "$elementsReal";
+        } else if (elementType.Equals(sink.StructType)) {
+          fieldName = "$elementsStruct";
+        } else {
+          assert false;  // unexpected array element type
+        }
+        return Bpl.Expr.Ident(fieldName, sink.FieldType(sink.ElementsType(elementType)));
+      }
+     }
+    
+    public readonly BuiltinFields! Fields = new BuiltinFields(this);
+    
+    public readonly Bpl.Expr! Null = Ident("null", new Bpl.UnresolvedTypeIdentifier(NoToken, "ref"));
+
+
+    public static Bpl.IdentifierExpr! Ident (string! id, Type! type) { return IdentWithClean(SanitizeIdentifier(id), type); }
+
+    public static Bpl.IdentifierExpr! Ident (Bpl.Variable! id) 
+    {
+      id.Name = SanitizeIdentifier((!)id.Name);
+      return IdentWithClean(id); 
+    }
+
+    public static Bpl.IdentifierExpr! Expr (Bpl.TypedIdent! i)
+    {
+      return IdentWithClean(i.Name, i.Type);
+    }
+
+    public static Bpl.BoundVariable! BoundVar(string! name, Bpl.Type! ty)
+    {
+      return new Bpl.BoundVariable(NoToken, TypedIdent(name, ty));
+    }
+
+    public static Bpl.TypedIdent! TypedIdent (string! name, Bpl.Type! ty)
+    {
+      return new Bpl.TypedIdent(NoToken, SanitizeIdentifier(name), ty);
+    }
+
+    public static string! SanitizeIdentifier (string! name)
+    {
+      return TokenTextWriter.SanitizeIdentifier(name);
+    }
+    
+    // The next two maps are used exclusively by FullName(Cci.TypeNode)
+    private static Cci.IMap/*<Cci.TypeNode,string!>*/! typesCciToBplName = new Cci.HashedMap();
+    private static Cci.IMutableSet/*<string>*/! typesBplNames = new Cci.HashSet();
+    // The next two maps are used exclusively by FullName(Cci.Field)
+    private static Cci.IMap/*<Cci.Field,string!>*/! fieldsCciToBplName = new Cci.HashedMap();
+    private static Cci.IMutableSet/*<string>*/! fieldsBplNames = new Cci.HashSet();
+
+    /// <summary>
+    /// Returns a meaningful, clean, and unique name for "type".
+    /// </summary>
+    public static string! FullName (Cci.TypeNode! type)
+    {
+        string n = (string)typesCciToBplName[type];
+        if (n != null) {
+          return n;
+        }
+        
+        string fullName = (!)type.FullName;
+        // If it's a type parameter, make it unique by prepending the name of the class or
+        // method that binds it.
+        Cci.TypeParameter typeParam = type as Cci.TypeParameter;
+        if (typeParam != null)
+        {
+          Cci.Member declaringMember = typeParam.DeclaringMember;
+          if (declaringMember != null)
+          {
+            fullName = declaringMember.FullName + ".." + fullName;
+          }
+        }
+        fullName = CleanUpName(fullName);
+        if (typesBplNames.Contains(fullName)) {
+          // apparently, there is more than one TypeNode that has this FullName, so append something that distinguishes this new name from previous ones
+          fullName += "`" + type.UniqueKey;
+        }
+        
+        // now we have a meaningful, clean, and fresh name; update the maps and return the name
+        typesCciToBplName[type] = fullName;
+        typesBplNames.Add(fullName);
+
+        return fullName;
+    }
+
+    public static string! FullName (Cci.Field! field)
+    {
+        string n = (string)fieldsCciToBplName[field];
+        if (n != null) {
+          return n;
+        }
+        
+        string fullName = CleanUpName((!)field.FullName);
+        if (fieldsBplNames.Contains(fullName)) {
+          // apparently, there is more than one Cci.Field that has this FullName, so append something that distinguishes this new name from previous ones
+          fullName += "`" + field.UniqueKey;
+        }
+
+        // now we have a meaningful, clean, and fresh name; update the maps and return the name
+        fieldsCciToBplName[field] = fullName;
+        fieldsBplNames.Add(fullName);
+
+        return fullName;
+    }
+    
+    public static string! BoundVarName (string! nominalName)
+    {
+      return Sink.CleanUpName("^" + nominalName);
+    }
+    
+    internal static void OwnedStatus (Cci.Method! m, out bool isRep, out bool isPeer, out bool ownedFalse)
+      ensures (!isRep && !isPeer) || (!isPeer && !ownedFalse) || (!ownedFalse && !isRep);
+    {
+      isRep = false;
+      isPeer = false;
+      ownedFalse = false;
+      isRep = m.GetAttribute(Cci.SystemTypes.RepAttribute) != null;
+      isPeer = m.GetAttribute(Cci.SystemTypes.PeerAttribute) != null;
+//      Cci.AttributeNode attr = m.GetAttribute(Cci.SystemTypes.OwnedAttribute);
+//      if (attr != null){
+//        Cci.ExpressionList exprs = attr.Expressions;
+//        if (exprs != null && exprs.Count > 0) {
+//          Cci.Expression arg = exprs[0];
+//          Cci.Literal lit = arg as Cci.Literal;
+//          if (lit != null) {
+//            if (lit.Value is bool) {
+//              isRep = (bool)lit.Value;
+//              ownedFalse = !isRep;
+//            } else if (lit.Value is string) {
+//              isRep = (string)lit.Value == "this";
+//              isPeer = (string)lit.Value == "peer";
+//            }
+//          }
+//          for (int n = attr.Expressions == null ? 0 : attr.Expressions.Count, i = 0; i < n; i++) {
+//            Cci.Expression e = attr.Expressions[i];
+//            Cci.AssignmentExpression ae = e as Cci.AssignmentExpression;
+//            if (ae != null) {
+//              Cci.AssignmentStatement s = ae.AssignmentStatement as Cci.AssignmentStatement;
+//              if (s != null) {
+//                Cci.Literal lit2 = s.Source as Cci.Literal;
+//                if (lit2 != null && lit2.Value is bool) {
+//                  isRep = (bool)lit2.Value;
+//                  ownedFalse = !isRep;
+//                } else if (lit2 != null && lit2.Value is string) {
+//                  isRep = (string)lit2.Value == "this";
+//                  isPeer = (string)lit2.Value == "peer";
+//                }
+//              }
+//            }
+//          }
+//        } else {
+//          // this is the default case: [Rep] without any arguments
+//          isRep = true;
+//        }
+//      }
+    }
+    
+    public static bool SameType (Bpl.Type! type1, Bpl.Type! type2)
+    {
+        return type1.ToString() == type2.ToString();
+    }
+
+
+    public Bpl.TypedIdent! Convert (Cci.Variable! variable)
+    {
+        return Convert(variable, Convert(variable.Type));
+    }
+    
+    
+    public static Bpl.TypedIdent! Convert (Cci.Variable! variable, Bpl.Type! type)
+    {
+        string! varName = (variable.Name != null && variable.Name.Name != null && ((!)variable.Name.Name).Length > 0) ? 
+            (!) variable.Name.Name :
+            "local" + variable.UniqueKey;
+    
+        return TypedIdent(
+            CleanUpName(varName),
+            type
+            );
+    }
+
+    public Bpl.Type! Convert (Cci.TypeNode! type)
+      requires !(type is Cci.Reference); // CIL pointers are always resolved to their pointees.
+    {
+      Bpl.SimpleType st;
+      if (type == Cci.SystemTypes.Boolean) 
+      {
+        st = Bpl.SimpleType.Bool;
+      } 
+      else if (IsIntegralType(type))
+      {
+        st = Bpl.SimpleType.Int;
+      } 
+      else if (
+        type == Cci.SystemTypes.Single ||
+        type == Cci.SystemTypes.Double) 
+      {
+        return RealType;
+      } 
+      else if (IsEnumType(type))
+      {
+        st = Bpl.SimpleType.Int;
+      }
+      else if (type == Cci.SystemTypes.IntPtr)
+      {
+        return RefType;
+      }
+      else if (type is Cci.Struct)
+      {
+        return StructType;
+      }
+      else 
+      {
+        return RefType;
+      }
+      return new Bpl.BasicType(st);
+    }
+
+    public Bpl.Type! Convert (FlowedValue.Type! type)
+    {
+      switch (type.TypeTag)
+      {
+        case FlowedValue.Type.Tag.Zero:
+        case FlowedValue.Type.Tag.One:
+        case FlowedValue.Type.Tag.Bool:
+          return Bpl.Type.Bool;
+        case FlowedValue.Type.Tag.BitPattern:
+        case FlowedValue.Type.Tag.Nat:
+        case FlowedValue.Type.Tag.Enum:
+        case FlowedValue.Type.Tag.Int:
+          return Bpl.Type.Int;
+        case FlowedValue.Type.Tag.Real:
+          return RealType;
+        case FlowedValue.Type.Tag.Struct:
+          return StructType;
+        case FlowedValue.Type.Tag.TyTok:
+          return StructType; // type tokens are structs
+        case FlowedValue.Type.Tag.AddrOf:
+        case FlowedValue.Type.Tag.Arg:
+          throw new System.ArgumentException();
+        default:
+          return RefType; 
+      }
+    }
+   
+    
+    public static bool IsStruct (Cci.TypeNode! type)
+    {
+        if (type == Cci.SystemTypes.IntPtr) return false;
+
+        // Unfortunately, types we consider non-structs, e.g. System.Int32, are instances of CCi.Struct
+        // so we need to handle them specially.
+        if (IsIntegralType(type) || type == Cci.SystemTypes.Single || type == Cci.SystemTypes.Double || IsEnumType(type)) {
+          return false;
+        }
+
+        return type is Cci.Struct;
+    }
+    
+    [Pure]
+    public static bool IsReferenceType (Cci.TypeNode! t) {
+      bool isNotNull;
+      return IsReferenceType(t, out isNotNull);
+    }
+    public static bool IsReferenceType (Cci.TypeNode! t, out bool isNotNull) {
+      t = Sink.StripOptionalModifiers(t, out isNotNull);
+      return (t is Cci.Class) || (t is Cci.Interface) || (t is Cci.ArrayType) || (t is Cci.DelegateNode);
+    }
+    
+    public static bool IsOnExHeap (Cci.TypeNode! t) {
+      bool result = false;
+      Cci.OptionalModifier m;
+      Cci.TypeNode type = t;
+      while ((m = type as Cci.OptionalModifier) != null)
+      {
+        if (m.Modifier != null && m.Modifier.Name.Name == "ExHeap")
+          result = true;
+        type = m.ModifiedType;
+      }
+      return result;
+    }
+    
+    public bool IsReferenceType (FlowedValue.Type! t) {
+      return Convert(t).Equals(RefType);
+    }
+    public static bool IsIntegralType (Cci.TypeNode! t) {
+      return
+        t == Cci.SystemTypes.Char ||
+        t == Cci.SystemTypes.Int8 ||
+        t == Cci.SystemTypes.Int16 ||
+        t == Cci.SystemTypes.Int32 ||
+        t == Cci.SystemTypes.Int64 ||
+        t == Cci.SystemTypes.UInt8 ||
+        t == Cci.SystemTypes.UInt16 ||
+        t == Cci.SystemTypes.UInt32 ||
+        t == Cci.SystemTypes.UInt64 ||
+        t == Cci.SystemTypes.IntPtr ||
+        t == Cci.SystemTypes.UIntPtr;
+    }
+    public static bool IsEnumValueType (Cci.TypeNode! t) {
+      return t.BaseType == Cci.SystemTypes.Enum && t.GetAttribute(Cci.SystemTypes.FlagsAttribute) == null;
+    }
+    public static bool IsEnumType (Cci.TypeNode! t) {
+      return t.BaseType == Cci.SystemTypes.Enum;
+    }
+
+    public static Cci.OptionalModifier? TypeAsNotNull (Cci.TypeNode! type)
+    {
+      Cci.OptionalModifier nntype = type as Cci.OptionalModifier;
+      if (nntype != null && Equals(((!)nntype.Modifier).FullName, "Microsoft.Contracts.NonNullType"))
+      {
+        return nntype;
+      }
+      return null;
+    }
+    
+    public static bool IsNonNullType (Cci.TypeNode! type)
+    {
+      bool result;
+      Sink.StripOptionalModifiers(type, out result);
+      return result;
+    }
+
+    public static string! CanonicalTypeName (Cci.TypeNode! type)
+    {
+      Cci.OptionalModifier nntype = TypeAsNotNull(type);
+      if (nntype != null) { return CanonicalTypeName(nntype.ModifiedType) + "$notnull"; }
+      return Sink.FullName(type);
+    }
+
+
+    public enum ParameterDirection { In, Out };
+
+    public static string! ParameterName (string! name, ParameterDirection direction)
+    {
+      if (direction == ParameterDirection.In) {
+        return name + "$in";
+      } else if (name.Equals(Prelude.ResultVariableName)) {
+        return name;
+      } else {
+        return name + "$out";
+      }
+    }
+
+
+    public static string! CleanUpName (string! name)
+    {
+      return name
+        .Replace(' ','.')
+        .Replace('+','.')
+        .Replace("::",".")
+        .Replace(":", "^")
+        .Replace("[]", ".array") // FIXME - handle the general case
+        .Replace("[,]", ".array2")
+        .Replace("[,,]", ".array3")
+        .Replace("[,,,]", ".array4")
+        .Replace("@", ".ptr")
+        .Replace("<", "...")
+        .Replace(">", "")
+        .Replace("(", "...")
+        .Replace(")", "")
+        .Replace(",", "`~`")
+        .Replace('-', '.')
+        .Replace('{', '.')
+        .Replace('}', '.')
+        .Replace('=', '.')
+        .Replace('*', '.')
+        ;
+    }
+
+    internal Bpl.Expr! IsAllocatedOfRef (string! id)
+    {
+      return IsAllocatedOfRef(Ident(id, RefType));
+    }
+    internal Bpl.Expr! IsAllocatedOfRef (Bpl.Expr! e)
+    {
+      return IsAllocatedOfRef(e, HeapExpr(), true);
+    }
+    internal Bpl.Expr! IsAllocatedOfRef (Bpl.Expr! e, Bpl.Expr! heap, bool alloc)
+    {
+      Bpl.Expr isAllocated = Bpl.Expr.Select(heap, e, Fields.Allocated);
+      if (alloc) {
+        return isAllocated;
+      } else {
+        return Bpl.Expr.Not(isAllocated);
+      }
+    }
+    internal Bpl.Expr! IsAllocated (Bpl.Expr! e, Bpl.Type! ty)
+    {
+      if (ty.Equals(RefType)) {
+        return IsAllocatedOfRef(e);
+      } else if (ty.Equals(StructType)) {
+        return Function(BuiltinFunction.IsAllocated, HeapExpr(), e);
+      } else {
+        return Bpl.Expr.True;
+      }
+    }
+    internal Bpl.Expr! IsAllocated (Bpl.TypedIdent! id)
+    {
+      return IsAllocated(Ident(id.Name, id.Type), id.Type);
+    }
+
+    internal Bpl.Expr! Allocated (Bpl.Expr! reference, string! heapName)
+    {
+      return Allocated(reference, HeapExpr(heapName));
+    }
+
+    internal Bpl.Expr! Allocated (Bpl.Expr! reference, Bpl.Expr! heap)
+    {
+      return Bpl.Expr.Select(heap, reference, Fields.Allocated);
+    }
+
+    internal static string! BlockName (Cci.CfgBlock! block, string! prefix){
+      return prefix + block.UniqueId;
+    }
+    internal static string! BlockName (Cci.Block! block, string! prefix){
+      return prefix + block.UniqueKey;
+    }
+
+
+    internal static Cci.TypeNode! StripOptionalModifiers (Cci.TypeNode! type, out bool isNonNull)
+    {
+      return (!)type.StripOptionalModifiers(out isNonNull);
+    }
+ 
+    internal static Cci.TypeNode! ParameterType(Cci.Parameter! parm) {
+      Cci.TypeNode t = parm.Type;
+      while (t is Cci.Reference) {
+        t = ((Cci.Reference)t).ElementType;
+      }
+      return t;
+    }
+    internal static Bpl.Expr! Binary (BinaryOperator.Opcode op, Bpl.Expr! e1, Bpl.Expr! e2)
+    {
+      return Bpl.Expr.Binary(NoToken, op, e1, e2); 
+    }
+
+    internal static Bpl.Expr! And (Bpl.Expr! e1, Bpl.Expr! e2) 
+    { 
+      return Binary(BinaryOperator.Opcode.And, e1, e2); 
+    }
+
+    internal static Bpl.Expr! And (Bpl.Expr! e1, Bpl.Expr! e2, Bpl.Expr! e3) 
+    {
+      return Binary(BinaryOperator.Opcode.And, e1, And(e2,e3)); 
+    }
+    internal Bpl.Expr! IntegerLiteral (long n) {
+      if (0 <= n) {
+        return IntegerLiteral(true, (ulong)n);
+      } else {
+        // We'd like to pass -n as a ulong, but negating n leaves it unchanged if it is long.MinValue.
+        // Therefore, we first add 1, then negate, and then add 1 again:
+        //   -n  =  -n-1+1  =  -(n+1)+1
+        return IntegerLiteral(false, (ulong)(-(n+1)+1));
+      }
+    }
+    private Bpl.Expr! IntegerLiteral (bool pos, ulong xn) {
+      if (pos) {
+        return new Bpl.LiteralExpr(NoToken, BigNum.FromULong(xn));
+      } else {
+        return new Bpl.LiteralExpr(NoToken, BigNum.FromULong(xn).Neg);
+      }
+    }
+    private Bpl.Expr! RealLiteral (float f) {
+      return RealLiteral((double)f);
+    }
+    private Bpl.Expr! RealLiteral (double d) {
+      string! constName = String.Format("real#{0:f}", d).Replace('-', 'm');
+      if (!Sink.numberConsts.Contains(constName)) {
+        Bpl.Constant realConst = new Bpl.Constant(NoToken, Sink.TypedIdent(constName, RealType));
+        Sink.numberConsts.Add(constName, realConst);
+      }
+      return Sink.Ident(constName, RealType);
+    }
+    
+    
+    
+    internal Bpl.Expr! Literal (object literal) {
+      Bpl.Expr! literalExpr;
+      if (literal == null)        { return Null; }
+      else if (literal is bool)   { literalExpr = Bpl.Expr.Literal((bool)literal); }
+      else if (literal is char)   { literalExpr = IntegerLiteral(true, (char)literal); }
+      else if (literal is sbyte)  { literalExpr = IntegerLiteral((sbyte)literal); }
+      else if (literal is short)  { literalExpr = IntegerLiteral((short)literal); }
+      else if (literal is int)    { literalExpr = IntegerLiteral((int)literal); }
+      else if (literal is long)   { literalExpr = IntegerLiteral((long)literal); }
+      else if (literal is byte)   { literalExpr = IntegerLiteral(true, (byte)literal); }
+      else if (literal is ushort) { literalExpr = IntegerLiteral(true, (ushort)literal); }
+      else if (literal is uint)   { literalExpr = IntegerLiteral(true, (uint)literal); }
+      else if (literal is ulong)  { literalExpr = IntegerLiteral(true, (ulong)literal); }
+      else if (literal is float)  { literalExpr = RealLiteral((float)literal); }
+      else if (literal is double) { literalExpr = RealLiteral((double)literal); }
+      else if (literal is string) {
+        literalExpr = stringBank.CreateLiteral((string)literal);
+        AddType((!)Cci.SystemTypes.String);  // needed for the eventual string axioms
+      } else if (literal is Cci.TypeNode) {
+        literalExpr = TypeNameExpression((Cci.TypeNode)literal);
+      } else {
+        throw new NotImplementedException("unsupported literal value: " + literal);
+      }
+      return literalExpr;
+    }
+    internal Bpl.Expr! ArrayLength (Bpl.Expr array)
+    {
+      return Function(Sink.BuiltinFunction.ArrayLength, array);
+    }
+
+    internal Bpl.Expr! Elements (Bpl.Expr! target, Bpl.Expr! heap, Bpl.Type! elementType)
+    {
+      return Bpl.Expr.Select(heap, target, Fields.Elements(elementType));
+    }
+    
+    /// <summary>
+    /// Returns TypeObject(e), and makes sure that System.Type is axiomatized.
+    /// </summary>
+    internal Bpl.Expr! TypeObject (Bpl.Expr! e) {
+      AddType((!)Cci.SystemTypes.Type);
+      return Function(Sink.BuiltinFunction.TypeObject, e);
+    }
+    public static string! NameOf (Cci.Identifier id)
+    {
+        if (id == null) { return ""; }
+        string! unique = (!) id.UniqueIdKey.ToString();
+        string name = id.Name;
+        if (name == null) { return unique; }
+        return name;
+    }
+    
+    
+    private Bpl.Expr! ConjoinInvariantForGenericClasses (Cci.Class! type, Bpl.Expr! receiver, string! heap, Bpl.Expr! inv) {
+      foreach (Cci.Member! m in type.Members) {
+        if (m is Cci.Field && !m.IsStatic) {
+          Cci.TypeNode! fieldType = ((Cci.Field!)m).Type;
+          if (fieldType.IsTemplateParameter) {
+            bool dummy;
+            Cci.TypeNode! tn = (!)fieldType.StripOptionalModifiers(out dummy);
+            int pos = ((Cci.ITypeParameter!)tn).ParameterListIndex;
+            // invariant: f == null || f.owner == ElementProxy(this,pos).owner;
+            Bpl.Expr cond = Bpl.Expr.Eq(this.FieldAccess(receiver, (Cci.Field!)m, heap), Null);
+            cond = Bpl.Expr.Or(cond,
+                               om.EqualOwners(this.FieldAccess(receiver, (Cci.Field!)m, heap),
+                                              this.Function(Sink.BuiltinFunction.ElementProxy, receiver, Bpl.Expr.Literal(pos)),
+                                              HeapExpr(heap)
+                   ));
+            inv = Bpl.Expr.And(inv, cond);
+          }
+       }
+     }
+     return inv;
+   }
+        
+    
+    public readonly List<Cci.Class!>! KnownClassesWithInvariants = new List<Cci.Class!>();
+    
+    private void RecordInvariantFunction (Cci.TypeNode! type) {
+      if (Equals(type.FullName, "<Module>")) { return; }
+  
+      if (type is Cci.Class) {
+        Bpl.Variable oVar = BoundVar("$oi", RefType);
+        Bpl.Expr o = Ident(oVar);
+        Bpl.Variable heapVar = BoundVar("$h", HeapType);
+        Bpl.Expr d = GetDeclaredInvariant(type, o, (!) heapVar.Name);
+        bool hasElementProxyInvariant = false;
+        if (CommandLineOptions.Clo.MethodologySelection == CommandLineOptions.Methodology.Boogie) {
+          d = this.ConjoinInvariantForGenericClasses((Cci.Class!) type, o, (!)heapVar.Name, d);
+          hasElementProxyInvariant = true;
+        }
+        // add class to knownClassesWithInvariants is d is non-trivial
+        if (!(d is Bpl.LiteralExpr && ((Bpl.LiteralExpr)d).IsTrue)) {
+          KnownClassesWithInvariants.Add((Cci.Class)type);
+        }
+
+        switch (CommandLineOptions.Clo.MethodologySelection) {
+          case CommandLineOptions.Methodology.Boogie:
+            if ((type.Contract != null && type.Contract.InvariantCount > 0) || hasElementProxyInvariant)
+            {
+              // e.g. axiom (forall $oi: ref, $h: [ref, <x>name]x ::
+              //                { $h[$oi, $inv] <: Bag }            // this trigger means the declared invariant is not used as part of the trigger; this may be restrictive, but it prevents a Simplify "possible matching loop" outcome in at least one place (test3/AddMethod.ssc:Bag.Add)
+              //                IsHeap($h) && $h[$oi, $inv] <: Bag && $h[$oi, $localinv] != immediate-base-type-of(Bag)
+              //                ==>
+              //                0 <= $h[$oi, Bag.n] && $h[$oi, Bag.n] <= $Length($h[$oi, Bag.a]);
+              Bpl.Expr isheap = Function(Sink.BuiltinFunction.IsHeap, Sink.Ident(heapVar));
+              Bpl.Expr body = Bpl.Expr.Imp(Bpl.Expr.And(isheap, Bpl.Expr.Not(om.IsExposed(o, TypeNameExpression(type), HeapExpr(heapVar.Name)))), d);
+              
+              Bpl.Trigger trig = om.IsAdditivelyExposedTrigger(o, type, HeapExpr(heapVar.Name));
+              
+              Bpl.Expr q = new Bpl.ForallExpr(NoToken, new Bpl.VariableSeq(oVar, heapVar), trig, body);
+              this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, q, type.FullName + " object invariant"));
+            }
+            break;
+
+          case CommandLineOptions.Methodology.VisibleState:
+          {
+            // e.g. axiom (forall $oi: ref, $h: [ref, <x>name]x ::
+            //                $Inv($h, $oi, Bag)
+            //                <==>
+            //                0 <= $h[$oi, Bag.n] && $h[$oi, Bag.n] <= $Length($h[$oi, Bag.a]);
+            // A possible trigger for this axiom is $Inv($h, $oi, Bag).  This is one that
+            // Simplify and Z3 will consider.  However, it may be that the invariant expression
+            // itself contains some good triggers.  By leaving out an explicit trigger for this
+            // quantifier, we hope the theorem prover will usefully pick up some triggers from
+            // the invariant expression as well as $Inv($h, $oi, Bag).
+            Bpl.Expr inv = Function(Sink.BuiltinFunction.TheInvariant, Sink.Ident(heapVar), o, TypeNameExpression(type));
+            Bpl.Expr body = Bpl.Expr.Iff(inv, d);
+            
+            Bpl.Expr q = new Bpl.ForallExpr(NoToken, new Bpl.VariableSeq(oVar, heapVar), body);
+            this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, q, type.FullName + " object invariant"));
+            break;
+          }
+
+          default:
+            assert false;
+        }
+        
+      } else if (type is Cci.Struct) {
+        // TODO: I find the generation of an invariant axiom for structs a bit dubious.  Should we remove this code?  --KRML
+        // TODO: For generic structs, we do not yet conjoin the ElementProxy-invariant.  --PM
+        if (type.Contract != null && type.Contract.InvariantCount > 0) {
+          Cci.InvariantList invariants = type.Contract.Invariants;
+          assert invariants != null;
+
+          foreach (Cci.Invariant inv in invariants) {
+            if (inv != null) {
+              Cci.Expression cond = inv.Condition;
+              if (cond != null) {
+                Bpl.Variable heap = Sink.BoundVar("$h", HeapType);
+                Bpl.Expr! bplCond = new ExpressionTranslator(this,null,null,null,null).TranslateExpression(cond, (!)heap.Name);
+                Bpl.Variable! s = BoundVar("this", StructType);
+                this.earlyDeclarations.Add(new Bpl.Axiom(NoToken, new Bpl.ForallExpr(NoToken, new VariableSeq(heap, s), null, bplCond)));
+              }
+            }
+          }
+        }
+      }
+    }
+    internal void AddDeclaration (Bpl.Declaration! decl, bool early) {
+      if (early) {
+        this.earlyDeclarations.Add(decl);
+      } else {
+        this.toplevelDeclarations.Add(decl);
+      }
+    }
+    
+    static int nondetCount = 0;
+    internal Expr! NonDeterministicValue()
+    {
+      string n = "_nondet#" + nondetCount;
+      nondetCount++;
+      Constant c = new Constant(NoToken, new TypedIdent(NoToken, n, NondetType));
+      AddDeclaration(c, false);
+      return Ident(c);
+    }
+    
+    const string! ActivityIndicatorName = "$ActivityIndicator";
+    internal IdentifierExpr! ActivityIndicator()
+    {
+      return Bpl.Expr.Ident(ActivityIndicatorName, ActivityType);
+    }
+    
+    internal Bpl.Expr! QuantifyOverActivityIndicator(Bpl.Expr! cond)
+    {
+      ActivityFinder af = new ActivityFinder();
+      af.VisitExpr(cond);
+      if (af.MentionsActivityIndicator) {
+        //Add existential quantification to deal with the boxing expressions that might occur in the axiom        
+        cond = new Bpl.ExistsExpr(NoToken, new VariableSeq(Sink.BoundVar(ActivityIndicator().Name, ActivityType)), cond);
+      }
+      return cond;
+    }
+    
+    /// <summary>
+    /// MentionsActivityIndicator is set to true when an IdentifierExpr referring to $ActivityIndicator is found in the visited AST.
+    /// Note: reset containsOld between uses.
+    /// Can deal with unresolved IdentifierExpr's.
+    ///</summary>
+    private class ActivityFinder : StandardVisitor {
+      public bool MentionsActivityIndicator = false;
+      
+      public override Expr! VisitIdentifierExpr(IdentifierExpr! node) {
+        if (node.Name == ActivityIndicatorName) {
+          MentionsActivityIndicator = true;
+        }
+        return node; // Just returning node here, as opposed to calling base.VisitIdentifierExpr, means we don't ever visit its Decl (which we thus can allow to be null, if that were ever to be important)
+      }
+    }
+
+    internal void AddProcedure (Cci.Method! method)
+    {
+      AddProcedure(method, false);
+    }
+    
+    internal void AddProcedure (Cci.Method! method, MethodSignature! sig)
+    {
+      AddProcedure(method, false, sig);
+    }
+    
+    internal void AddProcedure (Cci.Method! method, bool virtualSignature)
+    {
+      AddProcedure(method, virtualSignature, null);
+    }
+    
+    internal void AddProcedure (Cci.Method! method, bool virtualSignature, MethodSignature sig)
+      requires sig != null ==> !virtualSignature;
+    {
+      object key = virtualSignature ? (object) new VirtualWrapper(method) : method;
+      if ( ! this.declaredProcedures.Contains(key))
+      {
+        if (sig == null) {
+          sig = new MethodSignature(method, virtualSignature, this, om, false);
+        }
+
+        Bpl.Procedure procedure = new Bpl.Procedure(
+          NoToken,
+          UniqueProcedureName(method, virtualSignature), new Bpl.TypeVariableSeq(),
+          sig.InParameters, sig.OutParameters,
+          sig.Requires, sig.Modifies, sig.Ensures);
+
+        //HS D: FIXME:
+        if (CommandLineOptions.Clo.Sketching)
+            if (method.IsStatic)            
+                procedure.AddAttribute("IsStatic", Bpl.Expr.True);
+            if (method.Inline)
+                procedure.AddAttribute("inline", new Bpl.LiteralExpr(NoToken, BigNum.FromInt(1))); //HS D - FIXME
+
+        this.toplevelDeclarations.Add(procedure);
+
+        this.declaredProcedures.Add(key, procedure);
+      }
+    }
+    internal void RemoveProcedure (Cci.Method! method)
+    {
+      this.implementationOrigins.Remove(method);
+      Bpl.Procedure procedure = (Bpl.Procedure) this.declaredProcedures[method];
+      if (procedure != null){
+        for (int i = 0; i < this.toplevelDeclarations.Count; ){
+          Bpl.Implementation impl = this.toplevelDeclarations[i] as Bpl.Implementation;
+          if (impl != null && impl.Name == procedure.Name) {
+            this.toplevelDeclarations.RemoveAt(i);
+          } else {
+            i++;
+          }
+        }
+      }
+    }
+
+    private void HandleModelFields(Cci.TypeNode! type) {
+      if (!(type is Cci.Class)) return;
+      if (Equals(type.FullName, "<Module>")) return;              
+      if (type.Contract == null) return;
+      assert type.Contract.ModelfieldContracts != null;  //should follow from spec, not sure how to make that happen (see invariants)
+      
+      ExpressionTranslator exprTrans = new ExpressionTranslator(this, null, null, null, null);
+                        
+      foreach (Cci.ModelfieldContract mfC in type.Contract.ModelfieldContracts) {
+        //A modelfield is found. Two steps need to be taken:
+        //(A) A special purpose procedure that serves as the once-and-for-all witness proof obligation must be created, and
+        //(B) The axiom associated with this modelfield must be created.
+        
+        assert mfC != null;  //from invariant of ModelfieldContract
+        Cci.Field mf = mfC.Modelfield as Cci.Field;
+        assume mf != null; //as type is a class        
+        
+        if (!CommandLineOptions.Clo.NoConsistencyChecks) {  //should we have more ways of turning off this check?
+                    
+          #region (A) Create procedure+implementation to check proof obligation for witness
+
+          // Moved step 5 to the beginning so that the procedure and implementation have the same name. When the class containing
+          // a model field was within an explicit namespace, the procedure didn't get the namespace's name in its name, but the
+          // implementation did. This caused a named resolution error when the Boogie program was parsed.
+          //
+          //Now create and add the implementation
+          //5. The method that handles the implementation expects a cci method holding all the relevant information. Create it here.
+          Cci.Method! consistencyCheckerMethod = new Cci.Method(mfC.DeclaringType, ((!)mfC.DeclaringType).Attributes,
+                                                     Cci.Identifier.For("Boogie.ContractConsistencyCheckMF." + mfC.Modelfield.Name.Name),
+                                                     new Cci.ParameterList(), mfC.ModelfieldType, new Cci.Block());          
+                    
+
+          //1. first create the procedure      
+          string! procName = Sink.UniqueProcedureName(consistencyCheckerMethod);
+          Procedure checkWitnessProc = new Bpl.Procedure(NoToken, procName, 
+            new TypeVariableSeq(), new VariableSeq(), new VariableSeq(), new RequiresSeq(), new IdentifierExprSeq(), new EnsuresSeq());      
+          
+          //2. The procedure has 1 inparameter, namely       
+          //   this : ref where $IsNotNull(this, type) && $Heap[this, $allocated]        
+          TypedIdent! ident  = new TypedIdent(NoToken, "this", RefType);        
+          ident.WhereExpr = Bpl.Expr.And(this.TypeAssumption(Sink.Ident(ident.Name, ident.Type), type, true), this.IsAllocated(ident));        
+          Bpl.Formal! thisin = new Bpl.Formal(NoToken, ident, true);                
+          checkWitnessProc.InParams.Add(thisin);        
+          
+          checkWitnessProc.Modifies.Add( this.HeapExpr()); //The procedure modifies the heap
+                  
+          //3. The precondition of the procedure is 'IsValid': all owned objects are valid and this is consistent (but this.inv is not set)          
+          //(I don't understand why this is called IsValid, maybe the comment below should change)
+          Bpl.Expr thisExpr = new Bpl.IdentifierExpr(NoToken, thisin);          
+          Requires validFrame = new Requires(true, this.om.IsValid(thisExpr, type), "target object is consistent but not valid");      
+          checkWitnessProc.Requires.Add(validFrame);
+                      
+          this.toplevelDeclarations.Add(checkWitnessProc); //4. Add the procedure to the program.
+          
+          //6. The witnesses should satisfy all satisifies defined in this contract
+          //Additionally, they should satisfy all clauses of overridden contracts
+          //(as the value of the modelfield is changed on a "pack as <type>", and this change should not invalidate overridden contracts), 
+          //(note that clauses of implemented interface modelfields have been copied to mfC)
+          ExprSeq! sats = new ExprSeq();
+          for (Cci.ModelfieldContract currentMfC = mfC; currentMfC != null; currentMfC = currentMfC.NearestOverriddenContract) {        
+            foreach (Cci.Expression satClause in (!)currentMfC.SatisfiesList) {
+              if (satClause == null) continue;
+              sats.Add(exprTrans.TranslateExpression(satClause, Prelude.HeapName));
+            }
+          }
+          
+          //7. Like its procedure, the implementation has 1 inparameter, namely 'this', but it shouldn't have a where clause
+          TypedIdent! implIdent  = new TypedIdent(NoToken, "this", RefType);                
+          Bpl.Formal! implThisin = new Bpl.Formal(NoToken, implIdent, true);                
+          Bpl.VariableSeq ins = new VariableSeq();
+          ins.Add(implThisin);          
+          
+          //8. create and add the implementation
+          this.AddConsistencyCheckerImplementation(sats, ins, new VariableSeq(), consistencyCheckerMethod, mfC);
+                                
+          #endregion
+        }
+        
+        #region (B) Add the axiom that goes with the modelfield: this is valid ==> satisfies clauses of this.mf hold
+        // e.g. axiom (forall $oi: ref, $h: [ref,<x>name]x ::
+        //                { $h[$oi, C.mf] }
+        //                IsHeap($h) && $h[$oi, $inv] <: C && $h[$oi, $localinv] != immediate-base-type-of(C) (i.e., $oi is valid)
+        //                ==>
+        //                $h[$oi, C.mf] <= $h[$oi, C.k] && $h[$oi, C.mf] > $h[$oi, C.j]); (i.e, satisfies clauses of mf)
+        //This axiom is similar in style to the axiom generated for invariants (RecordInvariantFunction).
+                
+        //1. Create the bound variables
+        Bpl.Variable oVar = Sink.BoundVar("$oi", RefType);
+        Bpl.Expr o = Sink.Ident(oVar);
+        Bpl.Variable heapVar = Sink.BoundVar("$h", HeapType);
+
+        //2. Create the conjunction of satisifies clauses
+        //Note that it is not sound to include satisifies clauses of overridden modelfields in the axiom (due to local expose).
+        Bpl.Expr satConjunction = null;      
+        bool firstClause = true;
+        ExpressionTranslator expTran2 = new ExpressionTranslator(this, o, null, null, null);
+        foreach (Cci.Expression satClause in (!)mfC.SatisfiesList) { 
+          if (satClause == null) continue;
+          Bpl.Expr satConjunct = expTran2.TranslateExpression(satClause, heapVar.Name);          
+          if (firstClause) {
+            satConjunction = satConjunct;
+            firstClause = false;
+          } else
+            satConjunction = Bpl.NAryExpr.And((!)satConjunction, satConjunct);
+        }
+        
+        if (satConjunction == null) return; //3. only create axiom if there are relevant satisfies clauses.
+      
+        //4. Create the axiom's expression
+        Bpl.Expr isHeap = Function(Sink.BuiltinFunction.IsHeap, Sink.Ident(heapVar));  //isHeap($h)                
+        //Bpl.Expr and1 = Bpl.Expr.And(isHeap, Bpl.Expr.Neq(o, Bpl.Expr.Null)); //isHeap($h) && $oi != null, removed as oi != null should follow from $h[$oi, $inv] <: C
+        Bpl.Expr notLocEx = Bpl.Expr.Not(om.IsExposed(o, TypeNameExpression(type), HeapExpr(heapVar.Name))); //$h[$oi, $inv] <: C && $h[$oi, $localinv] != immediate-base-type-of(Bag)
+        Bpl.Expr premisse = Bpl.Expr.And(isHeap, notLocEx);
+        Bpl.Expr body = Bpl.Expr.Imp(premisse, satConjunction);        
+        Bpl.Trigger trig = new Bpl.Trigger(NoToken, true, new Bpl.ExprSeq(Bpl.Expr.Select(Sink.Ident(heapVar),o, this.Expr(mf))));                
+        Bpl.Expr q = new Bpl.ForallExpr(NoToken, new Bpl.VariableSeq(oVar, heapVar), trig, body);
+        
+        this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, q));  //5. Add the axiom
+        #endregion
+        
+      }
+      
+    }
+    
+    ///<summary>requires if mfC == null, then consistencyCheckerMethod is (a duplicate of) the method whose contract is to be checked for consistency,
+    ///else consistencyCheckerMethod is a dummy method containing the witnesses etc.
+    ///Note that this method does not duplicate guards</summary>
+    internal void AddConsistencyCheckerImplementation(ExprSeq! guards, Bpl.VariableSeq! ins, Bpl.VariableSeq! outs,  Cci.Method! consistencyCheckerMethod, Cci.ModelfieldContract mfC) {
+      
+      #region Step 1: set up this and result parameters 
+            
+        Bpl.Variable thisVariable = null;
+
+        foreach(Variable! v in ins){
+          if (v.Name == "this" || v.Name == "this$in") {           
+            thisVariable = v;
+            break; 
+          }
+        }
+        Bpl.IdentifierExpr thisVar = thisVariable == null ? null : new Bpl.IdentifierExpr(NoToken,thisVariable);          
+        Bpl.Variable resultVariable = null;              
+        foreach(Variable! v in outs){
+          if (v.Name == Prelude.ResultVariableName) {
+            resultVariable = v;         
+            break;
+          }          
+        }
+        Bpl.IdentifierExpr resultVar = resultVariable == null ? null : new Bpl.IdentifierExpr(NoToken,resultVariable);                                                              
+      
+      #endregion //step 1
+      
+      #region Step 2: Create bpl implementation for the consistencyCheckerMethod
+        
+        Bpl.Implementation checkerImpl = new Bpl.Implementation(
+          NoToken,
+          Sink.UniqueProcedureName(consistencyCheckerMethod),
+          new Bpl.TypeVariableSeq(),
+          ins,
+          outs,
+          new Bpl.VariableSeq(),
+          new List<Bpl.Block!>()
+        );
+
+        this.toplevelDeclarations.Add(checkerImpl);
+        if (mfC == null)
+          this.implementationOrigins[checkerImpl] = consistencyCheckerMethod; //set to original method, so errors can be traced back to it.              
+         
+        //Set up guard 'post'        
+        Bpl.Expr! post = Bpl.Expr.True;            
+        foreach (Expr! guard in guards) {                             
+          if (post == Bpl.Expr.True)
+            post = guard;            
+          else
+            post = Bpl.Expr.And(post, guard);            
+        }
+        Bpl.Expr! notPost = Bpl.Expr.Not(post);
+                                                                                                                      
+        //Block: on (post) return
+        Bpl.AssumeCmd assumePost = new Bpl.AssumeCmd(NoToken, post);
+        Bpl.ReturnCmd ret = new Bpl.ReturnCmd(NoToken);
+        Bpl.Block onPostReturn = new Bpl.Block(NoToken, "onPostReturn", new Bpl.CmdSeq(assumePost), ret);            
+        
+        Bpl.AssumeCmd assumeNotPost = new Bpl.AssumeCmd(NoToken, notPost);
+      
+        //set up expressiontranslator to translate witnesses and guards.
+        Bpl.ExpressionTranslator exprTrans = new Bpl.ExpressionTranslator(this, thisVar, resultVar, null, null);
+                                                                                                  
+        //init gotos
+        Bpl.GotoCmd! gotoIPlus1 = new Bpl.GotoCmd(NoToken, new BlockSeq());                                                      
+        Bpl.GotoCmd! gotoIJPlus1 = new Bpl.GotoCmd(NoToken, new BlockSeq());
+        
+        //initialize the first block                  
+        Bpl.Block checkerEntry = new Bpl.Block(NoToken, "entry", new Bpl.CmdSeq(), gotoIPlus1); //"i is -1"
+        checkerImpl.Blocks.Add(checkerEntry);              
+                      
+        //deserialize the witness attributes and update checkerImpl 
+        int attrCount = consistencyCheckerMethod.Attributes == null ? 0 : consistencyCheckerMethod.Attributes.Count;                  
+        for (int i = 0; i < attrCount; i++) {
+          #region deserialize witness attribute
+          Cci.AttributeNode attr = ((!)consistencyCheckerMethod.Attributes)[i];
+          if (attr == null) continue; //defensive check
+          Cci.MemberBinding mb = attr.Constructor as Cci.MemberBinding;
+          if (mb == null || mb.BoundMember == null) continue;  //defensive checks
+          if (mb.BoundMember.DeclaringType != Cci.SystemTypes.WitnessAttribute) continue;  //not the attribute we're looking for                      
+          assume attr.Expressions != null && attr.Expressions.Count > 3; //defensive check: signals error in IL                            
+          Cci.Literal isUpperboundAsLit = attr.Expressions[0] as Cci.Literal;
+          assume isUpperboundAsLit != null; //defensive check
+          bool isUpperbound = (bool) (!)isUpperboundAsLit.Value;  //Upperbound for witness on false (i.e., all lower values are potential witnesses as well) 
+          Cci.Literal nrOfDupsAsLit = attr.Expressions[1] as Cci.Literal;
+          assume nrOfDupsAsLit != null; //defensive check
+          int nrOfDups = (int) (!)nrOfDupsAsLit.Value;                            
+          Cci.Literal guardAsLit = attr.Expressions[2] as Cci.Literal;
+          assume guardAsLit != null; //defensive check
+          Cci.IContractDeserializer ds = Cci.ContractDeserializerContainer.ContractDeserializer;
+          assert ds != null; //defensive check
+          ds.CurrentAssembly = ((!)consistencyCheckerMethod.DeclaringType).DeclaringModule;
+          string guardAsString = (string) guardAsLit.Value;    //guardAsString should be either a serialized expression, or ""
+          Cci.Expression guard = null;
+          if (guardAsString != "")                              
+            guard = ds.ParseContract(consistencyCheckerMethod.Contract,guardAsString,null);
+          //Note that guard can be null
+          Cci.Literal witnessAsLit = attr.Expressions[3] as Cci.Literal;
+          assume witnessAsLit != null; //defensive check
+          string witnessAsString = (string) witnessAsLit.Value;    //witnessAsString should be a serialized expression.
+          Cci.Expression witness = ds.ParseContract(consistencyCheckerMethod.Contract,witnessAsString,null);
+          assume witness != null; //defensive check
+          witness.SourceContext = Cci.MethodContract.GetSourceContext(attr);
+          #endregion //deserialize witness attribute
+                                                                    
+          #region witness found. Create new block(s)
+          //Previous block must goto this one, this one must goto finalblock (i.e., to previousBlock.transferCmd).
+          Bpl.Expr witnessExpr = exprTrans.TranslateExpression(witness, Prelude.HeapName);  //Todo: deal with totality checks          
+          assert witnessExpr != null; //Translate should be able to deal with anything we throw at it (as anything we throw at it should be a valid expression).                                                            
+          
+          //if this isn't the first witness, assume !post                    
+          Bpl.CmdSeq witnessI0Seq = new CmdSeq();                    
+          if (checkerImpl.Blocks.Count > 1)
+            witnessI0Seq.Add(assumeNotPost);
+          //if there is a guard, create two blocks, one that updates, one that assumes !guard and skips update(s) of (duplicates of) this witness.                    
+          Bpl.GotoCmd nextIPlus1 = new GotoCmd(NoToken, new BlockSeq()); //dummy: not needed when there is no guard
+          if (guard != null) {
+            Bpl.Expr guardExpr = exprTrans.TranslateExpression(guard, Prelude.HeapName);
+            Bpl.AssumeCmd assumeGuard = new Bpl.AssumeCmd(NoToken, guardExpr);
+            witnessI0Seq.Add(assumeGuard);                      
+            Bpl.AssumeCmd assumeNotGuard = new Bpl.AssumeCmd(NoToken, Bpl.Expr.Not(guardExpr));
+            Bpl.Block onNotGuardSkipWitness = new Bpl.Block(NoToken, "onNotGuardSkipUpdate" + i.ToString(), new CmdSeq(assumeNotGuard), new GotoCmd(NoToken, new BlockSeq()));                       
+            gotoIPlus1.AddTarget(onNotGuardSkipWitness);
+            gotoIJPlus1.AddTarget(onNotGuardSkipWitness);
+            nextIPlus1 = (GotoCmd)(!)onNotGuardSkipWitness.TransferCmd;
+            checkerImpl.Blocks.Add(onNotGuardSkipWitness);
+          }
+          //For reference types, we need to make sure the witness is of (a subtype of) the returntype to catch an inconsistent contract like D m(C c) ensures result == c; where C
+          //is a subclass of D. We need this because the Spec# typechecker doesn't (and shouldn't) enforce a subtype relation between result and c (where our assignment will).                    
+          //We don't check subtype the subtype relation for the duplicates: they succeed whenever the original succeeds.                                                  
+          if (this.Convert(consistencyCheckerMethod.ReturnType).Equals(RefType)) {
+            Bpl.Expr witnessIsOfReturnType = this.Function(Sink.BuiltinFunction.Is, witnessExpr, this.TypeNameExpression(consistencyCheckerMethod.ReturnType));                                      
+            Bpl.AssertCmd assertWitOfRetType =  new Bpl.AssertCmd(NoToken, witnessIsOfReturnType);                      
+            assertWitOfRetType.ErrorData = new Translator.ErrorPair(witness, "The type of witness candidate \"" + witness.SourceContext.SourceText + "\" is not (a subtype of) the return type");
+            witnessI0Seq.Add(assertWitOfRetType);
+          }                          
+          Bpl.Cmd resBecomesWitnessI0 = this.GetWitnessAssignment(resultVar, witnessExpr, thisVar, mfC);
+          witnessI0Seq.Add(resBecomesWitnessI0);  
+          //if post holds, then return 
+          Bpl.GotoCmd tempIJPlus1 = new GotoCmd(NoToken, new BlockSeq(onPostReturn));                    
+          Bpl.Block onGuardUpdateWitness = new Bpl.Block(NoToken, "onGuardUpdateWitness" + i.ToString(), witnessI0Seq, tempIJPlus1);
+          //update previous goto's to try this witness if post didn't hold after previous update.
+          gotoIPlus1.AddTarget(onGuardUpdateWitness);
+          gotoIJPlus1.AddTarget(onGuardUpdateWitness);
+          gotoIJPlus1 = (GotoCmd)(!)onGuardUpdateWitness.TransferCmd;
+          gotoIPlus1 = nextIPlus1;
+          checkerImpl.Blocks.Add(onGuardUpdateWitness);                    
+          //deal with duplicates by creating a block:
+          //assume !post; $result = witness +- i; (+ or - depending on whether we are dealing with an upper- or lowerbound)
+          //and let the block of witness + i update block goto the witness + (i+1) update block if the post does not hold
+          Bpl.Expr currentWitness = witnessExpr;
+          for (int j = 1; j <= nrOfDups; j++) {
+            if (isUpperbound)
+              currentWitness = Bpl.Expr.Sub(witnessExpr, new Bpl.LiteralExpr(NoToken, BigNum.FromInt(j)));
+            else 
+              currentWitness = Bpl.Expr.Add(witnessExpr, new Bpl.LiteralExpr(NoToken, BigNum.FromInt(j)));
+            Bpl.Cmd resBecomesWitnessIJ = this.GetWitnessAssignment(resultVar, currentWitness, thisVar, mfC);            
+            Bpl.Block updateIJBlock =  new Block(NoToken, "updateWitness" + i.ToString() + "_" + j.ToString(), new CmdSeq(assumeNotPost, resBecomesWitnessIJ), new Bpl.GotoCmd(NoToken, new BlockSeq()));  
+            checkerImpl.Blocks.Add(updateIJBlock);
+            gotoIJPlus1.AddTarget(updateIJBlock);
+            gotoIJPlus1 = (GotoCmd)(!)updateIJBlock.TransferCmd;
+          }
+          #endregion
+        }
+        //all witnesses processed, finish up
+        //create the 'final' return block. The blocks that are still 'on the stack' must goto finalBlock.
+        Bpl.Block finalBlock = new Bpl.Block(NoToken, "returnBlock", new Bpl.CmdSeq(), new Bpl.ReturnCmd(NoToken));                  
+        gotoIPlus1.labelTargets = new BlockSeq(finalBlock);
+        gotoIPlus1.labelNames = new StringSeq(finalBlock.Label);
+        gotoIJPlus1.labelTargets = new BlockSeq(finalBlock);
+        gotoIJPlus1.labelNames = new StringSeq(finalBlock.Label);
+        if (mfC != null) {
+          //For model field checks, add asserts to give the right error messages (these asserts should imply checkerSig's postcondition).
+          //The witnesses should satisfy all satisifies clauses defined in this contract
+          //Additionally, they should satisfy all clauses of overridden contracts (the value of the modelfield is changed on a "pack as <type>", this change should not invalidate overridden contracts), 
+          //(note that clauses of implemented interface modelfields have been copied to mfC)              
+          for (Cci.ModelfieldContract currentMfC = mfC; currentMfC != null; currentMfC = currentMfC.NearestOverriddenContract) {        
+            foreach (Cci.Expression satClause in (!)currentMfC.SatisfiesList) {
+              if (satClause == null) continue;
+              Bpl.Expr satExpr = exprTrans.TranslateExpression(satClause, Prelude.HeapName);                            
+              finalBlock.Cmds.Add(Sink.Assert(satExpr, satClause, "The consistency of this satisfies clause could not be verified"));
+            }
+          }
+        }                            
+        if (checkerImpl.Blocks.Count > 2) //if there is more than 1 witness, we need the assume Post; return; block.
+          checkerImpl.Blocks.Add(onPostReturn);
+        checkerImpl.Blocks.Add(finalBlock);                                                                                                                             
+        
+        #endregion //step 2
+    
+    }
+    
+    /// <summary>
+    /// Helper method for AddConsistencyCheckerImplementation.
+    /// If mfC == null, then returns result := witnessExpr, else returns $Heap[this,mf] := witnessExp
+    /// </summary>
+    private Cmd GetWitnessAssignment(IdentifierExpr resultVar, Expr! witnessExpr, IdentifierExpr thisVar, Cci.ModelfieldContract mfC)
+      requires (mfC != null && thisVar != null) || resultVar != null;
+    {
+      Bpl.Cmd resBecomesWitness = null;
+      if (mfC == null) {
+        resBecomesWitness = Cmd.SimpleAssign(NoToken, (!)resultVar, witnessExpr); //result := witnessExpr
+      } else {          
+        Cci.Member! modF = (!)mfC.Modelfield;      
+        Expr mf = this.Expr((Cci.Field)modF);
+        resBecomesWitness = Cmd.MapAssign(NoToken, this.HeapExpr(), (!)thisVar, mf, witnessExpr); //$Heap[this, mf] := witnessExpr
+      }
+      return resBecomesWitness;
+    }                               
+    
+    internal void AddType (Cci.TypeNode! type)
+    {
+        if (type.FullName == "<Module>") { return; }
+          
+        // Peel off layers that don't matter here
+        while (true) {
+            if (type is Cci.ArrayType) {
+                // add supertype
+                AddType((!)Cci.SystemTypes.Array);
+                
+                type = ((Cci.ArrayType)type).ElementType;
+            } else if (type is Cci.Reference) {
+                type = ((Cci.Reference)type).ElementType;
+            } else if (type is Cci.Pointer) {
+                type = ((Cci.Pointer)type).ElementType;
+            } else {
+                Cci.OptionalModifier nntype = Sink.TypeAsNotNull(type);
+                if (nntype != null) {
+                    type = nntype.ModifiedType;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // Skip types declared in the prelude.  We also choose not to produce axioms that say
+        // value types are subtypes of System.Object, because (in at least one place--an axiom
+        // in the prelude that says that boxing is the identity on reference types) we use
+        // "T <: System.Object" to mean that T is a reference type.
+        if (Sink.IsIntegralType(type) || type == Cci.SystemTypes.Object || type == Cci.SystemTypes.Boolean)
+        {
+            return;
+        }
+
+        if (this.typesToBeDeclared.Contains(type))
+        {
+            // type already processed
+            return;
+        }
+
+        bool isGenericTypeParameter = type is Cci.ITypeParameter;
+        // declare the name of the type as a constant; the constant is unique, unless it's a type paramter
+        Bpl.Constant typeConst = new Bpl.Constant(NoToken, Sink.TypedIdent(Sink.FullName(type), TypeType), !isGenericTypeParameter);
+        this.typesToBeDeclared.Add(type, typeConst);
+
+        // Add the subtyping relation
+        if (isGenericTypeParameter) {
+            Bpl.Expr ty = TypeNameExpression(type);
+
+            // DON'T generate: axiom T <: T;
+
+            // axiom T <: superTypeConstraint && ...;
+            Bpl.Expr c;
+            Cci.TypeNode baseType = type.BaseType;
+            if (baseType == null) {
+              c = null;
+            } else {
+              AddType(baseType);
+              Bpl.Expr sub = Bpl.Expr.Subtype(ty, TypeNameExpression(baseType));
+              c = sub;
+            }
+            Cci.InterfaceList ifaces = type.Interfaces;
+            if (ifaces != null) {
+              foreach (Cci.Interface! intf in ifaces) {
+                AddType(intf);
+                Bpl.Expr sub = Bpl.Expr.Subtype(ty, TypeNameExpression(intf));
+                c = c == null ? sub : Bpl.Expr.And(c, sub);
+              }
+            }
+            if (c != null) {
+              this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, c));
+            }
+            
+        } else if (type is Cci.Class || type is Cci.DelegateNode) {
+            Bpl.Expr ty = TypeNameExpression(type);
+
+            // axiom T <: T;
+            this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Bpl.Expr.Subtype(ty, ty)));
+
+            Bpl.Variable superK = Sink.BoundVar("$K", TypeType);
+            Bpl.Expr superTypeDisjunction = Bpl.Expr.Eq(TypeNameExpression(type), Sink.Ident(superK));  // T==K
+
+            // axiom $BaseClass(T) == baseType && asDirectSub(T, $baseClass(T)) == T;
+            Cci.TypeNode baseType = type.BaseType;
+            if (baseType != null)
+            {
+                AddType(baseType);
+                Bpl.Expr bt = TypeNameExpression(baseType);
+                Bpl.Expr bc = Function(Sink.BuiltinFunction.BaseClass, ty);
+                Bpl.Expr ads = Function(Sink.BuiltinFunction.AsDirectSubClass, ty, bc);
+                this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Bpl.Expr.And(Bpl.Expr.Eq(bc, bt), Bpl.Expr.Eq(ads, ty))));
+                
+                superTypeDisjunction = Bpl.Expr.Or(superTypeDisjunction,
+                                         Bpl.Expr.Subtype(bt, Sink.Ident(superK)));  // ... || baseType <: K
+            }
+
+            // For types known to be immutable:
+            //   $IsImmutable(T) && $AsImmutable(T) == T
+            // For types known to be mutable:
+            //   !$IsImmutable(T) && $AsMutable(T) == T
+            bool isImmutable;
+            if (IsImmutable(type, out isImmutable)) {
+              Bpl.Expr imtb = Function(Sink.BuiltinFunction.IsImmutable, ty);
+              if (isImmutable) {
+                Bpl.Expr amtb = Bpl.Expr.Eq(Function(Sink.BuiltinFunction.AsImmutable, ty),ty);
+                this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Bpl.Expr.And(imtb, amtb)));
+              } else {
+                Bpl.Expr amtb = Bpl.Expr.Eq(Function(Sink.BuiltinFunction.AsMutable, ty),ty);
+                this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Bpl.Expr.And(Bpl.Expr.Not(imtb), amtb)));
+              }
+            }
+
+            Cci.InterfaceList ifaces = type.Interfaces;
+            if (ifaces != null) {
+                foreach (Cci.Interface! intf in ifaces) {
+                    AddType(intf);
+                    // axiom T <: intf;
+                    this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Bpl.Expr.Subtype(ty, TypeNameExpression(intf))));
+                    
+                    superTypeDisjunction = Bpl.Expr.Or(superTypeDisjunction,
+                                             Bpl.Expr.Subtype(TypeNameExpression(intf), Sink.Ident(superK)));  // ... || intf <: K
+                }
+            }
+
+            if (1 <= CommandLineOptions.Clo.OrderStrength) {
+              // axiom (forall K :: {T <: K}  T <: K <==> T==K || baseType <: K || superIntf0 <: K || ...)
+              Bpl.Expr lhs = Bpl.Expr.Subtype(ty, Sink.Ident(superK));
+              Bpl.Expr superBody = Bpl.Expr.Iff(lhs, superTypeDisjunction);
+              Bpl.Trigger trig = new Bpl.Trigger(NoToken, true, new Bpl.ExprSeq(lhs));
+              this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, new Bpl.ForallExpr(NoToken, new Bpl.VariableSeq(superK), trig, superBody)));
+            }
+            
+        } else if (type is Cci.Interface) {
+            Bpl.Expr ty = TypeNameExpression(type);
+            
+            // axiom T <: T;
+            this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Bpl.Expr.Subtype(ty, ty)));
+
+            Bpl.Variable superK = Sink.BoundVar("$K", TypeType);
+            Bpl.Expr superTypeDisjunction = Bpl.Expr.Eq(ty, Sink.Ident(superK));  // T==K
+
+            Cci.InterfaceList ifaces = type.Interfaces;
+            if (ifaces != null) {
+                foreach (Cci.Interface! intf in ifaces) {
+                    AddType(intf);
+                    // axiom T <: intf;
+                    this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Bpl.Expr.Subtype(ty, TypeNameExpression(intf))));
+
+                    superTypeDisjunction = Bpl.Expr.Or(superTypeDisjunction,
+                                             Bpl.Expr.Subtype(TypeNameExpression(intf), Sink.Ident(superK)));  // ... || intf <: K
+                }
+            }
+            
+            if (1 <= CommandLineOptions.Clo.OrderStrength) {
+              // axiom (forall K :: {T <: K}  T <: K <==> T==K || superIntf0 <: K || ...)
+              Bpl.Expr lhs = Bpl.Expr.Subtype(ty, Sink.Ident(superK));
+              Bpl.Expr superBody = Bpl.Expr.Iff(lhs, superTypeDisjunction);
+              Bpl.Trigger trig = new Bpl.Trigger(NoToken, true, new Bpl.ExprSeq(lhs));
+              this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, new Bpl.ForallExpr(NoToken, new Bpl.VariableSeq(superK), trig, superBody)));
+            }
+            
+            // For types known to be immutable:
+            //   $IsImmutable(T) && $AsImmutable(T) == T
+            // (There are no interface types that are known to be mutable.)
+            bool isImmutable;
+            if (IsImmutable(type, out isImmutable) && isImmutable) {
+              Bpl.Expr imtb = Function(Sink.BuiltinFunction.IsImmutable, ty);
+              Bpl.Expr amtb = Bpl.Expr.Eq(Function(Sink.BuiltinFunction.AsImmutable, ty),ty);
+              this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Bpl.Expr.And(imtb, amtb)));
+            }
+
+        } else if (type == Cci.SystemTypes.Single || type == Cci.SystemTypes.Double) {
+          // Don't generate subtyping relation information for these types, see comment above for types already
+          // included in the prelude.
+
+        } else if (IsEnumValueType(type)) {
+          // axiom (forall ev: int :: InRange(ev, type) <==> ev == 0 || ev == 1 || ...);
+          Bpl.Variable evVar = Sink.BoundVar("$ev", Bpl.Type.Int);
+          Bpl.Expr ev = Sink.Ident(evVar);
+          Bpl.Expr lhs = Function(Sink.BuiltinFunction.InRange, ev, TypeNameExpression(type));
+          // collect the various values, including 0, which is part of every enum
+          List<int> enumValues = new List<int>(1+type.Members.Count);
+          enumValues.Add(0);
+          foreach (Cci.Field f in type.Members) {
+            if (f != null && f.DefaultValue != null && f.DefaultValue.Value != null) {
+              int v = (int)f.DefaultValue.Value;
+              enumValues.Add(v);
+            }
+          }
+          enumValues.Sort();
+          // generates the RHS
+          Bpl.Expr rhs = null;
+          int j = 0;
+          while (j < enumValues.Count) {
+            // find the next consecutive interval
+            int start = enumValues[j++];
+            int endInclusive = start;
+            for (; j < enumValues.Count && enumValues[j] <= endInclusive+1; j++) {
+              endInclusive = enumValues[j];
+            }
+            Bpl.Expr p;
+            if (endInclusive == start) {
+              p = Bpl.Expr.Eq(ev, Bpl.Expr.Literal(start));
+            } else {
+              p = Bpl.Expr.And(Bpl.Expr.Le(Bpl.Expr.Literal(start), ev), Bpl.Expr.Le(ev, Bpl.Expr.Literal(endInclusive)));
+            }
+            // add p to RHS
+            rhs = rhs == null ? p : Bpl.Expr.Or(rhs, p);
+          }
+          assert rhs != null;  // follows from enumValues.Count > 0
+          
+          Bpl.Expr body = Bpl.Expr.Iff(lhs, rhs);
+          Bpl.Trigger trig = new Bpl.Trigger(NoToken, true, new Bpl.ExprSeq(lhs));
+          Bpl.Expr ax = new Bpl.ForallExpr(NoToken, new Bpl.VariableSeq(evVar), trig, body);
+          this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, ax, "enum definition for " + type.FullName));
+          
+        } else if (type is Cci.Struct){
+          for (int i = 0, n = type.Interfaces == null ? 0 : type.Interfaces.Count; i < n; i++){
+            Cci.Interface J = type.Interfaces[i];
+            if (J == null) continue;
+            // axiom T <: J
+            AddType(J);
+            this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Bpl.Expr.Subtype(TypeNameExpression(type), TypeNameExpression(J))));
+          }
+        
+          // axiom (forall $bx: ref :: { BoxTester($bx, T) } BoxTester($bx, T) != null ==> (exists $s: struct :: Box($s, $bx) == $bx));
+          Bpl.Variable bxVar = Sink.BoundVar("$bx", RefType);
+          Bpl.Expr bx = Sink.Ident(bxVar);
+          Bpl.Variable sVar = Sink.BoundVar("$s", StructType);
+          Bpl.Expr s = Sink.Ident(sVar);
+          Bpl.Expr boxTester = Function(Sink.BuiltinFunction.BoxTester, bx, TypeNameExpression(type));
+          Bpl.Expr isBox = Bpl.Expr.Eq(Function(Sink.BuiltinFunction.Box, s, bx), bx);
+          Bpl.Expr ex = new Bpl.ExistsExpr(NoToken, new Bpl.VariableSeq(sVar), isBox);
+          Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new ExprSeq(boxTester));
+          Bpl.Expr ax = new Bpl.ForallExpr(NoToken, new Bpl.VariableSeq(bxVar), tr, Bpl.Expr.Imp(Bpl.Expr.Neq(boxTester, Null), ex));
+          this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, ax));
+
+        }
+        
+        if (!isGenericTypeParameter &&
+            ((type.IsAbstract && type is Cci.Class) || type is Cci.Interface)) {
+          // axiom $IsMemberlessType(T);
+          this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Function(Sink.BuiltinFunction.IsMemberlessType, TypeNameExpression(type))));
+          if (type is Cci.Interface){
+            // axiom $AsInterface(J) == J;
+            Bpl.Expr ty = TypeNameExpression(type);
+            this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Bpl.Expr.Eq(Function(Sink.BuiltinFunction.AsInterface, ty), ty)));
+          }
+        }
+
+        if (IsReferenceType(type)) {
+          // handle types for which we know all of the subtypes
+          List<Cci.TypeNode!> subtypes = this.assemblyInfo.GetAllSubtypes(type);
+          if (subtypes != null) {
+            // axiom forall U :: {U <: T} U <: T ==> U == T || U <: Sub0 || U <: Sub1 || ...);
+            Bpl.Variable uVar = Sink.BoundVar("$U", TypeType);
+            Bpl.Expr u = Sink.Ident(uVar);
+            
+            Bpl.Expr lhs = Bpl.Expr.Subtype(u, TypeNameExpression(type));
+            Bpl.Expr rhs = Bpl.Expr.Eq(u, TypeNameExpression(type));
+            foreach (Cci.TypeNode sub in subtypes) {
+              AddType(sub);
+              rhs = Bpl.Expr.Or(rhs, Bpl.Expr.Subtype(u, TypeNameExpression(sub)));
+            }
+            
+            Bpl.Expr body = Bpl.Expr.Imp(lhs, rhs);
+            Bpl.Trigger trig = new Bpl.Trigger(NoToken, true, new Bpl.ExprSeq(lhs));
+            Bpl.Expr ax = new Bpl.ForallExpr(NoToken, new Bpl.VariableSeq(uVar), trig, body);
+            this.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, ax));
+          }
+        }
+            
+        this.RecordInvariantFunction(type);
+        this.HandleModelFields(type);
+    }
+    
+    /// <summary>
+    /// Returns true iff it is known whether or not "type" is an Immutable type.
+    /// If it returns true, "isImmutable" says whether or not "type" is an Immutable type.
+    /// </summary>
+    internal static bool IsImmutable (Cci.TypeNode! type, out bool isImmutable) {
+      bool dummy;
+      type = StripOptionalModifiers(type, out dummy);
+      Cci.AttributeNode attr = type.GetAttribute(Cci.SystemTypes.ImmutableAttribute);
+      if (attr != null) {
+        // we know it's Immutable
+        isImmutable = true;
+        return true;
+      }
+      if (type == Cci.SystemTypes.Object || type is Cci.Interface) {
+        // we don't know if it's immutable or not
+        isImmutable = false;  // set out parameter to some (arbitrary) value to please the compiler
+        return false;  // we don't know
+      }
+      // all other types are mutable
+      isImmutable = false;
+      return true;
+    }  
+    internal static string PrintableConstant (object value)
+    {
+      if (value == null) { return ""; }
+      string! content = (!) value.ToString();
+      System.Text.StringBuilder buffer = new System.Text.StringBuilder();
+      if (value is string) {
+        buffer.Append('\"');
+      }
+      foreach (char c in content)
+      {
+        switch (c) {
+          case '\r':  buffer.Append("\\r");  break;
+          case '\n':  buffer.Append("\\n");  break;
+          case '\"':  buffer.Append("\\\"");  break;
+          default:  buffer.Append(c);  break;
+        }
+      }
+      if (value is string) {
+        buffer.Append('\"');
+      }
+      return buffer.ToString();
+    }
+    /// <summary>
+    /// Returns an expression denoting the conjunction of the declared invariants for "type", where
+    /// "receiver" denotes "this" in the declared invariant and "heapName" names the heap for the
+    /// expression.  If "receiver" is null, the currently used receiver is used.
+    /// </summary>
+    public Bpl.Expr! GetDeclaredInvariant (Cci.TypeNode! type, Bpl.Expr receiver, string! heapName) {
+      Bpl.Expr d = null;
+      
+      if (type is Cci.Class && type.Contract != null && type.Contract.InvariantCount > 0) {
+        Cci.InvariantList invariants = type.Contract.Invariants;
+        assert invariants != null;
+
+        foreach (Cci.Invariant inv in invariants) {
+          if (inv != null && inv.Condition != null) {
+            Bpl.Expr thisReplacement = null;
+            if (receiver != null) {
+              thisReplacement = receiver;
+            }
+            Bpl.Expr e = new ExpressionTranslator(this,thisReplacement,null,null,null).TranslateExpression(inv.Condition, heapName);
+            e = QuantifyOverActivityIndicator(e);
+            
+            if (d == null) {
+              d = e;
+            } else {
+              d = Bpl.Expr.And(d, e);
+            }
+          }
+        }
+      }
+
+      if (d == null) {
+        return Bpl.Expr.True;
+      } else {
+        return d;
+      }
+    }
+    internal List<Bpl.Declaration!>! NameConsts
+    {
+      get
+      {
+        List<Bpl.Declaration!> nameConsts = new List<Bpl.Declaration!>();
+        foreach (Cci.Field field in (!)this.instanceFields.Keys)
+        {
+          Bpl.Constant nameConst = (Bpl.Constant!)this.instanceFields[field];
+          nameConsts.Add(nameConst);
+        }
+        foreach (Cci.TypeNode! type in (!)this.typesToBeDeclared.Keys)
+        {
+          if (type == Cci.SystemTypes.Array || type == Cci.SystemTypes.Type || type == Cci.SystemTypes.String) {
+            // each of these types is already declared as a constant in PRELUDE.bpl, so don't add the "const ..." declaration here
+          } else {
+            Bpl.Constant nameConst = (Bpl.Constant!)this.typesToBeDeclared[type];
+            nameConsts.Add(nameConst);
+          }
+        }
+        foreach (string c in (!)Sink.numberConsts.Keys)
+        {
+          object o = Sink.numberConsts[c];
+          if (o != null) {
+            Bpl.Constant floatConst = (Bpl.Constant)o;
+            nameConsts.Add(floatConst);
+          }
+        }
+        return nameConsts;
+      }
+    }
+    
+    private readonly Duplicator! duplicator = new Bpl.Duplicator ();
+    internal Bpl.Expr! Clone(Bpl.Expr! expr) {
+      return (Bpl.Expr!)duplicator.Visit(expr);
+    }
+
+} // end class Sink
+
+  public interface ParameterInfo
+  {
+    int Count { get; }
+    bool IsInParameter (int i);
+    bool IsOutParameter (int i);
+  }
+  
+  public class MethodParameters : ParameterInfo
+  {
+    private Cci.ParameterList parameters;
+    public MethodParameters (Cci.ParameterList ps) { this.parameters = ps; }
+    public int Count { get {assume this.parameters != null; return this.parameters.Count; } }
+    public bool IsInParameter (int i) {assume this.parameters != null; return Sink.IsInParameter( (!) this.parameters[i]); }
+    public bool IsOutParameter (int i) {assume this.parameters != null; return Sink.IsOutParameter( (!) this.parameters[i]); }
+  }
+   
+  public class FunctionPointerParameters : ParameterInfo
+  {
+    private Cci.FunctionPointer! fp;
+    public FunctionPointerParameters (Cci.FunctionPointer! fp) { this.fp = fp; }
+    public int Count { get { return this.fp.ParameterTypes.Count; } }
+    public bool IsInParameter (int i) { return true; } // FIXME - how can we do better here?
+    public bool IsOutParameter (int i) { return false; } // FIXME - how can we do better here?
+  }
+}

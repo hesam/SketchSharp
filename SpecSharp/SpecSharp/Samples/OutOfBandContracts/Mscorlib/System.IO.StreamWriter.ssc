@@ -1,0 +1,80 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.IO
+{
+
+    public class StreamWriter
+    {
+
+        public bool AutoFlush
+        {
+          get;
+          set;
+        }
+
+        public Stream BaseStream
+        {
+          get;
+        }
+
+        public System.Text.Encoding Encoding
+        {
+          get;
+        }
+
+        public void Write (string value);
+
+        public void Write (char[]! buffer, int index, int count)
+            requires buffer != null otherwise ArgumentNullException;
+            requires index >= 0 otherwise ArgumentOutOfRangeException;
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+            requires index + count <= buffer.Length otherwise ArgumentException;
+
+        public void Write (char[] buffer);
+
+        public void Write (char value);
+
+        public void Flush ();
+
+        public void Close ();
+
+        public StreamWriter (string! path, bool append, System.Text.Encoding! encoding, int bufferSize)
+            requires path != null otherwise ArgumentNullException;
+            requires encoding != null otherwise ArgumentNullException;
+            requires bufferSize > 0 otherwise ArgumentOutOfRangeException;
+
+        public StreamWriter (string! path, bool append, System.Text.Encoding! encoding)
+            requires path != null otherwise ArgumentNullException;
+            requires encoding != null otherwise ArgumentNullException;
+
+        public StreamWriter (string! path, bool append)
+            requires path != null otherwise ArgumentNullException;
+
+        public StreamWriter (string! path)
+            requires path != null otherwise ArgumentNullException;
+
+        public StreamWriter (Stream! stream, System.Text.Encoding! encoding, int bufferSize)
+            requires stream != null otherwise ArgumentNullException;
+            requires encoding != null otherwise ArgumentNullException;
+            requires bufferSize > 0 otherwise ArgumentOutOfRangeException;
+
+        public StreamWriter (Stream! stream, System.Text.Encoding! encoding)
+            requires stream != null otherwise ArgumentNullException;
+            requires encoding != null otherwise ArgumentNullException;
+
+        public StreamWriter (Stream! stream)
+            requires stream != null otherwise ArgumentNullException;
+    }
+}

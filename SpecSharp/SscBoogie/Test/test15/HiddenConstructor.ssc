@@ -1,0 +1,28 @@
+class T {
+  public int x;
+  public static T! Create()
+    //ensures result.IsNew;
+  {
+    return new T();
+  }
+  public int P()
+  {
+    return 0;
+  }
+}
+
+class C {
+  void M() {
+    T t = T.Create();
+    t.x = 5; // this fails because the t given here could have been allocated before [Create() is no constructor and has weaker post condition]
+  }
+}
+
+// fix above makes it verify
+
+//current error:
+// Error: Method C.M(), unsatisfied frame condition
+
+//better error:
+// line 17: t could be owned and the owner could be valid, thus t could be committed and the write not allowed
+// concrete example??? hard

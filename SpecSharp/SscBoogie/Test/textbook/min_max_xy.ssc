@@ -1,0 +1,54 @@
+/* min_max_xy.ssc
+   Calculates the minimum/maximum of 2 input parameters
+   Rosemary Monahan
+   March 7th 2007
+*/
+
+using System;
+using Microsoft.Contracts;
+
+public class C {
+  public static void Main() {
+    int x = 3;
+    int y = 9;
+    int mi = min(x,y);
+    int ma = max(x,y);
+
+    int mi2 = min{x,y};
+    int ma2 = max{x,y};
+
+    assert mi == mi2 && mi == min{x,y};
+    assert ma == ma2 && ma == max{x,y};
+
+    assert mi == 3;
+    assert ma == 9;
+
+    System.Console.WriteLine("The min is {0}, the max is {1}", mi, ma);
+  }
+  
+  static int min(int x, int y)
+    ensures x<y ? result == x : result == y;
+  {
+    int m;
+    if (x < y) {
+      m = x;
+    } else {
+      m = y;
+    }
+    return m;
+  }
+
+  static int max(int x, int y)
+    ensures x>y ? result == x : result == y;
+  {
+    int m;
+    if (x > y) {
+      m = x;
+    } else {
+      m = y;
+    }
+    return m;
+  }
+
+}
+

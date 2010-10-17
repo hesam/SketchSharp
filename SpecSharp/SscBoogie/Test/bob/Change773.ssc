@@ -1,0 +1,17 @@
+class Test1
+{
+    static void Foo(int[]! xs, object! o)
+    {
+        bool b = xs == o;
+        int i = xs[1];
+    }
+}
+
+class Test2
+{
+    static void Foo()
+    {
+        int[] xs = new int[4];
+        int i = xs[1];
+    }
+}

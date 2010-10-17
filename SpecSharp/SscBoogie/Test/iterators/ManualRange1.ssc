@@ -1,0 +1,107 @@
+static class Tools
+{
+   public sealed class Range_Enumerator
+   {
+      public int A;
+      public int B;
+      public int Index;
+      invariant true;
+
+      public Range_Enumerator(int a, int b)
+         ensures this.A == a;
+         ensures this.B == b;
+         ensures this.Index == -1;
+      {
+         this.A = a;
+         this.B = b;
+         this.Index = -1;
+         base();
+      }
+
+      public bool MoveNext()
+         ensures this.A == old(this.A);
+         ensures this.B == old(this.B);
+         ensures this.Index == old(this.Index) + 1;
+         ensures result == (this.A + this.Index < this.B);
+      {
+         expose (this)
+         {
+           this.Index++;
+           return this.A + this.Index < this.B;
+         }
+      }
+
+      public int Current
+      {
+         get
+            ensures result == this.A + this.Index;
+         {
+            return this.A + this.Index;
+         }
+      }
+   }
+
+   public sealed class Range_Enumerable
+   {
+      public int A;
+      public int B;
+
+      public Range_Enumerable(int a, int b)
+         ensures this.A == a;
+         ensures this.B == b;
+      {
+         this.A = a;
+         this.B = b;
+         base();
+      }
+
+      public Range_Enumerator! GetEnumerator()
+         ensures this.A == old(this.A);
+         ensures this.B == old(this.B);
+         ensures result.A == this.A;
+         ensures result.B == this.B;
+         ensures result.Index == -1;
+         ensures result.IsNew;
+      {
+         Range_Enumerator result = new Range_Enumerator(this.A, this.B);
+         assume (object) result != (object) this;
+         return result;
+      }
+   }
+
+   public static Range_Enumerable! Range(int a, int b)
+      ensures result.A == a && result.B == b;
+      ensures result.IsNew;
+   {
+      return new Range_Enumerable(a, b);
+   }
+}
+
+static class Test
+{
+   static void Main()
+   {
+      Tools.Range_Enumerable! c = Tools.Range(1, 3);
+      assert c.A == 1;
+      assert c.B == 3;
+      Tools.Range_Enumerator! e = c.GetEnumerator();
+      assert e.A == 1;
+      assert e.B == 3;
+      assert e.Index == -1;
+      int sum = 0;
+      while (e.MoveNext())
+         // modifies e.Index;
+         invariant e.A == 1;
+         invariant e.B == 3;
+         invariant -1 <= e.Index;
+         invariant e.Index <= 1;
+         invariant e.Index == -1 ==> sum == 0;
+         invariant e.Index == 0 ==> sum == 1;
+         invariant e.Index == 1 ==> sum == 3;
+         invariant e.IsPeerConsistent;
+      {
+         sum += e.Current;
+      }
+      assert sum == 3;
+   }
+}

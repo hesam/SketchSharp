@@ -1,0 +1,81 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.IO
+{
+
+    public class FileInfo
+    {
+
+        public bool Exists
+        {
+          get;
+        }
+
+        public string Name
+        {
+          get;
+        }
+
+        public string DirectoryName
+        {
+          get;
+        }
+
+        public Int64 Length
+        {
+          get
+            ensures result >= 0;
+        }
+
+        public DirectoryInfo Directory
+        {
+          get;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public void MoveTo (string! destFileName)
+            requires destFileName != null otherwise ArgumentNullException;
+            requires destFileName.Length != 0 otherwise ArgumentException;
+
+        public FileStream OpenWrite ();
+
+        public FileStream OpenRead ();
+
+        public FileStream Open (FileMode mode, FileAccess access, FileShare share);
+
+        public FileStream Open (FileMode mode, FileAccess access);
+
+        public FileStream Open (FileMode mode);
+
+        public void Delete ();
+
+        public FileInfo CopyTo (string destFileName, bool overwrite);
+
+        public FileStream Create ();
+
+        public FileInfo CopyTo (string destFileName);
+
+        public StreamWriter AppendText ();
+
+        public StreamWriter CreateText ();
+
+        public StreamReader OpenText ();
+
+        public FileInfo (string! fileName)
+            requires fileName != null otherwise ArgumentNullException;
+    }
+}

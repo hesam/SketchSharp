@@ -1,0 +1,46 @@
+using Microsoft.Contracts;
+
+public class C {
+  [Rep] public C f;
+
+  public void M()
+    modifies f;
+  {
+    f = null;
+  }
+
+  public void N()
+    modifies f;
+  {
+    f = new C();
+  }
+
+  public void P()
+    modifies f;
+  {
+    f = f;
+  }
+
+  [Captured]
+  public void Q()
+    modifies f;
+  {
+    f = this;  // error
+  }
+
+  [Captured]
+  public void R()
+    requires Owner.None(this);
+    modifies f;
+  {
+    f = this;  // error
+  }
+
+  [Captured]
+  public void S()
+    requires Owner.None(this);
+    modifies f;
+  {
+    f = this;  // error
+  }
+}

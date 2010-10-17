@@ -1,0 +1,32 @@
+using System;
+using Microsoft.Contracts;
+
+public class Switch {
+  public void FooString(string! s) {
+    switch (s) {
+      case "Bill":
+        assert s == "Bill";
+        break;
+    }
+  }
+
+  public bool M(string! s)
+    ensures result <==> (s == "Bill");
+  {
+    switch (s) {
+      case "Bill":
+        return true;
+    }
+    return false;
+  }
+
+  [Pure][ResultNotNewlyAllocated]
+  public string M2(string! s, string! t)
+    requires s.Equals("Bill");
+    ensures result == String.IsInterned(s);
+  {
+    assert s == "Bill";
+    assert String.Equals(s,t) == s.Equals(t);
+    return s;
+  }
+}

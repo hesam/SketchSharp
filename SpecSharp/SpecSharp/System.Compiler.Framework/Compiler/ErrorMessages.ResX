@@ -1,0 +1,1528 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="CannotDeferenceNonPointerType" xml:space="preserve">
+    <value>Type {0} is not a pointer type</value>
+  </data>
+  <data name="DidNotExpect" xml:space="preserve">
+    <value>Did not expect '{0}'</value>
+  </data>
+  <data name="DuplicateAssemblyReference" xml:space="preserve">
+    <value>Duplicate reference to assembly</value>
+  </data>
+  <data name="LabelIdentiferAlreadyInUse" xml:space="preserve">
+    <value>Another label already has this name</value>
+  </data>
+  <data name="MultipleMainMethods" xml:space="preserve">
+    <value>More than one main method</value>
+  </data>
+  <data name="NoImplicitCoercion" xml:space="preserve">
+    <value>Values of type {0} cannot be implicitly coerced to type {1}</value>
+  </data>
+  <data name="NoMainMethod" xml:space="preserve">
+    <value>No main method</value>
+  </data>
+  <data name="NoSuchConstructor" xml:space="preserve">
+    <value>The type '{0}' has no constructors defined</value>
+  </data>
+  <data name="NotAnAssembly" xml:space="preserve">
+    <value>Module is not an assembly</value>
+  </data>
+  <data name="Win32ResourceFileNotRead" xml:space="preserve">
+    <value>Could not read Win32 resource file {0}. {1}</value>
+  </data>
+  <data name="InternalCompilerError" xml:space="preserve">
+    <value>Internal error in compiler</value>
+  </data>
+  <data name="NoSuchField" xml:space="preserve">
+    <value>No such field</value>
+  </data>
+  <data name="NoSuchMethod" xml:space="preserve">
+    <value>No such method</value>
+  </data>
+  <data name="NoSuchMember" xml:space="preserve">
+    <value>Type '{0}' does not have a member with name '{1}'</value>
+  </data>
+  <data name="NoSuchVariable" xml:space="preserve">
+    <value>No such variable</value>
+  </data>
+  <data name="NoExplicitCoercion" xml:space="preserve">
+    <value>Values of this type cannot be implicitly coerced to the required type</value>
+  </data>
+  <data name="NotAssignable" xml:space="preserve">
+    <value>Cannot be assigned to</value>
+  </data>
+  <data name="InvalidCompilerOption" xml:space="preserve">
+    <value>Invalid option: '{0}'</value>
+  </data>
+  <data name="InvalidCompilerOptionArgument" xml:space="preserve">
+    <value>Invalid option argument: {0}</value>
+  </data>
+  <data name="DuplicateResponseFile" xml:space="preserve">
+    <value>Response file '{0}' included multiple times</value>
+  </data>
+  <data name="DuplicateModuleReference" xml:space="preserve">
+    <value>Duplicate reference to module</value>
+  </data>
+  <data name="NotAModule" xml:space="preserve">
+    <value>'{0}' is not a module</value>
+  </data>
+  <data name="InvalidCodePage" xml:space="preserve">
+    <value>Code page '{0}' is invalid or not installed</value>
+  </data>
+  <data name="SourceFileTooLarge" xml:space="preserve">
+    <value>Source file '{0}' is too large to be compiled</value>
+  </data>
+  <data name="InvalidOutputFile" xml:space="preserve">
+    <value>Could not write to output file  -- {1}</value>
+  </data>
+  <data name="ReturnNotAllowed" xml:space="preserve">
+    <value>The return statement is not valid here</value>
+  </data>
+  <data name="NotAType" xml:space="preserve">
+    <value>Not a type</value>
+  </data>
+  <data name="IsNeverOfType" xml:space="preserve">
+    <value>Expression is never a value of type {0}</value>
+  </data>
+  <data name="NoImplicitCoercionFromConstant" xml:space="preserve">
+    <value>Constant value '{0}' cannot be implicitly coerced to type {1}</value>
+  </data>
+  <data name="IdentifierNotFound" xml:space="preserve">
+    <value>The name '{0}' is not defined</value>
+  </data>
+  <data name="IsAlwaysOfType" xml:space="preserve">
+    <value>Expression is always a value of type {0}</value>
+  </data>
+  <data name="IsBinaryFile" xml:space="preserve">
+    <value>'{0}' is a binary file instead of a source code file</value>
+  </data>
+  <data name="NoSuchType" xml:space="preserve">
+    <value>Could not find a type named '{0}'</value>
+  </data>
+  <data name="NotAnAttribute" xml:space="preserve">
+    <value>Type {0} does not derive from System.Attribute</value>
+  </data>
+  <data name="NoSuchQualifiedType" xml:space="preserve">
+    <value>Could not find a type named '{0}.{1}'</value>
+  </data>
+  <data name="NoSourceFiles" xml:space="preserve">
+    <value>No source files to compile</value>
+  </data>
+  <data name="FatalError" xml:space="preserve">
+    <value>fatal error {0}: </value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>error {0}: </value>
+  </data>
+  <data name="Warning" xml:space="preserve">
+    <value>warning {0}: </value>
+  </data>
+  <data name="ClashWithLocalConstant" xml:space="preserve">
+    <value>A local constant named '{0}' is already defined in this scope</value>
+  </data>
+  <data name="ClashWithLocalVariable" xml:space="preserve">
+    <value>A local variable named '{0}' is already defined in this scope</value>
+  </data>
+  <data name="DuplicateTypeMember" xml:space="preserve">
+    <value>Type {1} already contains a  declaration for '{0}'</value>
+  </data>
+  <data name="RelatedErrorLocation" xml:space="preserve">
+    <value>(Location of symbol related to previous error)</value>
+  </data>
+  <data name="DuplicateParameterName" xml:space="preserve">
+    <value>The parameter name '{0}' is a duplicate</value>
+  </data>
+  <data name="InvalidMainMethodSignature" xml:space="preserve">
+    <value>Wrong signature for an entry point</value>
+  </data>
+  <data name="DuplicateMethod" xml:space="preserve">
+    <value>Type '{1}' already defines a method called '{0}' with the same parameter types</value>
+  </data>
+  <data name="DuplicateType" xml:space="preserve">
+    <value>The namespace '{1}' already contains a definition for '{0}'</value>
+  </data>
+  <data name="TypeNotAccessible" xml:space="preserve">
+    <value>Type '{0}' is internal to assembly '{1}' and hence not accessible</value>
+  </data>
+  <data name="RelatedErrorModule" xml:space="preserve">
+    <value>[{0}]{1}: (Location of symbol related to previous error)</value>
+  </data>
+  <data name="MemberNotVisible" xml:space="preserve">
+    <value>'{0}' is not visible due to its protection level</value>
+  </data>
+  <data name="NotVisibleViaBaseType" xml:space="preserve">
+    <value>Cannot access protected member '{0}' via a qualifier of type '{1}'; the qualifier must be of type '{2}' (or derived from it)</value>
+  </data>
+  <data name="BaseClassLessAccessible" xml:space="preserve">
+    <value>Inconsistent accessibility: base class '{0}' is less accessible than class '{1}'</value>
+  </data>
+  <data name="AccessToNonStaticOuterMember" xml:space="preserve">
+    <value>Cannot access a nonstatic member of outer type '{0}' via nested type '{1}'</value>
+  </data>
+  <data name="NoSuchLabel" xml:space="preserve">
+    <value>No label '{0}' in scope</value>
+  </data>
+  <data name="UnreferencedLabel" xml:space="preserve">
+    <value>This label has not been referenced</value>
+  </data>
+  <data name="MemberHidesBaseClassMember" xml:space="preserve">
+    <value>Hides a base class member</value>
+  </data>
+  <data name="RelatedWarningLocation" xml:space="preserve">
+    <value>(Location of symbol related to previous warning)</value>
+  </data>
+  <data name="RelatedWarningModule" xml:space="preserve">
+    <value>[{0}]{1}: (Location of symbol related to previous warning)</value>
+  </data>
+  <data name="WrongKindOfMember" xml:space="preserve">
+    <value>'{0}' is a '{1}' but is used like a '{2}'</value>
+  </data>
+  <data name="NoOverloadWithMatchingArgumentCount" xml:space="preserve">
+    <value>No overload for method '{0}' takes '{1}' arguments</value>
+  </data>
+  <data name="ObjectRequired" xml:space="preserve">
+    <value>An object reference is required for the nonstatic field, method, or property '{0}'</value>
+  </data>
+  <data name="NoGetter" xml:space="preserve">
+    <value>The property or indexer '{0}' cannot be used in this context because it lacks the get accessor</value>
+  </data>
+  <data name="BadUseOfMethod" xml:space="preserve">
+    <value>Method '{0}' referenced without parentheses</value>
+  </data>
+  <data name="TypeNameRequired" xml:space="preserve">
+    <value>Static member '{0}' cannot be accessed with an instance reference; qualify it with a type name instead</value>
+  </data>
+  <data name="OverrideChangesAccess" xml:space="preserve">
+    <value>'{0}': cannot change access modifiers when overriding inherited member '{1}'</value>
+  </data>
+  <data name="BaseInterfaceLessAccessible" xml:space="preserve">
+    <value>Inconsistent accessibility: base interface '{0}' is less accessible than interface '{1}'</value>
+  </data>
+  <data name="ReturnTypeLessAccessibleThanDelegate" xml:space="preserve">
+    <value>Inconsistent accessibility: return type '{0}' is less accessible than delegate '{1}'</value>
+  </data>
+  <data name="ParameterLessAccessibleThanDelegate" xml:space="preserve">
+    <value>Inconsistent accessibility: parameter type '{0}' is less accessible than delegate '{1}'</value>
+  </data>
+  <data name="FieldTypeLessAccessibleThanField" xml:space="preserve">
+    <value>Inconsistent accessibility: field type '{0}' is less accessible than field '{1}'</value>
+  </data>
+  <data name="ReturnTypeLessAccessibleThanMethod" xml:space="preserve">
+    <value>Inconsistent accessibility: return type '{0}' is less accessible than method '{1}'</value>
+  </data>
+  <data name="ParameterLessAccessibleThanMethod" xml:space="preserve">
+    <value>Inconsistent accessibility: parameter type '{0}' is less accessible than method '{1}'</value>
+  </data>
+  <data name="PropertyTypeLessAccessibleThanProperty" xml:space="preserve">
+    <value>Inconsistent accessibility: property type '{0}' is less accessible than property '{1}'</value>
+  </data>
+  <data name="ParameterLessAccessibleThanIndexedProperty" xml:space="preserve">
+    <value>Inconsistent accessibility: parameter type '{0}' is less accessible than indexer '{1}'</value>
+  </data>
+  <data name="PropertyTypeLessAccessibleThanIndexedProperty" xml:space="preserve">
+    <value>Inconsistent accessibility: indexer return type '{0}' is less accessible than indexer '{1}'</value>
+  </data>
+  <data name="ReturnTypeLessAccessibleThanOperator" xml:space="preserve">
+    <value>Inconsistent accessibility: return type '{0}' is less accessible than operator '{1}'</value>
+  </data>
+  <data name="ParameterLessAccessibleThanOperator" xml:space="preserve">
+    <value>Inconsistent accessibility: parameter type '{0}' is less accessible than operator '{1}'</value>
+  </data>
+  <data name="ConversionNotInvolvingContainedType" xml:space="preserve">
+    <value>Duplicate user-defined conversion in class '{0}'</value>
+  </data>
+  <data name="IdentityConversion" xml:space="preserve">
+    <value>User-defined operator cannot take an object of the enclosing type and convert to an object of the enclosing type</value>
+  </data>
+  <data name="ConversionWithBase" xml:space="preserve">
+    <value>'{0}': user-defined conversion to/from base class</value>
+  </data>
+  <data name="ConversionWithInterface" xml:space="preserve">
+    <value>'{0}': user-defined conversion to/from interface</value>
+  </data>
+  <data name="ConversionWithDerived" xml:space="preserve">
+    <value>'{0}': user-defined conversion to/from derived class</value>
+  </data>
+  <data name="NoSetter" xml:space="preserve">
+    <value>Property or indexer '{0}' cannot be assigned to -- it is read only</value>
+  </data>
+  <data name="AssignmentToLiteral" xml:space="preserve">
+    <value>'{0}' is a literal and cannot be assigned to</value>
+  </data>
+  <data name="AssignmentToReadOnlyInstanceField" xml:space="preserve">
+    <value>'{0}' cannot be assigned to (except in a constructor or a variable initializer)</value>
+  </data>
+  <data name="AssignmentToReadOnlyStaticField" xml:space="preserve">
+    <value>'{0}' cannot be assigned to (except in a constructor or a variable initializer)</value>
+  </data>
+  <data name="AssignmentToType" xml:space="preserve">
+    <value>'{0}' is a type and cannot be assigned to</value>
+  </data>
+  <data name="CannotDeriveFromInterface" xml:space="preserve">
+    <value>'{1}': Cannot derive from interface type '{0}'</value>
+  </data>
+  <data name="CannotDeriveFromSealedType" xml:space="preserve">
+    <value>'{1}': Cannot derive from sealed type '{0}'</value>
+  </data>
+  <data name="CannotCoerceNullToValueType" xml:space="preserve">
+    <value>Cannot convert null to '{0}' because it is a value type</value>
+  </data>
+  <data name="MultipleTypeImport" xml:space="preserve">
+    <value>'{0}' is defined in multiple places; using definition from '{1}'</value>
+  </data>
+  <data name="AmbiguousTypeReference" xml:space="preserve">
+    <value>'{0}' is an ambiguous reference</value>
+  </data>
+  <data name="BadUnaryOp" xml:space="preserve">
+    <value>Operator '{0}' cannot be applied to operand of type '{1}'</value>
+  </data>
+  <data name="NotAnInterface" xml:space="preserve">
+    <value>'{0}' is not an interface</value>
+  </data>
+  <data name="BadNestedTypeReference" xml:space="preserve">
+    <value>Cannot access nested type {0} through an expression</value>
+  </data>
+  <data name="InvalidDebugInformationFile" xml:space="preserve">
+    <value>Could not write to debug information file  -- {1}</value>
+  </data>
+  <data name="DuplicateConversion" xml:space="preserve">
+    <value>Duplicate user-defined conversion in class '{0}'</value>
+  </data>
+  <data name="BadBinaryOps" xml:space="preserve">
+    <value>Operator '{0}' cannot be applied to operands of type '{1}' and '{2}'</value>
+  </data>
+  <data name="PossibleBadNegCast" xml:space="preserve">
+    <value>To cast a negative value, you must enclose the value in parentheses</value>
+  </data>
+  <data name="IntegerDivisionByConstantZero" xml:space="preserve">
+    <value>Division by constant zero</value>
+  </data>
+  <data name="CTOverflow" xml:space="preserve">
+    <value>The operation overflows at compile time</value>
+  </data>
+  <data name="ResultIsNotReference" xml:space="preserve">
+    <value>Cannot modify the return value of '{0}' because it is not a variable</value>
+  </data>
+  <data name="AssignmentHasNoEffect" xml:space="preserve">
+    <value>Assignment has no effect</value>
+  </data>
+  <data name="ThisInStaticCode" xml:space="preserve">
+    <value>Keyword this is not valid in a static property, static method, or static field initializer</value>
+  </data>
+  <data name="BaseInStaticCode" xml:space="preserve">
+    <value>Keyword base is not valid in a static property, static method, or static field initializer</value>
+  </data>
+  <data name="BaseInBadContext" xml:space="preserve">
+    <value>Keyword base is not available in the current context</value>
+  </data>
+  <data name="ThisInBadContext" xml:space="preserve">
+    <value>Keyword this is not available in the current context</value>
+  </data>
+  <data name="MemberDoesNotHideBaseClassMember" xml:space="preserve">
+    <value>Does not hide a base class member</value>
+  </data>
+  <data name="NoSuchOperator" xml:space="preserve">
+    <value>Operator '{0}' is not defined for type '{1}'</value>
+  </data>
+  <data name="AsMustHaveReferenceType" xml:space="preserve">
+    <value>Type '{0}' is not a reference type</value>
+  </data>
+  <data name="ImpossibleCast" xml:space="preserve">
+    <value>A value of type '{0}' can never be of type '{1}'</value>
+  </data>
+  <data name="BitwiseOrSignExtend" xml:space="preserve">
+    <value>Bitwise-or operator used on a sign-extended operand; consider casting to a smaller unsigned type first</value>
+  </data>
+  <data name="AmbiguousConditional" xml:space="preserve">
+    <value>Type of conditional expression can't be determined because '{0}' and '{1}' both implicitly convert to each other</value>
+  </data>
+  <data name="InvalidConditional" xml:space="preserve">
+    <value>Type of conditional expression can't be determined because there is no implicit conversion between '{0}' and '{1}'</value>
+  </data>
+  <data name="TypeInBadContext" xml:space="preserve">
+    <value>'{0}' denotes a type which is not valid in this context</value>
+  </data>
+  <data name="TypeInVariableContext" xml:space="preserve">
+    <value>'{0}' denotes a type where a variable is expected</value>
+  </data>
+  <data name="BadRefCompareLeft" xml:space="preserve">
+    <value>Possible unintended reference comparison; to get a value comparison, cast the left hand side to type '{0}'</value>
+  </data>
+  <data name="BadRefCompareRight" xml:space="preserve">
+    <value>Possible unintended reference comparison; to get a value comparison, cast the right hand side to type '{0}'</value>
+  </data>
+  <data name="BadUnaryOperatorSignature" xml:space="preserve">
+    <value>The parameter of a unary operator must be the containing type</value>
+  </data>
+  <data name="BadBoolOp" xml:space="preserve">
+    <value>In order to be applicable as a short circuit operator a user-defined logical operator ('{0}') must have the same return type as the type of its 2 parameters.</value>
+  </data>
+  <data name="MustHaveOpTF" xml:space="preserve">
+    <value>The type ('{0}') must contain declarations of operator true and operator false</value>
+  </data>
+  <data name="PointerInAsOrIs" xml:space="preserve">
+    <value>"is" or "as" are not valid on pointer types</value>
+  </data>
+  <data name="DuplicateUsedNamespace" xml:space="preserve">
+    <value>Namespace '{0}' is already in use</value>
+  </data>
+  <data name="BadIncDecSignature" xml:space="preserve">
+    <value>The parameter and return type for ++ or -- operator must be the containing type</value>
+  </data>
+  <data name="NotConstantExpression" xml:space="preserve">
+    <value>The expression being assigned to '{0}' must be constant</value>
+  </data>
+  <data name="ConstantExpected" xml:space="preserve">
+    <value>A constant value is expected</value>
+  </data>
+  <data name="BadForeachCollection" xml:space="preserve">
+    <value>Expressions of type '{0}' cannot be enumerated because '{1}' does not contain a definition for '{2}', or it is inaccessible</value>
+  </data>
+  <data name="AssignmentToReadOnlyLocal" xml:space="preserve">
+    <value>Cannot assign to '{0}' because it is read-only</value>
+  </data>
+  <data name="BadExitOrContinue" xml:space="preserve">
+    <value>No enclosing loop out of which to break or continue</value>
+  </data>
+  <data name="CannotReturnValue" xml:space="preserve">
+    <value>It is not possible to return a value from this method</value>
+  </data>
+  <data name="BadExceptionType" xml:space="preserve">
+    <value>The type caught or thrown must be derived from System.Exception</value>
+  </data>
+  <data name="BadEmptyThrow" xml:space="preserve">
+    <value>Throw needs argument</value>
+  </data>
+  <data name="ConflictBetweenAliasAndType" xml:space="preserve">
+    <value>Namespace '{0}' already contains a type definition for '{1}'</value>
+  </data>
+  <data name="DuplicateAliasDefinition" xml:space="preserve">
+    <value>Namespace '{0}' already contains an alias definition for '{1}'</value>
+  </data>
+  <data name="NullNotAllowed" xml:space="preserve">
+    <value>Use of null is not valid in this context</value>
+  </data>
+  <data name="BadGetEnumerator" xml:space="preserve">
+    <value>The call to GetEnumerator may not return a value of type '{0}'</value>
+  </data>
+  <data name="CloseUnimplementedInterfaceMember" xml:space="preserve">
+    <value>'{0}' does not implement interface member '{1}'. '{2}' is either static, not public, or has the wrong return type.</value>
+  </data>
+  <data name="UnimplementedInterfaceMember" xml:space="preserve">
+    <value>'{0}' does not implement interface member '{1}'</value>
+  </data>
+  <data name="CLSNotOnModules" xml:space="preserve">
+    <value>You must specify the CLSCompliant attribute on the assembly, not the module, to enable CLS compliance checking</value>
+  </data>
+  <data name="CustomAttributeError" xml:space="preserve">
+    <value>Error emitting '{0}' -- argument '{1}' is invalid</value>
+  </data>
+  <data name="CircularBase" xml:space="preserve">
+    <value>Circular dependency between '{1}' and '{0}'</value>
+  </data>
+  <data name="ConstructsAbstractClass" xml:space="preserve">
+    <value>Cannot create an instance of the abstract class '{0}'</value>
+  </data>
+  <data name="UnimplementedAbstractMethod" xml:space="preserve">
+    <value>'{0}' does not implement inherited abstract member '{1}'</value>
+  </data>
+  <data name="FamilyInStruct" xml:space="preserve">
+    <value>'{0}' : a value type cannot be extended, new members should therefore not be given family visibility</value>
+  </data>
+  <data name="OperatorNeedsMatch" xml:space="preserve">
+    <value>The operator '{0}' requires a matching operator '{1}' to also be defined</value>
+  </data>
+  <data name="EqualityOpWithoutEquals" xml:space="preserve">
+    <value>'{0}' defines operator == or operator != but does not override Object.Equals</value>
+  </data>
+  <data name="EqualityOpWithoutGetHashCode" xml:space="preserve">
+    <value>'{0}' defines operator == or operator != but does not override Object.GetHashCode</value>
+  </data>
+  <data name="DuplicateInterfaceInBaseList" xml:space="preserve">
+    <value>'{0}' is already listed in interface list</value>
+  </data>
+  <data name="CycleInInterfaceInheritance" xml:space="preserve">
+    <value>Inherited interface '{0}' causes a cycle in the interface hierarchy of '{1}'</value>
+  </data>
+  <data name="InterfaceMemberNotFound" xml:space="preserve">
+    <value>'{0}' in explicit interface declaration does not match a member of interface '{1}'</value>
+  </data>
+  <data name="DuplicateIndexer" xml:space="preserve">
+    <value>Type '{1}' already defines an indexer with the same parameter types</value>
+  </data>
+  <data name="AssignmentToBase" xml:space="preserve">
+    <value>Not a valid assignment target</value>
+  </data>
+  <data name="StaticNotVirtual" xml:space="preserve">
+    <value>'{0}' can not be static as well as virtual</value>
+  </data>
+  <data name="NotIndexable" xml:space="preserve">
+    <value>Type '{0}' is not indexable</value>
+  </data>
+  <data name="InstanceFieldInitializerInStruct" xml:space="preserve">
+    <value>Instance fields of value types cannot have initializers</value>
+  </data>
+  <data name="InterfaceMemberHasBody" xml:space="preserve">
+    <value>'{0}': an interface member cannot have a definition</value>
+  </data>
+  <data name="CannotDeriveFromSpecialType" xml:space="preserve">
+    <value>'{1}' cannot be derived from special class '{0}'</value>
+  </data>
+  <data name="BadBinaryOperatorSignature" xml:space="preserve">
+    <value>One of the parameters of a binary operator must be the containing type</value>
+  </data>
+  <data name="OpTrueFalseMustResultInBool" xml:space="preserve">
+    <value>The return type of operator True or False must be bool</value>
+  </data>
+  <data name="AmbiguousBinaryOperation" xml:space="preserve">
+    <value>Operator '{0}' is ambiguous on operands of type '{1}' and '{2}'</value>
+  </data>
+  <data name="RecursiveConstructorCall" xml:space="preserve">
+    <value>Constructor '{0}' cannot call itself</value>
+  </data>
+  <data name="AmbiguousCall" xml:space="preserve">
+    <value>The call is ambiguous between the following methods or properties: '{0}' and '{1}'</value>
+  </data>
+  <data name="PropertyWithNoAccessors" xml:space="preserve">
+    <value>'{0}' : property or indexer must have at least one accessor</value>
+  </data>
+  <data name="AbstractHasBody" xml:space="preserve">
+    <value>'{0}' cannot declare a body because it is marked abstract</value>
+  </data>
+  <data name="PropertyCantHaveVoidType" xml:space="preserve">
+    <value>'{0}' : property or indexer cannot have void type</value>
+  </data>
+  <data name="ReturnValueRequired" xml:space="preserve">
+    <value>A return value of a type convertible to '{0}' is required</value>
+  </data>
+  <data name="OverrideChangesReturnType" xml:space="preserve">
+    <value>'{0}': cannot change return type when overriding inherited member '{1}'</value>
+  </data>
+  <data name="NoGetterToOverride" xml:space="preserve">
+    <value>'{0}': cannot override because '{1}' does not have an overridable get accessor</value>
+  </data>
+  <data name="NoSetterToOverride" xml:space="preserve">
+    <value>'{0}': cannot override because '{1}' does not have an overridable set accessor</value>
+  </data>
+  <data name="ObsoleteError" xml:space="preserve">
+    <value>'{0}' is obsolete</value>
+  </data>
+  <data name="ObsoleteWarning" xml:space="preserve">
+    <value>'{0}' is obsolete</value>
+  </data>
+  <data name="ObsoleteErrorWithMessage" xml:space="preserve">
+    <value>'{0}' is obsolete: {1}</value>
+  </data>
+  <data name="ObsoleteWarningWithMessage" xml:space="preserve">
+    <value>'{0}' is obsolete: {1}</value>
+  </data>
+  <data name="OverrideNotExpected" xml:space="preserve">
+    <value>'{0}': no suitable method found to override</value>
+  </data>
+  <data name="CircularConstantDefinition" xml:space="preserve">
+    <value>The evaluation of the constant value for '{0}' involves a circular definition</value>
+  </data>
+  <data name="ConcreteMissingBody" xml:space="preserve">
+    <value>'{0}' must declare a body because it is not marked abstract or extern</value>
+  </data>
+  <data name="AbstractMethodInConcreteType" xml:space="preserve">
+    <value>'{0}' is abstract but it is contained in nonabstract class '{1}'</value>
+  </data>
+  <data name="MemberHidesBaseClassOverridableMember" xml:space="preserve">
+    <value>Hides a base class member</value>
+  </data>
+  <data name="CannotOverrideAccessor" xml:space="preserve">
+    <value>Accessor '{0}' : cannot override '{1}' because it is hidden by '{2}'</value>
+  </data>
+  <data name="CannotCallSpecialMethod" xml:space="preserve">
+    <value>'{0}': cannot explicitly call operator or accessor</value>
+  </data>
+  <data name="AbstractBaseCall" xml:space="preserve">
+    <value>Cannot call an abstract base member: '{0}'</value>
+  </data>
+  <data name="NoPropertyToOverride" xml:space="preserve">
+    <value>'{0}' : cannot override; '{1}' is not a property</value>
+  </data>
+  <data name="NoMethodToOverride" xml:space="preserve">
+    <value>'{0}' : cannot override; '{1}' is not a method</value>
+  </data>
+  <data name="HidesAbstractMethod" xml:space="preserve">
+    <value>'{0}' hides inherited abstract member '{1}'</value>
+  </data>
+  <data name="CannotOverrideSpecialMethod" xml:space="preserve">
+    <value>'{0}' : cannot override '{1}' because it is a special compiler-generated method</value>
+  </data>
+  <data name="UselessComparisonWithIntegerLiteral" xml:space="preserve">
+    <value>Comparison to integral constant is useless; the constant is outside the range of type '{0}'</value>
+  </data>
+  <data name="FamilyInSealed" xml:space="preserve">
+    <value>New family member '{0}' declared in sealed type</value>
+  </data>
+  <data name="ThisReferenceFromFieldInitializer" xml:space="preserve">
+    <value>A field initializer cannot reference the nonstatic field, method, or property '{0}'</value>
+  </data>
+  <data name="VolatileAndReadonly" xml:space="preserve">
+    <value>'{0}': a field can not be both volatile and readonly</value>
+  </data>
+  <data name="VolatileByRef" xml:space="preserve">
+    <value>'{0}': a reference to a volatile field will not be treated as volatile</value>
+  </data>
+  <data name="VolatileNonWordSize" xml:space="preserve">
+    <value>'{0}': a volatile field can not be of the type '{1}'</value>
+  </data>
+  <data name="PInvokeWithoutModuleOrImportName" xml:space="preserve">
+    <value>Incomplete Platform Invoke signature: '{0}'</value>
+  </data>
+  <data name="PInvokeHasBody" xml:space="preserve">
+    <value>A Platform Invoke method '{0}' cannot have a body</value>
+  </data>
+  <data name="OverloadRefOut" xml:space="preserve">
+    <value>'{0}' cannot define overloaded methods which differ only on ref and out</value>
+  </data>
+  <data name="CannotOverrideNonVirtual" xml:space="preserve">
+    <value>'{0}' : cannot override inherited member '{1}'</value>
+  </data>
+  <data name="AbstractAndExtern" xml:space="preserve">
+    <value>Platform Invoke method '{0}' cannot be marked as abstract</value>
+  </data>
+  <data name="DllImportOnInvalidMethod" xml:space="preserve">
+    <value>The DllImport attribute must be specified on a Platform Invoke method</value>
+  </data>
+  <data name="ParamArrayMustBeLast" xml:space="preserve">
+    <value>A parameter array must be the last formal parameter</value>
+  </data>
+  <data name="ParamArrayParameterMustBeArrayType" xml:space="preserve">
+    <value>The type of the parameter specified as a parameter array must be a single dimensional array</value>
+  </data>
+  <data name="ValueTypeLayoutCycle" xml:space="preserve">
+    <value>Member '{0}' of value type '{1}' causes a cycle in the layout</value>
+  </data>
+  <data name="AttributeOnBadTarget" xml:space="preserve">
+    <value>Attribute '{0}' is not valid on this declaration type. It is valid on '{1}' declarations only.</value>
+  </data>
+  <data name="FieldOffsetNotAllowed" xml:space="preserve">
+    <value>The FieldOffset attribute can only be placed on fields of types that have explicit layout</value>
+  </data>
+  <data name="FieldOffsetNotAllowedOnStaticField" xml:space="preserve">
+    <value>The FieldOffset attribute can only be placed on instance fields</value>
+  </data>
+  <data name="NoMethodMatchesDelegate" xml:space="preserve">
+    <value>No method matches delegate '{0}'</value>
+  </data>
+  <data name="EventNotDelegate" xml:space="preserve">
+    <value>'{0}': event must be of a delegate type</value>
+  </data>
+  <data name="NegativeArraySize" xml:space="preserve">
+    <value>Cannot create an array with a negative size</value>
+  </data>
+  <data name="ArrayElementCannotBeTypedReference" xml:space="preserve">
+    <value>Array elements cannot be of type '{0}'</value>
+  </data>
+  <data name="WrongNumberOfIndices" xml:space="preserve">
+    <value>Wrong number of indices, expected '{0}'</value>
+  </data>
+  <data name="CannotOverrideFinal" xml:space="preserve">
+    <value>'{0}' : cannot override inherited method '{1}' because it is final</value>
+  </data>
+  <data name="CannotOverrideNonEvent" xml:space="preserve">
+    <value>'{0}' : cannot override; '{1}' is not an event</value>
+  </data>
+  <data name="BadLHSideForAssignment" xml:space="preserve">
+    <value>Not a valid assignment target</value>
+  </data>
+  <data name="AssignmentToEvent" xml:space="preserve">
+    <value>The event '{0}' cannot be assigned to, use the add accessor instead</value>
+  </data>
+  <data name="InaccessibleEventBackingField" xml:space="preserve">
+    <value>The event '{0}' cannot be assigned to, except inside the its declaring class, use the add accessor instead</value>
+  </data>
+  <data name="CannotExplicitlyImplementAccessor" xml:space="preserve">
+    <value>'{0}' explicit method implementation cannot implement '{1}' because it is an accessor</value>
+  </data>
+  <data name="AbstractEventInitializer" xml:space="preserve">
+    <value>'{0}': abstract event cannot have an initializer</value>
+  </data>
+  <data name="ArrayInitializerLengthMismatch" xml:space="preserve">
+    <value>Array initializer has {0} expressions, expecting {1}</value>
+  </data>
+  <data name="BadCallToEventHandler" xml:space="preserve">
+    <value>Handler for event '{0}' cannot be called directly</value>
+  </data>
+  <data name="TupleIndexExpected" xml:space="preserve">
+    <value>Integer literal between 0 and {0} expected</value>
+  </data>
+  <data name="BadUseOfEvent" xml:space="preserve">
+    <value>Event '{0}' cannot be used as a value</value>
+  </data>
+  <data name="VisualStudioNotFound" xml:space="preserve">
+    <value>Visual Studio 7.0 or 7.1 is not installed properly, compiler installation cannot proceed</value>
+  </data>
+  <data name="ContainingTypeDoesNotImplement" xml:space="preserve">
+    <value>'{0}': containing type does not implement interface '{1}'</value>
+  </data>
+  <data name="ExplicitPropertyAddingAccessor" xml:space="preserve">
+    <value>'{0}' adds an accessor not found in interface member '{1}'</value>
+  </data>
+  <data name="ExplicitPropertyMissingAccessor" xml:space="preserve">
+    <value>Explicit interface implementation '{0}' is missing accessor '{1}'</value>
+  </data>
+  <data name="ExplicitlyImplementedTypeNotInterface" xml:space="preserve">
+    <value>'{0}' is not an interface</value>
+  </data>
+  <data name="ValueTypeIsAlreadyInvariant" xml:space="preserve">
+    <value>Type '{0}' is already non substitutable since it is a value type</value>
+  </data>
+  <data name="SealedTypeIsAlreadyInvariant" xml:space="preserve">
+    <value>Type '{0}' is already non substitutable since it is a sealed type. Consider using a non null type expression to denote the exclusion of null.</value>
+  </data>
+  <data name="ValueTypeIsAlreadyNonNull" xml:space="preserve">
+    <value>Type '{0}' already cannot be null since it is a value type</value>
+  </data>
+  <data name="RedundantBox" xml:space="preserve">
+    <value>Type '{0}' can already be null</value>
+  </data>
+  <data name="BadBox" xml:space="preserve">
+    <value>Type '{0}' explicitly excludes null, did you intended to undo this?</value>
+  </data>
+  <data name="RedundantStream" xml:space="preserve">
+    <value>Type '{0}' is already a stream</value>
+  </data>
+  <data name="BadStream" xml:space="preserve">
+    <value>Type '{0}' explicitly excludes null, did you intended to undo this?</value>
+  </data>
+  <data name="BadNonNull" xml:space="preserve">
+    <value>Type '{0}' explicitly includes null, did you intended to undo this?</value>
+  </data>
+  <data name="BadNonNullOnStream" xml:space="preserve">
+    <value>Type '{0}' explicitly includes empty streams, did you intended to undo this?</value>
+  </data>
+  <data name="RedundantNonNull" xml:space="preserve">
+    <value>Type '{0}' already cannot be null</value>
+  </data>
+  <data name="BadNonEmptyStream" xml:space="preserve">
+    <value>Type '{0}' explicitly includes empty streams, did you intended to undo this?</value>
+  </data>
+  <data name="BadStreamOnNonNullStream" xml:space="preserve">
+    <value>Type '{0}' explicitly excludes empty streams, did you intended to undo this?</value>
+  </data>
+  <data name="EnumerationValueOutOfRange" xml:space="preserve">
+    <value>'{0}': value is too large to fit in underlying type of enumeration</value>
+  </data>
+  <data name="UnreachableCatch" xml:space="preserve">
+    <value>A previous catch clause already catches all exceptions of this or a super type ('{0}')</value>
+  </data>
+  <data name="TooManyArgumentsToAttribute" xml:space="preserve">
+    <value>Too many arguments to attribute '{0}'</value>
+  </data>
+  <data name="BadNamedAttributeArgument" xml:space="preserve">
+    <value>'{0}' is not a valid named attribute argument. Named attribute arguments must be fields which are not readonly, static or const, or read-write properties which are not static.</value>
+  </data>
+  <data name="MethodNameExpected" xml:space="preserve">
+    <value>Method name expected</value>
+  </data>
+  <data name="WrongNumberOfArgumentsForDelegate" xml:space="preserve">
+    <value>Delegate '{0}' does not take '{1}' arguments</value>
+  </data>
+  <data name="CannotReturnTypedReference" xml:space="preserve">
+    <value>Method or delegate cannot return type '{0}'</value>
+  </data>
+  <data name="ParameterTypeCannotBeTypedReference" xml:space="preserve">
+    <value>Method or delegate parameter cannot be of type '{0}'</value>
+  </data>
+  <data name="InvalidAttributeArgument" xml:space="preserve">
+    <value>Invalid value for argument to '{0}' attribute</value>
+  </data>
+  <data name="IndexerNameAttributeOnOverride" xml:space="preserve">
+    <value>Cannot set the IndexerName attribute on an indexer marked override</value>
+  </data>
+  <data name="ConditionalOnInterfaceMethod" xml:space="preserve">
+    <value>Conditional not valid on interface members</value>
+  </data>
+  <data name="QueryNotSupported" xml:space="preserve">
+    <value>Query operation not supported in this context</value>
+  </data>
+  <data name="QueryNoMatch" xml:space="preserve">
+    <value>'{0}' has no member matching '{1}'</value>
+  </data>
+  <data name="QueryIsCyclic" xml:space="preserve">
+    <value>Query operation is cyclic</value>
+  </data>
+  <data name="ConditionalOnSpecialMethod" xml:space="preserve">
+    <value>Conditional not valid on '{0}' because it is a constructor, destructor, operator, or explicit interface implementation</value>
+  </data>
+  <data name="QueryBadAggregate" xml:space="preserve">
+    <value>The aggregate '{0}' is not defined for '{1}'</value>
+  </data>
+  <data name="QueryBadAggregateForm" xml:space="preserve">
+    <value>The type '{0}' is not a proper aggregate</value>
+  </data>
+  <data name="ConditionalOnOverride" xml:space="preserve">
+    <value>Conditional not valid on '{0}' because it is an override method</value>
+  </data>
+  <data name="ConditionalMustReturnVoid" xml:space="preserve">
+    <value>Conditional not valid on '{0}' because its return type is not void</value>
+  </data>
+  <data name="InconsistantIndexerNames" xml:space="preserve">
+    <value>Two indexers have different names; the IndexerName attribute must be used with the same name on every indexer within a type</value>
+  </data>
+  <data name="QueryAmbiguousContextName" xml:space="preserve">
+    <value>The name '{0}' is defined in both the iteration context and the surrounding scope.  You can disambiguate by qualifying the name with 'it' or 'this'</value>
+  </data>
+  <data name="QueryBadGroupList" xml:space="preserve">
+    <value>The selection does not have any valid grouping expressions</value>
+  </data>
+  <data name="QueryBadOrderList" xml:space="preserve">
+    <value>The selection does not contain a valid ordering list</value>
+  </data>
+  <data name="QueryBadProjectionList" xml:space="preserve">
+    <value>The selection does not contain a valid projection list</value>
+  </data>
+  <data name="QueryBadQuantifier" xml:space="preserve">
+    <value>A quantifier can only occur as part of a boolean expression</value>
+  </data>
+  <data name="QueryBadQuantifiedExpression" xml:space="preserve">
+    <value>A quantifier can only occur as part of a boolean expression</value>
+  </data>
+  <data name="QueryBadDifferenceTypes" xml:space="preserve">
+    <value>Cannot perform set difference between type '{0}' and type '{1}'</value>
+  </data>
+  <data name="QueryBadInsertList" xml:space="preserve">
+    <value>The insert operator does not have a valid list of assignments</value>
+  </data>
+  <data name="QueryBadIntersectionTypes" xml:space="preserve">
+    <value>Cannot perform set intersection between type '{0}' and type '{1}'</value>
+  </data>
+  <data name="QueryBadLimit" xml:space="preserve">
+    <value>The selection does not contain a valid limit expression</value>
+  </data>
+  <data name="QueryBadLimitForNotPercent" xml:space="preserve">
+    <value>Integer literal is expected for top expression when percent is not specified</value>
+  </data>
+  <data name="QueryBadLimitNotLiteral" xml:space="preserve">
+    <value>Literal is expected for top expression</value>
+  </data>
+  <data name="QueryBadOrderItem" xml:space="preserve">
+    <value>Ordering expressions can only occur in the order-by expression list</value>
+  </data>
+  <data name="QueryBadUnionTypes" xml:space="preserve">
+    <value>Cannot perform set union between type '{0}' and type '{1}'</value>
+  </data>
+  <data name="QueryBadUpdateList" xml:space="preserve">
+    <value>The upate operator does not have a valid list of assignments</value>
+  </data>
+  <data name="QueryBadTypeFilter" xml:space="preserve">
+    <value>The type filter does not have a valid constraint</value>
+  </data>
+  <data name="QueryNoContext" xml:space="preserve">
+    <value>Reference to a non-existent context</value>
+  </data>
+  <data name="QueryNotScalar" xml:space="preserve">
+    <value>The expression does not evaluate to a single value</value>
+  </data>
+  <data name="QueryNotStream" xml:space="preserve">
+    <value>The expression does not evaluate to a stream of multiple values</value>
+  </data>
+  <data name="QueryProjectionThroughTypeUnion" xml:space="preserve">
+    <value>The projection involves a path through a type union</value>
+  </data>
+  <data name="DuplicateAttribute" xml:space="preserve">
+    <value>Duplicate '{0}' attribute</value>
+  </data>
+  <data name="QueryNotAddStream" xml:space="preserve">
+    <value>The type '{0}' does not support inserting elements of type '{1}'</value>
+  </data>
+  <data name="QueryNotDeleteStream" xml:space="preserve">
+    <value>The type '{0}' does not support deleting elements of type '{1}'</value>
+  </data>
+  <data name="QueryNotInsertStream" xml:space="preserve">
+    <value>The type '{0}' does not support inserting elements of type '{1}'</value>
+  </data>
+  <data name="QueryNotUpdateStream" xml:space="preserve">
+    <value>The type '{0}' does not support updating elements of type '{1}'</value>
+  </data>
+  <data name="IndexerNameNotIdentifier" xml:space="preserve">
+    <value>The argument to the IndexerName attribute must be a valid identifier</value>
+  </data>
+  <data name="DuplicateNamedAttributeArgument" xml:space="preserve">
+    <value>'{0}' duplicate named attribute argument</value>
+  </data>
+  <data name="BadAttributeParam" xml:space="preserve">
+    <value>Values of type '{0}' cannot be used in custom attributes</value>
+  </data>
+  <data name="QueryNotTransacted" xml:space="preserve">
+    <value>A transaction can only be commited or rolled back from within a transaction block</value>
+  </data>
+  <data name="QueryNotTransactable" xml:space="preserve">
+    <value>The type '{0}' does not implement IDbTransactable</value>
+  </data>
+  <data name="QueryNoNestedTransaction" xml:space="preserve">
+    <value>Nested transactions are not supported</value>
+  </data>
+  <data name="InterfaceImplementedByConditional" xml:space="preserve">
+    <value>Conditional member '{0}' cannot implement interface member '{1}'</value>
+  </data>
+  <data name="ComImportWithoutGuidAttribute" xml:space="preserve">
+    <value>The Guid attribute must be specified with the ComImport attribute</value>
+  </data>
+  <data name="BadFinallyLeave" xml:space="preserve">
+    <value>Control cannot leave the body of a finally clause</value>
+  </data>
+  <data name="CannotYieldFromCatchClause" xml:space="preserve">
+    <value>It is not possible to suspend an iterator inside an exception handler</value>
+  </data>
+  <data name="BadTupleIndex" xml:space="preserve">
+    <value>Bad tuple index, expected an integer in the range 0 to {0}</value>
+  </data>
+  <data name="CannotYieldFromTryBlock" xml:space="preserve">
+    <value>It is not possible to suspend an iterator inside a try block</value>
+  </data>
+  <data name="WrongReturnTypeForIterator" xml:space="preserve">
+    <value>The body of '{0}' cannot be an iterator block because '{1}' is not an iterator interface type</value>
+  </data>
+  <data name="NotYetImplemented" xml:space="preserve">
+    <value>The feature you are attempting to use, '{0}', has not been implemented. Please refrain from using it until a later time.</value>
+  </data>
+  <data name="InstanceMemberInAbstractSealedClass" xml:space="preserve">
+    <value>'{0}': cannot declare instance members in an abstract sealed class</value>
+  </data>
+  <data name="IndexerInAbstractSealedClass" xml:space="preserve">
+    <value>'{0}': cannot declare indexers in an abstract sealed class</value>
+  </data>
+  <data name="AbstractSealedBaseClass" xml:space="preserve">
+    <value>'{1}': Cannot derive from sealed class '{0}'</value>
+  </data>
+  <data name="ConstructorInAbstractSealedClass" xml:space="preserve">
+    <value>Abstract sealed classes may not have instance constructors</value>
+  </data>
+  <data name="DestructorInAbstractSealedClass" xml:space="preserve">
+    <value>Abstract sealed classes may not contain destructors</value>
+  </data>
+  <data name="ConstructsAbstractSealedClass" xml:space="preserve">
+    <value>Cannot create an instance of the abstract sealed class '{0}'</value>
+  </data>
+  <data name="AbstractSealedDerivedFromNonObject" xml:space="preserve">
+    <value>Abstract sealed class '{1}' may not derive from type '{0}'. Abstract sealed classes must derive from System.Object.</value>
+  </data>
+  <data name="AbstractSealedClassInterfaceImpl" xml:space="preserve">
+    <value>'{0}': abstract sealed classes cannot implement interfaces</value>
+  </data>
+  <data name="OperatorInAbstractSealedClass" xml:space="preserve">
+    <value>'{0}': abstract sealed classes cannot contain user-defined operators</value>
+  </data>
+  <data name="Usage" xml:space="preserve">
+    <value>
+                        - OUTPUT FILES -
+
+/out:&lt;file&gt;             Output file name (default: base name of file with main class or first file)
+/target:exe             Build a console executable (default) (Short form: /t:exe)
+/target:winexe          Build a Windows executable (Short form: /t:winexe)
+/target:library         Build a library (Short form: /t:library)
+/target:module          Build a module that can be added to another assembly (Short form: /t:module)
+/define:&lt;symbol list&gt;   Define conditional compilation symbol(s) (Short form: /d)
+/doc:&lt;file&gt;             XML Documentation file to generate
+
+                        - INPUT FILES -
+/reference:&lt;file list&gt;  Reference metadata from the specified assembly files (Short form: /r)
+/addmodule:&lt;file list&gt;  Link the specified modules into this assembly
+/shadow:&lt;file&gt;          Compile the input file as an out-of-band contract for the specified file
+
+                        - RESOURCES -
+/win32res:&lt;file&gt;        Specifies Win32 resource file (.res)
+/win32icon:&lt;file&gt;       Use this icon for the output
+/resource:&lt;resinfo&gt;     Embeds the specified resource (Short form: /res)
+/linkresource:&lt;resinfo&gt; Links the specified resource to this assembly (Short form: /linkres)
+                        
+                        - CODE GENERATION -
+/debug[+|-]             Emit debugging information
+/debug:{full|pdbonly}   Specify debugging type ('full' is default, and enables attaching a debugger to a running program)
+/optimize[+|-]          Enable optimizations (Short form: /o)
+
+                        - ERRORS AND WARNINGS -
+/warnaserror[+|-]       Report all warnings as errors
+/warnaserror:&lt;warning list&gt; 
+                        Report specific warnings as errors
+/warn:&lt;n&gt;               Set warning level (0-4) (Short form: /w)
+/nowarn:&lt;warning list&gt;  Disable specific warning messages
+
+                        - LANGUAGE -
+/checked[+|-]           Generate overflow checks
+/disable:&lt;features&gt;     Disable one or more features
+    where &lt;features&gt; is one or more of the following (long or short form):
+	    assumechecks (ac)
+	    defensivechecks (dc)
+	    guardedclasseschecks (gcc)
+	    internalchecks (ic)
+	    internalcontractsmetadata (icm)
+	    publiccontractsmetadata (pcm)
+
+                        - ADVANCED -
+/baseaddress:&lt;address&gt;  Base address for the library to be built
+/codepage:&lt;n&gt;           Specifies the codepage to use when opening source files
+/main:&lt;type&gt;            Specifies the type that contains the entry point (ignore all other possible entry points) (Short form: /m)
+/filealign:&lt;n&gt;          Specify the alignment used for output file sections
+/nostdlib[+|-]          Do not reference standard library (mscorlib.dll)
+/lib:&lt;file list&gt;        Specify additional directories to search in for references
+</value>
+  </data>
+  <data name="PartialClassesSpecifyMultipleBases" xml:space="preserve">
+    <value>Partial declarations of '{0}' must not specify different base classes</value>
+  </data>
+  <data name="NonObsoleteOverridingObsolete" xml:space="preserve">
+    <value>Member '{0}' overrides obsolete member '{1}'. Add the Obsolete attribute to '{0}'</value>
+  </data>
+  <data name="MissingStructOffset" xml:space="preserve">
+    <value>'{0}' : Instance fields of types with explicit layout must specify an explicit field offset.</value>
+  </data>
+  <data name="AttributeHasBadTarget" xml:space="preserve">
+    <value>'{0}' is not a valid attribute location for this declaration. Valid attribute locations for this declaration are '{1}'</value>
+  </data>
+  <data name="AbstractSealedParameterType" xml:space="preserve">
+    <value>Not a type</value>
+  </data>
+  <data name="AbstractSealedLocalType" xml:space="preserve">
+    <value>Not a type</value>
+  </data>
+  <data name="AbstractSealedFieldType" xml:space="preserve">
+    <value>Not a type</value>
+  </data>
+  <data name="AbstractSealedReturnType" xml:space="preserve">
+    <value>Not a type</value>
+  </data>
+  <data name="AbstractSealedArrayElementType" xml:space="preserve">
+    <value>Not a type</value>
+  </data>
+  <data name="AttributeUsageOnNonAttributeClass" xml:space="preserve">
+    <value>'{0}' : attribute is only valid on classes derived from System.Attribute</value>
+  </data>
+  <data name="BadNamedAttributeArgumentType" xml:space="preserve">
+    <value>'{0}' may not be initialized in an attribute argument list because its type is not a valid attribute parameter type.</value>
+  </data>
+  <data name="AbstractAttributeClass" xml:space="preserve">
+    <value>Cannot construct attribute class '{0}' because it is abstract</value>
+  </data>
+  <data name="UseSwitchInsteadOfAttribute" xml:space="preserve">
+    <value>Use command line option '{0}' or appropriate project settings instead of '{1}'</value>
+  </data>
+  <data name="AssemblyKeyFileMissing" xml:space="preserve">
+    <value>Key file does not exist at: {0}</value>
+  </data>
+  <data name="AssemblyCouldNotBeSigned" xml:space="preserve">
+    <value>Failure while signing assembly {0} -- {1}</value>
+  </data>
+  <data name="UnknownCryptoFailure" xml:space="preserve">
+    <value>Is the key valid?</value>
+  </data>
+  <data name="NoSuchFile" xml:space="preserve">
+    <value>File '{0}' does not exist</value>
+  </data>
+  <data name="SourceFileNoteRead" xml:space="preserve">
+    <value>Could not read source file '{0}'. {1}</value>
+  </data>
+  <data name="BatchFileNotRead" xml:space="preserve">
+    <value>Could not read option batch file '{0}'. {1}</value>
+  </data>
+  <data name="Win32IconFileNotRead" xml:space="preserve">
+    <value>Could not read icon file '{0}'. {1}</value>
+  </data>
+  <data name="AutoWin32ResGenFailed" xml:space="preserve">
+    <value>Error generating Win32 resource: {0}</value>
+  </data>
+  <data name="InvalidData" xml:space="preserve">
+    <value>The data is invalid</value>
+  </data>
+  <data name="InvalidWin32ResourceFileContent" xml:space="preserve">
+    <value>'{0}' is not a valid Win32 resource file</value>
+  </data>
+  <data name="AbstractMethodTemplate" xml:space="preserve">
+    <value>A method template cannot be abstract on the specified target platform</value>
+  </data>
+  <data name="AbstractInterfaceMethod" xml:space="preserve">
+    <value>The specified target platform does not allow interfaces to have generic methods</value>
+  </data>
+  <data name="InterfaceHasField" xml:space="preserve">
+    <value>Interfaces cannot contain fields</value>
+  </data>
+  <data name="DuplicateCaseLabel" xml:space="preserve">
+    <value>The label '{0}' already occurs in this switch statement</value>
+  </data>
+  <data name="IntegralTypeValueExpected" xml:space="preserve">
+    <value>A value of an integral type expected</value>
+  </data>
+  <data name="InvalidGotoCase" xml:space="preserve">
+    <value>A goto case is only valid inside a switch statement</value>
+  </data>
+  <data name="LabelNotFound" xml:space="preserve">
+    <value>No such label '{0}' within the scope of the goto statement</value>
+  </data>
+  <data name="LockNeedsReference" xml:space="preserve">
+    <value>'{0}' is not a reference type as required by the lock statement</value>
+  </data>
+  <data name="FixedMustInit" xml:space="preserve">
+    <value>You must provide an initializer in a fixed or using statement declaration</value>
+  </data>
+  <data name="InterfaceHasConstructor" xml:space="preserve">
+    <value>Interfaces cannot contain constructors</value>
+  </data>
+  <data name="CannotCoerceNullToNonNullType" xml:space="preserve">
+    <value>Null cannot be used where a non-null value is expected</value>
+  </data>
+  <data name="CoercionToNonNullTypeMightFail" xml:space="preserve">
+    <value>Conversion to '{0}' may fail if the value is null</value>
+  </data>
+  <data name="ReceiverMightBeNull" xml:space="preserve">
+    <value>Receiver might be null</value>
+  </data>
+  <data name="OnlyStructsAndClassesCanHaveInvariants" xml:space="preserve">
+    <value>Only classes and structs can have invariants </value>
+  </data>
+  <data name="UpToMustBeSuperType" xml:space="preserve">
+    <value>'{0}' must be a super class of '{1}' </value>
+  </data>
+  <data name="UpToMustBeClass" xml:space="preserve">
+    <value>'{0}' must be a class</value>
+  </data>
+  <data name="ExpectedLeftParenthesis" xml:space="preserve">
+    <value>( parenthesis expected</value>
+  </data>
+  <data name="ExpectedExpression" xml:space="preserve">
+    <value>expression expected</value>
+  </data>
+  <data name="MustSupportComprehension" xml:space="preserve">
+    <value>'{0}' must support IList</value>
+  </data>
+  <data name="MustResolveToType" xml:space="preserve">
+    <value>Expression did not resolve to a type</value>
+  </data>
+  <data name="CannotInferMethTypeArgs" xml:space="preserve">
+    <value>The type arguments for method '{0}' cannot be inferred from the usage. Try specifying the type arguments explicitly.</value>
+  </data>
+  <data name="NotATemplateType" xml:space="preserve">
+    <value>Type {0} is not a template and cannot be used with type arguments</value>
+  </data>
+  <data name="NestedFunctionDelegateParameterMismatch" xml:space="preserve">
+    <value>Cannot convert anonymous nested function to delegate type '{0}' because the function's parameter types do not match the delegate parameter types</value>
+  </data>
+  <data name="NestedFunctionDelegateReturnTypeMi&#xD;&#xA;	smatch" xml:space="preserve">
+    <value>Cannot convert anonymous nested function to delegate type '{0}' because some of the return values in the function are not implicitly convertible to the delegate return type</value>
+  </data>
+  <data name="CannotReadResource" xml:space="preserve">
+    <value>Error reading resource file '{0}' -- '{1}'</value>
+  </data>
+  <data name="MustBeTransparentForInvariant" xml:space="preserve">
+    <value>The checked exception '{0}' can be thrown but is not listed in the throws clause for method '{1}'.</value>
+  </data>
+  <data name="CheckedExceptionNotInThrowsClause" xml:space="preserve">
+    <value>The checked exception '{0}' can be thrown but is not listed in the throws clause for method '{1}'.</value>
+  </data>
+  <data name="MemberMustBePureForMethodContract" xml:space="preserve">
+    <value>The member '{0}' must be pure, confined or state independent (use custom attributes Contracts.Pure and Contracts.Reads).</value>
+  </data>
+  <data name="MemberMustBePureForInvariant" xml:space="preserve">
+    <value>The member '{0}' must be pure, confined or state independent (use custom attributes Contracts.Pure and Contracts.Reads).</value>
+  </data>
+  <data name="RequiresNotAllowedInOverride" xml:space="preserve">
+    <value>'{0}' : requires clause not allowed in override.</value>
+  </data>
+  <data name="ContractNotAllowedInExplicitInterfaceImplementation" xml:space="preserve">
+    <value>'{0}' : requires, ensures, throws or modifies not allowed in explicit interface implementation.</value>
+  </data>
+  <data name="CannotAddThrowsSet" xml:space="preserve">
+    <value>'{0}' : Cannot add any type to this method's throws set. The method it is overriding does not have any throws clauses.</value>
+  </data>
+  <data name="CannotWeakenThrowsSet" xml:space="preserve">
+    <value>'{0}' : Cannot add '{1}' to this method's throws set. The method it is overriding does not include this type.</value>
+  </data>
+  <data name="DuplicateThrowsType" xml:space="preserve">
+    <value>'{0}' : Throws sets cannot have duplicates.</value>
+  </data>
+  <data name="UncheckedExceptionInThrowsClause" xml:space="preserve">
+    <value>'{0}' : Cannot specify an unchecked exception in a throws clause.</value>
+  </data>
+  <data name="RequiresNotAllowedInInterfaceImplementation" xml:space="preserve">
+    <value>Requires not allowed in interface implementation of '{0}'.</value>
+  </data>
+  <data name="EnsuresInInterfaceNotInMethod" xml:space="preserve">
+    <value>cannot implicitly implement '{0}'. ensures can not be propagated to '{1}'.</value>
+  </data>
+  <data name="ModelMemberUseNotAllowedInContext" xml:space="preserve">
+    <value>The member '{0}' cannot be used outside a contract or another model member. </value>
+  </data>
+  <data name="TypeMustSupportIntCoercions" xml:space="preserve">
+    <value>Both arguments of .. must support the implicit coercions to int (System.Int32). </value>
+  </data>
+  <data name="CannotInjectContractFromInterface" xml:space="preserve">
+    <value>Cannot add the contract from '{0}' to this type. </value>
+  </data>
+  <data name="CheckedExceptionInRequiresOtherwiseClause" xml:space="preserve">
+    <value>Cannot specify a checked exception in an otherwise clause. </value>
+  </data>
+  <data name="ContractInheritanceRulesViolated" xml:space="preserve">
+    <value>The contract inheritance rules are violated between '{0}' and '{1}'. </value>
+  </data>
+  <data name="ThrowsEnsuresOnConstructor" xml:space="preserve">
+    <value>'throws' contracts on constructors are not allowed to have an 'ensures' condition. </value>
+  </data>
+  <data name="UseDefViolation" xml:space="preserve">
+    <value>Use of unassigned local variable '{0}'.</value>
+  </data>
+  <data name="UseDefViolationOut" xml:space="preserve">
+    <value>Use of unassigned out parameter '{0}'.</value>
+  </data>
+  <data name="UseDefViolationField" xml:space="preserve">
+    <value>Use of possibly unassigned field '{0}'.</value>
+  </data>
+  <data name="UseDefViolationThis" xml:space="preserve">
+    <value>The this object cannot be used before all of its fields are assigned to.</value>
+  </data>
+  <data name="ReturnExpected" xml:space="preserve">
+    <value>'{0}': not all code paths return a value.</value>
+  </data>
+  <data name="UnreferencedVar" xml:space="preserve">
+    <value>The variable '{0}' is declared but never used.</value>
+  </data>
+  <data name="UnreferencedVarAssg" xml:space="preserve">
+    <value>The variable '{0}' is assigned but its value is never used.</value>
+  </data>
+  <data name="ExpressionIsAlreadyOfThisType" xml:space="preserve">
+    <value>Expression is already of type '{0}'.</value>
+  </data>
+  <data name="TemplateTypeRequiresArgs" xml:space="preserve">
+    <value>Using the template type '{0}' requires '{1}' type arguments</value>
+  </data>
+  <data name="ReceiverCannotBeNull" xml:space="preserve">
+    <value>Receiver '{0}' can not be null</value>
+  </data>
+  <data name="UseOfNullPointer" xml:space="preserve">
+    <value>Using null pointer{0}</value>
+  </data>
+  <data name="UseOfPossiblyNullPointer" xml:space="preserve">
+    <value>Using possibly null pointer{0}</value>
+  </data>
+  <data name="TypeParameterNotCompatibleWithConstraint" xml:space="preserve">
+    <value>The type '{0}' must be convertible to '{1}' in order to use it as parameter '{2}' in the generic type or method '{3}'</value>
+  </data>
+  <data name="CaseFallThrough" xml:space="preserve">
+    <value>Control cannot fall through from this case label to another</value>
+  </data>
+  <data name="TypeOfExprMustBeGuardedClass" xml:space="preserve">
+    <value>Type of expression must be guarded class</value>
+  </data>
+  <data name="TypeCaseNotFound" xml:space="preserve">
+    <value>Type '{0}' does not occur in '{1}'</value>
+  </data>
+  <data name="TypeSwitchExpressionMustBeUnion" xml:space="preserve">
+    <value>The expression must be a type union.</value>
+  </data>
+  <data name="DefaultNotAllowedInTypeswitch" xml:space="preserve">
+    <value>A default case is not allowed inside a type switch</value>
+  </data>
+  <data name="CannotLoadShadowedAssembly" xml:space="preserve">
+    <value>Cannot load shadowed assembly '{0}'</value>
+  </data>
+  <data name="TypeMissingInShadowedAssembly" xml:space="preserve">
+    <value>extern method is in type '{0}', which is not found in shadowed assembly</value>
+  </data>
+  <data name="MethodMissingInShadowedAssembly" xml:space="preserve">
+    <value>extern method '{0}' not found in shadowed assembly</value>
+  </data>
+  <data name="NotADelegate" xml:space="preserve">
+    <value>Type '{0}' is not a delegate type.</value>
+  </data>
+  <data name="NonNullFieldNotInitializedBeforeConstructorCall" xml:space="preserve">
+    <value>The non-null field {0} must be initialized before base constructor call</value>
+  </data>
+  <data name="ModifiesNotAllowedInOverride" xml:space="preserve">
+    <value>'{0}' : modifies clause not allowed in override.</value>
+  </data>
+  <data name="GenericError" xml:space="preserve">
+    <value>{0}</value>
+  </data>
+  <data name="GenericWarning" xml:space="preserve">
+    <value>{0}</value>
+  </data>
+  <data name="OtherwiseExpressionMustBeNonNull" xml:space="preserve">
+    <value>otherwise expression must be of a non-null type</value>
+  </data>
+  <data name="OtherwiseExpressionMustBeType" xml:space="preserve">
+    <value>otherwise clause must be a type</value>
+  </data>
+  <data name="RefConstraintNotSatisfied" xml:space="preserve">
+    <value>The type '{0}' must be a reference type in order to use it as parameter '{1}' in the generic type or method '{2}'</value>
+  </data>
+  <data name="DefaultContructorConstraintNotSatisfied" xml:space="preserve">
+    <value>The type '{0}' must have a public parameterless constructor in order to use it as parameter '{1}' in the generic type or method '{2}'</value>
+  </data>
+  <data name="ValConstraintNotSatisfied" xml:space="preserve">
+    <value>The type '{0}' must be a non-nullable value type in order to use it as parameter '{1}' in the generic type or method '{2}'</value>
+  </data>
+  <data name="ConstraintIsAbstractSealedClass" xml:space="preserve">
+    <value>'{0}': abstract sealed classes cannot be used as constraints</value>
+  </data>
+  <data name="FixedNeeded" xml:space="preserve">
+    <value>You can only take the address of unfixed expression inside of a fixed statement initializer</value>
+  </data>
+  <data name="VoidError" xml:space="preserve">
+    <value>The operation in question is undefined on void pointers</value>
+  </data>
+  <data name="IllegalPointerType" xml:space="preserve">
+    <value>Indirection to managed type is not valid</value>
+  </data>
+  <data name="ManagedAddr" xml:space="preserve">
+    <value>Cannot take the address of, get the size of, or declare a pointer to a managed type ('{0}')</value>
+  </data>
+  <data name="PointerMustHaveSingleIndex" xml:space="preserve">
+    <value>A pointer must be indexed by only one value</value>
+  </data>
+  <data name="UnmanagedConstraintNotSatisfied" xml:space="preserve">
+    <value>The type '{0}' must be an unmanaged value type in order to use it as parameter '{1}' in the generic type or method '{2}'</value>
+  </data>
+  <data name="AnonymousNestedFunctionNotAllowed" xml:space="preserve">
+    <value>Expression cannot contain anonymous nested function</value>
+  </data>
+  <data name="UnreachableCode" xml:space="preserve">
+    <value>Unreachable code detected</value>
+  </data>
+  <data name="FixedNotNeeded" xml:space="preserve">
+    <value>You do not need to use the fixed statement to take the address of an already fixed expression</value>
+  </data>
+  <data name="NegativeStackAllocSize" xml:space="preserve">
+    <value>Cannot use a negative size with stackalloc</value>
+  </data>
+  <data name="StackallocInCatchFinally" xml:space="preserve">
+    <value>A stack allocated array may not be used in a catch or finally block</value>
+  </data>
+  <data name="InvalidAddressOf" xml:space="preserve">
+    <value>Cannot take the address of the given expression</value>
+  </data>
+  <data name="BadExplicitCoercionInFixed" xml:space="preserve">
+    <value>The expression being fixed may not be coerced to the type of the pinned variable</value>
+  </data>
+  <data name="AssignmentToFixedVariable" xml:space="preserve">
+    <value>Cannot assign to '{0}' because it is a fixed variable</value>
+  </data>
+  <data name="BadFixedVariableType" xml:space="preserve">
+    <value>Fixed variables must be of a pointer type</value>
+  </data>
+  <data name="GotoLeavesNestedMethod" xml:space="preserve">
+    <value>Control cannot be transferred from the body of a nested method to the body of the nesting method.</value>
+  </data>
+  <data name="GeneralComprehensionsNotAllowedInMethodContracts" xml:space="preserve">
+    <value>General comprehensions are not currently supported in method contracts.</value>
+  </data>
+  <data name="AliasNotFound" xml:space="preserve">
+    <value>Alias '{0}' not found</value>
+  </data>
+  <data name="GlobalSingleTypeNameNotFound" xml:space="preserve">
+    <value>The type or namespace name '{0}' could not be found in the global namespace (are you missing an assembly reference?)</value>
+  </data>
+  <data name="TypeArgsNotAllowed" xml:space="preserve">
+    <value>The {0} '{1}' cannot be used with type arguments</value>
+  </data>
+  <data name="NoSuchNestedType" xml:space="preserve">
+    <value>The type name '{0}' does not exist in the type '{1}'</value>
+  </data>
+  <data name="TypeAliasUsedAsNamespacePrefix" xml:space="preserve">
+    <value>Can't use alias '{0}' as a namespace prefix since the alias references a type.</value>
+  </data>
+  <data name="StrictReadonlyAssignment" xml:space="preserve">
+    <value>Assignments to [StrictReadonly] fields must occur prior to base class construction</value>
+  </data>
+  <data name="StrictReadonlyNotReadonly" xml:space="preserve">
+    <value>A [StrictReadonly] field must be declared readonly</value>
+  </data>
+  <data name="StrictReadonlyStatic" xml:space="preserve">
+    <value>A field must not be both static and [StrictReadonly]</value>
+  </data>
+  <data name="BaseMultipleInitialization" xml:space="preserve">
+    <value>Possible duplicate constructor call</value>
+  </data>
+  <data name="BaseNotInitialized" xml:space="preserve">
+    <value>Some code paths do not initialize the base class</value>
+  </data>
+  <data name="StrictReadonlyMultipleAssignment" xml:space="preserve">
+    <value>Assignment to [StrictReadonly] field that may already have been assigned is not allowed</value>
+  </data>
+  <data name="AlwaysNull" xml:space="preserve">
+    <value>The result of the expression is always 'null' of type '{0}'</value>
+  </data>
+  <data name="WritingPackedObject" xml:space="preserve">
+    <value>The object '{0}' must be exposed before its fields can be written</value>
+  </data>
+  <data name="ExposingExposedObject" xml:space="preserve">
+    <value>Cannot expose an already exposed object</value>
+  </data>
+  <data name="DontKnowIfCanExposeObject" xml:space="preserve">
+    <value>Object not known to be exposable</value>
+  </data>
+  <data name="NestedFunctionDelegateParameterMismatchBecauseOfOutParameter" xml:space="preserve">
+    <value>Cannot convert paramterless anonymous nested function to delegate type '{0}' because the delegate has one or more out parameters.</value>
+  </data>
+  <data name="SizeofUnsafe" xml:space="preserve">
+    <value>'{0}' does not have a predefined size and therefore its size can only be used in an unsafe context (consider using System.Runtime.InteropServices.Marshal.SizeOf)</value>
+  </data>
+  <data name="MainCantBeGeneric" xml:space="preserve">
+    <value>'{0}': an entry point cannot be generic or in a generic type</value>
+  </data>
+  <data name="AsWithTypeVar" xml:space="preserve">
+    <value>The type parameter '{0}' cannot be used with the 'as' operator because it does not have a class type constraint nor a 'class' constraint.</value>
+  </data>
+  <data name="InvalidUsageOfElementsRepPeer" xml:space="preserve">
+    <value>Only fields of IEnumerable-like type and array-type may be marked as ElementsRep or ElementsPeer.</value>
+  </data>
+  <data name="OldExprInPureEnsures" xml:space="preserve">
+    <value>Postcondition of methods marked as Pure may not contain old-expressions.</value>
+  </data>
+  <data name="IsNewExprInPureEnsures" xml:space="preserve">
+    <value>Postcondition of methods marked as Pure may not contain expressions containing IsNew.</value>
+  </data>
+  <data name="SideEffectsNotAllowedInContracts" xml:space="preserve">
+    <value>Contracts may not contain expressions with side effects.</value>
+  </data>
+  <data name="InvalidModifiesClause" xml:space="preserve">
+    <value>Invalid modifies clause {0}</value>
+  </data>
+  <data name="MemberCannotBeAnnotatedAsPure" xml:space="preserve">
+    <value>The member '{0}' cannot be annotated as being pure.</value>
+  </data>
+  <data name="SourceFileNotRead" xml:space="preserve">
+    <value>Source file '{0}' could not be read. {1}.</value>
+  </data>
+  <data name="PureMethodWithOutParamUsedInContract" xml:space="preserve">
+    <value>Pure methods with out parameters cannot be used in specifications.</value>
+  </data>
+  <data name="PureMethodCannotHaveRefParam" xml:space="preserve">
+    <value>Pure methods can't have ref parameters.</value>
+  </data>
+  <data name="ReadsWithoutPure" xml:space="preserve">
+    <value>Cannot specify [Reads] without also specifying [Pure].</value>
+  </data>
+  <data name="InconsistentPurityAttributes" xml:space="preserve">
+    <value>Purity annotation inconsistent with methodology (see documentation).</value>
+  </data>
+  <data name="PureOwnedNotAllowed" xml:space="preserve">
+    <value>Inconsistent purity annotation: methods in a struct or that are static cannot be marked as Owned.</value>
+  </data>
+  <data name="PointerFreeConstraintNotSatisfied" xml:space="preserve">
+    <value>The type '{0}' must be a pointerfree value type in order to use it as parameter '{1}' in the generic type or method '{2}'</value>
+  </data>
+  <data name="PureMethodCannotHaveModifies" xml:space="preserve">
+    <value>Pure methods can't have modifies clauses.</value>
+  </data>
+</root>

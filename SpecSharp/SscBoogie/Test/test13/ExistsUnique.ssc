@@ -1,0 +1,33 @@
+using System;
+class C {
+  public static void foo(int[]! xs)
+    requires exists unique{int i in (0:xs.Length); xs[i] == 4};
+  { }
+  public static void bar0() {
+    int[] A = new int[]{3, 4, 5};
+    assert A[1] == 4;
+    foo(A); // Okay
+  }
+  public static void bar1() {
+    int[] A = new int[]{3, 4, 4};
+    assert A[1] == 4;
+    foo(A); // Error
+  }
+
+  public static int M(short[]! a)
+    requires exists unique{int i in (0: a.Length); a[i] == 4};
+    ensures 0 <= result && result < a.Length;
+    ensures forall{int i in (0: result); a[i] != 4};
+    ensures a[result] == 4;
+    ensures forall{int i in (result+1: a.Length); a[i] != 4};
+  {
+    for (int n = 0; n < a.Length; n++)
+      invariant forall{int i in (0: n); a[i] != 4};
+    {
+      if (a[n] == 4) {
+        return n;
+      }
+    }
+    assert false;
+  }
+}

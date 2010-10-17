@@ -1,0 +1,92 @@
+// The Factorial...
+
+class SimpleWhile5
+{
+
+	private int Fact(int i)
+		requires i >= 0;
+		ensures result >=0;
+	{
+		int returnValue = 1;	
+
+		while(i >= 1)
+		{
+			returnValue *= i;
+			i--; 
+		}
+		
+		assert returnValue >= 1;	// Error: the property does hold, but because the
+						// analysis does not try to interpret the guard
+						// "i >= 1", it fails to prove this property.
+						// However, see proc SimpleWhile5 in VarMapFixpoint.bpl.
+		return returnValue;	
+	}
+
+	public int NonNegative(int X, int Y, int K)
+		ensures 0 <= result;
+	{
+		// set x to a non-negative value
+		int x = 0;
+		while (x < X) { x++; }
+		// set y to a non-negative value
+		int y = 0;
+		while (y < Y) { y++; }
+
+		int n = 12;
+		for (; K < 100; K++) {
+			n = x * y;
+		}
+		return n;
+	}
+
+	public int Positive(int X, int Y, int K)
+		ensures 1 <= result;
+	{
+		// set x to a positive value
+		int x = 1;
+		while (x < X) { x++; }
+		// set y to a positive value
+		int y = 1;
+		while (y < Y) { y++; }
+
+		int n = 12;
+		for (; K < 100; K++) {
+			n = x * y;
+		}
+		return n;
+	}
+
+	public int NegativeWrong(int X, int Y, int K)
+		ensures result < 0;
+	{
+		// set x to a negative value
+		int x = -1;
+		while (X < x) { x--; }
+		// set y to a negative value
+		int y = -1;
+		while (Y < y) { y--; }
+
+		int n = x * y;
+		for (; K < 100; K++) {
+			n = x * y;
+		}
+		return n;
+	}  // error: returns a positive number (ignoring overflow)
+
+	public int NegativeIntermediates(int X, int Y, int K)
+		ensures 1 <= result;
+	{
+		// set x to a negative value
+		int x = -1;
+		while (X < x) { x--; }
+		// set y to a negative value
+		int y = -1;
+		while (Y < y) { y--; }
+
+		int n = x * y;
+		for (; K < 100; K++) {
+			n = x * y;
+		}
+		return n;
+	}
+}

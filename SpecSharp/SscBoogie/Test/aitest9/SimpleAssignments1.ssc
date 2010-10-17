@@ -1,0 +1,32 @@
+// A trivial set of assignments
+// It test some arithmetic operations on intervals
+
+class SimpleAssignments1 
+{
+	public void M(int val) 
+	{
+		int a, b, c, d;
+	
+		a = 3;
+
+		if(val > 0)
+		{
+			b = -(2 + a);
+		}
+		else
+		{
+			b = 13 * (5 + a);
+		}	
+
+		assert -5 <= b && b <= 104;
+
+		c = a * b;
+
+		assert -15 <= c && c <= 312;	
+
+		d = c - c;
+
+		assert d == 0; // this is of true, but the "plain" implementation of intervals does not capture it
+				// however, because of wp generation, boogie can prove it
+	}
+}

@@ -1,0 +1,23 @@
+class SimpleWhile4
+{
+
+	public void AMethod()
+	{
+		int i = 30;				
+		int count = 0;
+
+		if(i>0) {		// Loop unrolling w.r.t. SimpleWhile3
+			i--;
+			count --;
+		}
+		while(i > 0) 
+		{
+			i --;
+			count --;
+		}
+
+		assert count < 0;	// Cannot prove it, as the handling of conditionals is very rough for intervals.
+					// To try with loop invariants on demand
+	}
+
+}

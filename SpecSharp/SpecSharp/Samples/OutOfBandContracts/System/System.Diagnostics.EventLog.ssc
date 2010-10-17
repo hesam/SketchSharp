@@ -1,0 +1,129 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Diagnostics
+{
+
+    public class EventLog
+    {
+
+        public string LogDisplayName
+        {
+          get;
+        }
+
+        public bool EnableRaisingEvents
+        {
+          get;
+          set;
+        }
+
+        public string MachineName
+        {
+          get;
+          set;
+        }
+
+        public EventLogEntryCollection Entries
+        {
+          get;
+        }
+
+        public string! Log
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public System.ComponentModel.ISynchronizeInvoke SynchronizingObject
+        {
+          get;
+          set;
+        }
+
+        public string Source
+        {
+          get;
+          set;
+        }
+
+        public static void WriteEntry (string source, string message, EventLogEntryType type, int eventID, Int16 category, Byte[] rawData);
+
+        public void WriteEntry (string message, EventLogEntryType type, int eventID, Int16 category, Byte[] rawData);
+
+        public static void WriteEntry (string source, string message, EventLogEntryType type, int eventID, Int16 category);
+
+        public void WriteEntry (string message, EventLogEntryType type, int eventID, Int16 category);
+
+        public static void WriteEntry (string source, string message, EventLogEntryType type, int eventID);
+
+        public void WriteEntry (string message, EventLogEntryType type, int eventID);
+
+        public static void WriteEntry (string source, string message, EventLogEntryType type);
+
+        public void WriteEntry (string message, EventLogEntryType type);
+
+        public static void WriteEntry (string source, string message);
+
+        public void WriteEntry (string message);
+
+        public static string LogNameFromSourceName (string source, string machineName);
+
+        public static bool SourceExists (string source, string machineName);
+
+        public static bool SourceExists (string source);
+
+        public static EventLog[] GetEventLogs (string machineName);
+
+        public static EventLog[] GetEventLogs ();
+
+        public static bool Exists (string logName, string machineName);
+
+        public static bool Exists (string logName);
+
+        public void EndInit ();
+
+        public static void DeleteEventSource (string source, string machineName);
+
+        public static void DeleteEventSource (string source);
+
+        public static void Delete (string! logName, string machineName)
+            requires logName != null otherwise ArgumentException;
+
+        public static void Delete (string logName);
+
+        public static void CreateEventSource (string source, string logName, string machineName);
+
+        public static void CreateEventSource (string source, string logName);
+
+        public void Close ();
+
+        public void Clear ();
+
+        public void BeginInit ();
+
+        public void remove_EntryWritten (EntryWrittenEventHandler value);
+
+        public void add_EntryWritten (EntryWrittenEventHandler value);
+
+        public EventLog (string! logName, string machineName, string source)
+            requires logName != null otherwise ArgumentNullException;
+
+        public EventLog (string logName, string machineName);
+
+        public EventLog (string logName);
+
+        public EventLog ();
+    }
+}

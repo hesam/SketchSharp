@@ -1,0 +1,265 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Net
+{
+
+    public class HttpWebRequest
+    {
+
+        public bool PreAuthenticate
+        {
+          get;
+          set;
+        }
+
+        public string MediaType
+        {
+          get;
+          set;
+        }
+
+        public string Referer
+        {
+          get;
+          set;
+        }
+
+        public Uri Address
+        {
+          get;
+        }
+
+        public string ConnectionGroupName
+        {
+          get;
+          set;
+        }
+
+        public string Expect
+        {
+          get;
+          set;
+        }
+
+        public string Method
+        {
+          get;
+          set;
+        }
+
+        public string UserAgent
+        {
+          get;
+          set;
+        }
+
+        public Uri RequestUri
+        {
+          get;
+        }
+
+        public DateTime IfModifiedSince
+        {
+          get;
+          set;
+        }
+
+        public bool SendChunked
+        {
+          get;
+          set;
+        }
+
+        public ServicePoint ServicePoint
+        {
+          get;
+        }
+
+        public WebHeaderCollection Headers
+        {
+          get;
+          set;
+        }
+
+        public bool AllowAutoRedirect
+        {
+          get;
+          set;
+        }
+
+        public Version ProtocolVersion
+        {
+          get;
+          set;
+        }
+
+        public Int64 ContentLength
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+        }
+
+        public ICredentials Credentials
+        {
+          get;
+          set;
+        }
+
+        public int Timeout
+        {
+          get;
+          set
+            requires value >= 0 || value == -1 otherwise ArgumentOutOfRangeException;
+        }
+
+        public HttpContinueDelegate ContinueDelegate
+        {
+          get;
+          set;
+        }
+
+        public string Connection
+        {
+          get;
+          set;
+        }
+
+        public string ContentType
+        {
+          get;
+          set;
+        }
+
+        public static int DefaultMaximumResponseHeadersLength
+        {
+          get;
+          set
+            requires value >= 0 || value == -1 otherwise ArgumentOutOfRangeException;
+        }
+
+        public bool HaveResponse
+        {
+          get;
+        }
+
+        public bool UnsafeAuthenticatedConnectionSharing
+        {
+          get;
+          set;
+        }
+
+        public CookieContainer CookieContainer
+        {
+          get;
+          set;
+        }
+
+        public string Accept
+        {
+          get;
+          set;
+        }
+
+        public int MaximumResponseHeadersLength
+        {
+          get;
+          set
+            requires value >= 0 || value == -1 otherwise ArgumentOutOfRangeException;
+        }
+
+        public bool Pipelined
+        {
+          get;
+          set;
+        }
+
+        public bool AllowWriteStreamBuffering
+        {
+          get;
+          set;
+        }
+
+        public int ReadWriteTimeout
+        {
+          get;
+          set
+            requires value >= 0 || value == -1 otherwise ArgumentOutOfRangeException;
+        }
+
+        public bool KeepAlive
+        {
+          get;
+          set;
+        }
+
+        public string TransferEncoding
+        {
+          get;
+          set;
+        }
+
+        public System.Security.Cryptography.X509Certificates.X509CertificateCollection ClientCertificates
+        {
+          get;
+        }
+
+        public IWebProxy! Proxy
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public int MaximumAutomaticRedirections
+        {
+          get;
+          set
+            requires value > 0 otherwise ArgumentException;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        public void AddRange (string! rangeSpecifier, int range)
+            requires rangeSpecifier != null otherwise ArgumentNullException;
+
+        public void AddRange (string! rangeSpecifier, int from, int to)
+            requires rangeSpecifier != null otherwise ArgumentNullException;
+            requires from >= 0 otherwise ArgumentOutOfRangeException;
+            requires to >= 0 otherwise ArgumentOutOfRangeException;
+            requires from <= to otherwise ArgumentOutOfRangeException;
+
+        public void AddRange (int range);
+
+        public void AddRange (int from, int to);
+
+        public void Abort ();
+
+        public WebResponse GetResponse ();
+
+        public WebResponse EndGetResponse (IAsyncResult! asyncResult)
+            requires asyncResult != null otherwise ArgumentNullException;
+
+        public IAsyncResult BeginGetResponse (AsyncCallback callback, object state);
+
+        public System.IO.Stream GetRequestStream ();
+
+        public System.IO.Stream EndGetRequestStream (IAsyncResult! asyncResult)
+            requires asyncResult != null otherwise ArgumentNullException;
+
+        public IAsyncResult BeginGetRequestStream (AsyncCallback callback, object state);
+    }
+}

@@ -1,0 +1,43 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Net.Sockets
+{
+
+    public class TcpListener
+    {
+
+        public System.Net.EndPoint LocalEndpoint
+        {
+          get;
+        }
+
+        public TcpClient! AcceptTcpClient ();
+
+        public Socket AcceptSocket ();
+
+        public bool Pending ();
+
+        public void Stop ();
+
+        public void Start ();
+
+        public TcpListener (int port);
+
+        public TcpListener (System.Net.IPAddress! localaddr, int port)
+            requires localaddr != null otherwise ArgumentNullException;
+
+        public TcpListener (System.Net.IPEndPoint! localEP)
+            requires localEP != null otherwise ArgumentNullException;
+    }
+}

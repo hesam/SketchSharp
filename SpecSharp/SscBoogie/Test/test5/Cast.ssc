@@ -1,0 +1,73 @@
+public class Cast {
+  object[] P(object o) {
+    assume o != null;
+    object[] a = (object[])o;  // error: cast might fail
+    return a;
+  }
+
+  object Q(object o) {
+    if (o != null) {
+      string s = (string)o;  // error: cast might fail
+      return s;
+    }
+    return o;
+  }
+
+  public string M(string s0, string! s1) {
+    string s2 = "hello";
+    object o;
+    string s;
+
+    o = s0;
+    s = (string)o;
+    o = s1;
+    s = (string)o;
+    o = s2;
+    s = (string)o;
+
+    return s;
+  }
+
+  public void N0(string s0, char[] cc) {
+    string s1 = "hello";
+    string s2 = new string(cc);  // by the way, is this constructor parameter allowed to be null?
+    object o2 = s2;  // use pointer equality in the next lines
+    assert (object)s0 != o2;
+    assert (object)s1 != o2;
+    assert s1 != null;
+    assert s2 != null;
+  }
+
+  public string N1(string s0) {
+    string s1 = "hello";
+    object o0 = s0;  // use pointer equality in the next line
+    object o1 = s1;
+    assert o0 != o1;  // error: this condition is not guaranteed
+    return s1;
+  }
+
+  public object R(object o, int choice)
+    requires o == null;
+  {
+    if (choice == 0) {
+      string s = (string)o;
+      return s;
+    } else if (choice == 1) {
+      object[] a = (object[])o;
+      return a;
+    } else {
+      J j = (J)o;
+      return j;
+    }
+  }
+
+#if BONUS
+  public void MoreAboutStringLiterals() {
+    string s0 = "hello";
+    string s1 = "hello";
+    assert (object)s0 == (object)s1;
+  }
+#endif
+}
+
+public interface J {}

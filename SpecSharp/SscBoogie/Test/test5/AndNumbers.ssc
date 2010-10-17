@@ -1,0 +1,45 @@
+using System.Collections.Generic;
+
+public class T {
+    /// <summary>
+    /// Returns the number of elements in the given enumerable. A null enumerable is allowed and results in 0.
+    /// </summary>
+    public static int EnumerableCount<T>(IEnumerable<T>/*?*/ enumerable)
+      //^ ensures result >= 0;
+    {
+      if (enumerable == null) return 0;
+      int result = 0;
+      IEnumerator<T> enumerator = enumerable.GetEnumerator();
+      while (enumerator.MoveNext()) result++;
+      return result & 0x7FFFFFFF;
+    }
+
+    /// <summary>
+    /// Returns the number of elements in the given enumerable. A null enumerable is allowed and results in 0.
+    /// </summary>
+    public static int M<T>(IEnumerable<T>/*?*/ enumerable, int y, bool b)
+      //^ ensures result >= 0;
+    {
+      if (enumerable == null) return 0;
+      int result = 0;
+      IEnumerator<T> enumerator = enumerable.GetEnumerator();  //assume enumerator.IsPeerConsistent;
+      while (enumerator.MoveNext()) result++;
+      if (b) {
+        return result & y;
+      } else {
+        return y & result;
+      }
+    }
+
+  int OrRange(bool isA, bool isB)
+    ensures 0 <= result && result <= 3;
+  {
+    return (isA ? 1 : 0) | (isB ? 2 : 0);
+  }
+ 
+  int OrRangeBad(bool isA, bool isB)
+    ensures 0 <= result && result <= 3;  // error
+  {
+    return (isA ? 4 : 0) | (isB ? 2 : 0);
+  }
+}

@@ -1,0 +1,100 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Diagnostics
+{
+
+    public class PerformanceCounter
+    {
+
+        public PerformanceCounterType CounterType
+        {
+          get;
+        }
+
+        public string CounterHelp
+        {
+          get;
+        }
+
+        public bool ReadOnly
+        {
+          get;
+          set;
+        }
+
+        public Int64 RawValue
+        {
+          get;
+          set;
+        }
+
+        public string! CategoryName
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string InstanceName
+        {
+          get;
+          set;
+        }
+
+        public string! CounterName
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string MachineName
+        {
+          get;
+          set;
+        }
+
+        public void RemoveInstance ();
+
+        public Single NextValue ();
+
+        public CounterSample NextSample ();
+
+        public Int64 Increment ();
+
+        public Int64 IncrementBy (Int64 value);
+
+        public void EndInit ();
+
+        public Int64 Decrement ();
+
+        public static void CloseSharedResources ();
+
+        public void Close ();
+
+        public void BeginInit ();
+
+        public PerformanceCounter (string categoryName, string counterName, bool readOnly);
+
+        public PerformanceCounter (string categoryName, string counterName);
+
+        public PerformanceCounter (string categoryName, string counterName, string instanceName, bool readOnly);
+
+        public PerformanceCounter (string categoryName, string counterName, string instanceName);
+
+        public PerformanceCounter (string categoryName, string counterName, string instanceName, string machineName);
+
+        public PerformanceCounter ();
+    }
+}

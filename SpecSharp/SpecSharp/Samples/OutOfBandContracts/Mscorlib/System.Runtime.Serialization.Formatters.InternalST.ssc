@@ -1,0 +1,35 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Runtime.Serialization.Formatters
+{
+
+    public class InternalST
+    {
+
+        public static System.Reflection.Assembly LoadAssemblyFromString (string assemblyString);
+
+        public static void SerializationSetValue (System.Reflection.FieldInfo! fi, object! target, object! value)
+            requires fi != null otherwise ArgumentNullException;
+            requires target != null otherwise ArgumentNullException;
+            requires value != null otherwise ArgumentNullException;
+
+        public static void SoapAssert (bool condition, string message);
+
+        public static void Soap (Object[] messages);
+
+        public static bool SoapCheckEnabled ();
+
+        public static void InfoSoap (Object[] messages);
+    }
+}

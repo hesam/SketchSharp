@@ -1,0 +1,217 @@
+
+-------------------- Boxes --------------------
+Boxes.ssc(13,10): Error: Unboxing cast might fail
+Boxes.ssc(40,7): Error: Unboxing cast might fail
+Boxes.ssc(46,10): Error: Unboxing cast might fail
+Boxes.ssc(62,11): Error: Unboxing cast might fail
+
+Spec# program verifier finished with 9 verified, 4 errors
+
+-------------------- MustOverride --------------------
+Error: Method Ex1.B.foo(), unsatisfied postcondition: result == 0
+MustOverride.ssc(9,5): Related information:     (trace position)
+Error: Method Ex3.C.foo(), unsatisfied postcondition: result == 0
+MustOverride.ssc(39,5): Related information:     (trace position)
+
+Spec# program verifier finished with 10 verified, 2 errors
+
+-------------------- WhereClause --------------------
+
+Spec# program verifier finished with 4 verified, 0 errors
+
+-------------------- Switch --------------------
+
+Spec# program verifier finished with 5 verified, 0 errors
+
+-------------------- StrictReadOnly --------------------
+StrictReadOnly.ssc(48,29): Error: Assertion might not hold: false
+StrictReadOnly.ssc(55,16): Error: Assertion might not hold: t != null
+StrictReadOnly.ssc(60,15): Error: Assertion might not hold: impX != null
+StrictReadOnly.ssc(64,15): Error: Assertion might not hold: impY != null
+StrictReadOnly.ssc(79,5): Error: Assertion might not hold: false
+StrictReadOnly.ssc(95,5): Error: Assertion might not hold: false
+StrictReadOnly.ssc(103,5): Error: Assertion might not hold: P() != null
+StrictReadOnly.ssc(109,5): Error: Assertion might not hold: false
+StrictReadOnly.ssc(113,15): Error: Assertion might not hold: impX != null
+StrictReadOnly.ssc(115,15): Error: Assertion might not hold: impX != null
+StrictReadOnly.ssc(117,15): Error: Assertion might not hold: false
+StrictReadOnly.ssc(119,15): Error: Assertion might not hold: impX == null
+StrictReadOnly.ssc(122,15): Error: Assertion might not hold: impY != null
+StrictReadOnly.ssc(124,15): Error: Assertion might not hold: impY != null
+StrictReadOnly.ssc(126,15): Error: Assertion might not hold: false
+StrictReadOnly.ssc(128,15): Error: Assertion might not hold: impY == null
+Error: Could not establish consistency of pure method contract. On exit from C2.P(), return value must be peer valid
+
+Spec# program verifier finished with 27 verified, 17 errors
+
+-------------------- LocalExpose --------------------
+LocalExpose.ssc(14,22): Error: Object might not be exposable
+LocalExpose.ssc(30,5): Error: Object invariant possibly does not hold: 0 <= x
+LocalExpose.ssc(35,13): Error: Local expose is not allowed at System.Object
+LocalExpose.ssc(49,12): Error: Objects of Immutable types are not allowed to be exposed
+LocalExpose.ssc(58,15): Error: Object might not be locally exposable
+LocalExpose.ssc(67,24): Error: Object might not be exposable
+LocalExpose.ssc(101,7): Error: Assignment to additive field S.x requires the target object to be additively exposed
+LocalExpose.ssc(109,7): Error: Assignment to additive field S.x requires the target object to be additively exposed
+LocalExpose.ssc(134,7): Error: The call to S.V1() requires target object to be additively exposable for S
+LocalExpose.ssc(152,7): Error: The call to S.V3() requires target object to be additively exposable for S
+LocalExpose.ssc(158,7): Error: Assignment to field T.y of non-exposed target object may break invariant: y <= x
+LocalExpose.ssc(164,7): Error: Assignment to additive field S.x requires the target object to be additively exposed
+LocalExpose.ssc(169,7): Error: Assignment to additive field S.z requires the target object to be additively exposed
+LocalExpose.ssc(185,9): Error: Assignment to additive field S.x requires the target object to be additively exposed
+LocalExpose.ssc(199,7): Error: Assignment to additive field S.x requires the target object to be additively exposed
+LocalExpose.ssc(207,7): Error: Assignment to additive field S.w requires the target object to be additively exposed
+LocalExpose.ssc(215,7): Error: Assignment to additive field S.x requires the target object to be additively exposed
+
+Spec# program verifier finished with 18 verified, 17 errors
+
+-------------------- SiblingConstructors --------------------
+SiblingConstructors.ssc(16,5): Error: Assignment to field SiblingConstructors.i of non-exposed target object may break invariant: i < j
+
+Spec# program verifier finished with 5 verified, 1 error
+
+-------------------- AdditiveMethods --------------------
+AdditiveMethods.ssc(33,5): Error: The call to AdditiveMethods.M() requires target object to be peer consistent
+AdditiveMethods.ssc(38,5): Error: The call to AdditiveMethods.Y() requires target object to be peer consistent
+AdditiveMethods.ssc(43,5): Error: The call to AdditiveMethods.Z() requires target object to be consistent
+AdditiveMethods.ssc(52,22): Error: Object might not be exposable
+AdditiveMethods.ssc(58,7): Error: The call to AdditiveMethods.M() requires target object to be peer consistent
+AdditiveMethods.ssc(64,7): Error: The call to AdditiveMethods.Y() requires target object to be peer consistent
+AdditiveMethods.ssc(73,5): Error: The call to AdditiveMethods.Z() requires target object to be additively exposable for AdditiveMethods
+AdditiveMethods.ssc(79,7): Error: The call to AdditiveMethods.X0() requires target object to be additively exposable for AdditiveMethods
+AdditiveMethods.ssc(97,5): Error: The call to AdditiveMethods.M() requires target object to be peer consistent
+AdditiveMethods.ssc(104,5): Error: The call to AdditiveMethods.Y() requires target object to be peer consistent
+Error: Could not establish consistency of pure method contract. Postcondition violation: Result value of method OwnedResults.Pw() is specified to be owned by the receiver
+Error: Postcondition violation: Result value of method OwnedResults.Pw() is specified to be owned by the receiver
+Error: Postcondition violation: Result value of method OwnedResults.F4() is specified to have the same owner as the receiver
+Error: Could not establish consistency of pure method contract. On exit from OwnedResults.Static0(), return value must be peer valid
+Error: Could not establish consistency of pure method contract. On exit from OwnedResults.Static1(), return value must be peer valid
+Error: Could not establish consistency of pure method contract. On exit from OwnedResults.Static2(), return value must be peer valid
+Error: Postcondition violation: Result value of method OwnedResults.F5() is specified to be owned by the receiver
+
+Spec# program verifier finished with 22 verified, 17 errors
+
+-------------------- PureReceiverMightBeCommitted --------------------
+
+Spec# program verifier finished with 10 verified, 0 errors
+
+-------------------- ResultNotNewlyAllocated --------------------
+Error: Postcondition violation: M is marked ResultNotNewlyAllocated, and such methods are not allowed to return newly allocated objects.
+
+Spec# program verifier finished with 4 verified, 1 error
+
+-------------------- Branching --------------------
+
+Spec# program verifier finished with 5 verified, 0 errors
+
+-------------------- QuantifierVisibilityInvariant --------------------
+QuantifierVisibilityInvariant.ssc(7,90): warning CS2614: Receiver might be null (of type 'A')
+QuantifierVisibilityInvariant.ssc(38,46): warning CS2614: Receiver might be null (of type 'AbstractCity0')
+QuantifierVisibilityInvariant.ssc(39,16): warning CS2614: Receiver might be null (of type 'AbstractCity0')
+QuantifierVisibilityInvariant.ssc(39,15): warning CS2614: Receiver might be null (of type 'A')
+QuantifierVisibilityInvariant.ssc(53,17): warning CS2614: Receiver might be null (of type 'AbstractCity1')
+QuantifierVisibilityInvariant.ssc(53,59): warning CS2614: Receiver might be null (of type 'AbstractCity1')
+QuantifierVisibilityInvariant.ssc(53,58): warning CS2614: Receiver might be null (of type 'A')
+QuantifierVisibilityInvariant.ssc(17,7): Error: Assignment to field A.x may violate a visibility-based invariant declared in class A
+QuantifierVisibilityInvariant.ssc(23,7): Error: Assignment to field A.y may violate a visibility-based invariant declared in class B
+
+Spec# program verifier finished with 15 verified, 2 errors
+
+-------------------- DeferringConstructor --------------------
+DeferringConstructor.ssc(26,13): Error: Object might not be locally exposable
+DeferringConstructor.ssc(59,13): Error: Object might not be locally exposable
+
+Spec# program verifier finished with 8 verified, 2 errors
+
+-------------------- ArrayInit --------------------
+ArrayInit.ssc(26,5): Error: RHS might not be a subtype of the element type of the array being assigned
+
+Spec# program verifier finished with 7 verified, 1 error
+
+-------------------- CommittedOblivious --------------------
+CommittedOblivious.ssc(24,5): Error: The call to W.MutatingOp() requires target object to be peer consistent (owner must not be valid)
+CommittedOblivious.ssc(28,13): Error: Objects of Immutable types are not allowed to be exposed
+
+Spec# program verifier finished with 7 verified, 2 errors
+
+-------------------- ModelfieldTest --------------------
+ModelfieldTest.ssc(11,3): Error: Assignment to field C.i of non-exposed target object may break satisfies clause this.mf == this.i of modelfield C.mf
+
+Spec# program verifier finished with 8 verified, 1 error
+
+-------------------- CheckingConsistency --------------------
+Error: Could not establish consistency of pure method contract. Method Wrong.m(int i), unsatisfied postcondition: result > 4
+CheckingConsistency.ssc(105,24): Error: The type of witness candidate "(D2)this" is not (a subtype of) the return type
+Error: Type cast might fail
+Error: Could not establish consistency of pure method contract. Method WontFindWitness.m(), unsatisfied postcondition: result.i == 4
+Error: Could not establish consistency of pure method contract. Method BadButYouAreAllowedToTry.m(), unsatisfied postcondition: result == result + 1
+Error: Could not establish consistency of pure method contract. Method BadProp.get_M(), unsatisfied postcondition: result > 4
+
+Spec# program verifier finished with 40 verified, 6 errors
+
+-------------------- Modifies --------------------
+Modifies.ssc(18,5): Error: assignment to location may violate the modifies clause
+Modifies.ssc(38,5): Error: Assertion might not hold: a[1] == 1
+Modifies.ssc(66,5): Error: assignment to array location may violate the modifies clause
+Modifies.ssc(83,7): Error: assignment to array location may violate the modifies clause
+
+Spec# program verifier finished with 7 verified, 4 errors
+
+-------------------- PureAxioms --------------------
+Error: Method B.Dummy1(), unsatisfied postcondition: a.x + a.y == a.SumXYNoAxiom1()
+Error: Method B.Dummy2(), unsatisfied postcondition: a.x + a.y == a.SumXYNoAxiom2()
+Error: Could not establish consistency of pure method contract. Method UnsoundSpec.Unsound(), unsatisfied postcondition: false
+Error: Method UnsoundSpec.Dummy1(), unsatisfied postcondition: Unsound() == Unsound() + 1
+PureAxioms.ssc(108,23): Error: Could not establish consistency of pure method contract C.N(optional(Microsoft.Contracts.NonNullType) C). The type of witness candidate "(object)c" is not (a subtype of) the return type
+
+Spec# program verifier finished with 36 verified, 5 errors
+
+-------------------- ExposeVersion --------------------
+Error: Method A.FieldUpdateWithMethodQuery(A! o), unsatisfied postcondition: o.getValue(4)  == 5
+Error: Method A.FieldUpdateWithGetterQuery(A! o), unsatisfied postcondition: o.Value  == 5
+Error: Method A.FieldUpdateOnOtherWithMethodQueryWithDifferentParam(A! o, A! oo), unsatisfied postcondition: o.getValue(5)  == 5
+Error: Method A.MethodCallWithMethodQuery(), unsatisfied postcondition: getValue(4)  == 5
+Error: Method A.MethodCallWithGetterQuery(), unsatisfied postcondition: Value  == 5
+Error: Method A.FieldUpdateOnOtherFieldWithMethodQuery(), unsatisfied postcondition: getValue(4)  == 5
+Error: Method A.FieldUpdateOnOtherFieldWithGetterQuery(), unsatisfied postcondition: Value  == 5
+ExposeVersion.ssc(167,5): Error: Assertion might not hold: Value == 5
+Error: Method X.FieldUpdateByObjectCreationWithMethodQueryFails(X! o), unsatisfied postcondition: o.getValue(4)  == 5
+
+Spec# program verifier finished with 34 verified, 9 errors
+
+-------------------- ExplicitExposeVersionHavoc --------------------
+ExplicitExposeVersionHavoc.ssc(21,5): Error: Assertion might not hold: Foo() == 5
+ExplicitExposeVersionHavoc.ssc(35,5): Error: Assertion might not hold: c.Foo() == 5
+ExplicitExposeVersionHavoc.ssc(54,5): Error: Assignment to field D.x of non-exposed target object may break invariant: x >= 0
+
+Spec# program verifier finished with 9 verified, 3 errors
+
+-------------------- StructTests --------------------
+StructTests.ssc(59,5): Error: Assertion might not hold: x == 8
+StructTests.ssc(80,30): Error: Assertion might not hold: false
+
+Spec# program verifier finished with 20 verified, 2 errors
+
+-------------------- Modifies2 --------------------
+Error: Method D.f1(D! obj), unsatisfied frame condition
+Error: Method D.f3(D! obj), unsatisfied frame condition
+Error: Method D.h0(int[]! ar), unsatisfied frame condition
+Error: Method D.h1(int[]! ar), unsatisfied frame condition
+Error: Method D.h2(int[]! ar), unsatisfied frame condition
+Modifies2.ssc(54,5): Error: illegal assignment to rep field, RHS may already have a different owner
+Modifies2.ssc(54,5): Error: when target object is valid, it is not allowed to have the same owner as RHS, because that would cause a cycle in the ownership relation
+Error: Method D.i0(int[]! newAr), unsatisfied frame condition
+
+Spec# program verifier finished with 4 verified, 8 errors
+
+-------------------- Modifies2 --------------------
+Modifies2.ssc(17,5): Error: method invocation may violate the modifies clause of the enclosing method
+Modifies2.ssc(26,5): Error: method invocation may violate the modifies clause of the enclosing method
+Modifies2.ssc(38,5): Error: method invocation may violate the modifies clause of the enclosing method
+Modifies2.ssc(43,5): Error: assignment to array location may violate the modifies clause
+Modifies2.ssc(50,5): Error: method invocation may violate the modifies clause of the enclosing method
+Modifies2.ssc(54,5): Error: assigning the owner of this object may violate the modifies clause
+Modifies2.ssc(54,5): Error: illegal assignment to rep field, RHS may already have a different owner
+Modifies2.ssc(54,5): Error: when target object is valid, it is not allowed to have the same owner as RHS, because that would cause a cycle in the ownership relation
+
+Spec# program verifier finished with 4 verified, 8 errors

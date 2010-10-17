@@ -1,0 +1,86 @@
+public class C {
+  // Forward, invariant mentions what's been done
+  public static int Sum0(int[]! a)
+    ensures result == sum{int i in (0: a.Length); a[i]};
+  {
+    int s = 0;
+    for (int n = 0; n < a.Length; n++)
+      invariant n <= a.Length;
+      invariant s == sum{int i in (0: n); a[i]};
+    {
+      s += a[n];
+    }
+    return s;
+  }
+
+  // Forward, invariant mentions what's left to be done
+  public static int Sum1(int[]! a)
+    ensures result == sum{int i in (0: a.Length); a[i]};
+  {
+    int s = 0;
+    for (int n = 0; n < a.Length; n++)
+      invariant n <= a.Length;
+      invariant s + sum{int i in (n: a.Length); a[i]} == sum{int i in (0: a.Length); a[i]};
+    {
+      s += a[n];
+    }
+    return s;
+  }
+
+  // Backward, invariant mentions what's been done
+  public static int Sum2(int[]! a)
+    ensures result == sum{int i in (0: a.Length); a[i]};
+  {
+    int s = 0;
+    for (int n = a.Length; 0 <= --n; )
+      invariant 0 <= n && n <= a.Length;
+      invariant s == sum{int i in (n: a.Length); a[i]};
+    {
+      s += a[n];
+    }
+    return s;
+  }
+
+  // Backward, invariant mentions what's left to be done
+  public static int Sum3(int[]! a)
+    ensures result == sum{int i in (0: a.Length); a[i]};
+  {
+    int s = 0;
+    for (int n = a.Length; 0 <= --n; )
+      invariant 0 <= n && n <= a.Length;
+      invariant s + sum{int i in (0: n); a[i]} == sum{int i in (0: a.Length); a[i]};
+    {
+      s += a[n];
+    }
+    return s;
+  }
+
+  // Like Sum0, but writing the postcondition in "x in a" form instead of "i in (0: a.Length)" form
+  public static int Sum4(int[]! a)
+    ensures result == sum{int x in a; x};
+  {
+    int s = 0;
+    for (int n = 0; n < a.Length; n++)
+      invariant n <= a.Length;
+      invariant s == sum{int i in (0: n); a[i]};
+    {
+      s += a[n];
+    }
+    return s;
+  }
+
+  // Boogie transforms quantifiers in "x in a" form, unless the "x" appears in an "old" expression.
+  // So in this test case, no transformation takes place.  Since for bound variable "x", "x == old(x)",
+  // the postcondition below holds.  However, if our translation incorrectly transformed the
+  // quantifier to:
+  //   forall{int _x in (0: a.Length); a[_x] == old(a[_x])}
+  // then the postcondition would fail.
+  public static void TransformQuant(int[]! a)
+    modifies a[*];
+    ensures forall{int x in a; x == old(x)};
+  {
+    if (4 < a.Length) {
+      a[4]++;
+    }
+  }
+}

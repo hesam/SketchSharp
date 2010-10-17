@@ -1,0 +1,127 @@
+`/debug+ /d:DEBUG /d:TRACE
+// Object shared as Unshared, but then Main thread attempts to access: fails
+using System;
+using System.Threading;
+public class Account{
+  int balance;
+  invariant true;
+  public void Increment(){
+    write lock (this){
+      balance++;
+    }
+  }
+  void DoWork(){
+    try{
+      Increment();
+    }catch (Exception e){
+      Console.WriteLine(e.Message);
+    }
+  }
+  static void Main(){
+    Account account = new Account();
+    Thread t = new Thread(new ThreadStart(account.DoWork));
+    t.Start();
+    try{
+      account.Increment();
+    }finally{
+      t.Join();
+    }
+    Console.WriteLine(account.balance);
+  }
+}
+`
+The target object of this call must be exposable.
+`
+`/debug+ /d:DEBUG /d:TRACE
+// Object shared as lock-protected and accessed with locking: succeeds
+using System;
+using System.Threading;
+using Microsoft.Contracts;
+public class Account{
+  int balance;
+  invariant true;
+  public void Increment(){
+    balance++;
+  }
+  [RequiresLockProtected]
+  [NoDefaultContract]
+  void DoWork(){
+    try{
+      acquire (this){
+        Increment();
+      }
+    }catch (Exception e){
+      Console.WriteLine(e.Message);
+    }
+  }
+  static void Main(){
+    Account account = new Account();
+    Thread t = new Thread(new ThreadStart(account.DoWork));
+    t.Start();
+    try{
+      acquire (account){
+        account.Increment();
+      }
+    }finally{
+      t.Join();
+    }
+    Console.WriteLine(account.balance);
+  }
+}
+`
+2
+`
+`/debug+ /d:DEBUG /d:TRACE /d:GuardedFieldAccessChecks
+public class Account{
+  int balance;
+  invariant true;
+  static void Main(){
+    Account account = new Account();
+    System.Console.WriteLine(account.balance);
+  }
+}
+`
+Thread is not reading object.
+`
+`/debug+ /d:DEBUG /d:TRACE /d:GuardedFieldAccessChecks
+public class Account{
+  int balance;
+  invariant true;
+  static void Main(){
+    Account account = new Account();
+    read lock (account){
+      System.Console.WriteLine(account.balance);
+    }
+  }
+}
+`
+0
+`
+`/debug+ /d:DEBUG /d:TRACE /d:GuardedFieldAccessChecks
+public class Account{
+  int balance;
+  invariant true;
+  static void Main(){
+    Account account = new Account();
+    account.balance = 5;
+    System.Console.WriteLine(account.balance);
+  }
+}
+`
+Thread is not writing object.
+`
+`/debug+ /d:DEBUG /d:TRACE /d:GuardedFieldAccessChecks
+public class Account{
+  int balance;
+  invariant true;
+  static void Main(){
+    Account account = new Account();
+    write lock (account){
+      account.balance = 5;
+      System.Console.WriteLine(account.balance);
+    }
+  }
+}
+`
+5
+`

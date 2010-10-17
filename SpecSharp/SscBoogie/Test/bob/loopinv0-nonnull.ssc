@@ -1,0 +1,70 @@
+using System.Collections.Generic;
+
+public sealed class F
+{
+  public int X = 0;
+  public void M() { expose(this) { X = 4; } }
+}
+
+public sealed class TestEnumerable
+{
+    public F field;
+//  private readonly List<int>! list = new List<int>();
+
+// UNCOMMENT later, takes too long right now.
+//     private IEnumerator<int> e;
+
+//     int Test0()
+//       modifies this.*;
+//       ensures field != null;
+//     {
+//         expose (this)
+//         {
+//             field = new F();
+            
+//             int sum = 0;
+// //            foreach (int i in list)
+// //            {
+// //                sum += i;
+// //            }
+
+//             IEnumerable<int> l = list;
+//             e = l.GetEnumerator();
+//             assume e != null && e.IsNew;
+
+//             for(;;)
+//                 //invariant this.IsExposed;
+
+//                 // This loop invariant fails now because havoc
+//                 // on the $Heap to break the loop cycle loses
+//                 // that IsHeap still holds, which will fixed
+//                 // when "where" clauses are added to BoogiePL.
+//                 invariant field == null || field.IsConsistent;
+//                 invariant list.IsConsistent;
+//                 invariant e != null && e.IsConsistent;
+//             {
+//                bool b = e.MoveNext();
+//                if (!b) break;
+//                int i = e.Current;
+//                sum += i;
+//             }
+
+//             return sum;
+//         }
+//     }
+
+    void Test1(F! other)
+      modifies this.field, other.*;
+      ensures field != null;  // this currently fails, because the lack of loop-frame-condition inference
+    {
+      expose (this)
+      {
+        field = new F();
+      }
+
+      for (int i = 0; i < 10; i++)
+      {
+        other.M();
+      }
+    }
+}

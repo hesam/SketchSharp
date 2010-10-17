@@ -1,0 +1,15 @@
+public sealed class Test
+{
+  private int x = 0;
+  public void Method()
+    modifies this.*;
+  {
+    expose (this)
+    {
+      while (true)
+      {
+        this.x = 1;
+      }
+    }
+  }
+}

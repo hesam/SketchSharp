@@ -1,0 +1,14 @@
+class Test
+{
+    static int FooGood()
+        ensures result == 1;
+    {
+        return 1;
+    }
+
+    static int FooBad()
+        ensures result == 1;
+    {
+        return 2;
+    }
+}

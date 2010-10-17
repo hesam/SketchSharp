@@ -1,0 +1,60 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System.Collections;
+using Microsoft.Contracts;
+//using System.Runtime.InteropServices;
+
+namespace System.Collections
+{
+    // Summary:
+    //     Supports a simple iteration over a nongeneric collection.
+    [ComVisible(true)]
+    //[Guid("496B0ABF-CDEE-11d3-88E8-00902754C43A")]
+    public interface IEnumerator
+    {
+        // Summary:
+        //     Gets the current element in the collection.
+        //
+        // Returns:
+        //     The current element in the collection.
+        //
+        // Exceptions:
+        //   System.InvalidOperationException:
+        //     The enumerator is positioned before the first element of the collection or
+        //     after the last element.
+        
+        object Current { get; }
+
+        // Summary:
+        //     Advances the enumerator to the next element of the collection.
+        //
+        // Returns:
+        //     true if the enumerator was successfully advanced to the next element; false
+        //     if the enumerator has passed the end of the collection.
+        //
+        // Exceptions:
+        //   System.InvalidOperationException:
+        //     The collection was modified after the enumerator was created.
+        [WriteConfined] 
+        bool MoveNext();
+        //
+        // Summary:
+        //     Sets the enumerator to its initial position, which is before the first element
+        //     in the collection.
+        //
+        // Exceptions:
+        //   System.InvalidOperationException:
+        //     The collection was modified after the enumerator was created.
+        [WriteConfined] 
+        void Reset();
+    }
+}

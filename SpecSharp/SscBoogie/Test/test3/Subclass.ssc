@@ -1,0 +1,23 @@
+public class Super {
+}
+
+public class Sub : Super {
+  int x;
+  public Sub() {
+    this.x = 10;
+    base();
+    assert this.x == 10;  // this should work
+  }
+  public Sub(bool b) {
+    this.x = 10;
+    base();
+    assert false;  // error: this should not
+  }
+
+  // some more "typeof" tests, placed here without any mention of "System.Type"
+  void Ty() {
+    object t = typeof(Sub);
+    assert t != null;
+    assert t is object;  // good
+  }
+}

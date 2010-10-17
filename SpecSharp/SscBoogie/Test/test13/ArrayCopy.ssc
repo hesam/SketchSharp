@@ -1,0 +1,134 @@
+// This file tests for the presence of the hardcoded specs of Array.Copy and Array.CopyTo.
+
+using System;
+
+public class C {
+  void MInt(int[]! a, int[]! b)
+    requires 10 <= a.Length && a.Length + 2 <= b.Length;
+    modifies b[*];
+  {
+    Array.Copy(a, 0, b, 0, a.Length);
+    assert b[5] == a[5];
+
+    b[b.Length - 1] = 300;
+    Array.Copy(a, 0, b, 1, a.Length);
+    assert b[5] == a[4];
+    assert b[b.Length-1] == 300;
+  }
+  void MLong(int[]! a, int[]! b)
+    requires 10 <= a.Length && a.Length + 2 <= b.Length;
+    modifies b[*];
+  {
+    Array.Copy(a, 0L, b, 0L, a.Length);
+    assert b[5] == a[5];
+
+    b[b.Length - 1] = 300;
+    Array.Copy(a, 0L, b, 1L, a.Length);
+    assert b[5] == a[4];
+    assert b[b.Length-1] == 300;
+  }
+
+  void NInt(int[]! a, int[]! b)
+    requires 10 <= a.Length && a.Length + 2 <= b.Length;
+    modifies b[*];
+  {
+    b[b.Length - 1] = 300;
+    Array.Copy(a, b, a.Length);
+    assert b[5] == a[5];
+    assert b[b.Length-1] == 300;
+  }
+  void NLong(int[]! a, int[]! b)
+    requires 10 <= a.Length && a.Length + 2 <= b.Length;
+    modifies b[*];
+  {
+    b[b.Length - 1] = 300;
+    Array.Copy(a, b, (long)a.Length);
+    assert b[5] == a[5];
+    assert b[b.Length-1] == 300;
+  }
+
+  void PInt(int[]! a, int[]! b)
+    requires 10 <= a.Length && a.Length + 2 <= b.Length;
+    modifies b[*];
+  {
+    b[b.Length - 1] = 300;
+    a.CopyTo(b, 0);
+    assert b[5] == a[5];
+    assert b[b.Length-1] == 300;
+
+    b[1] = 120;
+    a.CopyTo(b, 2);
+    assert b[1] == 120;
+  }
+  void PLong(int[]! a, int[]! b)
+    requires 10 <= a.Length && a.Length + 2 <= b.Length;
+    modifies b[*];
+  {
+    b[b.Length - 1] = 300;
+    a.CopyTo(b, 0L);
+    assert b[5] == a[5];
+    assert b[b.Length-1] == 300;
+
+    b[1] = 120;
+    a.CopyTo(b, 2L);
+    assert b[1] == 120;
+  }
+
+  void X(C[]! a, C[]! b)
+    requires 10 <= a.Length && a.Length + 2 <= b.Length;
+    modifies b[*];
+  {
+    Array.Copy(a, 0, b, 0, a.Length);
+    assert b[5] == a[5];
+
+    b[b.Length - 1] = null;
+    Array.Copy(a, 0, b, 1, a.Length);
+    assert b[5] == a[4];
+    assert b[b.Length-1] == null;
+  }
+
+  void Y(MyStruct[]! a, MyStruct[]! b)
+    requires 10 <= a.Length && a.Length + 2 <= b.Length;
+    modifies b[*];
+  {
+    Array.Copy(a, 0, b, 0, a.Length);
+    assert b[5].x == a[5].x;
+
+    b[b.Length - 1] = new MyStruct();
+    assume b[b.Length - 1].x == 152;  // BUGBUG: workaround because our translation can't do this assignment
+    Array.Copy(a, 0, b, 1, a.Length);
+    assert b[5].x == a[4].x;
+    assert b[b.Length-1].x == 152;
+  }
+
+  void Overlaps0(int[]! a, int[]! b)
+    requires 50 <= a.Length && 50 <= b.Length;
+    modifies b[*];
+  {
+    int x = a[18];
+    int y = b[18];
+    Array.Copy(a, 0, b, 0, 20);
+    assert a[18] == x;  // a is always preserved in this case
+    assert a == b ==> b[18] == y;  // also fine
+    assert b[18] == y;  // error
+  }
+
+  void Overlaps1(int[]! a, int[]! b)
+    requires 50 <= a.Length && 50 <= b.Length;
+    modifies b[*];
+  {
+    int t = a[2];
+    int x = a[18];
+    int y = a[23];
+    Array.Copy(a, 0, b, 3, 20);
+    assert x == b[21];
+    assert t == a[2];
+    assert y == a[23];
+    assert a != b ==> x == a[18];
+    assert x == a[18];  // error: this does not necessarily hold if a==b
+  }
+}
+
+public struct MyStruct {
+  public int x;
+}

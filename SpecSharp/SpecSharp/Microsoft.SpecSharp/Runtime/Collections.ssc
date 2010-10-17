@@ -1,0 +1,2014 @@
+#define SpecSharp
+
+using System;
+using System.Diagnostics;
+using SC = System.Collections;
+#if CCINamespace
+using Microsoft.Cci;
+#else
+using System.Compiler;
+#endif
+using Microsoft.Contracts;
+using System.Collections.Generic;
+
+namespace Microsoft.SpecSharp.Collections{
+
+  /*internal*/ 
+  public delegate object Projection(object! p);
+
+  /*internal*/ 
+  public class RandomController{
+    /*internal*/ 
+    public static Random rand = new Random(0);
+  }
+  public class Debug{
+    public static void Assert(bool b) {
+      if (!b) throw new Exception("Assert failed");
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  //Pair
+  // ---------------------------------------------------------------------------
+  
+
+  /// <summary>
+  /// Pairs are 2-ary tuples, having fields First and Second. Pairs are immutable and have structural equality.
+  /// </summary>
+  public struct Pair{
+    public readonly object First, Second;
+
+    // Constructors - - - - - - - - - - - - - - - - - - - - - - - - - -
+    /// <summary>
+    /// Initializes a new instance of a pair with the given arguments
+    /// </summary>
+    public Pair(object first, object second) { First = first; Second = second;}
+
+    /// <summary>
+    /// True, if value is a pair and is structurally equal to this, false otherwise [Time: see ==]
+    /// </summary>
+    public override bool Equals(object value) {
+      return value is Pair && this == (Pair)value;
+    }
+
+    public override int GetHashCode() {
+      return First.GetHashCode() ^ Second.GetHashCode();
+    }
+
+    /// <summary>
+    /// Deep structural equality on Pairs
+    /// </summary>
+    public static bool operator ==(Pair x, Pair y) {
+      return Object.Equals(x.First,y.First) && Object.Equals(x.Second,y.Second);
+    }
+
+    /// <summary>
+    /// Deep structural inequality on Pairs
+    /// </summary>
+    public static bool operator !=(Pair x, Pair y) {
+      return !(x == y);
+    }
+    //ToString - - - -  - - - - - - - - - - - - - - - - - - - - - - - -
+
+    /// <summary>
+    /// Formats this pair as "(first, second}"
+    /// </summary>
+    public override string ToString() {
+      return String.Format("({0},{1})",First,Second);   
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  //Vector
+  // ---------------------------------------------------------------------------
+
+  /// <summary>
+  /// Vectors contain indexable elements. They are similar to ArrayLists, but immutable.
+  /// Vector can only grow at one end. They are implemented via arrays which double in size, when the array is full. 
+  /// (Adding to the end is constant time)
+  /// </summary>
+
+  public struct Vector:SC.IEnumerable{
+
+    internal class Vec{
+      private object[]! elems ;
+      private int count;
+      internal Vec():this(4){}
+      internal Vec(int size){
+        elems = new object[size];
+        count = 0;
+      }
+      internal int Count{ 
+        get { return count;}
+      }
+      internal object! this[int index]{
+        get{ return (object!)this.elems[index];}
+        set{ this.elems[index] = value;}
+      }
+      internal Vec Clone() {
+        Vec vec = new Vec();
+        vec.count = this.count;
+        vec.elems = (object[]!) elems.Clone();
+        return vec;
+      }
+      internal int Add(object! o) {
+        int n = (count == 0? 0 : this.elems.Length);
+        int i = this.count++;
+        if (i == n){
+          int m = n*2; if (m < 4) m = 4;
+          object [] newElems = new object [m];
+          for (int j = 0; j < n; j++) newElems[j] = elems[j];
+            elems = newElems;
+        }
+        elems[i] = o;
+        return this.count;
+      }
+    }
+
+
+    Vec! vec;
+    int count;
+    //     public Vector(object o){
+    //       elems = new object[1];
+    //       elems[0]=o;     
+    //       count = 1;        
+    //     }
+    //     public Vector(SC.IEnumerable os){
+    //       elems = new object[4]; 
+    //       count = 0;
+    //       foreach(object o in os)
+    //         Add(o);        
+    //     } 
+
+    /// <summary>
+    /// Gets or sets the element at the specified index. Get constant time, Set linear time.
+    /// </summary>
+    public object! this[int index]{
+      get
+        requires index >= 0 && index < Length;
+      { 
+        return vec[index];
+      }
+      set
+        requires index >= 0 && index < Length;
+      {
+        if (vec == null) vec = new Vec();
+        if (index==count){
+          this.Add(value);
+        }else{
+          vec = (!)vec.Clone();
+          vec[index] = value;
+        }
+      }
+    }
+
+    /// <summary>
+    /// Gets the number of elements actually contained in the Vector.
+    /// </summary>
+    public int Length{
+      [Pure]
+      get{return this.count;}}
+
+    /// <summary>
+    /// Gets the number of elements actually contained in the Vector.
+    /// </summary>
+      
+    public int Count{get{return this.count;}}
+
+    /// <summary>
+    /// Adds an object to the end of the Vector (constant time if count is smaller than the vectors capacity, linear time otherwise).
+    /// </summary>
+    public int Add(object! o){
+      if (vec == null) vec = new Vec();
+      if (count != vec.Count) vec = (!)vec.Clone();
+      count++;
+      return vec.Add(o);  
+    }
+
+    /// <summary>
+    /// True if the Vector contains the object, False otherwise (linear time)
+    /// </summary>
+    public bool Contains(object o){
+      for(int i = 0; i< count; i++)
+      if(Object.Equals(o,vec[i]))
+        return true;
+      return false;
+    }
+    /// <summary>
+    /// Returns the zero-based index of the first occurrence of the given object in the Vector, -1 if it doesn't occur (linear time).
+    /// </summary>
+    public int IndexOf(object o) {
+      for(int i = 0; i< count; i++)
+        if(Object.Equals(o,vec[i]))
+          return i;
+      return -1;
+    }
+    /// <summary>
+    /// Returns the zero-based index of the last occurrence of the given object in the Vector, -1 if it doesn't occur (linear time).
+    /// </summary>
+    public int LastIndexOf(object o){
+      for(int i = count-1; i>=0; i--)
+        if(Object.Equals(o,vec[i]))
+          return i;
+      return -1;
+    }
+      
+    /// <summary>
+    /// ...
+    /// </summary>
+    public static Vector operator + (Vector s, Vector t){
+      Vector r= s;
+      for(int i = 0; i< t.count; i++)
+        r.Add(t[i]);
+      return r;
+    }
+    /// <summary>
+    /// Removes the first occurrence of a specific object from the vector
+    /// </summary>
+    public void Remove(object value){
+      Vec vec = new Vec(this.count);
+      int count=0;
+      int i = 0;
+      for(; i < this.count; i++)
+        if (!Object.Equals(this.vec[i],value)) {
+          vec[i]=this.vec[i];
+          count++;
+        }else
+          break;
+      i++;
+      for(; i < this.count; i++){
+        vec[i-1]=this.vec[i];
+        count++;
+      }
+      this.count = count;
+      this.vec = vec;
+    }
+    // Comparison - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    //  public static bool operator < (Vector s, Vector t){
+    //    return s.count < t.count && IsPrefix(s,t);          
+    //  }
+    //  public static bool operator <= (Vector s, Vector t){
+    //    return s.count <= t.count && IsPrefix(s,t);
+    //  }
+    //  public static bool operator > (Vector s, Vector t){ 
+    //    return t < s;
+    //  }
+    //  public static bool operator >= (Vector s, Vector t){ 
+    //    return t <= s;
+    //  }
+
+    // IEnumerator - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+      
+    /// <summary>
+    /// Returns an enumerator that can iterate through the vector
+    /// </summary>
+    public SC.IEnumerator GetEnumerator() { 
+      return new VectorEnumerator(this, this.count);
+    }
+    public struct VectorEnumerator: SC.IEnumerator{
+      Vector vector;
+      int index;
+      int length;
+      bool ok;
+      public VectorEnumerator(Vector vector, int length) { 
+        this.vector = vector; this.index = 0; this.ok = false; this.length = 0;
+      }
+      public bool MoveNext(){
+        if (!ok) ok = true;  else index++; return index <length;
+      }
+      public object Current{ 
+        get {return vector.vec[index];}
+      }
+      public void Reset() {
+        index = 0; ok = false;
+      }
+    }
+    /// <summary>
+    /// True, if value is a vector and has the same elements in the same order, false otherwise
+    /// </summary>
+    public override bool Equals(object value) {
+      return value is Vector && this == (Vector)value;
+    }
+
+    /// <summary>
+    /// Returns the hashcode derived from the hashcode of its elements
+    /// </summary>
+    public override int GetHashCode() {
+      if (vec == null){ vec = new Vec(); count = 0; }
+      int h = 0;
+      for(int i = 0; i<count; i++){
+        h ^= vec[i].GetHashCode();
+      }
+      return h;
+    }
+
+    /// <summary>
+    /// Equality: True, if both vectors have same elements in the same order, false otherwise
+    /// </summary>
+    public static bool operator ==(Vector x, Vector y) {
+      return (x.Length == y.Length) && IsPrefix(x,y);
+    }
+    public static bool IsPrefix (Vector s, Vector t){
+      for(int i = 0; i< s.count; i++)
+        if(!Object.Equals(s[i],t[i]))
+          return false;
+      return true;
+    }
+
+    /// <summary>
+    /// Inequality: True, if both vectors do not have the same elements in the same order, false otherwise
+    /// </summary>
+    public static bool operator !=(Vector x, Vector y) {
+      return !(x == y);
+    }
+
+    //ToString - - - -  - - - - - - - - - - - - - - - - - - - - - - - -
+    /// <summary>
+    /// Returns the Vector formatted in the form "Vector{value_1, ..., value_n}" 
+    /// </summary>
+    public override string ToString() {
+        String s = "Vector{";
+        for(int i = 0; i < count-1; i++)
+          s+= vec[i] + ", ";
+        if (count >0)
+          s+= vec[this.count-1].ToString();
+        return s+"}";   
+    }
+  }
+
+  /*internal*/ 
+  public class LinkedList{
+    /*internal*/ 
+    public object! head;
+    /*internal*/ 
+    public LinkedList tail;
+    /*internal*/ 
+    public LinkedList(object! head, LinkedList tail){
+      this.head = head; this.tail = tail;
+    }
+    /*internal*/ 
+    public LinkedList! Add( object! o, bool replace, out bool added){
+      LinkedList l = this;
+      if (!replace){
+        while(l!= null && !Object.Equals(l.head,o))
+          l = l.tail;                        
+        if (l!= null) {
+          added = false;
+          return this;
+        }else{
+          added = true;
+          return new LinkedList(o,this);
+        }
+      }else
+        return Update(this,  o, out  added);
+    }
+    private LinkedList! Update(LinkedList l, object! o,  out bool added){
+      if (l==null) {
+        added = true;
+        return new LinkedList(o,null);
+      }
+      if (Object.Equals(l.head,o)){
+        added = false;
+        return new LinkedList(o,l.tail);
+      }else
+        return new LinkedList(l.head,Update(l.tail, o, out  added));
+    }
+    /*internal*/ 
+    public LinkedList Remove(object o,  out bool deleted){
+      LinkedList l = this;
+      if (l==null) {
+        deleted = false;
+        return l;
+      }
+      if (Object.Equals(l.head,o)){
+        deleted = true;
+        return l.tail;
+      }else if (l.tail == null){
+        deleted = false;
+        return l;
+      }else{
+        return new LinkedList(l.head,l.tail.Remove(o, out deleted));
+      }
+    }
+    /*internal*/
+    public static object Lookup(LinkedList l , object o){
+      while(l!= null && !Object.Equals(l.head,o))
+        l = l.tail;
+      if (l!= null)
+        return l.head;
+       else
+         return null;
+    }
+    public override string ToString(){
+      string s = head.ToString()+" ";
+      LinkedList l = tail;
+      while(l!= null){
+        l = l.tail;
+        s+=head.ToString()+" ";
+      }
+      return s;
+    }
+  }
+
+  /*internal*/ 
+  public enum Color{Red, Black};
+  /*internal*/ 
+  public class RedBlackTree:SC.IEnumerable{
+    Color color;
+    readonly int key;
+    /*internal*/ 
+    public LinkedList! elems;
+    RedBlackTree left,right;
+
+    /*internal*/ 
+    public RedBlackTree(Color c, int k, LinkedList! e, RedBlackTree l, RedBlackTree r){
+      color = c; key =k; elems = e; left =l; right = r;
+    }
+
+    /*internal*/ 
+    public static RedBlackTree Remove(RedBlackTree t, object! o, out bool deleted){
+      RedBlackTree root = RemoveHelper(t,o, out deleted);
+      if (root!=null)
+        root.color = Color.Black;
+      return root;
+    }
+    private static RedBlackTree RemoveHelper(RedBlackTree t, object! o, out bool deleted){
+      if (t == null) {
+        deleted = false;
+        return t;
+      } else {
+        int k = o.GetHashCode(); 
+        if (k == t.key) {
+          LinkedList xs = t.elems.Remove(o, out deleted);
+          if (! deleted)
+            return t;
+          else if (xs!=null)
+            return new RedBlackTree(t.color, t.key, xs, t.left, t.right);                   
+          else if(t.left==null)
+            return t.right;
+          else if (t.right==null)
+            return t.left; 
+          else
+            return Relink(t.left,t.right);
+        } else if (k < t.key)
+          return Balance(t.color, t.key, t.elems, RemoveHelper(t.left, o, out deleted), t.right);
+        else
+          return Balance(t.color, t.key, t.elems, t.left, RemoveHelper(t.right, o, out deleted));
+      }
+    }
+
+    private static RedBlackTree Relink(RedBlackTree! t, RedBlackTree s) {
+      if(s==null)
+        return t;
+      else if (t.key < s.key)
+        return Balance(s.color, s.key, s.elems, Relink(t, s.left), s.right);
+      else
+        return Balance(s.color, s.key, s.elems, s.left, Relink(t, s.right));
+    }
+
+    /*internal*/ 
+    public static RedBlackTree Insert(RedBlackTree t, object! o, bool replace, out bool added){
+      RedBlackTree! root = InsertHelper(t,o, replace, out added);
+      root.color = Color.Black;
+      return root;
+    }
+    private static RedBlackTree! InsertHelper(RedBlackTree t, object! o, bool replace, out bool added){
+      if (t == null) {
+        added = true;
+        return new RedBlackTree(Color.Red, o.GetHashCode(), new LinkedList(o,null), null, null);
+      } else {
+        int k = o.GetHashCode(); 
+        if (k == t.key) {
+          LinkedList xs = t.elems.Add(o, replace, out added);
+          return added || replace? new RedBlackTree(t.color, t.key, xs, t.left, t.right) : t;
+        } else if (k < t.key)
+          return Balance(t.color, t.key, t.elems, InsertHelper(t.left, o, replace, out added), t.right);
+        else
+          return Balance(t.color, t.key, t.elems, t.left, InsertHelper(t.right, o, replace, out added));
+      }
+    }
+    private static RedBlackTree! Balance(Color c, int k, LinkedList! e, RedBlackTree l, RedBlackTree r) {
+      if (c == Color.Red)
+        return new RedBlackTree(c,k,e,l,r);
+      else {
+        /*c == Color.Black*/
+        if (l != null && l.color == Color.Red && l.left!= null && l.left.color == Color.Red){
+          RedBlackTree ll = l.left;
+          RedBlackTree newl = new RedBlackTree(Color.Black,ll.key,ll.elems,ll.left,ll.right);
+          RedBlackTree newr = new RedBlackTree(Color.Black,k,e,l.right,r);
+          return new RedBlackTree(Color.Red,l.key, l.elems, newl, newr);
+        } else if (l != null && l.color == Color.Red && l.right!= null && l.right.color == Color.Red){
+          RedBlackTree newl = new RedBlackTree(Color.Black,l.key,l.elems,l.left,l.right.left);
+          RedBlackTree newr = new RedBlackTree(Color.Black,k,e,l.right.right,r);
+          return new RedBlackTree(Color.Red,l.right.key, l.right.elems, newl, newr);
+        } else if (r != null && r.color == Color.Red && r.left!= null && r.left.color == Color.Red){
+          RedBlackTree newl = new RedBlackTree(Color.Black,k,e,l,r.left.left);
+          RedBlackTree newr = new RedBlackTree(Color.Black,r.key,r.elems,r.left.right,r.right);
+          return new RedBlackTree(Color.Red,r.left.key, r.left.elems, newl, newr);
+        } else if (r!= null && r.color == Color.Red && r.right!= null && r.right.color == Color.Red){
+          RedBlackTree rr = r.right;
+          RedBlackTree newl = new RedBlackTree(Color.Black,k,e,l,r.left);
+          RedBlackTree newr = new RedBlackTree(Color.Black,rr.key,rr.elems,rr.left,rr.right);
+          return new RedBlackTree(Color.Red,r.key, r.elems, newl, newr);
+        } else
+          return new RedBlackTree(c,k,e,l,r);
+      }
+    }
+    /*internal*/ 
+    public static object Lookup(RedBlackTree t, object! o){
+      if (t == null) 
+        return null;
+      else {
+        int k = o.GetHashCode(); 
+        if (k == t.key)
+          return LinkedList.Lookup(t.elems,o);
+        else if (k < t.key )
+          return Lookup(t.left,o);
+        else //if (k > t.key)
+          return Lookup(t.right,o);
+      }
+    }
+    public override int GetHashCode(){
+      int k = key; 
+      if (left != null)
+        k^= left.GetHashCode();
+      if (right != null)
+        k^= right.GetHashCode();
+      return k;
+    }
+    public SC.IEnumerator GetEnumerator() { 
+      return new Enumerator(new LazyRedBlackTreeEnumerator(this));
+    }
+    public SC.IEnumerator GetProjectionEnumerator(Projection p) { 
+      return new Enumerator(new LazyRedBlackTreeEnumerator(this),p);
+    }
+    public override string ToString() {
+      string s = key + "(" + color + ", ";
+      if (left != null)
+        s += left.ToString() +", ";
+      else
+        s += "null, ";
+      s+=elems.ToString()+", ";
+      if (right != null)
+        s += right.ToString();
+      else
+        s += "null";
+      return s+")";
+    }
+
+    /*internal*/ 
+    public class LazyRedBlackTreeEnumerator : IStream{
+      /*internal*/ 
+      public int pc;
+      /*internal*/ 
+      public RedBlackTree! t;
+      /*internal*/ 
+      public LinkedList l;
+      /*internal*/ 
+      public LazyRedBlackTreeEnumerator(RedBlackTree! t) { this.t = t; }
+      object! IStream.Force(){
+        for(;;) {
+          switch (pc) {
+            case 0: 
+              pc++; 
+              l = t.elems;
+              if (t.left != null) 
+                return new LazyRedBlackTreeEnumerator(t.left);
+              break;
+            case 1 : 
+              if (l == null){
+                pc ++;
+                break;
+              } else {
+                object h = l.head;
+                l = l.tail;                         
+                return h; 
+                //return new Yield(h); 
+              }
+            case 2: 
+              pc++;
+              if (t.right != null) 
+                return new LazyRedBlackTreeEnumerator(t.right);         
+              break;
+            case 3 : 
+              return (!)Stream.Empty;
+          }
+        }
+      }
+    }
+
+  //ToString - - - -  - - - - - - - - - - - - - - - - - - - - - - - -
+  //  public override string ToString() {
+  //    String s = "{";
+  //    int i = 0;
+  //    foreach(object o in this)
+  //      if (i>0)
+  //        s+= ", " +o;
+  //      else
+  //        s = o.ToString();
+  //    return s+"}";   
+  //  }
+  //
+
+    /*internal*/ 
+    public struct RedBlackTreeEnumerator: SC.IEnumerator{
+      RedBlackTree t;
+      public RedBlackTreeEnumerator(RedBlackTree t) { 
+        this.t = t; 
+      }
+      public bool MoveNext(){
+        return true;
+      }
+      public object Current{ 
+        get {return null;}
+      }
+      public void Reset() {
+      }
+    }
+  }
+
+        // ------------------------------------------------------------------
+        // Set
+        // ------------------------------------------------------------------
+
+  public struct Set: SC.IEnumerable{
+    private int count; 
+    RedBlackTree elems;
+          
+  // Constructors - - - - - - - - - - - - - - - - - - - - - - - - - -
+          
+  //  public Set(object o){
+  //    bool added = false;
+  //    count = 1; elems = RedBlackTree.Insert(null,o, false, out added);
+  //  }
+  //  public Set(IEnumerable<T> os) {
+  //    count = 0;
+  //    elems = null;
+  //    bool added = false;
+  //    foreach(T o in os) {
+  //      Debug.Assert(o != null);
+  //      elems=RedBlackTree.Insert(elems,o, false, out added);
+  //      if (added) count++;
+  //    }
+  //  }
+  //
+
+    /// <summary>
+    /// Returns the cardinality (number of elements) in the Set
+    /// </summary>
+    public int Count{
+      get { return count; }
+    }
+
+    // Iterators - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    /// <summary>
+    /// Returns an enumerator that can iterate through a Set
+    /// </summary>
+    public SC.IEnumerator GetEnumerator() { 
+      if (elems==null) return new EmptyEnumerator();
+      return elems.GetEnumerator();
+    }
+
+    // Equality - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    /// <summary>
+    /// True, if o is a set and contains the elements as this, false otherwise [Time: see ==]
+    /// </summary>
+    public override bool Equals (object o){ 
+      return o is Set && this == (Set)o;
+    }
+
+    /// <summary>
+    /// Returns the hashcode of the contained elements [Time: this.Count]
+    /// </summary>
+    public override int GetHashCode(){
+      if (elems==null) return 0;
+      return elems.GetHashCode();
+    }
+    /// <summary>
+    /// Membership: True, if this Set contains o, false otherwise [Time: log(this.count)]
+    /// </summary>
+    public bool Contains(object! o){
+      return RedBlackTree.Lookup(elems,o)!=null;
+    }
+    /// <summary>
+    /// Equality: True, if s and t contains the same elements, false otherwise [Time: min(s.Count,t.Count)*log(max(s.Count,t.Count))]
+    /// </summary>
+    public static bool operator ==(Set s, Set t) {
+      if (s.Count != t.Count) return false;
+      foreach(object o in s) 
+        if (!t.Contains(o))
+          return false;
+      return true;
+    }
+    /// <summary>
+    /// Inequality: True, if s and t do not contain the same elements, false otherwise [Time: see ==]
+    /// </summary>
+    public static bool operator != (Set s, Set t){
+      return !(s==t);
+    }
+    /// <summary>
+    /// Subset: True, if every element from s is also a member of t, false otherwise [Time: see ==]
+    /// </summary>
+    public static bool operator <= (Set s, Set t){
+      if (!(s.Count <= t.Count)) 
+        return false;
+      foreach(object o in s)
+        if (!t.Contains(o))
+          return false;
+      return true; 
+    }
+    /// <summary>
+    /// Proper Subset: True, if s is a subset of t and in addition s is different from t, false otherwise [Time: see ==]
+    /// </summary>
+    public static bool operator < (Set s, Set t){ 
+      if (!(s.Count < t.Count)) 
+        return false;
+      foreach(object o in s)
+        if (!t.Contains(o))
+          return false;
+      return true; 
+    }
+    /// <summary>
+    /// Superset: True, if every element from t is also a member of s, false otherwise [Time: see ==]
+    /// </summary>
+    public static bool operator >= (Set s, Set t){ 
+      return t <= s;  
+    }
+    /// <summary>
+    /// Proper Superset: True, if s is a superset of t and in addition s is different from t, false otherwise [Time: see ==]
+    /// </summary>
+    public static bool operator > (Set s, Set t){ 
+      return t < s; 
+    }
+              
+    // In situ operations - - - - - - - - - - - - - - - - - - - - - - - -
+          
+    /// <summary>
+    /// Membership:  Get returns true, if this contains it (where it!=null), false otherwise; Set where value==true includes it in this, set where value==false exludes it [Time: log(this.Count)]
+    /// </summary>
+    public bool this[object! it]{            
+      get{
+        return this.Contains(it);
+      } 
+      set{
+        if (value) 
+          this.Add(it); 
+        else 
+          this.Remove(it);
+      } 
+    }  
+      
+    /// <summary>
+    /// Exclude value (where value!=null) from this [Time: log(this.Count)]
+    /// </summary>
+    public void Remove(object! value){
+      bool deleted = false;
+      elems = RedBlackTree.Remove(elems,value,out deleted);
+      if (deleted)
+        count--;
+    }
+      
+    /// <summary>
+    /// Include value (where value!=null) in this [Time: log(this.Count)]
+    /// </summary>
+    public int Add(object! value) {
+      bool added;
+      elems = RedBlackTree.Insert(elems,value,false, out added);
+      if (added) count++;
+      return count;
+    }
+          
+    // To String - - - - - - - - - - - - - - - - - - - - - - - -
+    /// <summary>
+    /// Formats this set as "Set{elem_1, ..., elem_n}" [Time: this.Count]
+    /// </summary>
+    public override string ToString() {
+      if (elems == null)
+        return "Set{}";
+      else {
+        string s = "Set{";
+        bool succ = false;
+        foreach(object o in elems) {
+          if (succ) s+=", "; else succ = true;
+          s+= o.ToString();
+        }
+        return s+"}";
+      }
+    }
+
+    // Pure Set Operations- - - - - - - - - - - - - - - - - - - - -
+
+    /// <summary>
+    /// Union: Returns the set containing all the elements from both s and t [Time: max(s.Count,t.Count)*log(s.Count,t.Count)]
+    /// </summary>
+    public static Set operator + (Set s, Set t){
+      Set r;
+      if (s.Count > t.Count) {
+        r = s;
+        foreach(object o in t)
+          r.Add(o);
+      } else {
+        r = t;
+        foreach(object o in s)
+          r.Add(o);
+      }
+      return r;
+    }    
+    /// <summary>
+    /// Difference: Returns the set containing all the elements from s that are not in s2 [Time: t.Count*log(s.Count)]
+    /// </summary>
+    public static Set operator - (Set s, Set t){ 
+      Set r = s;
+      foreach(object o in t)
+        r.Remove(o);
+      return r;  
+    }
+    /// <summary>
+    /// Intersection: Returns the set containing the elements thar are both in s and t [Time: max(s.Count,t.Count)*log(s.Count,t.Count)]
+    /// </summary>
+    public static Set operator * (Set s, Set t){ 
+      Set r;
+      if (s.Count < t.Count) {
+        r = s;
+        foreach(object o in s)
+          if (!t.Contains(o))
+            r.Remove(o);
+      } else {
+        r = t;
+        foreach(object o in t)
+          if (!s.Contains(o))
+            r.Remove(o);
+      }
+      return r;
+    }
+          
+    /// <summary>
+    /// Distributed Union: The resulting set is the union of all the elements of s, 
+    /// i.e. it contains all the elements of all the elements of s [Time: s.Count * ...]
+    /// </summary>
+    public static Set BigUnion(Set s) {
+      Set r = new Set();  int i = 0;
+      foreach(Set ks in s){
+        if (i==0)
+          r = ks;
+        else
+          r = r+ks;
+        i++;
+      }
+      return r;
+    }
+
+    /// <summary>
+    /// Distributed Intersection: The resulting set is the intersection of all the elements of s, 
+    /// i.e. it contains the elements that are in all elements [Time: max(s.Count,t.Count)*log(s.Count,t.Count)]
+    /// </summary>
+    public static Set BigIntersect(Set s) { 
+      Set r = new Set(); int i = 0;
+      foreach(Set ks in s){
+        if (i==0)
+          r = ks;
+        else
+          r = r*ks;
+        i++;
+      }
+      return r;
+    }
+  }
+
+  // --------------------------------------------------------------------
+  // Map
+  // --------------------------------------------------------------------
+
+  /// <summary>
+  /// Maps map keys to values. Maps are similar to hashtables, but in opposite to hashtables, they are immutable.
+  /// </summary>
+  public struct Map: SC.IEnumerable{ //:ICollection  
+    
+    //Auxiliary Type, needed for adapting Equals method...
+    sealed public class Maplet{
+      /*internal*/ public SC.DictionaryEntry d;
+      public Maplet(SC.DictionaryEntry d){
+        this.d = d;
+      }
+      public override bool Equals (Object o){
+        Maplet m = o as Maplet;
+        if (m == null) return false;
+        return Object.Equals(d.Key,m.d.Key);
+      }
+      public override int GetHashCode(){
+        return ((!)d.Key).GetHashCode();
+      }
+    }
+
+    private int count; 
+    RedBlackTree elems;
+
+    // Constructors - - - - - - - - - - - - - - - - - - - - - - - - - -
+    //  public Map(SC.DictionaryEntry d){
+    //        bool added = false;
+    //        count = 1; elems = RedBlackTree.Insert(elems,new Maplet(d),true, out added);
+    //  }
+    //      public Map(SC.IEnumerable os) {
+    //          count = 0;
+    //          elems = null;
+    //          bool added = false;
+    //          foreach(SC.DictionaryEntry o in os) {
+    //              elems=RedBlackTree.Insert(elems,new Maplet(o), true, out added);
+    //              if (added) count++;
+    //          }
+    //      }
+      
+    /// <summary>
+    /// Returns the Gets the number of key-and-value pairs contained in the map
+    /// </summary>
+    public int Count{
+      [Pure]
+      get { return count; }
+    }
+
+    // Iterators - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    /// <summary>
+    /// Returns an IDictionaryEnumerator that can iterate through the map
+    /// </summary>
+    public SC.IEnumerator GetEnumerator() { 
+      if (elems==null) return new EmptyEnumerator();
+      return elems.GetProjectionEnumerator(new Projection(Map.DictionaryEntryProjection));;
+    }   
+    private static object DictionaryEntryProjection(object! m){
+      return ((Maplet)m).d;
+    }
+    /// <summary>
+    /// Gets an IEnumerable containing the keys in the map
+    /// </summary>
+    public SC.IEnumerable! Keys {
+      get{ return new KeysEnumerable(this);}
+    }
+
+    /*internal*/ 
+    public class KeysEnumerable:SC.IEnumerable{
+      Map m;
+      /*internal*/ 
+      public KeysEnumerable(Map m) {
+        this.m = m;
+      }
+      public static object KeyProjection(object! m){
+        return ((Maplet)m).d.Key;
+      }
+      public SC.IEnumerator GetEnumerator() { 
+        if (m.elems==null) return new EmptyEnumerator();
+        return m.elems.GetProjectionEnumerator(new Projection(KeysEnumerable.KeyProjection));
+      }
+    }
+
+    /// <summary>
+    /// Gets an IEnumerable containing the values in the map
+    /// </summary>
+    public SC.IEnumerable! Values{
+      get{ return new ValuesEnumerable(this);}
+    }
+      /*internal*/ 
+    public class ValuesEnumerable:SC.IEnumerable{
+      Map m;
+      /*internal*/ 
+      public ValuesEnumerable(Map m) {
+        this.m = m;
+      }
+      public static object ValueProjection(object! m){
+        return ((Maplet)m).d.Value;
+      }
+      public SC.IEnumerator GetEnumerator() { 
+        if (m.elems==null) return new EmptyEnumerator();
+        return m.elems.GetProjectionEnumerator(new Projection(ValuesEnumerable.ValueProjection));
+      }
+    }
+
+    // Equality - - - - - - - - - - - - - - - - - - - - - - - - - -
+       
+    /// <summary>
+    /// True, if o is a map and contains the same key-value pairs as this, false otherwise [Time: see ==]
+    /// </summary>
+    public override bool Equals (object o){ 
+      return o is Map && this == (Map)o;
+    }
+
+    /// <summary>
+    /// Returns the hashcode of its key-value pairs [Time: this.Count]
+    /// </summary>
+    public override int GetHashCode() {
+      if (elems == null) return 0;
+      return elems.GetHashCode();
+    }
+            
+    /// <summary>
+    /// Equality: True, if s and t contains the same key-value pairs, false otherwise [Time: min(s.Count,t.Count)*log(max(s.Count,t.Count))]
+    /// </summary>
+    public static bool operator ==(Map s, Map t) {
+      return s.Count == t.Count && IsSubset(s,t);
+    }
+    private static bool IsSubset(Map s, Map t){
+      if (s.elems== null) return true;
+      if (t.elems == null) return false;
+
+      foreach(Maplet o in s.elems) {                
+        object p = RedBlackTree.Lookup(t.elems,o);
+        if (p == null || p!=null && !Object.Equals(((Maplet)p).d.Value,o.d.Value))
+          return false;
+      }
+      return true;
+    }
+
+    /// <summary>
+    /// Inequality: True, if s and t do not contain the same key-value pairs, false otherwise [Time: see ==]
+    /// </summary>
+    public static bool operator != (Map s, Map t){
+      return !(s==t);
+    }
+    //  /// <summary>
+  //   /// Subset: True, if every key-value pair from s is also a member of t, false otherwise [Time: see ==]
+  //   /// </summary>
+  //   public static bool operator <= (Map s, Map t){
+  //     return s.Count <= t.Count && IsSubset(s,t); 
+  //   }
+  //   /// <summary>
+  //   /// Proper Subset: True, if s is a subset of t and in addition s is different from t, false otherwise [Time: see ==]
+  //   /// </summary>
+  //   public static bool operator < (Map s, Map t){ 
+  //     return s.Count < t.Count && IsSubset(s,t); 
+  //   }
+  //   /// <summary>
+  //   /// Superset: True, if every key-value pair from t is also a member of s, false otherwise [Time: see ==]
+  //   /// </summary>
+  //   public static bool operator >= (Map s, Map t){ 
+  //     return t <= s;  
+  //   }    
+  //   /// <summary>
+  //   /// Proper Superset: True, if s is a suoerset of t and in addition s is different from t, false otherwise [Time: see ==]
+  //   /// </summary>
+  //   public static bool operator > (Map s, Map t){ 
+  //     return t < s; 
+  //   }
+
+    // In situ operations - - - - - - - - - - - - - - - - - - - - - - - -
+
+    /// <summary>
+    /// Get returns the value of the provided key stored in the map, provided it exists, otherwise it abrupts; 
+    /// Set includes/overrides the key-value pair in the map [Time: log(this.Count)]
+    /// </summary>
+    public object this[object! key] { 
+      get{
+        object o = RedBlackTree.Lookup(elems,key);
+        if (o != null)
+          return ((Maplet)o).d.Value;
+        else 
+          throw new Exception(String.Format("Map.[]: key '{0}' not in Map",key.ToString()));
+      } 
+      set{
+        bool added;
+        elems = RedBlackTree.Insert(elems,new Maplet(new SC.DictionaryEntry(key,value)), true, out added);
+        if (added) 
+          count++;; 
+      }
+    }
+
+    /// <summary>
+    /// Adds an element with the specified key and value into the map [Time: log(this.Count)]
+    /// </summary>
+    public void Add(object! key, object value){
+      bool added;
+      elems = RedBlackTree.Insert(elems,new Maplet(new SC.DictionaryEntry(key,value)), true, out added);
+      if (added) 
+        count++;
+      else 
+        throw new Exception(String.Format("Map.Add: Duplicate key '{0}'", key.ToString()));
+    }
+    /*internal*/
+    public int Add(SC.DictionaryEntry d){
+      bool added;
+      elems = RedBlackTree.Insert(elems,new Maplet(d), true, out added);
+      if (added) 
+        count++;
+      else 
+        throw new Exception(String.Format("Map.Add: Duplicate key '{0}'", ((!)d.Key).ToString()));
+      return count;
+    }
+    private void Add(Maplet! m){
+      bool added;
+      elems = RedBlackTree.Insert(elems,m, true, out added);
+      if (added) 
+        count++;
+      else{ 
+        throw new Exception(String.Format("Map.Add: Duplicate key '{0}'", ((!)m.d.Key).ToString()));
+      }
+    }
+    /// <summary>
+    /// Adds an element with the specified key and value into the map [Time: log(this.Count)]
+    /// </summary>
+    public void Override(SC.DictionaryEntry d){ 
+      bool added;
+      elems = RedBlackTree.Insert(elems,new Maplet(d), true, out added);
+      if (added) 
+        count++;
+    }
+
+    /// <summary>
+    /// Removes the element with the specified key from the map
+    /// </summary>
+    public void RemoveKey(object! key) { 
+      bool deleted = false;
+      elems = RedBlackTree.Remove(elems,new Maplet(new SC.DictionaryEntry(key,null)),out deleted);
+      if (deleted)
+        count--;
+    }
+    /// <summary>
+    /// Removes the key-value pair from the map
+    /// </summary>
+    /*internal*/
+    public void Remove(SC.DictionaryEntry d) { 
+      bool deleted = false;
+      elems = RedBlackTree.Remove(elems,new Maplet(d),out deleted);
+      if (deleted)
+        count--;
+    }
+
+    // Choose operation- - - - - - - - - - - - - - - - - - - - - - - -
+    /// <summary>
+    /// Returns an arbitraryly chosen key-value pair from the map
+    /// </summary>
+    public SC.DictionaryEntry Choose() 
+      requires Count > 0;
+    {
+      if (elems==null)
+        throw new Exception("Map.Choose called on empty Domain");
+      return ((Maplet)(elems.elems.head)).d;
+    }
+
+    /// <summary>
+    /// Returns an arbitrarily choosen key-value pair from the map, at the same time removing it from the map
+    /// </summary>
+    public SC.DictionaryEntry ChooseAndRemove() {
+      SC.DictionaryEntry d = Choose();
+      Remove(d);
+      return d;
+    }
+
+    //ToString - - - - - - - - - - - - - - - - - - - - - - - - -
+    /// <summary>
+    /// Returns the map formatted in the form "Map{key_1~> value_1, ..., key_n~> value_n}" [Time: this.Count]
+    /// </summary>
+    public override string ToString() {
+      if (elems == null)
+        return "Map{}";
+      else {
+        string s = "Map{";
+        bool succ = false;
+        foreach(Maplet o in elems) {
+          if (succ) s+=", "; else succ = true;
+          object val = o.d.Value;
+          s+= ((!)o.d.Key)+"~>" + (val == null ? null : val.ToString());
+        }
+        return s+"}";
+      }
+    }
+
+    // Comparison operations - - - - - - - - - - - - - - - - - - - - - - -
+
+    /// <summary>
+    /// True, if the map contains a specific key, false otherwise [Time: log(this.Count)]
+    /// </summary>
+    public bool ContainsKey(object! key){
+      return RedBlackTree.Lookup(elems,new Maplet(new SC.DictionaryEntry(key,null))) != null;
+    }    
+    /// <summary>
+    /// True, if the map contains a specific key (better key-value pair ... ?), false otherwise [Time: log(this.Count)]                                                
+    /// </summary>
+      
+    /*internal*/
+    public bool Contains(SC.DictionaryEntry d){ 
+      return RedBlackTree.Lookup(elems,new Maplet(d)) != null;
+    }
+
+    //Ordinary map operations- - - - - - - - - - - - - - - - - - - - - - - - 
+
+    /// <summary>
+    /// Override: Returns a map combined of s and t that contains every key-value pair of t and those of s for which there was no key in t.
+    /// </summary>
+    public static Map operator + (Map s, Map t){
+      Map r = s;
+      bool added = false;
+      if (t.elems!= null)
+        foreach(Maplet o in t.elems){
+          r.elems=RedBlackTree.Insert(r.elems,o,true,out added);        
+          if (added)
+            r.count++;
+        }
+      return r;
+    }    
+    /// <summary>
+    /// Merge: Returns a map combined of s and t that contains every key-value pair of t and of s, 
+    /// provided that for keys that are in s and t their values agree (implmentation must be fixed ...)
+    /// </summary>
+    public static Map Merge (Map s, Map t){
+      Map r;
+      if (s.Count > t.Count) {
+        r = s;
+        foreach(SC.DictionaryEntry o in t)
+          r.Add(o);
+      } else {
+        r = t;
+        foreach(SC.DictionaryEntry o in s)
+          r.Add(o);
+      }
+      return r;
+    }
+
+    /// <summary>
+    /// Returns a map consisting of the elements in map whose key is not in keys
+    /// </summary>
+    public static Map KeyRestriction (Map map, SC.IEnumerable! keys){ 
+      Map r = map;
+      foreach(object o in keys)
+        r.RemoveKey(o);
+      return r;  
+    }
+
+    /// <summary>
+    /// Returns a map consisting of the elements in map whose value is not in values
+    /// </summary>
+    public static Map ValueRestriction(Map map, SC.IEnumerable! values) {
+      Set s = new Set();
+      foreach(object o in values)
+        s.Add(o);
+        
+      Map r = new Map();
+      foreach(SC.DictionaryEntry d in map)
+        if (d.Value != null && !s.Contains((object!)d.Value))
+          r.Add(d);
+      return r;  
+    }
+    /// <summary>
+    /// Returns a map consisting of the elements in map whose value is not in values
+    /// </summary>
+    public static Map ValueRestriction (Map map, Set values){ 
+      Set s = values;
+      Map r = new Map();
+      foreach(SC.DictionaryEntry d in map)
+        if (d.Value != null && !s.Contains((object!)d.Value))
+          r.Add(d);
+      return r;  
+    }
+
+    /// <summary>
+    /// Returns the set of key-value pairs
+    /// </summary>
+    public Set ToSet (){ 
+      Set s = new Set();
+      SC.IEnumerator r = this.GetEnumerator();
+      while (r.MoveNext()) {
+        SC.DictionaryEntry d = (SC.DictionaryEntry) r.Current;
+        s.Add(new Pair(d.Key, d.Value));
+      }
+      return s;  
+    }
+
+  //   public static Map operator - (Map s, Map t){ 
+  //     Map r = s;
+  //     foreach(SC.DictionaryEntry o in t)
+  //       r.Remove(o);
+  //     return r;  
+  //   }
+  //   public static Map operator * (Map s, Map t){ 
+  //     Map r;
+  //     if (s.Count < t.Count) {
+  //       r = s;
+  //       foreach(SC.DictionaryEntry o in s)
+  //         if (!t.Contains(o))
+  //           r.Remove(o);
+  //     } else {
+  //       r = t;
+  //       foreach(SC.DictionaryEntry o in t)
+  //         if (!s.Contains(o))
+  //           r.Remove(o);
+  //     }
+  //     return r;
+  //   }
+
+    /// <summary>
+    /// Distributed Merge: Returns the mapping that is constructed by merging all the mappings in s.
+    /// </summary>
+    public static Map BigMerge(SC.IEnumerable! s) {
+      Map r = new Map();  int i = 0;
+      foreach(Map ks in s){
+        if (i==0)
+          r = ks;
+        else
+          r = Merge(r,ks);
+        i++;
+      }
+      return r;
+    }
+      /// <summary>
+    /// Distributed Override: Returns the mapping that is constructed by overriding all the mappings in s.
+    /// </summary>
+    public static Map BigOverride(SC.IEnumerable! s) {
+      Map r = new Map();  int i = 0;
+      foreach(Map ks in s){
+        if (i==0)
+          r = ks;
+        else
+          r = r+ks;
+        i++;
+      }
+      return r;
+    }
+
+  //   public static Map BigIntersect(Map s) { 
+  //     Map r = new Map(); int i = 0;
+  //     foreach(Map ks in s){
+  //       if (i==0)
+  //         r = ks;
+  //       else
+  //         r = r*ks;
+  //       i++;
+  //     }
+  //     return r;
+  //   }
+  }
+
+    // --------------------------------------------------------------------
+    // Seq
+    // --------------------------------------------------------------------
+
+    /*internal*/ 
+    public class DoubleLinkedNode{
+      /*internal*/ 
+      public object elem;
+      /*internal*/ 
+      public DoubleLinkedNode next, prev;
+      /*internal*/
+      public DoubleLinkedNode(object e) { elem = e; }
+    }
+  
+    /// <summary>
+    /// Sequences contain indexable elements. Sequences are similar to ArrayLists, but in opposite to ArrayLists, they are immutable.
+    /// Sequences are implmented as double linked list (concatenation to the beginning or end is constant time)
+    /// </summary>
+    public struct Seq: SC.IEnumerable{   //ICollection 
+      private int count;
+      private DoubleLinkedNode! head, last;
+                
+      //constructors - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+      //   public Seq(object o) {
+      //     head = last = new DoubleLinkedNode(o);
+      //     count = 1;
+      //   }
+      // 
+  
+      /// <summary>
+      /// Gets the number of elements actually contained in the sequence.
+      /// </summary>
+      public int Count{
+        [Pure]
+        get { return  count;}}
+        
+      private Seq(DoubleLinkedNode! head, DoubleLinkedNode! last, int count){
+        this.head = head; this.last = last; this.count = count;
+      }
+      //   public Seq(SC.IEnumerable os)  { 
+      //     head = null; last = null; count = 0;
+      //     foreach(object o in os)
+      //       this.Add(new DoubleLinkedNode(o));
+      //   }
+      //      
+  
+      // Iterators - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+      /// <summary>
+      /// Returns an enumerator that can iterate through the sequence from beginning to end
+      /// </summary>
+      public SC.IEnumerator! GetEnumerator() {
+        return new SeqEnumerator(this); 
+      }
+      SC.IEnumerator SC.IEnumerable.GetEnumerator(){
+        return new SeqEnumerator(this); 
+      }
+
+      private class SeqEnumerator: SC.IEnumerator{
+        DoubleLinkedNode cur; bool started = false; int count;
+        public SeqEnumerator(Seq s){
+          cur = s.head;
+          count = s.count;
+        }
+        public bool MoveNext(){
+          if (!started)
+            started = true;
+          else{
+            count--;
+            cur = cur.next;
+          }
+          return count>0;
+        }
+        public object Current{
+          get {
+            if (!started) throw new InvalidOperationException();
+            return cur.elem;
+          }
+        }  
+        public void Reset(){
+          throw new InvalidOperationException();
+        }  
+      }
+
+    //IList - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    /// <summary>
+    /// Gets or sets the element at the specified index [Time: this.Count/2]
+    /// </summary>
+    public object this[int index]{
+      get
+        requires index > 0 && index < Count;
+      {
+        if (index > count/2){
+          DoubleLinkedNode cur = head;
+          for(int i = 0;i<count; i++)
+            cur = cur.next;
+          return cur.elem;
+        } else {
+          DoubleLinkedNode cur = last;
+          for(int i = count-1;i>count; i--)
+            cur = cur.prev;
+          return cur.elem;        
+        }
+      }
+      set
+        requires index > 0 && index < Count;
+      {
+        if (index == count && this.last.next == null)       
+          this.Add(value);
+        else {
+          Seq r = new Seq();
+          DoubleLinkedNode cur = head;
+          for(int i = 0;i<index; i++){
+            r.Add(cur.elem);
+            cur = cur.next;
+          }
+          r.Add(value); cur = cur.next;
+          for(int i = index+1; i< count; i++){
+            r.Add(cur.elem);
+            cur = cur.next;
+          }
+          this.count = r.count;
+          this.head = r.head;
+          this.last = r.last;
+        }
+      }        
+    }
+
+    /// <summary>
+    /// True if the seq contains o, false otherwise [Time: this.Count]
+    /// </summary>
+    public bool Contains(object o){
+      if (count == 0) return  false;
+      DoubleLinkedNode cur = head;
+      for(int i = 0; i< count; i++)
+        if(Object.Equals(o,cur.elem))
+          return true;
+        else
+          cur = cur.next;
+      return false;
+    }
+    //public int Add(object o){ return _seq.Add(o);}
+    //public bool IsReadOnly{ get {return _seq.IsReadOnly; } }
+    //public bool IsFixedSize { get {return _seq.IsFixedSize; }}
+
+    /// <summary>
+    /// Returns the zero-based index of the first occurrence of the given object in the Vector, -1 if it doesn't occur [Time: this.Count].
+    /// </summary>
+    public int IndexOf(object o) {
+      DoubleLinkedNode cur = head;
+      for(int i = 0; i< count; i++)
+        if(Object.Equals(o,cur.elem))
+          return i;
+        else
+          cur = cur.next;
+      return -1;
+    }
+    /// <summary>
+    /// Returns the zero-based index of the last occurrence of the given object in the Vector, -1 if it doesn't occur (linear time).
+    /// </summary>
+    public int LastIndexOf(object o) {
+      DoubleLinkedNode cur = last;
+      for(int i = count-1; i>=0; i--)
+        if(Object.Equals(o,cur.elem))
+          return i;
+        else
+          cur = cur.prev;
+      return -1;
+    }
+    //public void Insert(int index, object o){_seq.IndexOf(o);}    
+    //public void Remove(object o){_seq.Remove(o);}
+    //public void RemoveAt(int index){_seq.RemoveAt(index);}
+
+    //ToString - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    /// <summary>
+    /// Formats the seq as "Seq{elem_1, ..., elem_n}" [Time: this.Count]
+    /// </summary>
+    public override string ToString() {
+      if (count == 0)
+        return "Seq{}";
+      else {
+        string s = head.prev != null ? "?prev?Seq{": "Seq{";
+        DoubleLinkedNode cur = head;
+        for (int i = 0; i< count; i++){
+          if (i>0)
+            s+=", ";
+          s+= cur.elem==null?"null":cur.elem.ToString();
+          cur = cur.next;
+        }
+        return s+ (last.next != null ? "}?last?" : "}");
+      }
+    }
+    //Equality- - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    /// <summary>
+    /// True, if o is a seq and contains the same elements at the same indices, false otherwise [Time: see ==]
+    /// </summary>
+    public override bool Equals (object o){
+      if (o == null) return false;
+      if (!(o is Seq)) return false;
+      return this == (Seq) o;       
+    }
+
+    /// <summary>
+    /// Equality: True, if s and t contain the same elements at the same indices, false otherwise [Time: Max(s.Count,t.Count)]
+    /// </summary>
+    public static bool operator == (Seq s, Seq t){
+      return s.count == t.count && IsPrefix(s,t);         
+    }
+    public static bool IsPrefix (Seq s, Seq t){
+      DoubleLinkedNode sCur = s.head, tCur = t.head;
+      for(int i = 0; i< s.count; i++) {
+        if(!Object.Equals(sCur.elem,tCur.elem))
+          return false;
+        else {
+          sCur = sCur.next;
+          tCur = tCur.next;
+        }
+      }
+      return true;
+    }
+
+    /// <summary>
+    /// Inequality: True, if s and t do not contain  the same elements at the same indices, false otherwise [Time: see ==]
+    /// </summary>
+    public static bool operator != (Seq s, Seq t){ 
+      return !(s == t); 
+    }
+          
+    /// <summary>
+    /// Returns the hascode of its contained elements [Time: this.Count]
+    /// </summary>
+    public override int GetHashCode (){
+      int h=0;
+      DoubleLinkedNode cur = head;
+      for(int i = 0; i< count; i++){
+        h = h ^ cur.elem.GetHashCode();
+        cur = cur.next;
+      }
+      return h;
+    }
+    // Comparison - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    //   
+    //   public static bool operator < (Seq s, Seq t){
+    //     return s.count < t.count && IsPrefix(s,t);         
+    //   }
+    //   public static bool operator <= (Seq s, Seq t){
+    //     return s.count <= t.count && IsPrefix(s,t);
+    //   }
+    //   public static bool operator > (Seq s, Seq t){ 
+    //     return t < s;
+    //   }
+    //   public static bool operator >= (Seq s, Seq t){ 
+    //     return t <= s;
+    //   }
+
+    /// <summary>
+    /// Return the first element of the seq
+    /// </summary>
+    public object Head {
+      get 
+        requires Count > 0;
+      {
+        return head.elem;
+      }
+    }
+    /// <summary>
+    /// Return the last element of the seq
+    /// </summary>
+    public object Last{
+      get 
+        requires Count > 0;
+      {
+        return last.elem;      
+      }
+    }
+       
+    /// <summary>
+    /// Return the subsequence of the seq where the first element is removed
+    /// </summary>
+    public  Seq Tail {
+      get 
+        requires Count > 0;
+      {
+        return new Seq(head.next, last, count-1);       
+      }
+    }
+    /// <summary>
+    /// Return the subsequence of the seq where the last element is removed
+    /// </summary>
+    public  Seq Front {
+      get 
+        requires Count > 0;
+      {
+        return new Seq(head, last.prev, count-1);      
+      }
+    }      
+
+    /// <summary>
+    /// Distributed Concatenation: Returns the sequence where the elements of s 
+    /// (these are sequences themselves) are appended, the first, the second and so on
+    /// </summary>
+    public static Seq Concat(Seq s) {
+      DoubleLinkedNode cur = s.head;
+      Seq r = new Seq();
+      for(int i =0 ; i< s.count; i++) {
+        assume cur.elem is Seq; //TODO: provide invariants that guarantee this
+        r += (Seq) cur.elem;
+        cur = cur.next;
+      }
+      return r;
+    }
+
+    /// <summary>
+    /// Returns the sequence where the elements of s are in reverse order, 
+    /// i.e. the last becomes the first, the second last becomes the second, ans so on
+    /// </summary>
+    public static Seq Reverse(Seq s) {
+      if (s.count == 0) return s;
+      DoubleLinkedNode cur = s.last;
+      Seq r = new Seq();
+      for(int i=0 ; i< s.count; i++) {
+        r.Add(new DoubleLinkedNode(cur.elem));
+        cur = cur.prev;
+      }
+      return r;      
+    }
+    private Seq Dup (){
+      Seq r = new Seq();
+      DoubleLinkedNode cur = this.head;
+      for (int i = 0; i < count; i++){
+        r.Add(new DoubleLinkedNode(cur.elem));
+        cur = cur.next;
+      }
+      return r;
+    }
+          
+    /// <summary>
+    /// Append: Returns the sequence consistsing of the eleents of s followed by those of t in order.
+    /// </summary>
+    public static Seq operator + (Seq s, Seq t){
+      if (s.count == 0) return t;
+      if (t.count == 0) return s;
+      if (s.last.next != null)
+        s = s.Dup();
+      if (t.head.prev != null)
+        t = t.Dup();
+      Seq r = new Seq(s.head,t.last, s.count+t.count);
+      s.last.next = t.head;
+      t.head.prev = s.last;
+      return r;
+    } 
+
+    /// <summary>
+    /// Adds the object to the sequence [Time: constant]
+    /// </summary>
+    public int Add(object o){
+      if (count == 0 || last.next== null){
+        Add(new DoubleLinkedNode(o));
+      } else {
+        Seq s = this.Dup();
+        s.Add(new DoubleLinkedNode(o));
+        this.count=s.count;
+        this.head=s.head;
+        this.last=s.last;
+      }
+      return this.count;
+    }   
+    private void Add(DoubleLinkedNode! cur){
+      if (count == 0){
+        head = cur;
+        last = cur;
+        count = 1;
+      } else {
+        last.next = cur;
+        cur.prev = last;
+        last = cur;
+        count++;
+      }
+    }
+    /// <summary>
+    /// Removes the first occurrence of a specific object from the sequence [Time this.Count]
+    /// </summary>
+    public void Remove(object o){
+      Seq r = new Seq();
+      DoubleLinkedNode cur = this.head;
+      int i = 0; 
+      for(; i< count; i++) {
+        if (!Object.Equals(cur.elem,o)){
+          r.Add(new DoubleLinkedNode(cur.elem));
+          cur = cur.next;
+        } else
+          break;
+      }
+      if(i!=count){
+        cur = cur.next; i++;
+        for(; i< count; i++) {
+          r.Add(new DoubleLinkedNode(cur.elem));
+          cur = cur.next;
+        } 
+      }
+      this.count = r.count;
+      this.head=r.head;
+      this.last=r.last;
+    }   
+
+    /// <summary>
+    /// Returns a subsequence of s, by removing t's elements from s in order.  [Time this.Count]
+    /// </summary>
+    public static Seq operator - (Seq s, Seq t){ 
+      int i =0, j = 0; 
+      DoubleLinkedNode sCur = s.head, tCur = t.head;
+      Seq r = new Seq();
+      while(i < s.count && j <s.count){
+        if (Object.Equals(sCur.elem,tCur.elem)){
+          i++; j++; 
+          sCur = sCur.next; tCur = tCur.next;
+        } else{ 
+          r.Add(new DoubleLinkedNode(sCur.elem));
+          i++;
+          sCur = sCur.next;
+        }
+      }
+      return r;
+    }
+            
+    /// <summary>
+    /// Returns the sequence of pairs of elements from s1 and s2
+    /// </summary>
+    public static Seq Zip(Seq s, Seq t) {
+      DoubleLinkedNode sCur = s.head, tCur = t.head;
+      int m = Math.Min(s.count, t.count);
+      Seq r = new Seq();
+      for(int i = 0; i< m; i++, sCur = sCur.next, tCur = tCur.next)
+        r.Add(new DoubleLinkedNode(new Pair(sCur.elem, tCur.elem)));
+      return r;
+    }
+    /// <summary>
+    /// Returns a pair of sequences which elements are drawn from a sequqnce of pairs 
+    /// </summary>
+    public static Pair Unzip(Seq s){
+      DoubleLinkedNode cur = s.head;
+      Seq r = new Seq(), t = new Seq();
+      for(int i = 0; i< s.count; i++, cur = cur.next){
+        assume cur.elem is Pair; //TODO: provide invariants that guarantee this
+        Pair p = (Pair) cur.elem;
+        r.Add(new DoubleLinkedNode(p.First)); 
+        t.Add(new DoubleLinkedNode(p.Second));
+      }
+      return new Pair(r,t);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  //Lazy Tree Enumerators...
+  // ---------------------------------------------------------------------------
+  /*internal*/ 
+  public interface IStream{
+      object! Force();
+  }
+
+  /*internal*/ 
+  public class Stream{
+      private Stream() {}
+      public static Stream Empty = new Stream();
+  }
+
+  public class Enumerator: SC.IEnumerator{
+    IStream o;
+    SC.Stack St;     //This is a Stack of Streasm
+    object current;
+    Projection p;
+    /*internal*/ 
+    public Enumerator(IStream o){
+      this.o = o;
+      SC.Stack st = St = new SC.Stack();
+      st.Push(o);
+    }
+    /*internal*/ 
+    public Enumerator(IStream o, Projection p) {
+      this.o = o;
+      this.p = p;
+      SC.Stack st = St = new SC.Stack();
+      st.Push(o);
+    }
+
+    public void Reset(){
+      throw new Exception("Stream not resetable");
+    }
+
+    public bool MoveNext(){
+      for(;;) {
+        if (St.Count == 0)
+          return false;
+        IStream istr = (IStream) St.Peek();
+        if (istr != null){
+          object l = istr.Force();
+          if (l == Stream.Empty){
+            St.Pop();
+            continue;
+          }else if (l is IStream){
+            St.Push(l);
+            continue;
+          }else{                      
+            if(p!=null) current = p(l);  else current = l;
+            return true;
+          }
+        }
+      }
+    }
+    public object Current {
+      get {return (current);}
+    }  
+    public void Dispose() {
+      St = null;
+      o = null;
+    }
+  }
+
+  public class EmptyEnumerator: SC.IEnumerator{
+    public EmptyEnumerator() {}
+    public void Reset() {
+      throw new Exception("Stream not resetable");
+    }
+    public bool MoveNext() {
+      return false;
+    }
+    public object Current {
+      get {throw new Exception("Current called before MoveNext");;}
+    } 
+  }
+
+  // ---------------------------------------------------------------------------
+  //Reductions
+  // ---------------------------------------------------------------------------
+  
+  /// <summary>
+  /// The sealed class Reductions contains all standard reduction operators, like 
+  /// Forall, Exists, ExistsOne, Choose, Minimum, Maximum, Average, StandardDeviation
+  /// </summary>
+  [Anonymous]
+  public sealed class Reductions{
+
+    /// <summary>
+    /// Universal quantification: True, if all bindings in bindings are true, false otherwise 
+    /// </summary>
+    [StateIndependent]
+    public static bool Forall(IEnumerable<bool>! bindings){
+      foreach(bool v in bindings)
+        if (!v)
+          return false;        
+      return true;
+    }
+
+    /// <summary>
+    /// Existential quantification: True, if at least one binding in bindings is true, false otherwise 
+    /// </summary>
+    public static bool Exists(IEnumerable<bool>! bindings){
+      foreach(bool v in bindings)
+        if (v)
+          return true;        
+      return false;
+    }
+
+    /// <summary>
+    /// Unique quantification: True, if exactly one binding in bindings is true, false otherwise 
+    /// </summary>
+    public static bool ExistsOne(IEnumerable<bool>! bindings) {
+      int i=0;
+      foreach(bool v in bindings)
+        if (v)
+          i++;
+      return i==1;
+    }
+
+    /// <summary>
+    /// Returns the minimum of the given bindings, provided at least one binding exists, int.MinValue otherwise
+    /// </summary>
+    public static int Minimum(IEnumerable<int>! bindings) {
+      int m=0; bool has=false;
+      foreach(int v in bindings){
+        if (!has){
+          m = v;
+          has = true;
+        }
+        if (v < m)
+          m = v;
+      }
+      return (has? m : int.MinValue);
+    }
+    /// <summary>
+    /// Returns the maximum of the given int bindings, provided at least one binding exists, int.MaxValue otherwise 
+    /// </summary>
+    public static int Maximum(IEnumerable<int>! bindings){
+      int m=0; bool has=false;
+      foreach(int v in bindings){
+        if (!has){
+          m = v;
+          has = true;
+        }
+        if (v > m)
+          m = v;
+      }
+      return (has? m : int.MaxValue);
+    }
+
+    /// <summary>
+    /// Returns the minimum of given IComparable bindings, provided at least one binding exists, null otherwise
+    /// </summary>
+    public static IComparable Minimum(IEnumerable<IComparable>! bindings){
+      IComparable m = null;
+      foreach(IComparable v in bindings){
+        if (v != null){
+          if (m == null || v.CompareTo(m) < 0)
+            m = v;
+        }
+      }
+      return m;
+    }
+
+    /// <summary>
+    /// Returns the maximum of given IComparable bindings, provided at least one binding exists, null otherwise
+    /// </summary>
+    public static IComparable Maximum(IEnumerable<IComparable>! bindings) {
+      IComparable m = null;
+      foreach(IComparable v in bindings){
+        if (v != null){
+          if (m == null || v.CompareTo(m) > 0)
+            m = v;
+        }
+      }
+      return m;
+    }
+
+    /// <summary>
+    /// Returns the sum of given int bindings, provided at least one binding exists, 0 otherwise
+    /// </summary>
+    public static int Sum(IEnumerable<int>! bindings){
+      if (bindings == null) return 0;
+      int total=0;
+      foreach(int v in bindings)
+        total+=v;
+      return total;
+    }
+
+    /// <summary>
+    /// Returns the average of given int bindings, throws ...Violation if no binding exists
+    /// </summary>
+    public static int Average(ICollection<int>! bindings)
+      //requires bindings.Count > 0; //TODO: need a contract for ICollection
+    {
+      assume bindings.Count > 0;
+      long total=0;
+      long count=0;
+      foreach(int v in bindings){
+        total += v;
+        count++;
+      }
+      return  (int)(total / count);
+    }
+    /// <summary>
+    /// Return the standard deviation of given double bindings, throws ...Violation if no binding exists
+    /// </summary>
+    public double StandardDeviation(ICollection<double>! bindings)
+      //requires bindings.Count > 0; //TODO: need a contract for ICollection
+    {
+      assume bindings.Count > 0;
+      double sumX=0, sumX2=0;
+      int count=0;
+      foreach(double v in bindings){
+        sumX += v;
+        sumX2 += (v * v);
+        count++;
+      }
+      int c = count - 1;
+      return Math.Sqrt((sumX2/c) - ((sumX * sumX)/count/c));
+    }
+  }
+}

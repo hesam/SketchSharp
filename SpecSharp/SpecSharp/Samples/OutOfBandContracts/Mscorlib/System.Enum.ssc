@@ -1,0 +1,261 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System
+{
+    public struct Enum
+    {
+
+        public static object Parse(Type! enumType, string! value)
+            requires enumType != null otherwise ArgumentNullException;
+            requires value != null otherwise ArgumentNullException;
+            
+        public static object Parse(Type! enumType, string! value, bool ignoreCase)
+            requires enumType != null otherwise ArgumentNullException;
+            requires value != null otherwise ArgumentNullException;
+            
+        public static Type! GetUnderlyingType(Type! enumType);
+        
+      //
+      // Summary:
+      //     Retrieves an array of the values of the constants in a specified enumeration.
+      //
+      // Parameters:
+      //   enumType:
+      //     An enumeration type.
+      //
+      // Returns:
+      //     An System.Array of the values of the constants in enumType. The elements
+      //     of the array are sorted by the values of the enumeration constants.
+      //
+      // Exceptions:
+      //   System.ArgumentNullException:
+      //     enumType is null.
+      //
+      //   System.ArgumentException:
+      //     enumType is not an System.Enum.
+      [ComVisible(true)]
+      public static Array! GetValues(Type enumType);
+          
+            
+    //
+    // Summary:
+    //     Returns an instance of the specified enumeration type set to the specified
+    //     8-bit unsigned integer value.
+    //
+    // Parameters:
+    //   enumType:
+    //     The enumeration for which to create a value.
+    //
+    //   value:
+    //     The value to set.
+    //
+    // Returns:
+    //     An instance of the enumeration set to value.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     enumType is null.
+    //
+    //   System.ArgumentException:
+    //     enumType is not an System.Enum.
+    public static object! ToObject(Type! enumType, byte value);
+    //
+    // Summary:
+    //     Returns an instance of the specified enumeration type set to the specified
+    //     32-bit signed integer value.
+    //
+    // Parameters:
+    //   enumType:
+    //     The enumeration for which to create a value.
+    //
+    //   value:
+    //     The value to set.
+    //
+    // Returns:
+    //     An instance of the enumeration set to value.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     enumType is null.
+    //
+    //   System.ArgumentException:
+    //     enumType is not an System.Enum.
+    public static object! ToObject(Type! enumType, int value);
+    //
+    // Summary:
+    //     Returns an instance of the specified enumeration type set to the specified
+    //     64-bit signed integer value.
+    //
+    // Parameters:
+    //   enumType:
+    //     The enumeration for which to create a value.
+    //
+    //   value:
+    //     The value to set.
+    //
+    // Returns:
+    //     An instance of the enumeration set to value.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     enumType is null.
+    //
+    //   System.ArgumentException:
+    //     enumType is not an System.Enum.
+    public static object! ToObject(Type! enumType, long value);
+    //
+    // Summary:
+    //     Returns an instance of the specified enumeration set to the specified value.
+    //
+    // Parameters:
+    //   enumType:
+    //     An enumeration.
+    //
+    //   value:
+    //     The value.
+    //
+    // Returns:
+    //     An enumeration object whose value is value.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     enumType is null.
+    //
+    //   System.ArgumentException:
+    //     enumType is not an System.Enum.-or- value is not type System.SByte, System.Int16,
+    //     System.Int32, System.Int64, System.Byte, System.UInt16, System.UInt32, or
+    //     System.UInt64.
+    public static object! ToObject(Type! enumType, object! value);
+    //
+    // Summary:
+    //     Returns an instance of the specified enumeration type set to the specified
+    //     8-bit signed integer value.
+    //
+    // Parameters:
+    //   enumType:
+    //     The enumeration for which to create a value.
+    //
+    //   value:
+    //     The value to set.
+    //
+    // Returns:
+    //     An instance of the enumeration set to value.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     enumType is null.
+    //
+    //   System.ArgumentException:
+    //     enumType is not an System.Enum.
+    [ComVisible(true)]
+    [CLSCompliant(false)]
+    public static object ToObject(Type enumType, sbyte value);
+    //
+    // Summary:
+    //     Returns an instance of the specified enumeration type set to the specified
+    //     16-bit signed integer value.
+    //
+    // Parameters:
+    //   enumType:
+    //     The enumeration for which to create a value.
+    //
+    //   value:
+    //     The value to set.
+    //
+    // Returns:
+    //     An instance of the enumeration set to value.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     enumType is null.
+    //
+    //   System.ArgumentException:
+    //     enumType is not an System.Enum.
+    public static object! ToObject(Type! enumType, short value);
+    //
+    // Summary:
+    //     Returns an instance of the specified enumeration type set to the specified
+    //     32-bit unsigned integer value.
+    //
+    // Parameters:
+    //   enumType:
+    //     The enumeration for which to create a value.
+    //
+    //   value:
+    //     The value to set.
+    //
+    // Returns:
+    //     An instance of the enumeration set to value.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     enumType is null.
+    //
+    //   System.ArgumentException:
+    //     enumType is not an System.Enum.
+    public static object! ToObject(Type! enumType, uint value);
+    //
+    // Summary:
+    //     Returns an instance of the specified enumeration type set to the specified
+    //     64-bit unsigned integer value.
+    //
+    // Parameters:
+    //   enumType:
+    //     The enumeration for which to create a value.
+    //
+    //   value:
+    //     The value to set.
+    //
+    // Returns:
+    //     An instance of the enumeration set to value.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     enumType is null.
+    //
+    //   System.ArgumentException:
+    //     enumType is not an System.Enum.
+    [CLSCompliant(false)]
+    [ComVisible(true)]
+    public static object! ToObject(Type! enumType, ulong value);
+    //
+    // Summary:
+    //     Returns an instance of the specified enumeration type set to the specified
+    //     16-bit unsigned integer value.
+    //
+    // Parameters:
+    //   enumType:
+    //     The enumeration for which to create a value.
+    //
+    //   value:
+    //     The value to set.
+    //
+    // Returns:
+    //     An instance of the enumeration set to value.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     enumType is null.
+    //
+    //   System.ArgumentException:
+    //     enumType is not an System.Enum.
+    [CLSCompliant(false)]
+    [ComVisible(true)]
+    public static object! ToObject(Type! enumType, ushort value);
+    
+    public string! ToString();
+
+    }
+}

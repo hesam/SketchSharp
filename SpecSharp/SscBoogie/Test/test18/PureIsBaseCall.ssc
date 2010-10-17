@@ -1,0 +1,350 @@
+using Microsoft.Contracts;
+
+public class C {
+  public int X {
+    get {
+      return 12;
+    }
+  }
+
+  public virtual int Y {
+    get {
+      return 20;
+    }
+  }
+
+  public virtual int P()
+    ensures 0 <= result;
+  {
+    return 25;
+  }
+
+  [Pure]
+  public virtual int Q()
+    ensures 0 <= result;
+  {
+    return 25;
+  }
+}
+
+public class D : C {
+  public override int Y {
+    get {
+      return 21;
+    }
+  }
+
+  public void SomeRegularCalls() {
+    int x = X;
+    x += ((C)this).X;
+    x += Y;
+  }
+
+  public override int P()
+    ensures result == 8;
+  {
+    int p = base.P();
+    assert p == 8;  // error:  this assert should fail
+    return p + 8 - p;
+  }
+
+  [Pure]
+  public override int Q()
+    ensures result == 8;
+  {
+    int q = base.Q();
+    assert q == 8;  // error:  this assert should fail
+    return q + 8 - q;
+  }
+}
+
+public class E : C {
+  public override int P()
+    ensures 10 <= result;
+  {
+    return 30;
+  }
+
+  [Pure]
+  public override int Q()
+    ensures 10 <= result;
+  {
+    return 30;
+  }
+
+  void UsePureInContract0()
+    requires Q() == X;
+    requires Q() == Y;
+    ensures X == base.X;
+    ensures Y == base.Y;
+  {
+  }
+
+  void UsePureInContract1(bool choice)
+    requires Q() == X;
+    requires Q() == Y;
+  {
+    if (choice) {
+      int bx = base.X;
+      assert X == bx;  // since X is not virtual, the postcondition of base.X ensures result==#X
+    } else {
+      int by = base.Y;
+      assert Y == by;  // error:  the base call to Y does not provide any postcondition that
+    }                  //         lets the caller infer properties about #Y
+  }
+}
+
+// The following exhibits a previous incompleteness of our translation, whose fix might
+// easily have turned into an unsoundness.
+
+public class CA {
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public virtual int M()
+    ensures 0 <= result;
+  {
+    return 12;
+  }
+}
+
+public class CB : CA {
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public override int M()
+    ensures result == 18;
+  {
+    return 18;
+  }
+
+  void Xyz() {
+    assert 0 <= base.M();
+    assert base.M() == 18;  // Note, "base" in a contract means the same as "this"
+  }
+}
+
+public class Caller {
+  void M0(CA! a) {
+    int t = a.M();
+    assert 0 <= t;  // fine
+    assert t == 18;  // error
+  }
+
+  void M1(CB! b) {
+    int t = b.M();
+    assert 0 <= t;  // fine
+    assert t == 18;  // also fine
+  }
+
+  void M2(CB! b) {
+    CA a = b;
+    int t = a.M();
+    assert 0 <= t;  // fine
+    assert t == 18;  // also fine, but this requires an extra axiom to figure out
+  }
+
+  void M3(CA! a, CB! b) {
+    assert 0 <= a.M();
+    assert 0 <= ((CA)b).M();
+    assert b.M() == 18;
+    assert ((CA)b).M() == 18;  // fine, but this requires the extra axiom
+    assert a.M() == 18;  // error
+  }
+}
+
+public class CC : CB {
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public override int M()
+  {
+    int t = base.M();
+    assert t == 18;  // this should work fine
+    return t;
+  }
+}
+
+public class CBprime : CA {
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public override int M()
+    ensures result == 18;
+  {
+    return base.M();
+  }  // error:  postcondition "result == 18" not satisfied
+}
+
+// ------------- And here are some examples that involve interfaces
+
+interface J {
+  [Pure]
+  int H(int y);
+    ensures 0 <= result;
+}
+
+class CJ : J {
+  [Pure]
+  public int H(int y)
+    ensures 10 <= result;  // strengthen postcondition
+  {
+    return 0 <= y ? 10 + y : 12;
+  }
+
+  void Client(int y, J! otherJ) {
+    int h = H(y);
+    assert 10 <= h;
+    J j = this;
+    h = j.H(y);
+    assert 10 <= h;
+    h = otherJ.H(y);
+    assert 0 <= h;
+    assert otherJ is DJ || 10 <= h;
+  }
+
+  void AnotherClient(int y, J! otherJ) {
+    int h = otherJ.H(y);
+    assert 0 <= h;
+    assert 10 <= h;  // error
+  }
+}
+
+class DJ : J {
+  [Pure]
+  public virtual int H(int y)
+  {
+    return 3;
+  }
+
+  void ClientsAbound(int y) {
+    int h = H(y);
+    assert h == ((J)this).H(y);
+  }
+}
+
+// ----------------- A subclass makes its method [Pure]
+
+public class SuperMutable {
+  public virtual int M()
+    ensures result % 3 == 0;
+  {
+    return 0;
+  }
+
+  [Pure]
+  public virtual int AlwaysPureM()
+    ensures result % 3 == 0;
+  {
+    return 0;
+  }
+}
+
+public interface InterfaceMutable {
+  int M();
+    ensures result % 5 == 0;
+
+  [Pure]
+  int AlwaysPureM();
+    ensures result % 5 == 0;
+
+  [Pure] int Na();
+  [Pure] int Nb();
+  [Pure] int Nc();
+}
+
+public interface AnotherInterface {
+  [Pure] int Nc();
+}
+
+public class SubPure : SuperMutable, InterfaceMutable /*CAUSES Z3 TO LOOP:  , AnotherInterface*/ {
+  [Pure]
+  public override int M()
+    ensures result % 2 == 0;
+  {
+    return 330;
+  }
+
+  [Pure]
+  public override int AlwaysPureM()
+    ensures result % 2 == 0;
+  {
+    return 330;
+  }
+
+  [Pure] public virtual int Na() { return 0; }
+  [Pure] public virtual int Nb() { return 0; }
+  [Pure] public int Nc() { return 0; }
+
+  public void AClient() {
+    assert Na() + Nb() + Nc() == Nc() + Nb() + Na();
+
+    assert this.M() % 2 == 0;
+    assert this.M() % 3 == 0;
+    assert this.M() % 5 == 0;
+
+    int im = ((InterfaceMutable)this).M();
+    assert im % 2 == 0;  // error
+    assert im % 3 == 0;  // error
+    assert im % 5 == 0;
+
+    int sm = ((SuperMutable)this).M();
+    assert sm % 2 == 0;  // error
+    assert sm % 3 == 0;
+    assert sm % 5 == 0;  // error
+
+    assert this.AlwaysPureM() % 2 == 0;
+    assert this.AlwaysPureM() % 3 == 0;
+    assert this.AlwaysPureM() % 5 == 0;
+
+    assert ((InterfaceMutable)this).AlwaysPureM() % 2 == 0;
+    assert ((InterfaceMutable)this).AlwaysPureM() % 3 == 0;
+    assert ((InterfaceMutable)this).AlwaysPureM() % 5 == 0;
+
+    assert ((SuperMutable)this).AlwaysPureM() % 2 == 0;
+    assert ((SuperMutable)this).AlwaysPureM() % 3 == 0;
+    assert ((SuperMutable)this).AlwaysPureM() % 5 == 0;
+  }
+
+  public void AnotherClient(SuperMutable! s, InterfaceMutable! t) {
+    assert s.AlwaysPureM() % 2 == 0;  // error
+    assert s.AlwaysPureM() % 3 == 0;
+    assert s.AlwaysPureM() % 5 == 0;  // error
+
+    assert t.AlwaysPureM() % 2 == 0;  // error
+    assert t.AlwaysPureM() % 3 == 0;  // error
+    assert t.AlwaysPureM() % 5 == 0;
+  }
+}
+
+
+// ----------------- Finally, some test cases involving structs and interfaces
+
+public interface Intf {
+  [Pure]
+  int G();
+    ensures 0 <= result;
+}
+
+public struct Strct : Intf {
+  [Pure]
+  public int G()
+    ensures result < 100;
+  {
+    return 88;
+  }
+
+  void Client0(int z)
+    requires z == G();
+  {
+    assert 0 <= z && z < 100;
+  }
+
+  void Client1(Intf! intf, int z)
+    requires z == intf.G();
+  {
+    if (intf is Strct) {
+      assert z < 100;
+    }
+  }
+
+  void Client2(Intf! intf, int z)
+    requires z == intf.G();
+  {
+    if (intf is Strct) {
+      assert z == 72;  // error:  this just tests that not everything is provable
+    }
+  }
+}

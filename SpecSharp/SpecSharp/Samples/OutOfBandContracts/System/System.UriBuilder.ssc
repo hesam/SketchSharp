@@ -1,0 +1,98 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System
+{
+
+    public class UriBuilder
+    {
+
+        public string Scheme
+        {
+          get;
+          set;
+        }
+
+        public Uri Uri
+        {
+          get;
+        }
+
+        public string Password
+        {
+          get;
+          set;
+        }
+
+        public int Port
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+        }
+
+        public string Fragment
+        {
+          get;
+          set;
+        }
+
+        public string Host
+        {
+          get;
+          set;
+        }
+
+        public string UserName
+        {
+          get;
+          set;
+        }
+
+        public string Path
+        {
+          get;
+          set;
+        }
+
+        public string Query
+        {
+          get;
+          set;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object rparam);
+
+        public UriBuilder (string scheme, string host, int port, string path, string extraValue);
+
+        public UriBuilder (string scheme, string host, int port, string pathValue);
+
+        public UriBuilder (string scheme, string host, int portNumber);
+
+        public UriBuilder (string schemeName, string hostName);
+
+        public UriBuilder (Uri uri);
+
+        public UriBuilder (string uri);
+
+        public UriBuilder ();
+    }
+}

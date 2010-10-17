@@ -1,0 +1,133 @@
+class test {
+  public void M() {
+    P(uint.MaxValue);
+  }
+  public void N() {
+    Q(true);
+  }
+  public void O() {
+    R(1);
+  }
+
+  public bool P(uint ui)
+    requires 0 <= ui;  // should always hold, given the type (unless the translation on the
+                       // call site is wrong, which is what this precondition is meant to test)
+    ensures result <==> ui == 1;
+  {
+    return ui == 1;
+  }
+  public bool Q(bool b)
+    requires b == false || b == true;
+    ensures result == b;
+  {
+    return b;
+  }
+  public bool R(int x)
+    ensures result <==> x == 1;
+  {
+    return x == 1;
+  }
+
+  // ---------------------------------------------------------------------------------------
+
+  public void Caller0(uint i){
+    assert i >= 0;
+
+    KitchenSink0(sbyte.MinValue, byte.MinValue, short.MinValue, ushort.MinValue,
+                 int.MinValue, uint.MinValue, long.MinValue, ulong.MinValue, char.MinValue);
+    KitchenSink0(sbyte.MaxValue, byte.MaxValue, short.MaxValue, ushort.MaxValue,
+                 int.MaxValue, uint.MaxValue, long.MaxValue, ulong.MaxValue, char.MaxValue);
+
+    KitchenSink1(sbyte.MinValue, byte.MinValue, short.MinValue, ushort.MinValue,
+                 int.MinValue, uint.MinValue, long.MinValue, ulong.MinValue, char.MinValue);
+    KitchenSink1(sbyte.MaxValue, byte.MaxValue, short.MaxValue, ushort.MaxValue,
+                 int.MaxValue, uint.MaxValue, long.MaxValue, ulong.MaxValue, char.MaxValue);
+  }
+
+  public void Caller1(){
+    // assign to local variables first
+
+    sbyte sb = sbyte.MinValue;
+    byte b = byte.MinValue;
+    short s = short.MinValue;
+    ushort us = ushort.MinValue;
+    int i = int.MinValue;
+    uint ui = uint.MinValue;
+    long l = long.MinValue;
+    ulong ul = ulong.MinValue;
+    char c = char.MinValue;
+    KitchenSink0(sb, b, s, us, i, ui, l, ul, c);
+    KitchenSink1(sb, b, s, us, i, ui, l, ul, c);
+
+    sb = sbyte.MaxValue;
+    b = byte.MaxValue;
+    s = short.MaxValue;
+    us = ushort.MaxValue;
+    i = int.MaxValue;
+    ui = uint.MaxValue;
+    l = long.MaxValue;
+    ul = ulong.MaxValue;
+    c = char.MaxValue;
+    KitchenSink0(sb, b, s, us, i, ui, l, ul, c);
+    KitchenSink1(sb, b, s, us, i, ui, l, ul, c);
+  }
+
+  public void KitchenSink0(sbyte sb, byte b, short s, ushort us, int i, uint ui, long l, ulong ul, char c)
+    requires -128 <= sb && sb <= 127;
+    requires 0 <= b && b <= 255;
+    requires -32768 <= s && s <= 32767;
+    requires 0 <= us && us <= 65535;
+    // nothing much to say about "i"
+    requires 0 <= ui;
+    // nothing much to say about "l"
+    requires 0 <= ul;
+    requires 0 <= c && c <= 65535;
+  {
+  }
+
+  public void KitchenSink1(sbyte sb, byte b, short s, ushort us, int i, uint ui, long l, ulong ul, char c)
+    requires sbyte.MinValue <= sb && sb <= sbyte.MaxValue;
+    requires byte.MinValue <= b && b <= byte.MaxValue;
+    requires short.MinValue <= s && s <= short.MaxValue;
+    requires ushort.MinValue <= us && us <= ushort.MaxValue;
+    requires int.MinValue <= i && i <= int.MaxValue;
+    requires uint.MinValue <= ui && ui <= uint.MaxValue;
+    requires long.MinValue <= l && l <= long.MaxValue;
+    requires ulong.MinValue <= ul && ul <= ulong.MaxValue;
+    requires char.MinValue <= c && c <= char.MaxValue;
+  {
+    KitchenSink0(sb, b, s, us, i, ui, l, ul, c);
+  }
+
+  public void KitchenSink2(sbyte sb, byte b, short s, ushort us, int i, uint ui, long l, ulong ul, char c)
+  {
+    KitchenSink0(sb, b, s, us, i, ui, l, ul, c);
+    KitchenSink1(sb, b, s, us, i, ui, l, ul, c);
+  }
+
+  // ---------------------------------------------------------------------------------------
+
+  public int OrRange(bool b) {
+    return b ? (!b ? 0 : 1) : 2;
+  }
+
+  // ---------------------------------------------------------------------------------------
+
+  public int Conversions(uint ui, double d) {
+    // the test here is rather weak: we only test that the translation does not crash
+    int x = (int)ui;
+    uint y = (uint)x;
+    float f = (float)d;
+    double dd = f;
+    dd++;
+    int dx = (int)dd;
+    long lx = (long)dd;
+    dd = dx;  // (strange that this doesn't require a cast)
+    dd = lx;  // (strange that this doesn't require a cast)
+    short s = (short)x;
+    assert x == s;  // error: the conversion to short loses 16 bits
+    x = s;
+    s = (short)y;
+    return (int)y;
+  }
+}

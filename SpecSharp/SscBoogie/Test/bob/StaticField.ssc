@@ -1,0 +1,16 @@
+class Test
+{
+    static int x;
+
+    void Foo()
+    {
+        x = 5;
+        assert x == 5;
+    }
+
+    void Bar()
+    {
+        x = 6;
+        assert x == 7;
+    }
+}

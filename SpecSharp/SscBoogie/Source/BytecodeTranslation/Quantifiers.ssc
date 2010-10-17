@@ -1,0 +1,1479 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+namespace Microsoft.Boogie
+{
+  using System.Collections.Generic;
+  using Microsoft.Contracts;
+  using Cci = System.Compiler;
+  using Bpl = Microsoft.Boogie;
+
+  public partial class ExpressionTranslator
+  {
+    /// <summary>
+    /// Translates "q", adding bound variables to "vs", and returning only the inside of the quantifier.
+    /// The out parameter "universal" indicates whether the quantifier is universal or existential.
+    /// If "body" is passed in as null, then the returned expression will be:
+    ///     rangePred ==> Translate(q.Body)               (*)
+    /// or:
+    ///     rangePred AND Translate(q.Body)               (**)
+    /// depending on "universal", where "rangePred" is the predicate that describes the range of the
+    /// bound variables.  If "body" is not null, then "body" is used instead of "Translate(q.Body)" (and
+    /// q.Body is ignored) and form (*) is always used, never (**) regardless of what kind of quantifier
+    /// it is (yeah, yeah, this seems a bit twisted, but that's what the particular body!=null client wants).
+    /// </summary>
+    internal Bpl.Expr! TranslateQuantifierPieces (Cci.Quantifier! q, VariableSeq! vs, Bpl.Expr body, string! heapName, string prefix, out bool universal)
+      requires q.QuantifierType == Cci.NodeType.Forall || q.QuantifierType == Cci.NodeType.Exists
+               || q.QuantifierType == Cci.NodeType.ExistsUnique;
+    {
+      universal = q.QuantifierType == Cci.NodeType.Forall;
+
+      Cci.Quantifier newQ = TransformQuantifier(q);
+      if (newQ != null)
+        q = newQ;
+          
+      int start;
+      RegisterBoundVariables(prefix, out start, q);
+
+      Cci.Comprehension! comp = q.Comprehension;
+      Bpl.Expr originalBody = body;
+      if (body == null) {
+        body = TranslateExpression((!)comp.Elements[0], heapName);
+      }
+      
+      for (int i = comp.BindingsAndFilters.Count; 0 <= --i; ) {
+        Cci.Expression! filter = (!)comp.BindingsAndFilters[i];
+        Bpl.Expr! rangePred;
+        Cci.ComprehensionBinding binding = filter as Cci.ComprehensionBinding;
+        if (binding == null)
+        {
+          rangePred = TranslateExpression(filter, heapName);
+        }
+        else
+        {
+          Cci.Field f = (Cci.Field) ((Cci.MemberBinding!) binding.TargetVariable).BoundMember;
+          Variable v = this.enclosingBoundVariables[f];
+          vs.Add(v);
+          Cci.Expression source = (!)binding.SourceEnumerable;
+          Cci.CollectionEnumerator enumerator = source as Cci.CollectionEnumerator;
+          if (enumerator != null) {
+            source = (!)enumerator.Collection;
+          }
+          while (source.NodeType == Cci.NodeType.Parentheses)
+          {
+              source = ((Cci.UnaryExpression) source).Operand;
+          }
+          if (source.NodeType == Cci.NodeType.Range)
+          {
+            Cci.BinaryExpression! range = (Cci.BinaryExpression) source;
+            rangePred = Bpl.Expr.And(
+                  Bpl.Expr.Le(TranslateExpression(range.Operand1, heapName), Sink.IdentWithClean(v)),
+                  Bpl.Expr.Le(Sink.IdentWithClean(v), TranslateExpression(range.Operand2, heapName)));
+          }
+          else
+          {
+            // TODO
+            //this.NotSupported(binding.SourceEnumerable, "Nodes of type '{0}' are not supported as source enumerables of bindings in quantifiers.", source.NodeType);
+            rangePred = Bpl.Expr.True;
+          }
+        }
+        if (universal || originalBody != null) {
+          body = Bpl.Expr.Imp(rangePred, body);
+        } else {
+          body = Bpl.Expr.And(rangePred, body);
+        }
+      }
+      UnRegisterBoundVariables(q);
+      return body;
+    }
+
+    // --------------------------------------------------------------------------------------------------------
+        
+    Bpl.Expr! TranslateSumLikeQuantifier (Cci.Quantifier! q, string! heapName)
+      requires q.QuantifierType == Cci.NodeType.Sum || q.QuantifierType == Cci.NodeType.Count ||
+        q.QuantifierType == Cci.NodeType.Product ||
+        q.QuantifierType == Cci.NodeType.Min || q.QuantifierType == Cci.NodeType.Max;
+    {
+      Cci.Quantifier newQ = TransformQuantifier(q);
+      if (newQ != null)
+        q = newQ;
+
+      int start;
+      int n = RegisterBoundVariables("#", out start, q);
+
+      Cci.Comprehension! comp = q.Comprehension;
+      if (comp.IsDisplay) {
+        return TranslateDisplay(q.QuantifierType, comp, heapName);
+      }
+      Bpl.Expr body = TranslateExpression((!)comp.Elements[0], heapName);
+      
+      Bpl.Expr[] lowerBounds = new Bpl.Expr[n];
+      Bpl.Expr[] upperBounds = new Bpl.Expr[n];
+      Bpl.Expr[] filters = new Bpl.Expr[n+1];  // filters[0] is the pre-binder filter; filters[i+1] is the filters following binder i
+      int i = 0;
+      foreach (Cci.Expression! filter in comp.BindingsAndFilters) {
+        Bpl.Expr! rangePred;
+        Cci.ComprehensionBinding binding = filter as Cci.ComprehensionBinding;
+        if (binding == null) {
+          Bpl.Expr f = TranslateExpression(filter, heapName);
+          filters[i] = filters[i] == null ? f : Bpl.Expr.And((!)filters[i], f);
+
+        } else {
+          Cci.Expression source = (!)binding.SourceEnumerable;
+          Cci.CollectionEnumerator enumerator = source as Cci.CollectionEnumerator;
+          if (enumerator != null) {
+            source = (!)enumerator.Collection;
+          }
+          while (source.NodeType == Cci.NodeType.Parentheses) {
+            source = ((Cci.UnaryExpression) source).Operand;
+          }
+          if (source.NodeType == Cci.NodeType.Range) {
+            Cci.BinaryExpression! range = (Cci.BinaryExpression) source;
+            lowerBounds[i] = TranslateExpression(range.Operand1, heapName);
+            upperBounds[i] = Bpl.Expr.Add(TranslateExpression(range.Operand2, heapName), Bpl.Expr.Literal(1));
+
+          } else {
+            // TODO: other kinds of "in" expressions
+            throw new System.NotImplementedException("only numeric range expressions are currently supported for summation-like quantifiers");
+          }
+          
+          i++;
+        }
+      }
+      assert i == n;  // we should have encountered the same number of bindings here as RegisterBoundVariables did above
+      
+      UnRegisterBoundVariables(q);
+      
+      Cci.NodeType nt = q.QuantifierType;
+      while (n > 0) {
+        n--;
+        string! fn;
+        List<Bpl.Expr!>! arguments;
+        Bpl.Expr filter = filters[n+1] == null ? Bpl.Expr.True : (!)filters[n+1];
+        BreakUpSumTerm(nt, n+start, filter, body, out fn, out arguments);
+        if (n > 0 && nt == Cci.NodeType.Count) {
+          // this is a nested "count" quantifier, so treat the enclosing ones as "sum" quantifiers
+          nt = Cci.NodeType.Sum;
+        }
+
+        Expr[] args = new Expr[2 + arguments.Count];
+        args[0] = lowerBounds[n];
+        args[1] = upperBounds[n];
+        i = 2;
+        foreach (Expr arg in arguments) {
+          args[i] = arg;
+          i++;
+        }
+        body = sink.Function(fn, Bpl.Type.Int, args);
+      }
+      if (filters[0] != null) {
+        // a pre-binder filter (filters[0]) is a degenerate case
+        // return:  preBinderFilter ? body : fnUnitElement
+        return sink.Function(Sink.BuiltinFunction.IfThenElse,
+            filters[0], body, SummationLikeUnitElement(q.QuantifierType));
+      } else {
+        return body;
+      }
+    }
+
+    public Bpl.Expr! TranslateDisplay(Cci.NodeType nt, Cci.Comprehension! comp, string! heapName)
+      requires nt == Cci.NodeType.Forall || nt == Cci.NodeType.Exists || nt == Cci.NodeType.ExistsUnique ||
+        nt == Cci.NodeType.Sum || nt == Cci.NodeType.Count || nt == Cci.NodeType.Product ||
+        nt == Cci.NodeType.Min || nt == Cci.NodeType.Max;
+      requires comp.IsDisplay;
+    {
+      if (comp.Elements.Count == 0) {
+        return SummationLikeUnitElement(nt);
+      }
+      
+      if (nt == Cci.NodeType.ExistsUnique) {
+        int n = comp.Elements.Count;
+        Bpl.Expr disj = null;
+        for (int i = 0; i < n; i++) {
+          Bpl.Expr conj = null;
+          for (int j = 0; j < n; j++) {
+            Bpl.Expr e = TranslateExpression((!)comp.Elements[j], heapName);
+            if (j != i) {
+              e = Bpl.Expr.Not(e);
+            }
+            conj = conj == null ? e : Bpl.Expr.And(conj, e);
+          }
+          assert conj != null;  // because n > 0
+          disj = disj == null ? conj : Bpl.Expr.Or(disj, conj);
+        }
+        assert disj != null;  // because n > 0
+        return disj;
+      }
+      
+      Bpl.Expr r = null;
+      foreach (Cci.Expression! expr in comp.Elements) {
+        Bpl.Expr e = TranslateExpression(expr, heapName);
+        if (nt == Cci.NodeType.Count) {
+          e = sink.Function(Sink.BuiltinFunction.IfThenElse, e, Bpl.Expr.Literal(1), Bpl.Expr.Literal(0));
+        }
+        if (r == null) {
+          r = e;
+        } else {
+          switch (nt) {
+            case Cci.NodeType.Forall:
+              r = Bpl.Expr.And(r, e);
+              break;
+            case Cci.NodeType.Exists:
+            case Cci.NodeType.ExistsUnique:
+              r = Bpl.Expr.Or(r, e);
+              break;
+            case Cci.NodeType.Sum:
+            case Cci.NodeType.Count:
+              r = Bpl.Expr.Add(r, e);
+              break;
+            case Cci.NodeType.Product:
+              r = Bpl.Expr.Mul(r, e);
+              break;
+            case Cci.NodeType.Min:
+              r = sink.Function(Sink.BuiltinFunction.Min, r, e);
+              break;
+            case Cci.NodeType.Max:
+              r = sink.Function(Sink.BuiltinFunction.Max, r, e);
+              break;
+            default:
+              assert false;
+          }
+        }
+      }
+      assert r != null;
+      return r;
+    }
+    
+    void BreakUpSumTerm (Cci.NodeType nt, int boundVariableIndex, Bpl.Expr! filterExpr, Bpl.Expr! body,
+                        out string! fn, out List<Bpl.Expr!>! arguments)
+    {
+      arguments = new List<Bpl.Expr!>();
+
+      Bpl.Expr filter = FindSumParameterization(boundVariableIndex, filterExpr, arguments);
+      if (filter == null) {
+        assert arguments.Count == 0;
+        filter = Sink.Ident(NextTemplateArgumentName(arguments), filterExpr.ShallowType);
+        arguments.Add(filterExpr);
+      }
+
+      int ct = arguments.Count;
+      Bpl.Expr template = FindSumParameterization(boundVariableIndex, body, arguments);
+      if (template == null) {
+        // evidently, this summation does not use bound variable "boundVariableIndex"
+        assert arguments.Count == ct;
+        template = Sink.Ident(NextTemplateArgumentName(arguments), body.ShallowType);
+        arguments.Add(body);
+      }
+
+      List<Bpl.Type!> argumentTypes = new List<Bpl.Type!>(arguments.Count);
+      foreach (Bpl.Expr arg in arguments) {
+        argumentTypes.Add(arg.ShallowType);
+      }
+      fn = GetSummationFunctionFromTemplate(nt, argumentTypes, filter, template);
+#if DEBUG_PRINT
+      System.Console.WriteLine("DEBUG: fn={0} template={1} body={2} filter={3} filterExpr={4}", fn, template, body, filter, filterExpr);
+#endif
+    }
+
+    internal class TemplateInfo {
+      public Cci.NodeType nt;
+      public List<Bpl.Type!>! argumentTypes;
+      public Bpl.Expr! filter;
+      public Bpl.Expr! template;
+      public string! fn;
+      public string! fnx;
+      
+      public TemplateInfo(Cci.NodeType nt, [Captured] List<Bpl.Type!>! argumentTypes, Bpl.Expr! filter, Bpl.Expr! template, string! fn, string! fnx) {
+        this.nt = nt;
+        this.argumentTypes = argumentTypes;
+        this.filter = filter;
+        this.template = template;
+        this.fn = fn;
+        this.fnx = fnx;
+      }
+    }
+    
+    string! GetSummationFunctionFromTemplate (Cci.NodeType nt, List<Bpl.Type!>! argumentTypes, Bpl.Expr! filter, Bpl.Expr! template)
+      requires nt == Cci.NodeType.Sum || nt == Cci.NodeType.Count || nt == Cci.NodeType.Product || nt == Cci.NodeType.Min || nt == Cci.NodeType.Max;
+    {
+      foreach (TemplateInfo! ti in sink.summationTemplates) {
+        if (ti.nt == nt && ti.argumentTypes.Count == argumentTypes.Count) {
+          if (forall{int i in (0: argumentTypes.Count); ti.argumentTypes[i].Equals(argumentTypes[i])}) {
+            if (filter.Equals(ti.filter)) {
+              if (template.Equals(ti.template)) {
+                return ti.fn;
+              }
+            }
+          }
+        }
+      }
+      
+      // need to create a new function symbol
+      Bpl.VariableSeq formals = new Bpl.VariableSeq();
+      formals.Add(new Bpl.Formal(NoToken, new Bpl.TypedIdent(NoToken, "lo", Bpl.Type.Int), true));
+      formals.Add(new Bpl.Formal(NoToken, new Bpl.TypedIdent(NoToken, "hi", Bpl.Type.Int), true));
+
+      for (int i = 0; i < argumentTypes.Count; i++) {
+        formals.Add(new Bpl.Formal(NoToken, new Bpl.TypedIdent(NoToken, "~" + i, argumentTypes[i]), true));
+      }
+      Bpl.Variable result = new Bpl.Formal(NoToken, new Bpl.TypedIdent(NoToken, "", Bpl.Type.Int), false);
+      
+      string fn;
+      switch (nt) {
+        case Cci.NodeType.Sum:
+          fn = "sum#";
+          break;
+        case Cci.NodeType.Count:
+          fn = "count#";
+          break;
+        case Cci.NodeType.Product:
+          fn = "product#";
+          break;
+        case Cci.NodeType.Min:
+          fn = "min#";
+          break;
+        case Cci.NodeType.Max:
+          fn = "max#";
+          break;
+        default:
+          assert false;
+      }
+      string fnx = fn + "x" + sink.summationTemplates.Count;
+      fn += sink.summationTemplates.Count;
+      sink.summationTemplates.Add(new TemplateInfo(nt, argumentTypes, filter, template, fn, fnx));
+
+      // declare and axiomatize the new function symbol
+      string descript = string.Format("{0} has template filter: {1}, template body: {2}", fn, filter, template);
+      sink.toplevelDeclarations.Add(new Bpl.Function(NoToken, fn, formals, result, descript));
+      sink.toplevelDeclarations.Add(new Bpl.Function(NoToken, fnx, formals, result));
+      GenerateConnectionAxiom(fn, fnx, formals);
+      GenerateUnitAxiom(fnx, nt, formals, filter, template);
+      // GenerateZeroAxiom(fnx, nt, formals, filter, template);
+      GenerateSameTermsAxiom(fn, fnx, formals, filter, template);
+      GenerateSplitRangeAxiom(fn, fnx, nt, formals, template);
+      
+      bool minmaxInductiveAxioms = CommandLineOptions.Clo.InductiveMinMax != 0 && CommandLineOptions.Clo.InductiveMinMax != 3;  // options 1,2,4,5
+      bool minmaxExtremeAxioms = CommandLineOptions.Clo.InductiveMinMax != 1 && CommandLineOptions.Clo.InductiveMinMax != 4;  // options 0,2,3,5
+      bool minmaxDistributionAxioms = 3 <= CommandLineOptions.Clo.InductiveMinMax;  // options 3,4,5
+      switch (nt) {
+        case Cci.NodeType.Sum:
+        case Cci.NodeType.Count:
+        case Cci.NodeType.Product:
+          GenerateInductiveAxioms(nt, fn, fnx, formals, filter, template);
+          break;
+        case Cci.NodeType.Min:
+          if (minmaxInductiveAxioms) {
+            GenerateInductiveAxioms(nt, fn, fnx, formals, filter, template);
+            //GenerateInductiveAxiomExtreme(false, fn, formals, filter, template);
+          }
+          if (minmaxExtremeAxioms) {
+            GenerateExtremeBoundAxiom(fn, fnx, false, formals, filter, template);
+            GenerateExtremeValue(fn, fnx, formals, filter, template);
+          }
+          if (minmaxDistributionAxioms) {
+            GenerateAdditionOverExtremeAxiom(fn, fnx, formals, filter, template);
+          }
+          break;
+        case Cci.NodeType.Max:
+          if (minmaxInductiveAxioms) {
+            GenerateInductiveAxioms(nt, fn, fnx, formals, filter, template);
+            //GenerateInductiveAxiomExtreme(true, fn, formals, filter, template);
+          }
+          if (minmaxExtremeAxioms) {
+            GenerateExtremeBoundAxiom(fn, fnx, true, formals, filter, template);
+            GenerateExtremeValue(fn, fnx, formals, filter, template);
+          }
+          if (minmaxDistributionAxioms) {
+            GenerateAdditionOverExtremeAxiom(fn, fnx, formals, filter, template);
+          }
+          break;
+        default:
+          assert false;
+      }
+      
+      return fn;
+    }
+    
+    // We defensively clone all axioms before they are put into the list 
+    // of top-level declarations (otherwise, sharing cannot be excluded and
+    // causes lots of problems later on)
+    private readonly Duplicator! duplicator = new Duplicator ();
+    private Bpl.Expr! Clone(Bpl.Expr! expr) {
+      return (Bpl.Expr!)duplicator.Visit(expr);
+    }
+
+    /// <summary>
+    /// Generates:
+    ///   axiom (forall formals :: { fn(formals) }  fn(formals) == fnx(formals) );
+    /// </summary>
+    void GenerateConnectionAxiom(string! fn, string! fnx, Bpl.VariableSeq! formals)
+    {
+      Bpl.VariableSeq bv = new Bpl.VariableSeq();
+      List<Bpl.Expr!> args = new List<Bpl.Expr!>(formals.Length);
+      foreach (Bpl.Variable! f in formals) {
+        Bpl.Variable v = Sink.BoundVar("^" + f.TypedIdent.Name, f.TypedIdent.Type);
+        bv.Add(v);
+        args.Add(Sink.Ident(v));
+      }
+      Bpl.Expr func = sink.Function(fn, Bpl.Type.Int, args);
+      Bpl.Expr funx = sink.Function(fnx, Bpl.Type.Int, args);
+      
+      Bpl.Expr body = Bpl.Expr.Eq(func, funx);
+      Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new ExprSeq(func));
+      Bpl.Expr q = new Bpl.ForallExpr(NoToken, bv, tr, body);
+      this.sink.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Clone(q)));
+    }
+
+    Bpl.Expr! SummationLikeUnitElement(Cci.NodeType nt)
+      requires nt == Cci.NodeType.Forall || nt == Cci.NodeType.Exists || nt == Cci.NodeType.ExistsUnique ||
+        nt == Cci.NodeType.Sum || nt == Cci.NodeType.Count || nt == Cci.NodeType.Product || nt == Cci.NodeType.Min || nt == Cci.NodeType.Max;
+    {
+      switch (nt) {
+        case Cci.NodeType.Forall:
+          return Bpl.Expr.True;
+        case Cci.NodeType.Exists:
+        case Cci.NodeType.ExistsUnique:
+          return Bpl.Expr.False;
+        case Cci.NodeType.Sum:
+        case Cci.NodeType.Count:
+          return Bpl.Expr.Literal(0);
+          break;
+        case Cci.NodeType.Product:
+          return Bpl.Expr.Literal(1);
+          break;
+        case Cci.NodeType.Min:
+          return sink.IntegerLiteral(int.MaxValue);
+          break;
+        case Cci.NodeType.Max:
+          return sink.IntegerLiteral(int.MinValue);
+          break;
+        default:
+          assert false;
+      }
+    }
+
+    /// <summary>
+    /// Returns the zero element of "nt", or null if "nt" has no zero element
+    /// </summary>
+    Bpl.Expr SummationLikeZeroElement(Cci.NodeType nt)
+    {
+      switch (nt) {
+        case Cci.NodeType.Product:
+          return Bpl.Expr.Literal(0);
+          break;
+        case Cci.NodeType.Min:
+          return sink.IntegerLiteral(int.MinValue);
+          break;
+        case Cci.NodeType.Max:
+          return sink.IntegerLiteral(int.MaxValue);
+          break;
+        default:
+          return null;
+      }
+    }
+
+    /// <summary>
+    /// Generates:
+    ///   axiom (forall formals :: { fn(formals) }  ...range-is-empty... ==> fn(formals) == unit);
+    /// where "range-is-empty" (or more precisely, "everything's a unit") means:
+    ///   (forall i ::  lo ATMOST i  AND  i LESS hi  AND  filter[i]  ==>  template[i] == unit)
+    /// </summary>
+    void GenerateUnitAxiom(string! fn, Cci.NodeType nt, Bpl.VariableSeq! formals, Bpl.Expr! filter, Bpl.Expr! template)
+      requires 2 <= formals.Length;
+    {
+      Bpl.Expr unit = SummationLikeUnitElement(nt);
+      Bpl.VariableSeq bv = new Bpl.VariableSeq();
+      List<Bpl.Expr!> args = new List<Bpl.Expr!>(formals.Length);
+      foreach (Bpl.Variable! f in formals) {
+        Bpl.Variable v = Sink.BoundVar("^" + f.TypedIdent.Name, f.TypedIdent.Type);
+        bv.Add(v);
+        args.Add(Sink.Ident(v));
+      }
+      Bpl.Expr func = sink.Function(fn, Bpl.Type.Int, args);
+      
+      Bpl.Variable ivar = Sink.BoundVar("^##", Bpl.Type.Int);
+      Bpl.Expr i = Bpl.Expr.Ident(ivar);
+      Bpl.VariableSeq qvars = new Bpl.VariableSeq();
+      qvars.Add(ivar);
+      Bpl.Expr b = Bpl.Expr.And(Bpl.Expr.Le(args[0], i), Bpl.Expr.Lt(i, args[1]));
+      b = Bpl.Expr.And(b, filter);
+      if (nt == Cci.NodeType.Count) {
+        b = Bpl.Expr.Imp(b, Bpl.Expr.Not(template));
+      } else {
+        b = Bpl.Expr.Imp(b, Bpl.Expr.Eq(template, unit));
+      }
+      Bpl.Expr emptyRange = new Bpl.ForallExpr(NoToken, qvars, b);
+
+      Bpl.Expr body = Bpl.Expr.Imp(emptyRange, Bpl.Expr.Eq(func, unit));
+      Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new ExprSeq(func));
+      Bpl.Expr q = new Bpl.ForallExpr(NoToken, bv, tr, body);
+      sink.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Clone(q), "unit axiom for " + fn));
+    }
+    
+    /// <summary>
+    /// Generates:
+    ///   axiom (forall formals :: { fn(formals) }
+    ///     (EXISTS i ::  lo ATMOST i  AND  i LESS hi  AND  filter[i]  AND  template[i] == zero)
+    ///     ==> fn(formals) == zero);
+    /// </summary>
+    void GenerateZeroAxiom(string! fn, Cci.NodeType nt, Bpl.VariableSeq! formals, Bpl.Expr! filter, Bpl.Expr! template)
+      requires 2 <= formals.Length;
+    {
+      Bpl.Expr zero = SummationLikeZeroElement(nt);
+      if (zero == null) {
+        return;
+      }
+      
+      Bpl.VariableSeq bv = new Bpl.VariableSeq();
+      List<Bpl.Expr!> args = new List<Bpl.Expr!>(formals.Length);
+      foreach (Bpl.Variable! f in formals) {
+        Bpl.Variable v = Sink.BoundVar("^" + f.TypedIdent.Name, f.TypedIdent.Type);
+        bv.Add(v);
+        args.Add(Sink.Ident(v));
+      }
+      Bpl.Expr func = sink.Function(fn, Bpl.Type.Int, args);
+      
+      Bpl.Variable ivar = Sink.BoundVar("^##", Bpl.Type.Int);
+      Bpl.Expr i = Bpl.Expr.Ident(ivar);
+      Bpl.VariableSeq qvars = new Bpl.VariableSeq();
+      qvars.Add(ivar);
+      Bpl.Expr b = Bpl.Expr.And(Bpl.Expr.Le(args[0], i), Bpl.Expr.Lt(i, args[1]));
+      b = Bpl.Expr.And(b, filter);
+      b = Bpl.Expr.And(b, Bpl.Expr.Eq(template, zero));
+      Bpl.Expr emptyRange = new Bpl.ExistsExpr(NoToken, qvars, b);
+      
+      Bpl.Expr body = Bpl.Expr.Imp(emptyRange, Bpl.Expr.Eq(func, zero));
+      Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new ExprSeq(func));
+      Bpl.Expr q = new Bpl.ForallExpr(NoToken, bv, tr, body);
+      sink.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Clone(q), "zero axiom for " + fn));
+    }
+    
+    /// <summary>
+    /// #if NestedQuantExtremeBounds
+    /// // These nested quantifiers may look better, but they somehow cause Simplify to crash
+    /// Generates, for isMax:
+    ///   axiom (forall formals :: { fnx(formals) }
+    ///     (forall i :: lo ATMOST i  AND  i LESS hi  AND  filter[i]  ==>  template[i] ATMOST fnx(formals)));
+    /// and for !isMax:
+    ///   axiom (forall formals :: { fnx(formals) }
+    ///     (forall i :: lo ATMOST i  AND  i LESS hi  AND  filter[i]  ==>  fnx(formals) ATMOST template[i]));
+    /// #else
+    /// Generates, for isMax:
+    ///   axiom (forall formals, i ::  lo ATMOST i  AND  i LESS hi  AND  filter[i]  ==>  template[i] ATMOST fnx(formals));
+    /// and for !isMax:
+    ///   axiom (forall formals, i ::  lo ATMOST i  AND  i LESS hi  AND  filter[i]  ==>  fnx(formals) ATMOST template[i]);
+    /// #endif
+    /// </summary>
+    void GenerateExtremeBoundAxiom(string! fn, string! fnx, bool isMax, Bpl.VariableSeq! formals, Bpl.Expr! filter, Bpl.Expr! template)
+      requires 2 <= formals.Length;
+    {
+      Bpl.VariableSeq bv = new Bpl.VariableSeq();
+      List<Bpl.Expr!> args = new List<Bpl.Expr!>(formals.Length);
+      foreach (Bpl.Variable! f in formals) {
+        Bpl.Variable v = Sink.BoundVar("^" + f.TypedIdent.Name, f.TypedIdent.Type);
+        bv.Add(v);
+        args.Add(Sink.Ident(v));
+      }
+      Bpl.Expr func = sink.Function(fnx, Bpl.Type.Int, args);
+      
+      Bpl.Variable ivar = Sink.BoundVar("^##", Bpl.Type.Int);
+      Bpl.Expr i = Bpl.Expr.Ident(ivar);
+#if NestedQuantExtremeBounds
+      Bpl.VariableSeq bvi = new Bpl.VariableSeq();
+      bvi.Add(ivar);
+#else
+      bv.Add(ivar);
+#endif
+      
+      Bpl.Expr b = Bpl.Expr.And(Bpl.Expr.Le(args[0], i), Bpl.Expr.Lt(i, args[1]));
+      b = Bpl.Expr.And(b, filter);
+      if (isMax) {
+        b = Bpl.Expr.Imp(b, Bpl.Expr.Le(template, func));
+      } else {
+        b = Bpl.Expr.Imp(b, Bpl.Expr.Le(func, template));
+      }
+      
+#if NestedQuantExtremeBounds
+      Bpl.Expr qInner = new Bpl.ForallExpr(NoToken, bvi, b);
+      Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new Bpl.ExprSeq(func));
+      Bpl.Expr q = new Bpl.ForallExpr(NoToken, bv, tr, qInner);
+#else
+      Bpl.Expr q = new Bpl.ForallExpr(NoToken, bv, b);
+#endif
+      sink.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Clone(q), "extreme bound axiom for " + fn));
+    }
+    
+    /// <summary>
+    /// Generates:
+    ///   axiom (forall lo, hi, params :: { fnx(lo,hi,params) }
+    ///      non-empty-range ==>
+    ///      (exists i :: lo ATMOST i  AND  i LESS hi  AND  filter[i]  AND  fnx(lo,hi,params) == template[i]));
+    /// where non-empty-range is:
+    ///   (exists i :: lo ATMOST i  AND  i LESS hi  AND  filter[i])
+    /// However, if filter[i] doesn't actually depend on i, then non-empty-range is generated as:
+    ///   lo LESS hi  AND  filter[i]
+    /// </summary>
+    void GenerateExtremeValue(string! fn, string! fnx, Bpl.VariableSeq! formals, Bpl.Expr! filter, Bpl.Expr! template)
+      requires 2 <= formals.Length;
+    {
+      Bpl.VariableSeq bv = new Bpl.VariableSeq();
+      List<Bpl.Expr!> args = new List<Bpl.Expr!>(formals.Length);
+      foreach (Bpl.Variable! f in formals) {
+        Bpl.Variable v = Sink.BoundVar("^" + f.TypedIdent.Name, f.TypedIdent.Type);
+        bv.Add(v);
+        args.Add(Sink.Ident(v));
+      }
+      Bpl.Expr func = sink.Function(fnx, Bpl.Type.Int, args);
+      
+      Bpl.Variable ivar = Sink.BoundVar("^##", Bpl.Type.Int);
+      Bpl.Expr i = Bpl.Expr.Ident(ivar);
+      Bpl.VariableSeq bvi = new Bpl.VariableSeq();
+      bvi.Add(ivar);
+      
+      Bpl.Expr b = Bpl.Expr.And(Bpl.Expr.Le(args[0], i), Bpl.Expr.Lt(i, args[1]));
+      b = Bpl.Expr.And(b, filter);
+      
+      Bpl.Expr nonemptyRange;
+      if (MentionsSummationIndex(filter)) {
+        nonemptyRange = new Bpl.ExistsExpr(NoToken, bvi, b);
+      } else {
+        nonemptyRange = Bpl.Expr.And(Bpl.Expr.Lt(args[0], args[1]), filter);
+      }
+      
+      Bpl.Expr body = new Bpl.ExistsExpr(NoToken, bvi, Bpl.Expr.And(b, Bpl.Expr.Eq(func, template)));
+      
+      Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new Bpl.ExprSeq(func));
+      Bpl.Expr q = new Bpl.ForallExpr(NoToken, bv, tr, Bpl.Expr.Imp(nonemptyRange, body));
+      sink.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Clone(q), "extreme value axiom for " + fn));
+    }
+
+    /// <summary>
+    /// Generates Induction Below:
+    ///   axiom (forall lo, hi, params :: { fn(lo,hi,params) }
+    ///       lo LESS hi  AND  filter[lo]  ==>  fnx(lo,hi,params) == fnx(lo+1,hi,params) OP template[lo]);
+    ///   axiom (forall lo, hi, params :: { fn(lo,hi,params) }
+    ///       lo LESS hi  AND  NOT filter[lo]  ==>  fnx(lo,hi,params) == fnx(lo+1,hi,params));
+    ///
+    /// and generates Induction Above:
+    ///   axiom (forall lo, hi, params :: { fn(lo,hi,params) }
+    ///       lo LESS hi  AND  filter[hi-1]  ==>  fnx(lo,hi,params) == fnx(lo,hi-1,params) OP template[hi-1]);
+    ///   axiom (forall lo, hi, params :: { fn(lo,hi,params) }
+    ///       lo LESS hi  AND  NOT filter[hi-1]  ==>  fnx(lo,hi,params) == fnx(lo,hi-1,params));
+    ///
+    /// where OP is determined by "nt".  If "nt" is Count, then the axioms have a slightly form, namely that
+    /// filter and template are conjoined, and the template above is 1; for example, the first of the axioms
+    /// above is generated as:
+    ///   axiom (forall lo, hi, params :: { fn(lo,hi,params) }
+    ///       lo LESS hi  AND  filter[lo] AND template[lo]  ==>  fnx(lo,hi,params) == fnx(lo+1,hi,params) + 1);
+    /// </summary>
+    void GenerateInductiveAxioms(Cci.NodeType nt, string! fn, string! fnx, Bpl.VariableSeq! formals, Bpl.Expr! filter, Bpl.Expr! template)
+      requires nt == Cci.NodeType.Sum || nt == Cci.NodeType.Count || nt == Cci.NodeType.Product || nt == Cci.NodeType.Min || nt == Cci.NodeType.Max;
+    {
+      Bpl.VariableSeq bv = new Bpl.VariableSeq();
+      List<Bpl.Expr!> args = new List<Bpl.Expr!>(formals.Length);            // the arguments for (lo,   hi,   params)
+      List<Bpl.Expr!> argsAllButFirst = new List<Bpl.Expr!>(formals.Length); // the arguments for (lo+1, hi,   params)
+      List<Bpl.Expr!> argsAllButLast = new List<Bpl.Expr!>(formals.Length);  // the arguments for (lo,   hi-1, params)
+      Bpl.Expr varA = null;  // lo
+      Bpl.Expr varB = null;  // lo+1
+      Bpl.Expr varY = null;  // hi-1
+      Bpl.Expr varZ = null;  // hi
+      int i = 0;
+      foreach (Bpl.Variable! f in formals) {
+        Bpl.Variable v = Sink.BoundVar("^" + f.TypedIdent.Name, f.TypedIdent.Type);
+        bv.Add(v);
+        Bpl.Expr var = Sink.Ident(v);
+        
+        if (i == 0) {
+          varA = var;
+          varB = Bpl.Expr.Add(var, Bpl.Expr.Literal(1));
+          args.Add(var);
+          argsAllButFirst.Add(varB);
+          argsAllButLast.Add(var);
+        } else if (i == 1) {
+          varY = Bpl.Expr.Sub(var, Bpl.Expr.Literal(1));
+          varZ = var;
+          args.Add(var);
+          argsAllButFirst.Add(var);
+          argsAllButLast.Add(varY);
+        } else {
+          args.Add(var);
+          argsAllButFirst.Add(var);
+          argsAllButLast.Add(var);
+        }
+        i++;
+      }
+      assert varA != null;
+      assert varB != null;
+      assert varY != null;
+      assert varZ != null;
+      
+      Bpl.Expr func = sink.Function(fn, Bpl.Type.Int, args);  // fn(lo,hi,params)
+      Bpl.Expr funx = sink.Function(fnx, Bpl.Type.Int, args);  // fnx(lo,hi,params)
+      Bpl.Expr funxAllButFirst = sink.Function(fnx, Bpl.Type.Int, argsAllButFirst);  // fnx(lo+1, hi, params)
+      Bpl.Expr funxAllButLast = sink.Function(fnx, Bpl.Type.Int, argsAllButLast);  // fnx(lo, hi-1, params)
+      
+
+      Bpl.Expr filter0;
+      Bpl.Expr filter1;
+      switch (nt) {
+        case Cci.NodeType.Count:
+          filter0 = Bpl.Expr.And(filter, template);
+          filter1 = filter0;
+          template = Bpl.Expr.Literal(1);
+          nt = Cci.NodeType.Sum;
+          break;
+        case Cci.NodeType.Min:
+          filter0 = Bpl.Expr.And(filter, Bpl.Expr.Lt(template, funxAllButFirst));
+          filter1 = Bpl.Expr.And(filter, Bpl.Expr.Lt(template, funxAllButLast));
+          break;
+        case Cci.NodeType.Max:
+          filter0 = Bpl.Expr.And(filter, Bpl.Expr.Lt(funxAllButFirst, template));
+          filter1 = Bpl.Expr.And(filter, Bpl.Expr.Lt(funxAllButLast, template));
+          break;
+        default:
+          filter0 = filter;
+          filter1 = filter;
+          break;
+      }
+      
+      GenerateInductiveAxiom(nt, bv, varA, varZ, varA, func, funx, funxAllButFirst, true, filter0, template, false, fn);
+      GenerateInductiveAxiom(nt, bv, varA, varZ, varA, func, funx, funxAllButFirst, false, filter0, template, false, fn);
+      GenerateInductiveAxiom(nt, bv, varA, varZ, varY, func, funx, funxAllButLast, true, filter1, template, true, fn);
+      GenerateInductiveAxiom(nt, bv, varA, varZ, varY, func, funx, funxAllButLast, false, filter1, template, true, fn);
+    }
+    
+    /// <summary>
+    /// If "includeFilter" is true, generates:
+    ///   axiom (forall bv :: { func }
+    ///       lo LESS hi  AND  filter[active]  ==>  funx == funxSmall OP template[active]);
+    ///
+    /// If "includeFilter" is false, generates:
+    ///   axiom (forall bv :: { func }
+    ///       lo LESS hi  AND  NOT filter[active]  ==>  funx == funxSmall);
+    ///
+    /// where OP is determined by "nt".  The comment is generated as a function of "includeFilter", "above", and "fn".
+    /// </summary>
+    void GenerateInductiveAxiom(Cci.NodeType nt, Bpl.VariableSeq! bv,
+                                Bpl.Expr! lo, Bpl.Expr! hi, Bpl.Expr! active,
+                                Bpl.Expr! func, Bpl.Expr! funx, Bpl.Expr! funxSmall,
+                                bool includeFilter, Bpl.Expr! filter, Bpl.Expr! template,
+                                bool above, string! fn)
+      requires nt == Cci.NodeType.Sum || nt == Cci.NodeType.Product || nt == Cci.NodeType.Min || nt == Cci.NodeType.Max;
+    {
+      Bpl.Expr a0 = Bpl.Expr.Lt(lo, hi);
+      filter = Rename(filter, active);
+      Bpl.Expr a1 = includeFilter ? filter : Bpl.Expr.Not(filter);
+      
+      Bpl.Expr rhs = funxSmall;
+      if (includeFilter) {
+        template = Rename(template, active);
+        switch (nt) {
+          case Cci.NodeType.Sum:
+            rhs = Bpl.Expr.Add(rhs, template);
+            break;
+          case Cci.NodeType.Product:
+            rhs = Bpl.Expr.Mul(rhs, template);
+            break;
+          case Cci.NodeType.Min:
+          case Cci.NodeType.Max:
+            rhs = template;
+            break;
+          default:
+            assert false;
+        }
+      }
+      
+      string comment = string.Format("inductive axiom {0} ({1}matching filter) for {2}", above ? "above" : "below", includeFilter ? "" : "not ", fn);
+      
+      Bpl.Expr body = Bpl.Expr.Imp(Bpl.Expr.And(a0, a1), Bpl.Expr.Eq(funx, rhs));
+      Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new ExprSeq(func));
+      Bpl.Expr q = new Bpl.ForallExpr(NoToken, bv, tr, body);
+      sink.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Clone(q), comment));
+    }
+    
+    /// <summary>
+    /// For min (that is, !isMax), generates:
+    ///   axiom (forall lo, hi, params :: { fn(lo,hi+1,params) }
+    ///     lo ATMOST hi  AND  filter[hi]  AND  template[hi] ATMOST fn(lo,hi,params)  ==>  fn(lo,hi+1,params) == template[hi]);
+    ///   axiom (forall lo, hi, params :: { fn(lo,hi+1,params) }
+    ///     lo ATMOST hi  AND  (!filter[hi]  OR  fn(lo,hi,params) ATMOST template[hi])  ==>  fn(lo,hi+1,params) == fn(lo,hi,params));
+    /// And analogously for max:
+    ///   axiom (forall lo, hi, params :: { fn(lo,hi+1,params) }
+    ///     lo ATMOST hi  AND  filter[hi]  AND  fn(lo,hi,params) ATMOST template[hi]  ==>  fn(lo,hi+1,params) == template[hi]);
+    ///   axiom (forall lo, hi, params :: { fn(lo,hi+1,params) }
+    ///     lo ATMOST hi  AND  (!filter[hi]  OR  template[hi] ATMOST fn(lo,hi,params))  ==>  fn(lo,hi+1,params) == fn(lo,hi,params));
+    /// </summary>
+    void GenerateInductiveAxiomExtreme(bool isMax, string! fn, Bpl.VariableSeq! formals, Bpl.Expr! filter, Bpl.Expr! template) {
+      Bpl.VariableSeq bv = new Bpl.VariableSeq();
+      List<Bpl.Expr!> args0 = new List<Bpl.Expr!>(formals.Length);
+      List<Bpl.Expr!> args1 = new List<Bpl.Expr!>(formals.Length);
+      int i = 0;
+      foreach (Bpl.Variable! f in formals) {
+        if (i == 1) {
+          Bpl.Variable v = Sink.BoundVar("^##", Bpl.Type.Int);
+          bv.Add(v);
+          args0.Add(Sink.Ident(v));
+          args1.Add(Bpl.Expr.Add(Sink.Ident(v), Bpl.Expr.Literal(1)));
+        } else {
+          Bpl.Variable v = Sink.BoundVar("^" + f.TypedIdent.Name, f.TypedIdent.Type);
+          bv.Add(v);
+          args0.Add(Sink.Ident(v));
+          args1.Add(Sink.Ident(v));
+        }
+        i++;
+      }
+      
+      Bpl.Expr func0 = sink.Function(fn, Bpl.Type.Int, args0);
+      Bpl.Expr func1 = sink.Function(fn, Bpl.Type.Int, args1);
+      
+      Bpl.Expr ante = Bpl.Expr.Le(args0[0], args0[1]);
+      
+      Bpl.Expr templateAtmostFunc = Bpl.Expr.Le(template, func0);
+      Bpl.Expr funcAtmostTemplate = Bpl.Expr.Le(func0, template);
+      
+      Bpl.Expr ante2 = Bpl.Expr.And(filter, isMax ? funcAtmostTemplate : templateAtmostFunc);
+      Bpl.Expr body = Bpl.Expr.Imp(Bpl.Expr.And(ante, ante2), Bpl.Expr.Eq(func1, template));
+      Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new ExprSeq(func1));
+      Bpl.Expr q = new Bpl.ForallExpr(NoToken, bv, tr, body);
+      sink.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Clone(q), "inductive new-extreme axiom for " + fn));
+      
+      ante2 = Bpl.Expr.Or(Bpl.Expr.Not(filter), isMax ? templateAtmostFunc : funcAtmostTemplate);
+      body = Bpl.Expr.Imp(Bpl.Expr.And(ante, ante2), Bpl.Expr.Eq(func1, func0));
+      tr = new Bpl.Trigger(NoToken, true, new ExprSeq(func1));
+      q = new Bpl.ForallExpr(NoToken, bv, tr, body);
+      sink.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Clone(q), "inductive old-extreme axiom for " + fn));
+    }
+    
+    /// <summary>
+    /// Generates:
+    ///   (forall lo, hi, params, params' ::
+    ///     { fn(lo, hi, params), fnx(lo, hi, params') }
+    ///     (forall i :: lo ATMOST i  AND  i LESS hi  ==>
+    ///         (filter[i] IFF filter'[i]) AND
+    ///         (filter[i] ==> template[i] == template'[i]))
+    ///     ==>
+    ///     fnx(lo, hi, params) == fnx(lo, hi, params'))
+    /// </summary>
+    void GenerateSameTermsAxiom(string! fn, string! fnx, Bpl.VariableSeq! formals, Bpl.Expr! filter, Bpl.Expr! template)
+    {
+      Bpl.VariableSeq bv = new Bpl.VariableSeq();
+      List<Bpl.Expr!> args = new List<Bpl.Expr!>(formals.Length);
+      List<Bpl.Expr!> argsPrime = new List<Bpl.Expr!>(formals.Length);
+      foreach (Bpl.Variable! f in formals) {
+        Bpl.Variable v = Sink.BoundVar("^" + f.TypedIdent.Name, f.TypedIdent.Type);
+        Bpl.Variable vPrime;
+        bv.Add(v);
+        if (args.Count < 2) {
+          vPrime = v;
+        } else {
+          vPrime = Sink.BoundVar("^x" + f.TypedIdent.Name, f.TypedIdent.Type);
+          bv.Add(vPrime);
+        }
+        args.Add(Sink.Ident(v));
+        argsPrime.Add(Sink.Ident(vPrime));
+      }
+      Bpl.Expr func = sink.Function(fn, Bpl.Type.Int, args);
+      Bpl.Expr funx = sink.Function(fnx, Bpl.Type.Int, args);
+      Bpl.Expr funxPrime = sink.Function(fnx, Bpl.Type.Int, argsPrime);
+      
+      Bpl.Expr filterPrime = Rename(filter, null);
+      Bpl.Expr templatePrime = Rename(template, null);
+      
+      Bpl.Variable ivar = Sink.BoundVar("^##", Bpl.Type.Int);
+      Bpl.Expr i = Bpl.Expr.Ident(ivar);
+      Bpl.VariableSeq qvars = new Bpl.VariableSeq();
+      qvars.Add(ivar);
+      Bpl.Expr range = Bpl.Expr.And(Bpl.Expr.Le(args[0], i), Bpl.Expr.Lt(i, args[1]));
+      Bpl.Expr b = Bpl.Expr.Iff(filter, filterPrime);
+      Bpl.Expr c = Bpl.Expr.Imp(filter, Bpl.Expr.Eq(template, templatePrime));
+      Bpl.Expr allTheSame = new Bpl.ForallExpr(NoToken, qvars, Bpl.Expr.Imp(range, Bpl.Expr.And(b, c)));
+
+      b = Bpl.Expr.Imp(allTheSame, Bpl.Expr.Eq(funx, funxPrime));
+      Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new ExprSeq(func, funxPrime));
+      Bpl.Expr q = new Bpl.ForallExpr(NoToken, bv, tr, b);
+      sink.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Clone(q), "same-terms axiom for " + fn));
+    }
+
+    /// <summary>
+    /// Generates an axiom that says that addition distributes over min/max:
+    ///   (forall lo, hi, params, params', D ::
+    ///     { fn(lo, hi, params) + D, fnx(lo, hi, params') }
+    ///     (forall i :: lo ATMOST i  AND  i LESS hi  ==>                      (*)
+    ///         (filter[i] IFF filter'[i]) AND
+    ///         (filter[i] ==> template[i] + D == template'[i])) AND
+    ///     non-empty-range
+    ///     ==>
+    ///     fnx(lo, hi, params) + D == fnx(lo, hi, params'))
+    /// where non-empty-range is, ostensibly:
+    ///     (exists i :: lo ATMOST i  AND  i LESS hi  AND  filter[i])          (**)
+    /// This existential quantification might not have a good trigger.  Therefore, we add the conjunct
+    /// "template[i] + D == template'[i]" to the body of the quantifier, which follows from the other
+    /// conjuncts plus the universal quantifier (*), and which improves the chances of there being a
+    /// good trigger:
+    ///     (exists i :: lo ATMOST i  AND  i LESS hi  AND  filter[i]  AND  template[i] + D == template'[i])
+    /// However, if filter[i] doesn't actually depend on i, then (**) can equivalently be written as:
+    ///     lo LESS hi  AND  filter[i]
+    /// which is what we do.
+    /// </summary>
+    void GenerateAdditionOverExtremeAxiom(string! fn, string! fnx, Bpl.VariableSeq! formals, Bpl.Expr! filter, Bpl.Expr! template)
+    {
+      Bpl.VariableSeq bv = new Bpl.VariableSeq();
+      List<Bpl.Expr!> args = new List<Bpl.Expr!>(formals.Length);
+      List<Bpl.Expr!> argsPrime = new List<Bpl.Expr!>(formals.Length);
+      foreach (Bpl.Variable! f in formals) {
+        Bpl.Variable v = Sink.BoundVar("^" + f.TypedIdent.Name, f.TypedIdent.Type);
+        Bpl.Variable vPrime;
+        bv.Add(v);
+        if (args.Count < 2) {
+          vPrime = v;
+        } else {
+          vPrime = Sink.BoundVar("^x" + f.TypedIdent.Name, f.TypedIdent.Type);
+          bv.Add(vPrime);
+        }
+        args.Add(Sink.Ident(v));
+        argsPrime.Add(Sink.Ident(vPrime));
+      }
+      Bpl.Expr func = sink.Function(fn, Bpl.Type.Int, args);
+      Bpl.Expr funx = sink.Function(fnx, Bpl.Type.Int, args);
+      Bpl.Expr funxPrime = sink.Function(fnx, Bpl.Type.Int, argsPrime);
+      
+      Bpl.Variable dvar = Sink.BoundVar("^D", Bpl.Type.Int);
+      bv.Add(dvar);
+      Bpl.Expr D = Sink.Ident(dvar);
+
+      Bpl.Expr funcPlusD = Bpl.Expr.Add(func, D);
+      Bpl.Expr funxPlusD = Bpl.Expr.Add(funx, D);
+            
+      Bpl.Expr filterPrime = Rename(filter, null);
+      Bpl.Expr templatePrime = Rename(template, null);
+      
+      // bound variable for the quantifications in the antecedent
+      Bpl.Variable ivar = Sink.BoundVar("^##", Bpl.Type.Int);
+      Bpl.Expr i = Bpl.Expr.Ident(ivar);
+      Bpl.VariableSeq qvars = new Bpl.VariableSeq();
+      qvars.Add(ivar);
+      Bpl.Expr range = Bpl.Expr.And(Bpl.Expr.Le(args[0], i), Bpl.Expr.Lt(i, args[1]));
+      
+      Bpl.Expr filtersTheSame = Bpl.Expr.Iff(filter, filterPrime);
+      Bpl.Expr oneTermIsDMore = Bpl.Expr.Imp(filter, Bpl.Expr.Eq(Bpl.Expr.Add(template, D), templatePrime));
+      Bpl.Expr eachTermIsDMore = new Bpl.ForallExpr(NoToken, qvars, Bpl.Expr.Imp(range, Bpl.Expr.And(filtersTheSame, oneTermIsDMore)));
+
+      Bpl.Expr nonEmptyRange;
+      if (MentionsSummationIndex(filter)) {
+        nonEmptyRange = new Bpl.ExistsExpr(NoToken, qvars, Bpl.Expr.And(Bpl.Expr.And(range, filter), oneTermIsDMore));
+      } else {
+        nonEmptyRange = Bpl.Expr.And(Bpl.Expr.Lt(args[0], args[1]), filter);
+      }
+      
+      Bpl.Expr body = Bpl.Expr.Imp(Bpl.Expr.And(eachTermIsDMore, nonEmptyRange), Bpl.Expr.Eq(funxPlusD, funxPrime));
+      Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new ExprSeq(funcPlusD, funxPrime));
+      Bpl.Expr q = new Bpl.ForallExpr(NoToken, bv, tr, body);
+      sink.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Clone(q), "plus-distributes-over-extreme axiom for " + fn));
+    }
+
+    /// <summary>
+    /// Generates:
+    ///   axiom (forall lo, mid, hi, params ::
+    ///     { fn(lo,mid,params), fn(mid,hi,params) }
+    ///     { fn(lo,mid,params), fn(lo,hi,params) }  // this trigger is costly in performance, but it makes examples like Coincidence Count go through
+    ///     lo ATMOST mid  AND  mid ATMOST hi  ==>  fnx(lo,mid,params) OP fnx(mid,hi,params) == fnx(lo,hi,params));
+    /// </summary>
+    void GenerateSplitRangeAxiom(string! fn, string! fnx, Cci.NodeType nt, Bpl.VariableSeq! formals, Bpl.Expr! template)
+      requires nt == Cci.NodeType.Sum || nt == Cci.NodeType.Count || nt == Cci.NodeType.Product || nt == Cci.NodeType.Min || nt == Cci.NodeType.Max;
+      requires 2 <= formals.Length;
+    {
+      Bpl.VariableSeq bv = new Bpl.VariableSeq();
+      List<Bpl.Expr!> argsLoMid = new List<Bpl.Expr!>(formals.Length);
+      List<Bpl.Expr!> argsMidHi = new List<Bpl.Expr!>(formals.Length);
+      List<Bpl.Expr!> argsLoHi = new List<Bpl.Expr!>(formals.Length);
+      Bpl.Expr lo = null;
+      Bpl.Expr mid = null;
+      Bpl.Expr hi = null;
+      foreach (Bpl.Variable! f in formals) {
+        Bpl.Variable v = Sink.BoundVar("^" + f.TypedIdent.Name, f.TypedIdent.Type);
+        bv.Add(v);
+
+        if (lo == null) {
+          lo = Sink.Ident(v);
+          
+          v = Sink.BoundVar("^mid", Bpl.Type.Int);
+          bv.Add(v);
+          mid = Sink.Ident(v);
+          
+        } else if (hi == null) {
+          assert mid != null;
+          hi = Sink.Ident(v);
+          
+          argsLoMid.Add(lo);
+          argsLoMid.Add(mid);
+          
+          argsMidHi.Add(mid);
+          argsMidHi.Add(hi);
+          
+          argsLoHi.Add(lo);
+          argsLoHi.Add(hi);
+          
+        } else {
+          Bpl.Expr arg = Sink.Ident(v);
+          argsLoMid.Add(arg);
+          argsMidHi.Add(arg);
+          argsLoHi.Add(arg);
+        }
+      }
+      assert lo != null;
+      assert mid != null;
+      assert hi != null;
+      Bpl.Expr funxLoMid = sink.Function(fnx, Bpl.Type.Int, argsLoMid);
+      Bpl.Expr funxMidHi = sink.Function(fnx, Bpl.Type.Int, argsMidHi);
+      Bpl.Expr funxLoHi = sink.Function(fnx, Bpl.Type.Int, argsLoHi);
+      
+      Bpl.Expr funcLoMid = sink.Function(fn, Bpl.Type.Int, argsLoMid);
+      Bpl.Expr funcMidHi = sink.Function(fn, Bpl.Type.Int, argsMidHi);
+      Bpl.Expr funcLoHi = sink.Function(fn, Bpl.Type.Int, argsLoHi);
+      
+      Bpl.Expr ante = Bpl.Expr.And(Bpl.Expr.Le(lo, mid), Bpl.Expr.Le(mid, hi));
+      Bpl.Expr combined;
+      switch (nt) {
+        case Cci.NodeType.Sum:
+        case Cci.NodeType.Count:
+          combined = Bpl.Expr.Add(funxLoMid, funxMidHi);
+          break;
+        case Cci.NodeType.Product:
+          combined = Bpl.Expr.Mul(funxLoMid, funxMidHi);
+          break;
+        case Cci.NodeType.Min:
+          combined = sink.Function(Sink.BuiltinFunction.Min, funxLoMid, funxMidHi);
+          break;
+        case Cci.NodeType.Max:
+          combined = sink.Function(Sink.BuiltinFunction.Max, funxLoMid, funxMidHi);
+          break;
+        default:
+          assert false;
+      }
+
+      Bpl.Expr body = Bpl.Expr.Imp(ante, Bpl.Expr.Eq(combined, funxLoHi));
+      Bpl.Trigger tr;
+      if (CommandLineOptions.Clo.SummationAxiomStrength < 1) {
+        tr = null;
+      } else {
+        // use the trigger { fn(lo,mid), fn(lo,hi) }
+        tr = new Bpl.Trigger(NoToken, true, new ExprSeq(funcLoMid, funcLoHi));
+      }
+      // add the trigger { fn(lo,mid), fn(mid,hi) }
+      tr = new Bpl.Trigger(NoToken, true, new ExprSeq(funcLoMid, funcMidHi), tr);
+      Bpl.Expr q = new Bpl.ForallExpr(NoToken, bv, tr, body);
+      sink.toplevelDeclarations.Add(new Bpl.Axiom(NoToken, Clone(q), "split range axiom for " + fn));
+    }
+    
+    // --------------------------------------------------------------------------------------------------------
+    // Here follow routines that visit the nodes of a Bpl.Expr (and, in particular, a Bpl.Expr that
+    // comes from the translation of a Spec# expression).
+
+    /// <summary>
+    /// Returns a template for "body", and adds its instantiation arguments to "templateArguments".
+    /// In more detail:
+    /// If there are no bound variables with index "boundVariableIndex" (or a bound variable in a nested
+    /// forall/exists quantification inside the sum-like quantification bound-variable with index
+    /// "boundVariableIndex") in "body", then returns "null".
+    /// Else, returns an expression that is "body" in which bound variable "boundVariableIndex" has
+    /// been replaced by the bound variable "~##", and each maximal subexpression that
+    /// contains no bound variables with index "boundVariableIndex" (and no inner bound variable, see above)
+    /// has been replaced by a new bound variable with a name "~n",
+    /// where n is a number equal to the number of elements in "templateArguments" at the time that subexpression
+    /// was visited.  The subexpression that is replaced by variable "~n" is appended (in position n)
+    /// to "templateArguments".
+    /// </summary>
+    static Bpl.Expr FindSumParameterization(int boundVariableIndex, Bpl.Expr! body, List<Bpl.Expr!>! templateArguments)
+    {
+      if (body is Bpl.LiteralExpr) {
+        return null;
+
+      } else if (body is Bpl.IdentifierExpr) {
+        Bpl.IdentifierExpr e = (Bpl.IdentifierExpr)body;
+        if (e.Name.StartsWith("^#")) {  // do initial "cheaper" pruning test
+          string nm = "^#" + boundVariableIndex + "_";
+          if (e.Name.StartsWith(nm)) {
+            if (e.Name.Length == nm.Length) {
+              // exact match: bound variable with index "boundVariableIndex"
+              return Sink.Ident(Sink.BoundVarName("##"), e.ShallowType);
+            } else {
+              // return the variable itself, but still count this as occurrence of what we're looking for (that is, don't return null)
+              return e;
+            }
+          }
+        }
+        return null;  // "e" was not an identifier that we're looking for
+        
+      } else if (body is Bpl.NAryExpr) {
+        Bpl.NAryExpr e = (Bpl.NAryExpr)body;
+        List<Bpl.Expr> xx = new List<Bpl.Expr>(e.Args.Length);
+        bool sightedAnyBoundVariables = false;
+        foreach (Bpl.Expr! arg in e.Args) {
+          Bpl.Expr x = FindSumParameterization(boundVariableIndex, arg, templateArguments);
+          if (x != null) {
+            sightedAnyBoundVariables = true;
+          }
+          xx.Add(x);
+        }
+        if (!sightedAnyBoundVariables) {
+          return null;
+        }
+        // build up new arguments:  for each argument Args[i],
+        // - if Args[i] contained no bound variables, it is a maximal subexpression that
+        //   doesn't, so replace it with a new "~n" variable
+        // - if Args[i] did contain bound variables, use its replacement as the new argument
+        ExprSeq args = new ExprSeq();
+        int i = 0;
+        foreach (Bpl.Expr x in xx) {
+          if (x == null) {
+            Bpl.Expr arg = (!)e.Args[i];
+            args.Add(Sink.Ident(NextTemplateArgumentName(templateArguments), arg.ShallowType));
+            templateArguments.Add(arg);
+          } else {
+            args.Add(x);
+          }
+          i++;
+        }
+        assert args.Length == e.Args.Length;
+        return new Bpl.NAryExpr(e.tok, e.Fun, args);
+        
+      } else if (body is Bpl.OldExpr) {
+        Bpl.OldExpr e = (Bpl.OldExpr)body;
+        Bpl.Expr x = FindSumParameterization(boundVariableIndex, e.Expr, templateArguments);
+        if (x != null) {
+          return new Bpl.OldExpr(e.tok, x);
+        } else {
+          return null;
+        }
+        
+      } else if (body is Bpl.QuantifierExpr) {
+        Bpl.QuantifierExpr q = (Bpl.QuantifierExpr)body;
+        assert q.Attributes == null || (q.Attributes.Key == "sk" && q.Attributes.Next == null);
+        assert q.Triggers == null;
+
+        Bpl.Expr x = FindSumParameterization(boundVariableIndex, q.Body, templateArguments);
+        if (x == null) {
+          return null;
+        } else if (q is Bpl.ForallExpr) {
+          return new Bpl.ForallExpr(q.tok, new Bpl.TypeVariableSeq(), q.Dummies, q.Attributes, q.Triggers, x);
+        } else {
+          assert q is Bpl.ExistsExpr;
+          return new Bpl.ExistsExpr(q.tok, new Bpl.TypeVariableSeq(), q.Dummies, q.Attributes, q.Triggers, x);
+        }
+
+      } else {
+        assert false;  // unexpected Bpl.Expr
+      }
+    }
+
+    static string! NextTemplateArgumentName(List<Bpl.Expr!>! templateArguments) {
+      return Sink.BoundVarName("~" + templateArguments.Count);
+    }
+    
+    /// <summary>
+    /// Returns an expression like "expr", but:
+    /// If "activeReplacement" is null:
+    ///   with every variable whose name starts with "^~" replaced by a variable whose name instead starts with "^x~".
+    /// If "activeReplacement" is non-null:
+    ///   with every variable whose name is "^##" replaced by "activeReplacement".
+    /// </summary>
+    static Bpl.Expr! Rename(Bpl.Expr! expr, Bpl.Expr activeReplacement)
+    {
+      if (expr is Bpl.LiteralExpr) {
+        return expr;
+
+      } else if (expr is Bpl.IdentifierExpr) {
+        Bpl.IdentifierExpr e = (Bpl.IdentifierExpr)expr;
+        if (activeReplacement == null) {
+          if (e.Name.StartsWith("^~")) {
+            string nm = "x~" + e.Name.Substring(2);
+            return Sink.Ident(Sink.BoundVarName(nm), e.ShallowType);
+          }
+        } else if (e.Name == "^##") {
+          return activeReplacement;
+        }
+        return expr;
+        
+      } else if (expr is Bpl.NAryExpr) {
+        Bpl.NAryExpr e = (Bpl.NAryExpr)expr;
+        ExprSeq xx = new ExprSeq();
+        foreach (Bpl.Expr! arg in e.Args) {
+          Bpl.Expr x = Rename(arg, activeReplacement);
+          xx.Add(x);
+        }
+        return new Bpl.NAryExpr(e.tok, e.Fun, xx);
+        
+      } else if (expr is Bpl.OldExpr) {
+        Bpl.OldExpr e = (Bpl.OldExpr)expr;
+        Bpl.Expr x = Rename(e.Expr, activeReplacement);
+        return new Bpl.OldExpr(e.tok, x);
+        
+      } else if (expr is Bpl.QuantifierExpr) {
+        Bpl.QuantifierExpr q = (Bpl.QuantifierExpr)expr;
+        assert q.Attributes == null || (q.Attributes.Key == "sk" && q.Attributes.Next == null);
+        assert q.Triggers == null;
+
+        Bpl.Expr x = Rename(q.Body, activeReplacement);
+        if (q is Bpl.ForallExpr) {
+          return new Bpl.ForallExpr(q.tok, new Bpl.TypeVariableSeq(), q.Dummies, q.Attributes, q.Triggers, x);
+        } else {
+          assert q is Bpl.ExistsExpr;
+          return new Bpl.ExistsExpr(q.tok, new Bpl.TypeVariableSeq(), q.Dummies, q.Attributes, q.Triggers, x);
+        }
+
+      } else {
+        assert false;  // unexpected Bpl.Expr
+      }
+    }
+
+    /// <summary>
+    /// Returns "true" iff "expr" mentions the summation index "~##".
+    /// </summary>
+    static bool MentionsSummationIndex(Bpl.Expr! expr)
+    {
+      if (expr is Bpl.LiteralExpr) {
+        return false;
+
+      } else if (expr is Bpl.IdentifierExpr) {
+        Bpl.IdentifierExpr e = (Bpl.IdentifierExpr)expr;
+        return e.Name == "^##";
+        
+      } else if (expr is Bpl.NAryExpr) {
+        Bpl.NAryExpr e = (Bpl.NAryExpr)expr;
+        foreach (Bpl.Expr! arg in e.Args) {
+          if (MentionsSummationIndex(arg)) {
+            return true;
+          }
+        }
+        return false;
+        
+      } else if (expr is Bpl.OldExpr) {
+        Bpl.OldExpr e = (Bpl.OldExpr)expr;
+        return MentionsSummationIndex(e.Expr);
+        
+      } else if (expr is Bpl.QuantifierExpr) {
+        Bpl.QuantifierExpr q = (Bpl.QuantifierExpr)expr;
+        assert q.Attributes == null;
+        assert q.Triggers == null;
+        return MentionsSummationIndex(q.Body);
+
+      } else {
+        assert false;  // unexpected Bpl.Expr
+      }
+    }
+
+    // --------------------------------------------------------------------------------------------------------
+
+    Dictionary<Cci.Field!,Bpl.BoundVariable!>! enclosingBoundVariables;
+    List<int>! enclosingSummationBoundVariableIndices = new List<int>(5);  // contains the indices into "enclosingBoundVariables" of the enclosing bound variables for sum-like quantifiers
+
+    Bpl.BoundVariable GetRegisteredBoundVariable(Cci.Field! field) {
+      Bpl.BoundVariable v;
+      if (enclosingBoundVariables.TryGetValue(field, out v)) {
+        assert v != null;
+        return v;
+      }
+      return null;
+    }
+    
+    /// <summary>
+    /// Registers all bound variables of all quantifiers in "qs".
+    /// If "prefix" is null, each bound variable "V" is registered as "V".
+    /// If "prefix" is "#", the bound variable that's preceded by n others in "qs" is registered
+    /// as "#N" where "N" is the number n+start represented as decimal digits, where
+    /// "start" is the number of bound variables registered at the beginning of this call.
+    /// Otherwise, each bound variable "V" is registered under the name prefix+"V".
+    /// Returns the number of registered bound variables.
+    /// </summary>
+    internal int RegisterBoundVariables (string prefix, out int start, params Cci.Quantifier[]! qs)
+      requires forall{int i in (0:qs.Length); qs[i] != null};
+    {
+      start = enclosingBoundVariables.Count;
+      bool doingSummation = prefix != null && prefix == "#";
+      int n = 0;
+      foreach (Cci.Quantifier! q in qs) {
+        Cci.Comprehension! comp = q.Comprehension;
+        if (comp == null) continue;
+        if (comp.IsDisplay) {
+          continue;
+        }
+        foreach (Cci.Expression bf in comp.BindingsAndFilters) {
+          if (bf is Cci.ComprehensionBinding) {
+            Cci.ComprehensionBinding binding = (Cci.ComprehensionBinding)bf;
+            Cci.Member m = ((Cci.MemberBinding!) binding.TargetVariable).BoundMember;
+            Cci.Field f = m as Cci.Field;
+            if (f != null) {
+              string bname;
+              if (doingSummation) {
+                bname = "^#" + (n + start) + "_";
+                enclosingSummationBoundVariableIndices.Add(n + start);
+              } else {
+                if (enclosingSummationBoundVariableIndices.Count == 0) {
+                  bname = "^";
+                } else {
+                  // there is an enclosing sum-like quantifier
+                  bname = "^#" + enclosingSummationBoundVariableIndices[enclosingSummationBoundVariableIndices.Count-1] + "_";
+                }
+                if (prefix != null) {
+                  bname += prefix;
+                }
+                bname += f.Name.Name;
+              }
+              enclosingBoundVariables.Add(f, Sink.BoundVar(bname, sink.Convert(f.Type)));
+              n++;
+            }
+          }
+        }
+      }
+      return n;
+    }
+    
+    internal void UnRegisterBoundVariables(params Cci.Quantifier[]! qs)
+      requires forall{int i in (0:qs.Length); qs[i] != null};
+    {
+      foreach (Cci.Quantifier! q in qs) {
+        Cci.Comprehension! comp = q.Comprehension;
+        if (comp.IsDisplay) {
+          continue;
+        }
+        foreach (Cci.Expression bf in comp.BindingsAndFilters) {
+          if (bf is Cci.ComprehensionBinding) {
+            Cci.ComprehensionBinding binding = (Cci.ComprehensionBinding)bf;
+            Cci.Member m = ((Cci.MemberBinding!) binding.TargetVariable).BoundMember;
+            Cci.Field f = m as Cci.Field;
+            if (f != null) {
+              // delete one item from the list
+              enclosingBoundVariables.Remove(f);
+
+              if (enclosingSummationBoundVariableIndices.Count != 0) {
+                int last = enclosingSummationBoundVariableIndices.Count-1;
+                int closestSummationIndex = enclosingSummationBoundVariableIndices[last];
+                if (closestSummationIndex == enclosingBoundVariables.Count) {
+                  enclosingSummationBoundVariableIndices.RemoveAt(last);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    internal static Cci.Quantifier TransformQuantifier (Cci.Quantifier! q) {
+      Cci.Comprehension c = q.Comprehension;
+      if (c.IsDisplay || c.Mode != Cci.ComprehensionMode.Comprehension) return null;
+      if (c.BindingsAndFilters == null || !(0 < c.BindingsAndFilters.Count)) return null;
+      if (c.Elements.Count != 1) return null;
+      
+      Cci.ExpressionList newBindingsAndFilters = new Cci.ExpressionList(c.BindingsAndFilters.Count);
+      
+      Cci.TrivialHashtable substitutionTable = new Cci.TrivialHashtable();
+      SimpleSubstituter ss = new SimpleSubstituter(substitutionTable);
+      
+      for (int i = 0, n = c.BindingsAndFilters.Count; i < n; i++){
+      
+        Cci.ComprehensionBinding cb = c.BindingsAndFilters[i] as Cci.ComprehensionBinding;
+        if (cb == null){
+          // then it is a filter, i.e., a boolean expression
+          // need to subsitute any occurrences of earlier bound variable with the replacement
+          // indexer
+          Cci.Expression filter = c.BindingsAndFilters[i] as Cci.Expression;
+          if (filter == null) { newBindingsAndFilters.Add(cb); continue; }
+          ss.VisitExpression(filter);
+          newBindingsAndFilters.Add(filter);
+          continue;
+        }
+        if (cb.SourceEnumerable == null) { newBindingsAndFilters.Add(cb); continue; }
+        
+        Cci.Expression sourceEnumerable = cb.SourceEnumerable;
+        // It might be non-normalized if coming from /verify
+        Cci.CollectionEnumerator ce = cb.SourceEnumerable as Cci.CollectionEnumerator;
+        if (ce != null) {
+          Cci.MemberBinding coll = ce.Collection as Cci.MemberBinding;
+          if (coll != null) {
+            Cci.ParameterField pf = coll.BoundMember as Cci.ParameterField;
+            if (pf != null) sourceEnumerable = pf.Parameter;
+          }
+        }
+        if (sourceEnumerable == null){
+          newBindingsAndFilters.Add(cb); continue; 
+        }
+        Cci.TypeNode arrayType = Cci.TypeNode.StripModifiers(sourceEnumerable.Type) as Cci.ArrayType;
+        if (arrayType == null) {
+          newBindingsAndFilters.Add(cb); continue; 
+        }
+        
+        Cci.MemberBinding mb = cb.TargetVariable as Cci.MemberBinding;
+        if (mb == null)  { newBindingsAndFilters.Add(cb); continue; }
+        Cci.Field f = mb.BoundMember as Cci.Field;
+        if (f == null)  { newBindingsAndFilters.Add(cb); continue; }
+        
+        Cci.Field index = new Cci.Field(f.DeclaringType, null, f.Flags, Cci.Identifier.For("_" + f.Name.Name), Cci.SystemTypes.Int32, Cci.Literal.Int32Zero);
+        assume f.DeclaringType != null;
+        f.DeclaringType.Members.Add(index);
+        Cci.Member getLength = ((!)arrayType.BaseType).GetMethod(Cci.Identifier.For("get_Length"));
+        Cci.Expression arrayLengthMB = new Cci.MemberBinding(sourceEnumerable, getLength);
+        Cci.Expression arrayLength = new Cci.MethodCall(arrayLengthMB, new Cci.ExpressionList(), Cci.NodeType.Callvirt);
+        arrayLength.Type = (!)Cci.SystemTypes.Int32;
+        Cci.Expression subOne = new Cci.BinaryExpression(arrayLength, Cci.Literal.Int32One, Cci.NodeType.Sub);
+        Cci.BinaryExpression range = new Cci.BinaryExpression(Cci.Literal.Int32Zero, subOne, Cci.NodeType.Range);
+        
+        Cci.ComprehensionBinding newB = new Cci.ComprehensionBinding();
+        newB.TargetVariable = new Cci.MemberBinding(mb.TargetObject, index);
+        newB.SourceEnumerable = range;
+        newBindingsAndFilters.Add(newB);
+  
+        Cci.Indexer indexer = new Cci.Indexer(sourceEnumerable, new Cci.ExpressionList(newB.TargetVariable));
+        indexer.Type = Cci.SystemTypes.Int32;
+        
+        substitutionTable[f.UniqueKey] = indexer;
+      }
+      
+      SearchForBoundVarsInOldExpressions s4bvioe = new SearchForBoundVarsInOldExpressions(substitutionTable);
+      s4bvioe.VisitExpression(c.Elements[0]);
+      if (s4bvioe.Present) {
+        return null;  // this quantifier has a bound variable inside an old expression and we don't know what to do with that, so we just won't transform this quantifier
+      }
+      
+      //c.Elements[0] = new Cci.BinaryExpression(Cci.Literal.Int32Zero, indexer, Cci.NodeType.Lt);
+      c.Elements[0] = ss.VisitExpression(c.Elements[0]);
+      
+      Cci.Comprehension newC = new Cci.Comprehension();
+      newC.BindingsAndFilters = newBindingsAndFilters;
+      newC.Elements = new Cci.ExpressionList(c.Elements[0]);
+      Cci.Quantifier newQ = new Cci.Quantifier(q.QuantifierType, newC);
+      return newQ;
+    }
+  }
+  internal class SimpleSubstituter : Cci.StandardVisitor{
+    Cci.TrivialHashtable! substTable;
+    internal SimpleSubstituter(Cci.TrivialHashtable! h){ this.substTable = h; }
+    public override Cci.Expression VisitMemberBinding (Cci.MemberBinding memberBinding) {
+      if (memberBinding == null) return null;
+      Cci.Expression replacement = substTable[memberBinding.BoundMember.UniqueKey] as Cci.Expression;
+      if (replacement != null) return replacement;
+      return base.VisitMemberBinding(memberBinding);
+    }
+  }
+  internal class SearchForBoundVarsInOldExpressions : Cci.StandardVisitor{
+    Cci.TrivialHashtable! substTable;
+    public bool Present = false;
+    internal SearchForBoundVarsInOldExpressions(Cci.TrivialHashtable! h){ this.substTable = h; }
+    int oldDepth = 0;
+    public override Cci.Expression VisitOldExpression (Cci.OldExpression oldExpr) {
+      oldDepth++;
+      Cci.Expression e = base.VisitOldExpression(oldExpr);
+      oldDepth--;
+      return e;
+    }
+    public override Cci.Expression VisitMemberBinding (Cci.MemberBinding memberBinding) {
+      if (memberBinding == null) return null;
+      Cci.Expression replacement = substTable[memberBinding.BoundMember.UniqueKey] as Cci.Expression;
+      if (replacement != null && oldDepth > 0) {
+        Present = true;
+      }
+      return base.VisitMemberBinding(memberBinding);
+    }
+  }
+}

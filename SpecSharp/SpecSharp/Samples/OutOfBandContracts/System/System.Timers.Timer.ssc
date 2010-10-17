@@ -1,0 +1,70 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Timers
+{
+
+    public class Timer
+    {
+
+        public bool AutoReset
+        {
+          get;
+          set;
+        }
+
+        public System.ComponentModel.ISite Site
+        {
+          get;
+          set;
+        }
+
+        public bool Enabled
+        {
+          get;
+          set;
+        }
+
+        public double Interval
+        {
+          get;
+          set
+            requires value > 0 otherwise ArgumentException;
+        }
+
+        public System.ComponentModel.ISynchronizeInvoke SynchronizingObject
+        {
+          get;
+          set;
+        }
+
+        public void Stop ();
+
+        public void Start ();
+
+        public void EndInit ();
+
+        public void Close ();
+
+        public void BeginInit ();
+
+        public void remove_Elapsed (ElapsedEventHandler value);
+
+        public void add_Elapsed (ElapsedEventHandler value);
+
+        public Timer (double interval)
+            requires interval > 0 otherwise ArgumentException;
+
+        public Timer ();
+    }
+}

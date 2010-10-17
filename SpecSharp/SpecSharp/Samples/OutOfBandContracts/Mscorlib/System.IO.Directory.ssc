@@ -1,0 +1,94 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.IO
+{
+
+    public class Directory
+    {
+
+        public static void Delete (string path, bool recursive);
+
+        public static void Delete (string path);
+
+        public static void Move (string! sourceDirName, string! destDirName)
+            requires sourceDirName != null otherwise ArgumentNullException;
+            requires sourceDirName.Length != 0 otherwise ArgumentException;
+            requires destDirName != null otherwise ArgumentNullException;
+            requires destDirName.Length != 0 otherwise ArgumentException;
+
+        public static void SetCurrentDirectory (string! path)
+            requires path != null otherwise ArgumentNullException;
+            requires path.Length != 0 otherwise ArgumentException;
+            requires path.Length < 260 otherwise PathTooLongException;
+
+        public static string GetCurrentDirectory ();
+
+        public static string GetDirectoryRoot (string! path)
+            requires path != null otherwise ArgumentNullException;
+
+        public static String[] GetLogicalDrives ();
+
+        public static String[] GetFileSystemEntries (string! path, string! searchPattern)
+            requires path != null otherwise ArgumentNullException;
+            requires searchPattern != null otherwise ArgumentNullException;
+
+        public static String[] GetFileSystemEntries (string path);
+
+        public static String[] GetDirectories (string! path, string! searchPattern)
+            requires path != null otherwise ArgumentNullException;
+            requires searchPattern != null otherwise ArgumentNullException;
+
+        public static String[] GetDirectories (string path);
+
+        public static String[] GetFiles (string! path, string! searchPattern)
+            requires path != null otherwise ArgumentNullException;
+            requires searchPattern != null otherwise ArgumentNullException;
+
+        public static String[] GetFiles (string path);
+
+        public static DateTime GetLastAccessTimeUtc (string path);
+
+        public static DateTime GetLastAccessTime (string path);
+
+        public static void SetLastAccessTimeUtc (string path, DateTime lastAccessTimeUtc);
+
+        public static void SetLastAccessTime (string path, DateTime lastAccessTime);
+
+        public static DateTime GetLastWriteTimeUtc (string path);
+
+        public static DateTime GetLastWriteTime (string path);
+
+        public static void SetLastWriteTimeUtc (string path, DateTime lastWriteTimeUtc);
+
+        public static void SetLastWriteTime (string path, DateTime lastWriteTime);
+
+        public static DateTime GetCreationTimeUtc (string path);
+
+        public static DateTime GetCreationTime (string path);
+
+        public static void SetCreationTimeUtc (string path, DateTime creationTimeUtc);
+
+        public static void SetCreationTime (string path, DateTime creationTime);
+
+        public static bool Exists (string path);
+
+        public static DirectoryInfo CreateDirectory (string! path)
+            requires path != null otherwise ArgumentNullException;
+            requires path.Length != 0 otherwise ArgumentException;
+
+        public static DirectoryInfo GetParent (string! path)
+            requires path != null otherwise ArgumentNullException;
+            requires path.Length != 0 otherwise ArgumentException;
+    }
+}

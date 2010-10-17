@@ -1,0 +1,18 @@
+public class C {
+  public int Square(int n)
+    requires 0 <= n;
+    ensures result == n*n;
+  {
+    int r = 0;
+    int x = 1;
+    for (int i = 0; i < n; i++)
+      invariant i <= n;
+      invariant r == i*i;
+      invariant x == 2*i + 1;
+    {
+      r += x;
+      x += 2;
+    }
+    return r;
+  }
+}

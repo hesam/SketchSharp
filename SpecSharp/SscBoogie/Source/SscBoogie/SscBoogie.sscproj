@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VisualStudioProject>
+  <XEN ProjectType="Local"
+     SchemaVersion="1.0"
+     Name="SscBoogie"
+     ProjectGuid="653640d6-84ad-43dd-86a3-92c33748ed20"
+    >
+    <Build>
+      <Settings ApplicationIcon=""
+         AssemblyName="SscBoogie"
+         OutputType="Exe"
+         RootNamespace="SscBoogie"
+         StartupObject=""
+         StandardLibraryLocation=""
+         TargetPlatform="v2"
+         TargetPlatformLocation=""
+        >
+        <Config Name="Debug"
+           AllowUnsafeBlocks="False"
+           BaseAddress="285212672"
+           CheckForOverflowUnderflow="False"
+           ConfigurationOverrideFile=""
+           DefineConstants="DEBUG;TRACE"
+           DocumentationFile=""
+           DebugSymbols="True"
+           FileAlignment="4096"
+           IncrementalBuild="True"
+           Optimize="False"
+           OutputPath="..\..\Binaries"
+           RegisterForComInterop="False"
+           RemoveIntegerChecks="false"
+           TreatWarningsAsErrors="False"
+           WarningLevel="4"
+           CheckContractAdmissibility="True"
+           CheckPurity="False"
+           ReferenceTypesAreNonNullByDefault="False"
+           RunProgramVerifier="False"
+           RunProgramVerifierWhileEditing="False"
+           ProgramVerifierCommandLineOptions=""
+           AllowPointersToManagedStructures="False"
+           />
+        <Config Name="Release"
+           AllowUnsafeBlocks="false"
+           BaseAddress="285212672"
+           CheckForOverflowUnderflow="false"
+           ConfigurationOverrideFile=""
+           DefineConstants="TRACE"
+           DocumentationFile=""
+           DebugSymbols="false"
+           FileAlignment="4096"
+           IncrementalBuild="false"
+           Optimize="true"
+           OutputPath="bin\release"
+           RegisterForComInterop="false"
+           RemoveIntegerChecks="false"
+           TreatWarningsAsErrors="false"
+           WarningLevel="4"
+           CheckContractAdmissibility="True"
+           CheckPurity="False"
+           />
+      </Settings>
+      <References>
+        <Reference Name="System"
+             AssemblyName="System"
+             Private="true"
+             />
+        <Reference Name="System.Data"
+             AssemblyName="System.Data"
+             Private="true"
+             />
+        <Reference Name="System.Xml"
+             AssemblyName="System.Xml"
+             Private="true"
+             />
+        <Reference Name="AbsInt"
+             AssemblyName="AbsInt"
+             Private="true"
+             HintPath="../../Binaries/AbsInt.dll"
+             />
+        <Reference Name="AIFramework"
+             AssemblyName="AIFramework"
+             Private="true"
+             HintPath="../../Binaries/AIFramework.dll"
+             />
+        <Reference Name="Basetypes"
+             AssemblyName="Basetypes"
+             Private="true"
+             HintPath="../../Binaries/Basetypes.dll"
+             />
+        <Reference Name="Core"
+             AssemblyName="Core"
+             Private="true"
+             HintPath="../../Binaries/Core.dll"
+             />
+        <Reference Name="System.Compiler"
+             AssemblyName="System.Compiler"
+             Private="true"
+             HintPath="../../Binaries/System.Compiler.dll"
+             />
+        <Reference Name="System.Compiler.Framework"
+             AssemblyName="System.Compiler.Framework"
+             Private="true"
+             HintPath="../../Binaries/System.Compiler.Framework.dll"
+             />
+        <Reference Name="VCGeneration"
+             AssemblyName="VCGeneration"
+             Private="true"
+             HintPath="../../Binaries/VCGeneration.dll"
+             />
+        <Reference Name="Microsoft.SpecSharp"
+             AssemblyName="Microsoft.SpecSharp"
+             Private="true"
+             HintPath="../../Binaries/Microsoft.SpecSharp.dll"
+             />
+        <Reference Name="Provers.Z3"
+             AssemblyName="Provers.Z3"
+             Private="true"
+             HintPath="../../Binaries/Provers.Z3.dll"
+             />
+        <Reference Name="Graph"
+             AssemblyName="Graph"
+             Private="true"
+             HintPath="../../Binaries/Graph.dll"
+             />
+        <Reference Name="VCExpr"
+             AssemblyName="VCExpr"
+             Private="true"
+             HintPath="../../Binaries/VCExpr.dll"
+             />
+        <Reference Name="Provers.Simplify"
+             AssemblyName="Provers.Simplify"
+             Private="true"
+             HintPath="../../Binaries/Provers.Simplify.dll"
+             />
+        <Reference Name="Provers.SMTLib"
+             AssemblyName="Provers.SMTLib"
+             Private="true"
+             HintPath="../../Binaries/Provers.SMTLib.dll"
+             />
+        <Reference Name="BytecodeTranslation"
+             Project="{4B727D4B-4A43-4B11-A47D-48A6CD8D4BC1}"
+             Private="true"
+             />
+        <Reference Name="DriverHelper"
+             Project="{18A0EBA3-DEDA-4F25-B21F-B86055719249}"
+             Private="true"
+             />
+        <Reference Name="Prelude"
+             Project="{C3F39495-FAB0-4594-BDCD-921D180B5C06}"
+             Private="true"
+             />
+      </References>
+    </Build>
+    <Files>
+      <Include>
+        <File RelPath="Main.ssc"
+                 SubType="Code"
+                 BuildAction="Compile"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="..\version.ssc"
+                 />
+      </Include>
+    </Files>
+  </XEN>
+</VisualStudioProject>

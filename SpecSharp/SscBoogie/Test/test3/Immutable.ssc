@@ -1,0 +1,164 @@
+using Microsoft.Contracts;
+
+namespace test3
+{
+
+  public class Typeof {
+    public void Foo(Typeof! c) {
+      assert typeof(Typeof).IsPeerConsistent; // OK, typeof should generate peer consistent result
+      assert c.GetType().IsPeerConsistent; // OK, GetType should generate peer consistent result
+    }
+    void M(Typeof! c) {
+      object o = typeof(Typeof);
+      assert o.IsPeerConsistent;
+
+      o = c.GetType();
+      assert o.IsPeerConsistent;
+    }
+  }
+
+  public interface Iface {}
+
+  [Immutable] public class Imtbl : Iface{}
+
+  public class XY {
+    Imtbl im;
+    [Rep] object o;
+    [Peer] object p;
+    [Rep] Iface io;
+    [Peer] Iface ip;
+
+    public XY() {
+      base();
+    }
+
+    [Additive] public virtual void M0(Imtbl iml) {
+      assert im != null ==> im.IsPeerConsistent;
+      additive expose (this) {
+        this.im = iml;  
+      }
+    }
+
+    [Additive] public virtual void M1(Imtbl im) {
+      additive expose (this) {
+        this.io = im;  // Error: RHS might be immutable, and not allowed in rep fields
+      }
+    }
+
+    [Additive] public virtual void M2(Imtbl im) {
+      additive expose (this) {
+        this.ip = im;  // Error: RHS might be immutable, and not allowed in peer fields
+      }
+    }
+
+    [Additive] public virtual void M3(Imtbl im) {
+      additive expose (this) {
+        this.o = im;  // Error: RHS might be immutable, and not allowed in rep fields
+      }
+    }
+
+    [Additive] public virtual void M4(Imtbl im) {
+      additive expose (this) {
+        this.p = im;  // Error: RHS might be immutable, and not allowed in peer fields
+      }
+    }
+
+    [Additive] public virtual void M5([Captured] object x) {
+      if (x is string) { // fixa
+      } else {
+        this.p = x; // Error: RHS might be immutable, and not allowed in peer fields
+      }
+    }
+  }
+
+  [Immutable] 
+  public class C {
+
+    [Rep] B b;
+    invariant b != null && 0 <= b.x;
+  
+    public C() {
+       b = new B();
+       base();
+    }
+  
+    [NotDelayed]
+    public C([Captured]B! b0)
+    requires 0 <= b0.x;
+    ensures Owner.Is(b0,this,typeof(C)); {
+      b = b0;
+      base();
+    }
+
+    void M0(){
+      additive expose(this){} //Error: Immutable objects are not allowed to be exposed
+    }
+
+    void M1(){
+      expose(this){} //Error: Immutable objects are not allowed to be locally exposed
+    }
+  }
+
+  public class B {
+
+    [Additive(false)] public int x = 0;
+
+    public B() 
+    ensures 0 <= this.x; {
+      base();
+    } 
+
+    public void M() {
+      expose(this){
+        x--;
+      }
+    } 
+  }
+
+  public class E {
+     B b;
+     C c;
+   
+     public void M(){
+       expose(this){
+         b = new B();
+         c = new C(b);
+       }
+       expose(c){ // Error: Immutable objects are not allowed to be locally exposed
+         // b.M(); // too slow at the moment 
+       }
+     }
+
+    public void Mfalse(){
+      assert false; // Error: Assertion might not hold
+    }
+  }
+}
+
+namespace AnotherNamespace {
+
+  public class C {
+    IFoo! f = new Foo();
+
+    public IFoo! MyFoo {
+      get {
+        return f;
+      }
+    }
+
+    public void M() {
+      assert f.IsPeerConsistent;
+    }
+
+    [NoDefaultContract]
+    public void N(IFoo! f) {
+      assert f.IsPeerConsistent;
+    }
+  }
+
+  [Immutable]
+  public interface IFoo { }
+
+  [Immutable]
+  public class Foo : IFoo { }
+}

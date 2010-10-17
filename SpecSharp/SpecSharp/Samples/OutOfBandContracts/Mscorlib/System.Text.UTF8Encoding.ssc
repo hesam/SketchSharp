@@ -1,0 +1,68 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Text
+{
+
+    public class UTF8Encoding
+    {
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object value);
+
+        public Byte[] GetPreamble ();
+
+        public int GetMaxCharCount (int byteCount)
+            requires byteCount >= 0 otherwise ArgumentOutOfRangeException;
+
+        public int GetMaxByteCount (int charCount)
+            requires charCount >= 0 otherwise ArgumentOutOfRangeException;
+
+        public Encoder GetEncoder ();
+
+        public Decoder GetDecoder ();
+
+        public int GetChars (Byte[] bytes, int byteIndex, int byteCount, Char[] chars, int charIndex);
+
+        public int GetCharCount (Byte[] bytes, int index, int count);
+
+        public int GetBytes (string! s, int charIndex, int charCount, Byte[]! bytes, int byteIndex)
+            requires s != null otherwise ArgumentNullException;
+            requires bytes != null otherwise ArgumentNullException;
+            requires charIndex >= 0 otherwise ArgumentOutOfRangeException;
+            requires charCount >= 0 otherwise ArgumentOutOfRangeException;
+            requires (s.Length - charIndex) >= charCount otherwise ArgumentOutOfRangeException;
+            requires byteIndex >= 0 otherwise ArgumentOutOfRangeException;
+            requires byteIndex <= bytes.Length otherwise ArgumentOutOfRangeException;
+
+        public Byte[] GetBytes (string! s)
+            requires s != null otherwise ArgumentNullException;
+
+        public int GetBytes (Char[] chars, int charIndex, int charCount, Byte[] bytes, int byteIndex);
+
+        public int GetByteCount (string! chars)
+            requires chars != null otherwise ArgumentNullException;
+
+        public int GetByteCount (Char[] chars, int index, int count);
+
+        public UTF8Encoding (bool encoderShouldEmitUTF8Identifier, bool throwOnInvalidBytes);
+
+        public UTF8Encoding (bool encoderShouldEmitUTF8Identifier);
+
+        public UTF8Encoding ();
+    }
+}

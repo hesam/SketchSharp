@@ -1,0 +1,333 @@
+HKCR
+{   
+    ForceRemove .%SourceFileExtension% = s '%LanguageName% source'
+    {
+        val 'Content Type' = s 'text/plain'
+    }
+    ForceRemove '%LanguageName% source' = s '%LanguageShortName% Source File'
+    {
+        DefaultIcon = s '%Win32ResourcesDllPath%,%SourceFileIconId%'
+        ForceRemove shell
+        {
+            ForceRemove Open
+            {   
+                command = s '%DevEnvPath% /dde'
+                ddeexec = s '%OpenCommand%'
+                {
+                    application = s 'VisualStudio.%VsVersion%'
+                    topic = s 'system'
+                }
+            }
+        }
+    }
+    ForceRemove .%ProjectFileExtension% = s '%LanguageName% project'
+    {
+        val 'Content Type' = s 'text/plain'
+    }
+    ForceRemove '%LanguageName% project' = s '%LanguageShortName% Project File'
+    {
+        DefaultIcon = s '%Win32ResourcesDllPath%,%ProjectFileIconId%'
+        ForceRemove shell
+        {
+            ForceRemove open
+            {
+                command = s '%DevEnvCommand%'
+            }
+        }
+    }
+}
+
+HKLM
+{
+  NoRemove Software 
+  { 
+    Microsoft 
+    { 
+      forceRemove SpecSharp{
+        val InstallDir = s '%BinDir%'
+      }
+    
+      VisualStudio 
+      { 
+        %VsVersion% 
+        {    
+          NoRemove AD7Metrics
+          {
+            NoRemove ExpressionEvaluator
+            {
+                ForceRemove %DebuggerLanguageGuid%
+                { 
+                    ForceRemove {994b45c4-e6e9-11d2-903f-00c04fa302a1}
+                    {
+                        val CLSID = s '%DebuggerEEGuid%'
+                        val Name  = s '%LanguageName%'
+                        val Language = s '%LanguageName%'
+                        ForceRemove Engine 
+                        {
+                            val 0 = s '%ManagedOnlyDebuggerEEGuid%'
+                            val 1 = s '%ManagedPlusNativeDebuggerEEGuid%'
+                        }
+                    }
+                }
+            }
+          }
+          
+          NoRemove CodeTools{
+            ForceRemove Contracts{
+              ForceRemove PropertyPages{
+                ForceRemove '{35a69422-a11a-4ce8-8962-061dfabb02eb}'{
+                  val clsid = s '{A6911A01-8795-4fe7-8E51-2904E8B5F27B}'
+                }
+              }
+              ForceRemove Tasks{
+                ForceRemove '{fae04ec0-301f-11d3-bf4b-00c04f79efbc}'{
+                  ForceRemove RunSpecSharp{
+                    val SpecSharpCompile = s ''
+                  }
+                }
+              }
+              val DisplayName = s 'Contracts'
+            }
+          }        
+
+          NoRemove Editors
+          {
+            ForceRemove %EditorFactoryGuid% = s '%EditorName%'
+            {
+              val Package = s '%PackageGuid%'
+              
+              ForceRemove Extensions
+              {
+                val %SourceFileExtension% = d 40
+              }
+              ForceRemove LogicalViews
+              {
+                val '{7651a700-06e5-11d1-8ebd-00a0c90f26ea}' = s ''
+                val '{7651a701-06e5-11d1-8ebd-00a0c90f26ea}' = s ''
+                val '{7651a702-06e5-11d1-8ebd-00a0c90f26ea}' = s ''
+                val '{7651a703-06e5-11d1-8ebd-00a0c90f26ea}' = s ''
+              }
+            }
+          }
+          
+          NoRemove AutoLoadPackages{
+            ForceRemove '{f1536ef8-92ec-443c-9ed7-fdadf150da82}'{
+              val '{072DD0C6-AE1E-4ed6-A0BF-B99D5B68D29F}' = d 0
+              val '{DA85543E-97EC-4478-90EC-45CBCB4FA5C2}' = d 0
+            }
+          }
+
+          NoRemove Packages
+          {                
+
+            ForceRemove %PackageGuid% = s '%ProductName% Package'
+            {
+                val InprocServer32 = s '%SystemFolder%mscoree.dll'
+                val Class = s '%PackageClassName%'
+                val Assembly = s '%PackageAssemblyName%'
+                val CodeBase = s 'file:///%BinDir%Microsoft.SpecSharp.DLL'
+                val ThreadingModel = s 'Both'
+                val CompanyName = s '%CompanyName%'
+                val ProductName = s '%ProductName%'
+                val ProductVersion = s '%ProductVersion%'
+                val MinEdition = s 'Standard'
+                val ID = d %PackageLoadKeyId%
+                            
+                ForceRemove SatelliteDll
+                {
+                    val DllName = s '%SatelliteDll%'
+                    val Path = s '%BinDir%'
+                }
+            }
+
+          }
+          
+          NoRemove Menus
+          {
+            val %PackageGuid% = s ',%MenuResourceId%,1'
+          }
+
+          NoRemove Projects
+          {
+            ForceRemove %ProjectFactoryGuid% = s '%LanguageName% Project'
+            {
+                val DefaultProjectExtension = s '%ProjectFileExtension%'
+                val DisplayProjectFileExtensions = s '%LanguageShortName% Projects (*.%ProjectFileExtension%);*.%ProjectFileExtension%'
+                val Package = s '%PackageGuid%'
+                val PossibleProjectExtensions = s '%ProjectFileExtension%'          
+                val ProjectTemplatesDir = s '%TemplatePath%Projects'
+                val ItemTemplatesDir = s '%TemplatePath%ProjectItems'
+                val DisplayName = s '#2'
+
+                ForceRemove Filters
+                {
+                    ForceRemove 1 = s '#3'
+                    {
+                        val SortPriority = d 1000
+                        val CommonOpenFilesFilter = d 0
+                        val CommonFindFilesFilter = d 0
+                        val NotAddExistingItemFilter = d 0
+                    }
+                }
+                
+                ForceRemove AddItemTemplates
+                {
+                    ForceRemove TemplateDirs
+                    {                   
+                        ForceRemove %PackageGuid%
+                        {
+                            ForceRemove 1 = s '%LanguageShortName% Project Items'
+                            {
+                                val TemplatesDir = s '%TemplatePath%ProjectItems'
+                                val SortPriority = d 100                
+                            }
+                        }
+                    }
+                }
+            }
+            NoRemove '{fae04ec0-301f-11d3-bf4b-00c04f79efbc}'{
+              ForceRemove CommonPropertyPages{
+                ForceRemove '{031911C8-6148-4e25-B1B1-44BCA9A0C45C}'{
+                  val '' = s 'CReferencePathsGuid'
+                }
+                ForceRemove '{1E78F8DB-6C07-4d61-A18F-7514010ABD56}'{
+                  val '' = s 'CBuildEventsPropPg2Guid'
+                }
+                ForceRemove '{5E9A8AC2-4F34-4521-858F-4C248BA31532}'{
+                  val '' = s 'CSharpApplicationPgGuid'
+                }
+                ForceRemove '{CC4014F5-B18D-439C-9352-F99D984CCA85}'{
+                  val '' = s 'CPublishPropPg2Guid'
+                }
+                ForceRemove '{DF8F7042-0BB1-47D1-8E6D-DEB3D07698BD}'{
+                  val '' = s 'CSecurityPropPg2Guid'
+                }
+                ForceRemove '{F8D6553F-F752-4DBF-ACB6-F291B744A792}'{
+                  val '' = s 'CVbSigningPropPgGuid'
+                }
+                ForceRemove '{35a69422-a11a-4ce8-8962-061dfabb02eb}'{
+                  val '' = s 'ContractsPropertyPageID'
+                }
+              }
+            }
+          }
+          NoRemove NewProjectTemplates
+          {               
+            NoRemove TemplateDirs
+            {
+                ForceRemove %ProjectFactoryGuid%
+                {
+                    ForceRemove 1 = s '%LanguageShortName% Projects'
+                    {
+                        val NewProjectDialogOnly = d 0                          
+                        val TemplatesDir = s '%TemplatePath%Projects'
+                        val SortPriority = d 41
+                    }
+                }
+            }
+          }
+
+          NoRemove InstalledProducts
+          {
+            ForceRemove %LanguageShortName%
+            {
+                val DefaultProductAttribute = s '%LanguageShortName%'
+                val Package = s '%PackageGuid%'
+                val UseInterface = d 1
+            }
+          }
+
+          NoRemove Languages
+          {
+            NoRemove 'File Extensions'
+            {
+                ForceRemove .%SourceFileExtension% = s '%LanguageServiceGuid%'
+                {
+                    val Name = s '%LanguageShortName%'
+                }
+                ForceRemove .xaml = s '{5A21E8A9-6491-43c6-8058-57A6C73459AC}'
+                {
+                    val Name = s 'Xaml'
+                }
+            }
+
+            NoRemove 'Language Services'
+            {
+                ForceRemove %LanguageShortName% = s '%LanguageServiceGuid%'
+                {
+                    val Package = s '%PackageGuid%'
+                    val LangResId = d 0
+                    val RequestStockColors = d %RequestStockColors%
+                    val QuickInfo = d 1
+                    val CodeSense = d 1
+                    val CodeSenseDelay = d %CodeSenseDelay%
+                    val CodeSenseFastOnLineChange = d 1
+                    val MatchBraces = d 1
+                    val MatchBracesAtCaret = d 0
+                    val ShowCompletion = d 1
+                    val ShowMatchingBrace = d 1
+                    val SortMemberList = d 1
+                    val MaxErrorMessages = d 1000
+                }
+                ForceRemove Xaml = s '{5A21E8A9-6491-43c6-8058-57A6C73459AC}'
+                {
+                    val Package = s '%PackageGuid%'
+                    val LangResId = d 0
+                    val RequestStockColors = d %RequestStockColors%
+                    val QuickInfo = d 1
+                    val CodeSense = d 1
+                    val CodeSenseDelay = d %CodeSenseDelay%
+                    val CodeSenseFastOnLineChange = d 1
+                    val MatchBraces = d 1
+                    val MatchBracesAtCaret = d 0
+                    val ShowCompletion = d 1
+                    val ShowMatchingBrace = d 1
+                    val SortMemberList = d 1
+                    val MaxErrorMessages = d 1000
+                }
+            }
+          }
+
+          NoRemove Services
+          {
+              ForceRemove %LanguageServiceGuid% = s '%PackageGuid%'
+              {
+                  val Name = s '%LanguageShortName% Language Service'
+              }
+              ForceRemove '{6ef71237-5832-4cd5-a75c-067911af5d14}' = s '{da85543e-97ec-4478-90ec-45cbcb4fa5c2}'{
+                  val Name = s 'ITaskManagerFactory Service'
+              }
+          }      
+		  NoRemove CLSID 
+		  {
+			  ForceRemove {5F6609AD-2EC5-4f95-856B-1C7716687512} = s 'Microsoft.SpecSharp.BuildPropertyPage'
+			  {
+
+				  ForceRemove InprocServer32 = s '%MODULE%'
+				  {
+					  val 'ThreadingModel' = s 'Both'
+					  val 'Class' = s 'Microsoft.SpecSharp.BuildPropertyPage'
+					  val 'Assembly' = s '%ASSEMBLY%'
+					  val 'RuntimeVersion' = s '%URTVER%'
+
+					  ForceRemove %ASSEMBLYVERSION%
+					  {
+						  val 'Class' = s 'Microsoft.SpecSharp.BuildPropertyPage'
+						  val 'Assembly' = s '%ASSEMBLY%
+						  val 'RuntimeVersion' = s '%URTVER%'
+					  }
+
+				  }
+				  ForceRemove ProgId = s 'Microsoft.SpecSharp.BuildPropertyPage'
+
+				  ForceRemove 'Implemented Categories'
+				  {
+					  ForceRemove {62C8FE65-4EBB-45E7-B440-6E39B2CDBF29}
+				  }
+			  }
+		  }
+        } 
+      }
+    } 
+  }
+}

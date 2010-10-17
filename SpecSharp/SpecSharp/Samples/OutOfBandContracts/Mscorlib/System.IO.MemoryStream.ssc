@@ -1,0 +1,109 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.IO
+{
+
+    public class MemoryStream
+    {
+
+        public Int64 Position
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+            requires value <= 2147483647 otherwise ArgumentOutOfRangeException;
+        }
+
+        public bool CanWrite
+        {
+          get;
+        }
+
+        public bool CanSeek
+        {
+          get;
+        }
+
+        public Int64 Length
+        {
+          get;
+        }
+
+        public int Capacity
+        {
+          get;
+          set;
+        }
+
+        public bool CanRead
+        {
+          get;
+        }
+
+        public void WriteTo (Stream! stream)
+            requires stream != null otherwise ArgumentNullException;
+
+        public void WriteByte (byte value);
+
+        public void Write (Byte[]! buffer, int offset, int count)
+            requires buffer != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+            requires (buffer.Length - offset) >= count otherwise ArgumentException;
+
+        public Byte[] ToArray ();
+
+        public void SetLength (Int64 value)
+            requires value <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+
+        public Int64 Seek (Int64 offset, SeekOrigin loc)
+            requires offset <= 2147483647 otherwise ArgumentOutOfRangeException;
+            requires offset >= 0 otherwise IOException;
+
+        public int ReadByte ();
+
+        public int Read (Byte[]! buffer, int offset, int count)
+            requires buffer != null otherwise ArgumentNullException;
+            requires offset >= 0 otherwise ArgumentOutOfRangeException;
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+            requires (buffer.Length - offset) >= count otherwise ArgumentException;
+
+        public Byte[] GetBuffer ();
+
+        public void Flush ();
+
+        public void Close ();
+
+        public MemoryStream (Byte[]! buffer, int index, int count, bool writable, bool publiclyVisible)
+            requires buffer != null otherwise ArgumentNullException;
+            requires index >= 0 otherwise ArgumentOutOfRangeException;
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+            requires (buffer.Length - index) >= count otherwise ArgumentException;
+
+        public MemoryStream (Byte[] buffer, int index, int count, bool writable);
+
+        public MemoryStream (Byte[] buffer, int index, int count);
+
+        public MemoryStream (Byte[]! buffer, bool writable)
+            requires buffer != null otherwise ArgumentNullException;
+
+        public MemoryStream (Byte[] buffer);
+
+        public MemoryStream (int capacity)
+            requires capacity >= 0 otherwise ArgumentOutOfRangeException;
+
+        public MemoryStream ();
+    }
+}

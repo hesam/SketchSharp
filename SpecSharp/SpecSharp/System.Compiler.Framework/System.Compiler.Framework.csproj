@@ -1,0 +1,267 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
+  <PropertyGroup>
+    <ProjectType>Local</ProjectType>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{5D3B8B5B-703E-4843-ABF3-A864F5B6ADA3}</ProjectGuid>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <ApplicationIcon>
+    </ApplicationIcon>
+    <AssemblyKeyContainerName>
+    </AssemblyKeyContainerName>
+    <AssemblyName>System.Compiler.Framework</AssemblyName>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
+    <DefaultClientScript>JScript</DefaultClientScript>
+    <DefaultHTMLPageLayout>Grid</DefaultHTMLPageLayout>
+    <DefaultTargetSchema>IE50</DefaultTargetSchema>
+    <DelaySign>false</DelaySign>
+    <OutputType>Library</OutputType>
+    <RootNamespace>System.Compiler</RootNamespace>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <StartupObject>
+    </StartupObject>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <SpecSharpBinPath>..\Microsoft.SpecSharp\LastKnownGood8</SpecSharpBinPath>
+    <NoStdLib>True</NoStdLib>
+    <OldToolsVersion>2.0</OldToolsVersion>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <OutputPath>bin\</OutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <BaseAddress>0</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants>TRACE;DEBUG;WHIDBEY</DefineConstants>
+    <DocumentationFile>System.Compiler.Framework.xml</DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <IncrementalBuild>false</IncrementalBuild>
+    <NoWarn>1595;1591;1587;1572;1573;1699</NoWarn>
+    <Optimize>false</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <OutputPath>bin\</OutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <BaseAddress>0</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants>WHIDBEY</DefineConstants>
+    <DocumentationFile>System.Compiler.Framework.xml</DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <IncrementalBuild>false</IncrementalBuild>
+    <NoWarn>1595;1591;1587;1572;1573;1699</NoWarn>
+    <Optimize>true</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'DebugCommandLine'">
+    <OutputPath>bin\</OutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <BaseAddress>0</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants>DEBUG;TRACE;WHIDBEY</DefineConstants>
+    <DocumentationFile>System.Compiler.Framework.xml</DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <IncrementalBuild>false</IncrementalBuild>
+    <NoWarn>1595;1591;1587;1572;1573;1699</NoWarn>
+    <Optimize>false</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'DebugNoData' ">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;WHIDBEY;NoData;NoRuntimeXml</DefineConstants>
+    <BaseAddress>0</BaseAddress>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DocumentationFile>System.Compiler.Framework.xml</DocumentationFile>
+    <NoWarn>1595;1591;1587;1572;1573;1699</NoWarn>
+    <NoStdLib>true</NoStdLib>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Mscorlib">
+      <Name>Mscorlib</Name>
+    </Reference>
+    <Reference Include="System">
+      <Name>System</Name>
+    </Reference>
+    <Reference Include="System.Data">
+      <Name>System.Data</Name>
+    </Reference>
+    <Reference Include="System.Xml">
+      <Name>System.XML</Name>
+    </Reference>
+    <ProjectReference Include="..\System.Compiler.Runtime\System.Compiler.Runtime.csproj">
+      <Project>{5BEE6906-9652-47B4-B617-368E9598B449}</Project>
+      <Package>{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</Package>
+      <Name>System.Compiler.Runtime9</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\System.Compiler\System.Compiler.csproj">
+      <Project>{D7E16B38-3893-4EEF-847F-A3BE807E9546}</Project>
+      <Package>{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</Package>
+      <Name>System.Compiler9</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\Common\Include\version.cs">
+      <Link>version.cs</Link>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Analysis\CciUtils.cs" />
+    <Compile Include="Analysis\CFG.cs" />
+    <Compile Include="Analysis\CFGanalysis.cs" />
+    <Compile Include="Analysis\CodeFlattener.cs" />
+    <Compile Include="Analysis\CodePrinter.cs" />
+    <Compile Include="Analysis\ControlFlow.cs" />
+    <Compile Include="Analysis\DataStructUtils.cs" />
+    <Compile Include="Analysis\DefiniteAssignmentAnalysis.cs" />
+    <Compile Include="Analysis\EGraph.cs" />
+    <Compile Include="Analysis\EmptyVisitor.cs" />
+    <Compile Include="Analysis\ExposureAnalysis.cs" />
+    <Compile Include="Analysis\InstructionVisitor.cs" />
+    <Compile Include="Analysis\NonNullAnalysis.cs" />
+    <Compile Include="Analysis\ObjectConsistencyAnalysis.cs" />
+    <Compile Include="Analysis\ObjectExposureAnalysis.cs" />
+    <Compile Include="Analysis\PointsTo\CallGraph.cs" />
+    <Compile Include="Analysis\PointsTo\PointsToAnalysis.cs" />
+    <Compile Include="Analysis\PointsTo\PointsToAndEffectsAnnotations.cs" />
+    <Compile Include="Analysis\PointsTo\PTGraph.cs" />
+    <Compile Include="Analysis\PointsTo\Set.cs" />
+    <Compile Include="Analysis\PurityAnalysis.cs" />
+    <Compile Include="Analysis\ReentrancyAnalysis.cs" />
+    <Compile Include="Analysis\StackDepthAnalysis.cs" />
+    <Compile Include="Analysis\StronglyConnectedComps.cs" />
+    <Compile Include="AssemblyInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Analysis\Analyzer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\Checker.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\CodeDom.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\Compiler.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\Declarer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\Error.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\Evaluator.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\Finders.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\GuardedFieldAccessInstrumenter.cs" />
+    <Compile Include="Compiler\Looker.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\Normalizer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\Optimizer.cs" />
+    <Compile Include="Compiler\Partitioner.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\Passer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\PathWrapper.cs" />
+    <Compile Include="Compiler\Resolver.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\Runtime.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\Scoper.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\TypeSystem.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Compiler\Verifier.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Debugger\Debugger.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Debugger\ExpressionEval.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="LanguageService\LanguageService.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="LanguageService\Scanner.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Query\QueryComposer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Query\TypeSystem.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Query\XmlHelper.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Serializer\DeserializerParser.cs" />
+    <Compile Include="Serializer\DeserializerScanner.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Serializer\Serializer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <EmbeddedResource Include="Compiler\ErrorMessages.ResX">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <AppDesigner Include="Properties\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Serializer\Deserializer.atg" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+  <!-- <Import Project="$(SpecSharpBinPath)\Microsoft.SpecSharp.Targets" /> -->
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
+    <SccAuxPath>
+    </SccAuxPath>
+  </PropertyGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>

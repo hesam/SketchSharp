@@ -1,0 +1,39 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.ComponentModel {
+  // Summary:
+  //     Defines identifiers that indicate the persistence scope of a tab in the Properties
+  //     window.
+  public enum PropertyTabScope {
+    // Summary:
+    //     This tab is added to the Properties window and cannot be removed.
+    Static = 0,
+    //
+    // Summary:
+    //     This tab is added to the Properties window and can only be removed explicitly
+    //     by a parent component.
+    Global = 1,
+    //
+    // Summary:
+    //     This tab is specific to the current document. This tab is added to the Properties
+    //     window and is removed when the currently selected document changes.
+    Document = 2,
+    //
+    // Summary:
+    //     This tab is specific to the current component. This tab is added to the Properties
+    //     window for the current component only and is removed when the component is
+    //     no longer selected.
+    Component = 3,
+  }
+}

@@ -1,0 +1,71 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Runtime.Remoting.Contexts
+{
+
+    public class Context
+    {
+
+        public IContextProperty[] ContextProperties
+        {
+          get;
+        }
+
+        public int ContextID
+        {
+          get;
+        }
+
+        public static Context DefaultContext
+        {
+          get;
+        }
+
+        public static bool UnregisterDynamicProperty (string! name, ContextBoundObject obj, Context ctx)
+            requires name != null otherwise ArgumentNullException;
+            requires obj == null || ctx == null otherwise ArgumentException;
+
+        public static bool RegisterDynamicProperty (IDynamicProperty! prop, ContextBoundObject obj, Context ctx)
+            requires prop != null otherwise ArgumentNullException;
+            requires obj == null || ctx == null otherwise ArgumentException;
+
+        public static object GetData (LocalDataStoreSlot slot);
+
+        public static void SetData (LocalDataStoreSlot slot, object data);
+
+        public static void FreeNamedDataSlot (string name);
+
+        public static LocalDataStoreSlot GetNamedDataSlot (string name);
+
+        public static LocalDataStoreSlot AllocateNamedDataSlot (string name);
+
+        public static LocalDataStoreSlot AllocateDataSlot ();
+
+        public void DoCallBack (CrossContextDelegate! deleg)
+            requires deleg != null otherwise ArgumentNullException;
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public void Freeze ();
+
+        public void SetProperty (IContextProperty! prop)
+            requires prop != null otherwise ArgumentNullException;
+
+        public IContextProperty GetProperty (string name);
+
+        public Context ();
+    }
+}

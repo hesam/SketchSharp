@@ -1,0 +1,50 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.CodeDom
+{
+
+    public class CodeAttributeDeclarationCollection
+    {
+
+        public CodeAttributeDeclaration this [int index]
+        {
+          get;
+          set;
+        }
+
+        public void Remove (CodeAttributeDeclaration value);
+
+        public void Insert (int index, CodeAttributeDeclaration value);
+
+        public int IndexOf (CodeAttributeDeclaration value);
+
+        public void CopyTo (CodeAttributeDeclaration[] array, int index);
+
+        public bool Contains (CodeAttributeDeclaration value);
+
+        public void AddRange (CodeAttributeDeclarationCollection! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public void AddRange (CodeAttributeDeclaration[]! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public int Add (CodeAttributeDeclaration value);
+
+        public CodeAttributeDeclarationCollection (CodeAttributeDeclaration[] value);
+
+        public CodeAttributeDeclarationCollection (CodeAttributeDeclarationCollection value);
+
+        public CodeAttributeDeclarationCollection ();
+    }
+}

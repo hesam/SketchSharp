@@ -1,0 +1,35 @@
+HKLM
+{
+ NoRemove Software 
+ { 
+  Microsoft 
+  { 
+   VisualStudio 
+   { 
+    %VsVersion% 
+    {
+      NoRemove AD7Metrics
+      {
+          NoRemove ExpressionEvaluator
+          {
+              ForceRemove %DebuggerLanguageGuid%
+              { 
+                  ForceRemove {994b45c4-e6e9-11d2-903f-00c04fa302a1}
+                  {
+                      val CLSID = s '%DebuggerEEGuid%'
+                      val Name  = s '%LanguageName%'
+                      val Language = s '%LanguageName%'
+                      ForceRemove Engine 
+                      {
+                          val 0 = s '%ManagedOnlyDebuggerEEGuid%'
+                          val 1 = s '%ManagedPlusNativeDebuggerEEGuid%'
+                      }
+                  }
+              }
+          }
+      }
+    } 
+   }
+  } 
+ }
+}

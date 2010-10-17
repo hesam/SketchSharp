@@ -1,0 +1,990 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using System.IO;
+using System.Text;
+using System.Xml.XPath;
+using Microsoft.Contracts;
+
+namespace System.Xml
+{
+  // Summary:
+  //     Represents a writer that provides a fast, non-cached, forward-only means
+  //     of generating streams or files containing XML data.
+  public abstract class XmlWriter
+  {
+    // Summary:
+    //     Initializes a new instance of the System.Xml.XmlWriter class.
+    protected XmlWriter();
+
+    // Summary:
+    //     Gets the System.Xml.XmlWriterSettings object used to create this System.Xml.XmlWriter
+    //     instance.
+    //
+    // Returns:
+    //     The System.Xml.XmlWriterSettings object used to create this writer instance.
+    //     If this writer was not created using the Overload:System.Xml.XmlWriter.Create
+    //     method, this property returns null.
+    public virtual XmlWriterSettings Settings { get; }
+    //
+    // Summary:
+    //     When overridden in a derived class, gets the state of the writer.
+    //
+    // Returns:
+    //     One of the System.Xml.WriteState values.
+    public abstract WriteState WriteState { get; }
+    //
+    // Summary:
+    //     When overridden in a derived class, gets the current xml:lang scope.
+    //
+    // Returns:
+    //     The current xml:lang or null if there is no xml:lang in the current scope.
+    public virtual string XmlLang { get; }
+    //
+    // Summary:
+    //     When overridden in a derived class, gets an System.Xml.XmlSpace representing
+    //     the current xml:space scope.
+    //
+    // Returns:
+    //     An XmlSpace representing the current xml:space scope.Value Meaning NoneThis
+    //     is the default if no xml:space scope exists. DefaultThe current scope is
+    //     xml:space="default". PreserveThe current scope is xml:space="preserve". 
+    public virtual XmlSpace XmlSpace { get; }
+
+    // Summary:
+    //     When overridden in a derived class, closes this stream and the underlying
+    //     stream.
+    //
+    // Exceptions:
+    //   System.InvalidOperationException:
+    //     A call is made to write more output after Close has been called or the result
+    //     of this call is an invalid XML document.
+    public abstract void Close();
+    //
+    // Summary:
+    //     Creates a new System.Xml.XmlWriter instance using the specified stream.
+    //
+    // Parameters:
+    //   output:
+    //     The stream to which you want to write. The System.Xml.XmlWriter writes XML
+    //     1.0 text syntax and appends it to the specified stream.
+    //
+    // Returns:
+    //     An System.Xml.XmlWriter object.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     The stream value is null.
+    public static XmlWriter! Create(Stream! output);
+      ensures result.IsNew;
+    //
+    // Summary:
+    //     Creates a new System.Xml.XmlWriter instance using the specified filename.
+    //
+    // Parameters:
+    //   outputFileName:
+    //     The file to which you want to write. The System.Xml.XmlWriter creates a file
+    //     at the specified path and writes to it in XML 1.0 text syntax. The outputFileName
+    //     must be a file system path.
+    //
+    // Returns:
+    //     An System.Xml.XmlWriter object.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     The url value is null.
+    public static XmlWriter! Create(string! outputFileName);
+      ensures result.IsNew;
+    //
+    // Summary:
+    //     Creates a new System.Xml.XmlWriter instance using the specified System.Text.StringBuilder.
+    //
+    // Parameters:
+    //   output:
+    //     The System.Text.StringBuilder to which to write to. Content written by the
+    //     System.Xml.XmlWriter is appended to the System.Text.StringBuilder.
+    //
+    // Returns:
+    //     An System.Xml.XmlWriter object.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     The builder value is null.
+    public static XmlWriter! Create(StringBuilder! output);
+      ensures result.IsNew;
+    //
+    // Summary:
+    //     Creates a new System.Xml.XmlWriter instance using the specified System.IO.TextWriter.
+    //
+    // Parameters:
+    //   output:
+    //     The System.IO.TextWriter to which you want to write. The System.Xml.XmlWriter
+    //     writes XML 1.0 text syntax and appends it to the specified System.IO.TextWriter.
+    //
+    // Returns:
+    //     An System.Xml.XmlWriter object.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     The text value is null.
+    public static XmlWriter! Create(TextWriter! output);
+      ensures result.IsNew;
+    //
+    // Summary:
+    //     Creates a new System.Xml.XmlWriter instance using the specified System.Xml.XmlWriter
+    //     object.
+    //
+    // Parameters:
+    //   output:
+    //     The System.Xml.XmlWriter object that you want to use as the underlying writer.
+    //
+    // Returns:
+    //     An System.Xml.XmlWriter object that is wrapped around the specified System.Xml.XmlWriter
+    //     object.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     The writer value is null.
+    public static XmlWriter! Create(XmlWriter! output);
+      ensures result.IsNew;
+    //
+    // Summary:
+    //     Creates a new System.Xml.XmlWriter instance using the stream and System.Xml.XmlWriterSettings
+    //     object.
+    //
+    // Parameters:
+    //   output:
+    //     The stream to which you want to write. The System.Xml.XmlWriter writes XML
+    //     1.0 text syntax and appends it to the specified stream
+    //
+    //   settings:
+    //     The System.Xml.XmlWriterSettings object used to configure the new System.Xml.XmlWriter
+    //     instance. If this is null, a System.Xml.XmlWriterSettings with default settings
+    //     is used.If the System.Xml.XmlWriter is being used with the System.Xml.Xsl.XslCompiledTransform.Transform(System.String,System.Xml.XmlWriter)
+    //     method, you should use the System.Xml.Xsl.XslCompiledTransform.OutputSettings
+    //     property to obtain an System.Xml.XmlWriterSettings object with the correct
+    //     settings. This ensures that the created System.Xml.XmlWriter object has the
+    //     correct output settings.
+    //
+    // Returns:
+    //     An System.Xml.XmlWriter object.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     The stream value is null.
+    public static XmlWriter! Create(Stream! output, XmlWriterSettings settings);
+      ensures result.IsNew;
+    //
+    // Summary:
+    //     Creates a new System.Xml.XmlWriter instance using the filename and System.Xml.XmlWriterSettings
+    //     object.
+    //
+    // Parameters:
+    //   outputFileName:
+    //     The file to which you want to write. The System.Xml.XmlWriter creates a file
+    //     at the specified path and writes to it in XML 1.0 text syntax. The outputFileName
+    //     must be a file system path.
+    //
+    //   settings:
+    //     The System.Xml.XmlWriterSettings object used to configure the new System.Xml.XmlWriter
+    //     instance. If this is null, a System.Xml.XmlWriterSettings with default settings
+    //     is used.If the System.Xml.XmlWriter is being used with the System.Xml.Xsl.XslCompiledTransform.Transform(System.String,System.Xml.XmlWriter)
+    //     method, you should use the System.Xml.Xsl.XslCompiledTransform.OutputSettings
+    //     property to obtain an System.Xml.XmlWriterSettings object with the correct
+    //     settings. This ensures that the created System.Xml.XmlWriter object has the
+    //     correct output settings.
+    //
+    // Returns:
+    //     An System.Xml.XmlWriter object.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     The url value is null.
+    public static XmlWriter! Create(string! outputFileName, XmlWriterSettings settings);
+      ensures result.IsNew;
+    //
+    // Summary:
+    //     Creates a new System.Xml.XmlWriter instance using the System.Text.StringBuilder
+    //     and System.Xml.XmlWriterSettings objects.
+    //
+    // Parameters:
+    //   output:
+    //     The System.Text.StringBuilder to which to write to. Content written by the
+    //     System.Xml.XmlWriter is appended to the System.Text.StringBuilder.
+    //
+    //   settings:
+    //     The System.Xml.XmlWriterSettings object used to configure the new System.Xml.XmlWriter
+    //     instance. If this is null, a System.Xml.XmlWriterSettings with default settings
+    //     is used.If the System.Xml.XmlWriter is being used with the System.Xml.Xsl.XslCompiledTransform.Transform(System.String,System.Xml.XmlWriter)
+    //     method, you should use the System.Xml.Xsl.XslCompiledTransform.OutputSettings
+    //     property to obtain an System.Xml.XmlWriterSettings object with the correct
+    //     settings. This ensures that the created System.Xml.XmlWriter object has the
+    //     correct output settings.
+    //
+    // Returns:
+    //     An System.Xml.XmlWriter object.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     The builder value is null.
+    public static XmlWriter! Create(StringBuilder! output, XmlWriterSettings settings);
+    //
+    // Summary:
+    //     Creates a new System.Xml.XmlWriter instance using the System.IO.TextWriter
+    //     and System.Xml.XmlWriterSettings objects.
+    //
+    // Parameters:
+    //   output:
+    //     The System.IO.TextWriter to which you want to write. The System.Xml.XmlWriter
+    //     writes XML 1.0 text syntax and appends it to the specified System.IO.TextWriter.
+    //
+    //   settings:
+    //     The System.Xml.XmlWriterSettings object used to configure the new System.Xml.XmlWriter
+    //     instance. If this is null, a System.Xml.XmlWriterSettings with default settings
+    //     is used.If the System.Xml.XmlWriter is being used with the System.Xml.Xsl.XslCompiledTransform.Transform(System.String,System.Xml.XmlWriter)
+    //     method, you should use the System.Xml.Xsl.XslCompiledTransform.OutputSettings
+    //     property to obtain an System.Xml.XmlWriterSettings object with the correct
+    //     settings. This ensures that the created System.Xml.XmlWriter object has the
+    //     correct output settings.
+    //
+    // Returns:
+    //     An System.Xml.XmlWriter object.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     The text value is null.
+    public static XmlWriter! Create(TextWriter! output, XmlWriterSettings settings);
+      ensures result.IsNew;
+    //
+    // Summary:
+    //     Creates a new System.Xml.XmlWriter instance using the specified System.Xml.XmlWriter
+    //     and System.Xml.XmlWriterSettings objects.
+    //
+    // Parameters:
+    //   output:
+    //     The System.Xml.XmlWriter object that you want to use as the underlying writer.
+    //
+    //   settings:
+    //     The System.Xml.XmlWriterSettings object used to configure the new System.Xml.XmlWriter
+    //     instance. If this is null, a System.Xml.XmlWriterSettings with default settings
+    //     is used.If the System.Xml.XmlWriter is being used with the System.Xml.Xsl.XslCompiledTransform.Transform(System.String,System.Xml.XmlWriter)
+    //     method, you should use the System.Xml.Xsl.XslCompiledTransform.OutputSettings
+    //     property to obtain an System.Xml.XmlWriterSettings object with the correct
+    //     settings. This ensures that the created System.Xml.XmlWriter object has the
+    //     correct output settings.
+    //
+    // Returns:
+    //     An System.Xml.XmlWriter object that is wrapped around the specified System.Xml.XmlWriter
+    //     object.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     The writer value is null.
+    public static XmlWriter! Create(XmlWriter! output, XmlWriterSettings settings);
+      ensures result.IsNew;
+    //
+    // Summary:
+    //     Releases the unmanaged resources used by the System.Xml.XmlWriter and optionally
+    //     releases the managed resources.
+    //
+    // Parameters:
+    //   disposing:
+    //     true to release both managed and unmanaged resources; false to release only
+    //     unmanaged resources.
+    protected virtual void Dispose(bool disposing);
+    //
+    // Summary:
+    //     When overridden in a derived class, flushes whatever is in the buffer to
+    //     the underlying streams and also flushes the underlying stream.
+    public abstract void Flush();
+    //
+    // Summary:
+    //     When overridden in a derived class, returns the closest prefix defined in
+    //     the current namespace scope for the namespace URI.
+    //
+    // Parameters:
+    //   ns:
+    //     The namespace URI whose prefix you want to find.
+    //
+    // Returns:
+    //     The matching prefix or null if no matching namespace URI is found in the
+    //     current scope.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     ns is either null or String.Empty.
+    public abstract string LookupPrefix(string ns);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes out all the attributes found at
+    //     the current position in the System.Xml.XmlReader.
+    //
+    // Parameters:
+    //   reader:
+    //     The XmlReader from which to copy the attributes.
+    //
+    //   defattr:
+    //     true to copy the default attributes from the XmlReader; otherwise, false.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     reader is null.
+    //
+    //   System.Xml.XmlException:
+    //     The reader is not positioned on an element, attribute or XmlDeclaration node.
+    public virtual void WriteAttributes(XmlReader reader, bool defattr);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes out the attribute with the specified
+    //     local name and value.
+    //
+    // Parameters:
+    //   localName:
+    //     The local name of the attribute.
+    //
+    //   value:
+    //     The value of the attribute.
+    //
+    // Exceptions:
+    //   System.InvalidOperationException:
+    //     The state of writer is not WriteState.Element or writer is closed.
+    //
+    //   System.ArgumentException:
+    //     The xml:space or xml:lang attribute value is invalid.
+    public void WriteAttributeString(string localName, string value);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes an attribute with the specified
+    //     local name, namespace URI, and value.
+    //
+    // Parameters:
+    //   localName:
+    //     The local name of the attribute.
+    //
+    //   value:
+    //     The value of the attribute.
+    //
+    //   ns:
+    //     The namespace URI to associate with the attribute.
+    //
+    // Exceptions:
+    //   System.InvalidOperationException:
+    //     The state of writer is not WriteState.Element or writer is closed.
+    //
+    //   System.ArgumentException:
+    //     The xml:space or xml:lang attribute value is invalid.
+    public void WriteAttributeString(string localName, string ns, string value);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes out the attribute with the specified
+    //     prefix, local name, namespace URI, and value.
+    //
+    // Parameters:
+    //   localName:
+    //     The local name of the attribute.
+    //
+    //   prefix:
+    //     The namespace prefix of the attribute.
+    //
+    //   value:
+    //     The value of the attribute.
+    //
+    //   ns:
+    //     The namespace URI of the attribute.
+    //
+    // Exceptions:
+    //   System.InvalidOperationException:
+    //     The state of writer is not WriteState.Element or writer is closed.
+    //
+    //   System.ArgumentException:
+    //     The xml:space or xml:lang attribute value is invalid.
+    public void WriteAttributeString(string prefix, string localName, string ns, string value);
+    //
+    // Summary:
+    //     When overridden in a derived class, encodes the specified binary bytes as
+    //     Base64 and writes out the resulting text.
+    //
+    // Parameters:
+    //   count:
+    //     The number of bytes to write.
+    //
+    //   buffer:
+    //     Byte array to encode.
+    //
+    //   index:
+    //     The position in the buffer indicating the start of the bytes to write.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     The buffer length minus index is less than count.
+    //
+    //   System.ArgumentNullException:
+    //     buffer is null.
+    //
+    //   System.ArgumentOutOfRangeException:
+    //     index or count is less than zero.
+    public abstract void WriteBase64(byte[] buffer, int index, int count);
+    //
+    // Summary:
+    //     When overridden in a derived class, encodes the specified binary bytes as
+    //     BinHex and writes out the resulting text.
+    //
+    // Parameters:
+    //   count:
+    //     The number of bytes to write.
+    //
+    //   buffer:
+    //     Byte array to encode.
+    //
+    //   index:
+    //     The position in the buffer indicating the start of the bytes to write.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     The buffer length minus index is less than count.
+    //
+    //   System.ArgumentNullException:
+    //     buffer is null.
+    //
+    //   System.ArgumentOutOfRangeException:
+    //     index or count is less than zero.
+    public virtual void WriteBinHex(byte[] buffer, int index, int count);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes out a <![CDATA[...]]> block containing
+    //     the specified text.
+    //
+    // Parameters:
+    //   text:
+    //     The text to place inside the CDATA block.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     The text would result in a non-well formed XML document.
+    public abstract void WriteCData(string text);
+    //
+    // Summary:
+    //     When overridden in a derived class, forces the generation of a character
+    //     entity for the specified Unicode character value.
+    //
+    // Parameters:
+    //   ch:
+    //     The Unicode character for which to generate a character entity.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     The character is in the surrogate pair character range, 0xd800 - 0xdfff.
+    public abstract void WriteCharEntity(char ch);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes text one buffer at a time.
+    //
+    // Parameters:
+    //   count:
+    //     The number of characters to write.
+    //
+    //   buffer:
+    //     Character array containing the text to write.
+    //
+    //   index:
+    //     The position in the buffer indicating the start of the text to write.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     buffer is null.
+    //
+    //   System.ArgumentOutOfRangeException:
+    //     index or count is less than zero. -or-The buffer length minus index is less
+    //     than count; the call results in surrogate pair characters being split or
+    //     an invalid surrogate pair being written.
+    public abstract void WriteChars(char[] buffer, int index, int count);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes out a comment <!--...--> containing
+    //     the specified text.
+    //
+    // Parameters:
+    //   text:
+    //     Text to place inside the comment.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     The text would result in a non-well formed XML document.
+    public abstract void WriteComment(string text);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes the DOCTYPE declaration with the
+    //     specified name and optional attributes.
+    //
+    // Parameters:
+    //   pubid:
+    //     If non-null it also writes PUBLIC "pubid" "sysid" where pubid and sysid are
+    //     replaced with the value of the given arguments.
+    //
+    //   name:
+    //     The name of the DOCTYPE. This must be non-empty.
+    //
+    //   sysid:
+    //     If pubid is null and sysid is non-null it writes SYSTEM "sysid" where sysid
+    //     is replaced with the value of this argument.
+    //
+    //   subset:
+    //     If non-null it writes [subset] where subset is replaced with the value of
+    //     this argument.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     The value for name would result in invalid XML.
+    //
+    //   System.InvalidOperationException:
+    //     This method was called outside the prolog (after the root element).
+    public abstract void WriteDocType(string name, string pubid, string sysid, string subset);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes an element with the specified
+    //     local name and value.
+    //
+    // Parameters:
+    //   localName:
+    //     The local name of the element.
+    //
+    //   value:
+    //     The value of the element.
+    //
+    // Exceptions:
+    //   System.InvalidOperationException:
+    //     This results in an invalid XML document.
+    public void WriteElementString(string localName, string value);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes an element with the specified
+    //     local name, namespace URI, and value.
+    //
+    // Parameters:
+    //   localName:
+    //     The local name of the element.
+    //
+    //   value:
+    //     The value of the element.
+    //
+    //   ns:
+    //     The namespace URI to associate with the element.
+    //
+    // Exceptions:
+    //   System.InvalidOperationException:
+    //     This results in an invalid XML document.
+    public void WriteElementString(string localName, string ns, string value);
+    //
+    // Summary:
+    //     Writes an element with the specified local name, namespace URI, and value.
+    //
+    // Parameters:
+    //   localName:
+    //     The local name of the element.
+    //
+    //   prefix:
+    //     The prefix of the element.
+    //
+    //   value:
+    //     The value of the element.
+    //
+    //   ns:
+    //     The namespace URI of the element.
+    //
+    // Exceptions:
+    //   System.InvalidOperationException:
+    //     This results in an invalid XML document.
+    public void WriteElementString(string prefix, string localName, string ns, string value);
+    //
+    // Summary:
+    //     When overridden in a derived class, closes the previous System.Xml.XmlWriter.WriteStartAttribute(System.String,System.String)
+    //     call.
+    public abstract void WriteEndAttribute();
+    //
+    // Summary:
+    //     When overridden in a derived class, closes any open elements or attributes
+    //     and puts the writer back in the Start state.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     The XML document is invalid.
+    public abstract void WriteEndDocument();
+    //
+    // Summary:
+    //     When overridden in a derived class, closes one element and pops the corresponding
+    //     namespace scope.
+    //
+    // Exceptions:
+    //   System.InvalidOperationException:
+    //     This results in an invalid XML document.
+    public abstract void WriteEndElement();
+    //
+    // Summary:
+    //     When overridden in a derived class, writes out an entity reference as &name;.
+    //
+    // Parameters:
+    //   name:
+    //     The name of the entity reference.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     name is either null or String.Empty.
+    public abstract void WriteEntityRef(string name);
+    //
+    // Summary:
+    //     When overridden in a derived class, closes one element and pops the corresponding
+    //     namespace scope.
+    public abstract void WriteFullEndElement();
+    //
+    // Summary:
+    //     When overridden in a derived class, writes out the specified name, ensuring
+    //     it is a valid name according to the W3C XML 1.0 recommendation (http://www.w3.org/TR/1998/REC-xml-19980210#NT-Name).
+    //
+    // Parameters:
+    //   name:
+    //     The name to write.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     name is not a valid XML name; or name is either null or String.Empty.
+    public virtual void WriteName(string name);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes out the specified name, ensuring
+    //     it is a valid NmToken according to the W3C XML 1.0 recommendation (http://www.w3.org/TR/1998/REC-xml-19980210#NT-Name).
+    //
+    // Parameters:
+    //   name:
+    //     The name to write.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     name is not a valid NmToken; or name is either null or String.Empty.
+    public virtual void WriteNmToken(string name);
+    //
+    // Summary:
+    //     When overridden in a derived class, copies everything from the reader to
+    //     the writer and moves the reader to the start of the next sibling.
+    //
+    // Parameters:
+    //   reader:
+    //     The System.Xml.XmlReader to read from.
+    //
+    //   defattr:
+    //     true to copy the default attributes from the XmlReader; otherwise, false.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     reader is null.
+    public virtual void WriteNode(XmlReader reader, bool defattr);
+    //
+    // Summary:
+    //     Copies everything from the System.Xml.XPath.XPathNavigator object to the
+    //     writer. The position of the System.Xml.XPath.XPathNavigator remains unchanged.
+    //
+    // Parameters:
+    //   defattr:
+    //     true to copy the default attributes; otherwise, false.
+    //
+    //   navigator:
+    //     The System.Xml.XPath.XPathNavigator to copy from.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     navigator is null.
+    public virtual void WriteNode(XPathNavigator navigator, bool defattr);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes out a processing instruction with
+    //     a space between the name and text as follows: <?name text?>.
+    //
+    // Parameters:
+    //   name:
+    //     The name of the processing instruction.
+    //
+    //   text:
+    //     The text to include in the processing instruction.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     The text would result in a non-well formed XML document.name is either null
+    //     or String.Empty.This method is being used to create an XML declaration after
+    //     System.Xml.XmlWriter.WriteStartDocument() has already been called.
+    public abstract void WriteProcessingInstruction(string name, string text);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes out the namespace-qualified name.
+    //     This method looks up the prefix that is in scope for the given namespace.
+    //
+    // Parameters:
+    //   localName:
+    //     The local name to write.
+    //
+    //   ns:
+    //     The namespace URI for the name.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     localName is either null or String.Empty.localName is not a valid name. 
+    public virtual void WriteQualifiedName(string localName, string ns);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes raw markup manually from a string.
+    //
+    // Parameters:
+    //   data:
+    //     String containing the text to write.
+    public abstract void WriteRaw(string data);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes raw markup manually from a character
+    //     buffer.
+    //
+    // Parameters:
+    //   count:
+    //     The number of characters to write.
+    //
+    //   buffer:
+    //     Character array containing the text to write.
+    //
+    //   index:
+    //     The position within the buffer indicating the start of the text to write.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     buffer is null.
+    //
+    //   System.ArgumentOutOfRangeException:
+    //     index or count is less than zero. -or-The buffer length minus index is less
+    //     than count.
+    public abstract void WriteRaw(char[] buffer, int index, int count);
+    //
+    // Summary:
+    //     Writes the start of an attribute with the specified local name.
+    //
+    // Parameters:
+    //   localName:
+    //     The local name of the attribute.
+    public void WriteStartAttribute(string localName);
+    //
+    // Summary:
+    //     Writes the start of an attribute with the specified local name and namespace
+    //     URI.
+    //
+    // Parameters:
+    //   localName:
+    //     The local name of the attribute.
+    //
+    //   ns:
+    //     The namespace URI of the attribute.
+    public void WriteStartAttribute(string localName, string ns);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes the start of an attribute with
+    //     the specified prefix, local name, and namespace URI.
+    //
+    // Parameters:
+    //   localName:
+    //     The local name of the attribute.
+    //
+    //   prefix:
+    //     The namespace prefix of the attribute.
+    //
+    //   ns:
+    //     The namespace URI for the attribute.
+    public abstract void WriteStartAttribute(string prefix, string localName, string ns);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes the XML declaration with the version
+    //     "1.0".
+    //
+    // Exceptions:
+    //   System.InvalidOperationException:
+    //     This is not the first write method called after the constructor.
+    public abstract void WriteStartDocument();
+    //
+    // Summary:
+    //     When overridden in a derived class, writes the XML declaration with the version
+    //     "1.0" and the standalone attribute.
+    //
+    // Parameters:
+    //   standalone:
+    //     If true, it writes "standalone=yes"; if false, it writes "standalone=no".
+    //
+    // Exceptions:
+    //   System.InvalidOperationException:
+    //     This is not the first write method called after the constructor.
+    public abstract void WriteStartDocument(bool standalone);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes out a start tag with the specified
+    //     local name.
+    //
+    // Parameters:
+    //   localName:
+    //     The local name of the element.
+    //
+    // Exceptions:
+    //   System.InvalidOperationException:
+    //     The writer is closed.
+    public void WriteStartElement(string localName);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes the specified start tag and associates
+    //     it with the given namespace.
+    //
+    // Parameters:
+    //   localName:
+    //     The local name of the element.
+    //
+    //   ns:
+    //     The namespace URI to associate with the element. If this namespace is already
+    //     in scope and has an associated prefix, the writer automatically writes that
+    //     prefix also.
+    //
+    // Exceptions:
+    //   System.InvalidOperationException:
+    //     The writer is closed.
+    public void WriteStartElement(string localName, string ns);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes the specified start tag and associates
+    //     it with the given namespace and prefix.
+    //
+    // Parameters:
+    //   localName:
+    //     The local name of the element.
+    //
+    //   prefix:
+    //     The namespace prefix of the element.
+    //
+    //   ns:
+    //     The namespace URI to associate with the element.
+    //
+    // Exceptions:
+    //   System.InvalidOperationException:
+    //     The writer is closed.
+    public abstract void WriteStartElement(string prefix, string localName, string ns);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes the given text content.
+    //
+    // Parameters:
+    //   text:
+    //     The text to write.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     The text string contains an invalid surrogate pair.
+    public abstract void WriteString(string text);
+    //
+    // Summary:
+    //     When overridden in a derived class, generates and writes the surrogate character
+    //     entity for the surrogate character pair.
+    //
+    // Parameters:
+    //   highChar:
+    //     The high surrogate. This must be a value between 0xD800 and 0xDBFF.
+    //
+    //   lowChar:
+    //     The low surrogate. This must be a value between 0xDC00 and 0xDFFF.
+    //
+    // Exceptions:
+    //   System.Exception:
+    //     An invalid surrogate character pair was passed.
+    public abstract void WriteSurrogateCharEntity(char lowChar, char highChar);
+    //
+    // Summary:
+    //     Writes a System.Boolean value.
+    //
+    // Parameters:
+    //   value:
+    //     The System.Boolean value to write.
+    public virtual void WriteValue(bool value);
+    //
+    // Summary:
+    //     Writes a System.DateTime value.
+    //
+    // Parameters:
+    //   value:
+    //     The System.DateTime value to write.
+    public virtual void WriteValue(DateTime value);
+    //
+    // Summary:
+    //     Writes a System.Decimal value.
+    //
+    // Parameters:
+    //   value:
+    //     The System.Decimal value to write.
+    public virtual void WriteValue(decimal value);
+    //
+    // Summary:
+    //     Writes a System.Double value.
+    //
+    // Parameters:
+    //   value:
+    //     The System.Double value to write.
+    public virtual void WriteValue(double value);
+    //
+    // Summary:
+    //     Writes a single-precision floating-point number.
+    //
+    // Parameters:
+    //   value:
+    //     The single-precision floating-point number to write.
+    public virtual void WriteValue(float value);
+    //
+    // Summary:
+    //     Writes a System.Int32 value.
+    //
+    // Parameters:
+    //   value:
+    //     The System.Int32 value to write.
+    public virtual void WriteValue(int value);
+    //
+    // Summary:
+    //     Writes a System.Int64 value.
+    //
+    // Parameters:
+    //   value:
+    //     The System.Int64 value to write.
+    public virtual void WriteValue(long value);
+    //
+    // Summary:
+    //     Writes the object value.
+    //
+    // Parameters:
+    //   value:
+    //     The object value to write.
+    public virtual void WriteValue(object value);
+    //
+    // Summary:
+    //     Writes a System.String value.
+    //
+    // Parameters:
+    //   value:
+    //     The System.String value to write.
+    public virtual void WriteValue(string value);
+    //
+    // Summary:
+    //     When overridden in a derived class, writes out the given white space.
+    //
+    // Parameters:
+    //   ws:
+    //     The string of white space characters.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     The string contains non-white space characters.
+    public abstract void WriteWhitespace(string ws);
+  }
+}

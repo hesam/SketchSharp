@@ -1,0 +1,16 @@
+
+-------------------- RoadblockDup --------------------
+RoadblockDup.ssc(9,14): warning CS2613: Conversion to 'System.Collections.Generic.List<ElementType!>!' fails if the value is null
+RoadblockDup.ssc(18,14): warning CS2613: Conversion to 'System.Collections.Generic.List<ElementType!>!' fails if the value is null
+
+Spec# program verifier finished with 0 verified, 0 errors
+
+-------------------- ParamOut --------------------
+
+Spec# program verifier finished with 3 verified, 0 errors
+
+-------------------- MethodCallInContracts --------------------
+MethodCallInContracts.ssc(13,5): Error: Assertion might not hold: this.Identity<int>("abc", 0, true) == 1
+MethodCallInContracts.ssc(29,5): Error: Assertion might not hold: gc.Identity("abc", 0, true) == 1
+
+Spec# program verifier finished with 13 verified, 2 errors

@@ -1,0 +1,228 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using System.Reflection;
+using Microsoft.Contracts;
+
+namespace System
+{
+
+    public class AppDomain
+    {
+
+        public string RelativeSearchPath
+        {
+          get;
+        }
+
+        public AppDomainSetup SetupInformation
+        {
+          get;
+        }
+
+        public string FriendlyName
+        {
+          get;
+        }
+
+        public string BaseDirectory
+        {
+          get;
+        }
+
+        public System.Security.Policy.Evidence Evidence
+        {
+          get;
+        }
+
+        public bool ShadowCopyFiles
+        {
+          get;
+        }
+
+        public string DynamicDirectory
+        {
+          get;
+        }
+
+        public static AppDomain! CurrentDomain
+        {
+          get;
+        }
+
+        public object CreateInstanceFromAndUnwrap (string assemblyName, string typeName, bool ignoreCase, System.Reflection.BindingFlags bindingAttr, System.Reflection.Binder binder, Object[] args, System.Globalization.CultureInfo culture, Object[] activationAttributes, System.Security.Policy.Evidence securityAttributes);
+
+        public object CreateInstanceFromAndUnwrap (string assemblyName, string typeName, Object[] activationAttributes);
+
+        public object CreateInstanceFromAndUnwrap (string assemblyName, string typeName);
+
+        public object CreateInstanceAndUnwrap (string assemblyName, string typeName, bool ignoreCase, System.Reflection.BindingFlags bindingAttr, System.Reflection.Binder binder, Object[] args, System.Globalization.CultureInfo culture, Object[] activationAttributes, System.Security.Policy.Evidence securityAttributes);
+
+        public object CreateInstanceAndUnwrap (string assemblyName, string typeName, Object[] activationAttributes);
+
+        public object CreateInstanceAndUnwrap (string assemblyName, string typeName);
+
+        public void SetDynamicBase (string path);
+
+        public void SetShadowCopyFiles ();
+
+        public void SetShadowCopyPath (string path);
+
+        public static AppDomain CreateDomain (string! friendlyName, System.Security.Policy.Evidence securityInfo, AppDomainSetup info)
+            requires friendlyName != null otherwise ArgumentNullException;
+
+        public static AppDomain CreateDomain (string friendlyName);
+
+        public static AppDomain CreateDomain (string friendlyName, System.Security.Policy.Evidence securityInfo, string appBasePath, string appRelativeSearchPath, bool shadowCopyFiles);
+
+        public static AppDomain CreateDomain (string friendlyName, System.Security.Policy.Evidence securityInfo);
+
+        public void DoCallBack (CrossAppDomainDelegate! callBackDelegate)
+            requires callBackDelegate != null otherwise ArgumentNullException;
+
+        public object InitializeLifetimeService ();
+
+        public void SetPrincipalPolicy (System.Security.Principal.PrincipalPolicy policy);
+
+        public void SetThreadPrincipal (System.Security.Principal.IPrincipal! principal)
+            requires principal != null otherwise ArgumentNullException;
+
+        public void SetAppDomainPolicy (System.Security.Policy.PolicyLevel! domainPolicy)
+            requires domainPolicy != null otherwise ArgumentNullException;
+
+        public static void Unload (AppDomain! domain)
+            requires domain != null otherwise ArgumentNullException;
+
+        public static int GetCurrentThreadId ();
+
+        public object GetData (string! name)
+            requires name != null otherwise ArgumentNullException;
+
+        public void SetData (string! name, object data)
+            requires name != null otherwise ArgumentNullException;
+
+        public void SetCachePath (string path);
+
+        public void ClearShadowCopyPath ();
+
+        public void ClearPrivatePath ();
+
+        public void AppendPrivatePath (string path);
+
+        public bool IsFinalizingForUnload ();
+
+        public System.Reflection.Assembly[]! GetAssemblies ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string! ToString ();
+
+        public int ExecuteAssembly (string assemblyFile, System.Security.Policy.Evidence assemblySecurity, String[] args, Byte[] hashValue, System.Configuration.Assemblies.AssemblyHashAlgorithm hashAlgorithm);
+
+        public int ExecuteAssembly (string assemblyFile, System.Security.Policy.Evidence assemblySecurity, String[] args);
+
+        public int ExecuteAssembly (string assemblyFile);
+
+        public int ExecuteAssembly (string assemblyFile, System.Security.Policy.Evidence assemblySecurity);
+
+        public System.Reflection.Assembly Load (string assemblyString, System.Security.Policy.Evidence assemblySecurity);
+
+        public System.Reflection.Assembly Load (System.Reflection.AssemblyName assemblyRef, System.Security.Policy.Evidence assemblySecurity);
+
+        public System.Reflection.Assembly Load (Byte[] rawAssembly, Byte[] rawSymbolStore, System.Security.Policy.Evidence securityEvidence);
+
+        public System.Reflection.Assembly Load (Byte[] rawAssembly, Byte[] rawSymbolStore);
+
+        public System.Reflection.Assembly Load (Byte[] rawAssembly);
+
+        public System.Reflection.Assembly Load (string assemblyString);
+
+        public System.Reflection.Assembly Load (System.Reflection.AssemblyName assemblyRef);
+
+        public System.Runtime.Remoting.ObjectHandle CreateInstanceFrom (string assemblyFile, string typeName, bool ignoreCase, System.Reflection.BindingFlags bindingAttr, System.Reflection.Binder binder, Object[] args, System.Globalization.CultureInfo culture, Object[] activationAttributes, System.Security.Policy.Evidence securityAttributes)
+            requires this != null otherwise NullReferenceException;
+
+        public System.Runtime.Remoting.ObjectHandle CreateInstance (string! assemblyName, string typeName, bool ignoreCase, System.Reflection.BindingFlags bindingAttr, System.Reflection.Binder binder, Object[] args, System.Globalization.CultureInfo culture, Object[] activationAttributes, System.Security.Policy.Evidence securityAttributes)
+            requires this != null otherwise NullReferenceException;
+            requires assemblyName != null otherwise ArgumentNullException;
+
+        public System.Runtime.Remoting.ObjectHandle CreateInstanceFrom (string assemblyFile, string typeName, Object[] activationAttributes)
+            requires this != null otherwise NullReferenceException;
+
+        public System.Runtime.Remoting.ObjectHandle CreateInstance (string! assemblyName, string typeName, Object[] activationAttributes)
+            requires this != null otherwise NullReferenceException;
+            requires assemblyName != null otherwise ArgumentNullException;
+
+        public System.Runtime.Remoting.ObjectHandle CreateComInstanceFrom (string! assemblyFile, string typeName, Byte[] hashValue, System.Configuration.Assemblies.AssemblyHashAlgorithm hashAlgorithm)
+            requires this != null otherwise NullReferenceException;
+            requires assemblyFile != null otherwise ArgumentNullException;
+
+        public System.Runtime.Remoting.ObjectHandle CreateComInstanceFrom (string! assemblyName, string typeName)
+            requires this != null otherwise NullReferenceException;
+            requires assemblyName != null otherwise ArgumentNullException;
+
+        public System.Runtime.Remoting.ObjectHandle CreateInstanceFrom (string assemblyFile, string typeName)
+            requires this != null otherwise NullReferenceException;
+
+        public System.Runtime.Remoting.ObjectHandle CreateInstance (string! assemblyName, string typeName)
+            requires this != null otherwise NullReferenceException;
+            requires assemblyName != null otherwise ArgumentNullException;
+
+        public System.Reflection.Emit.AssemblyBuilder DefineDynamicAssembly (System.Reflection.AssemblyName name, System.Reflection.Emit.AssemblyBuilderAccess access, string dir, System.Security.Policy.Evidence evidence, System.Security.PermissionSet requiredPermissions, System.Security.PermissionSet optionalPermissions, System.Security.PermissionSet refusedPermissions, bool isSynchronized);
+
+        public System.Reflection.Emit.AssemblyBuilder DefineDynamicAssembly (System.Reflection.AssemblyName name, System.Reflection.Emit.AssemblyBuilderAccess access, string dir, System.Security.Policy.Evidence evidence, System.Security.PermissionSet requiredPermissions, System.Security.PermissionSet optionalPermissions, System.Security.PermissionSet refusedPermissions);
+
+        public System.Reflection.Emit.AssemblyBuilder DefineDynamicAssembly (System.Reflection.AssemblyName name, System.Reflection.Emit.AssemblyBuilderAccess access, System.Security.Policy.Evidence evidence, System.Security.PermissionSet requiredPermissions, System.Security.PermissionSet optionalPermissions, System.Security.PermissionSet refusedPermissions);
+
+        public System.Reflection.Emit.AssemblyBuilder DefineDynamicAssembly (System.Reflection.AssemblyName name, System.Reflection.Emit.AssemblyBuilderAccess access, string dir, System.Security.PermissionSet requiredPermissions, System.Security.PermissionSet optionalPermissions, System.Security.PermissionSet refusedPermissions);
+
+        public System.Reflection.Emit.AssemblyBuilder DefineDynamicAssembly (System.Reflection.AssemblyName name, System.Reflection.Emit.AssemblyBuilderAccess access, string dir, System.Security.Policy.Evidence evidence);
+
+        public System.Reflection.Emit.AssemblyBuilder DefineDynamicAssembly (System.Reflection.AssemblyName name, System.Reflection.Emit.AssemblyBuilderAccess access, System.Security.PermissionSet requiredPermissions, System.Security.PermissionSet optionalPermissions, System.Security.PermissionSet refusedPermissions);
+
+        public System.Reflection.Emit.AssemblyBuilder DefineDynamicAssembly (System.Reflection.AssemblyName name, System.Reflection.Emit.AssemblyBuilderAccess access, System.Security.Policy.Evidence evidence);
+
+        public System.Reflection.Emit.AssemblyBuilder DefineDynamicAssembly (System.Reflection.AssemblyName name, System.Reflection.Emit.AssemblyBuilderAccess access, string dir);
+
+        public System.Reflection.Emit.AssemblyBuilder DefineDynamicAssembly (System.Reflection.AssemblyName name, System.Reflection.Emit.AssemblyBuilderAccess access);
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)][ResultNotNewlyAllocated]
+        public Type GetType ();
+
+        public void remove_UnhandledException (UnhandledExceptionEventHandler value);
+
+        public void add_UnhandledException (UnhandledExceptionEventHandler value);
+
+        public void remove_AssemblyResolve (ResolveEventHandler value);
+
+        public void add_AssemblyResolve (ResolveEventHandler value);
+
+        public void remove_ResourceResolve (ResolveEventHandler value);
+
+        public void add_ResourceResolve (ResolveEventHandler value);
+
+        public void remove_TypeResolve (ResolveEventHandler value);
+
+        public void add_TypeResolve (ResolveEventHandler value);
+
+        public void remove_ProcessExit (EventHandler value);
+
+        public void add_ProcessExit (EventHandler value);
+
+        public void remove_AssemblyLoad (AssemblyLoadEventHandler value);
+
+        public void add_AssemblyLoad (AssemblyLoadEventHandler value);
+
+        public void remove_DomainUnload (EventHandler value);
+
+        public void add_DomainUnload (EventHandler value);
+    }
+}

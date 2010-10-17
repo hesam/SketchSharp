@@ -1,0 +1,581 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+namespace Microsoft.Boogie
+{
+  using System.Collections.Generic;
+  using Microsoft.Contracts;
+  using Cci = System.Compiler;
+  using Bpl = Microsoft.Boogie;
+
+  public class ExperimentalOwnershipModel : OwnershipModel {
+  
+    public ExperimentalOwnershipModel([Delayed] Sink! sink) {
+      base(sink);
+    }
+    
+    /* 
+    // Initially this was considered to possibly improve performance which did not work out in the end.
+    // Here is a performance comparison against the standard model with the code of 2007-06-26:
+    
+    //                    StandardOwnershipModel  ExperimentalOwnershipModel
+    //Whole test suite	  37m03sec	              69m53sec
+    //test12	            0m13sec	                0m15sec
+    //PrettySx	          2m17sec	                2m35sec
+    //WindowsCard	        1m27sec	                1m27sec
+    
+    // So the standard stays the 'StandardOwnershipModel' but with the flag /ownerModelEncoding:e the
+    // experimental version can be used.  It uses the ExperimentalObjectModel setting in PRELUDE.bpl.
+    */
+    
+    /// <summary>
+    /// Returns the expression:  heap[target, $writable]
+    /// </summary>
+    override internal Bpl.Expr! IsObjectWritable (Bpl.Expr! target, Bpl.Expr! heap)
+    {
+      // o.committed  <==>  
+      // o.ownerFrame != PeerGroupPlaceholder && o.ownerRef.inv <: o.ownerFrame && o.ownerRef.localinv != $baseClass(o.ownerFrame)
+      // that is:
+      // o.writable  <==>  
+      // o.ownerFrame == PeerGroupPlaceholder || !(o.ownerRef.inv <: o.ownerFrame) || o.ownerRef.localinv == $baseClass(o.ownerFrame)
+      
+      // new: o.ownerFrame == PeerGroupPlaceholder ||  !o.ownerRef.validfor[o.ownerFrame] 
+      Bpl.Expr unOwned = Bpl.Expr.Eq(OwnerClassFrame(target, heap), Sink.Ident(Prelude.PeerGroupPlaceholderName, sink.TypeType));
+      Bpl.Expr owExposed = Bpl.Expr.Not(ValidFor(OwnerRef(target, heap), OwnerClassFrame(target, heap), heap));
+      return Bpl.Expr.Or(unOwned, owExposed);
+    }
+    
+    
+    //*****************************************************
+    // Exposure:
+    //*****************************************************
+    
+    // o.inv == T && o.localinv == $typeof(o) 
+    // new: o.inv == T && (forall U : o.validFor[U] || (typeof(o) <: U && BaseClass(U) <: T)
+    // plus optional check for ! o.committed
+    // For !exactType, use "o.inv <: T" instead of "o.inv == T".
+    override internal Bpl.Expr! IsExposable (Bpl.Expr! targetObject, Cci.TypeNode! targetType, bool mentionWritable, bool exactType)
+    {
+      sink.AddType(targetType);
+      
+      // (forall U : o.validFor[U] || (typeof(o) <: U && BaseClass(U) <: T)
+      Bpl.Variable uVar = Sink.BoundVar("$U", sink.TypeType);
+      Bpl.Expr u = Sink.Ident(uVar);
+      Bpl.Expr a = ValidFor(targetObject, u, sink.HeapExpr());
+      Bpl.Expr b0 = Bpl.Expr.Subtype(sink.Function(Sink.BuiltinFunction.Typeof, targetObject), u);
+      Bpl.Expr b1 = Bpl.Expr.Subtype(sink.Function(Sink.BuiltinFunction.BaseClass, u), sink.TypeNameExpression(targetType));
+      Bpl.Expr c = Bpl.Expr.Or(a, Bpl.Expr.And(b0, b1));
+      // Trigger: target.validFor[U]
+      Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new ExprSeq(ValidFor(targetObject, u, sink.HeapExpr()))); 
+      Bpl.Expr d = new Bpl.ForallExpr(NoToken, new VariableSeq(uVar), tr, c);
+      
+      Bpl.Expr inv = InvField(targetObject, Prelude.HeapName);
+      Bpl.Expr t = sink.TypeNameExpression(targetType);
+      Bpl.Expr valid = 
+          Bpl.Expr.And(
+            exactType ? Bpl.Expr.Eq(inv, t) : Bpl.Expr.Subtype(inv, t),
+            d);
+      if (mentionWritable) {
+        return Bpl.Expr.And(IsObjectWritable(targetObject), valid);
+      } else {
+        return valid;
+      }
+    }
+    
+    //new: o.validFor[T]
+    override internal Bpl.Expr! IsLocalExposable (Bpl.Expr! targetObject, Cci.TypeNode! targetType, bool mentionWritable)
+    {
+      sink.AddType(targetType);
+        Bpl.Expr valid = 
+          ValidFor(targetObject, sink.TypeNameExpression(targetType), sink.HeapExpr(Prelude.HeapName));
+      if (mentionWritable) { 
+        return Bpl.Expr.And(IsObjectWritable(targetObject), valid);
+      } else {
+        return valid;
+      }
+    }
+    
+    /// <summary>
+    /// Returns:  !(targetObject.$inv SUBTYPE targetType) || targetObject.$localInv == supertype(targetType)
+    /// new: Returns: !(targetObject.validFor[targetType])
+    /// </summary>
+    override internal Bpl.Expr! IsLocallyExposed (Bpl.Expr! targetObject, Cci.TypeNode! targetType)
+    {
+      sink.AddType(targetType);
+      return Bpl.Expr.Not(ValidFor(targetObject, sink.TypeNameExpression(targetType), sink.HeapExpr()));
+    }
+    
+    override internal Bpl.Expr! IsExposed (Bpl.Expr! target, Bpl.Expr! frame, Bpl.IdentifierExpr! heap) {
+      // in StandardOwnershipModel: ! (target.inv <: frame /\  target.localinv != BaseClass(frame))
+      // here: !(target.validFor[frame])
+      return Bpl.Expr.Not(ValidFor(target, frame, heap));
+    }
+    
+    override public Bpl.Expr! IsAdditivelyExposed (Bpl.Expr! target, Bpl.Expr! frame, Bpl.IdentifierExpr! heap) {
+      // ! (target.inv <: frame)
+      return Bpl.Expr.Not(Bpl.Expr.Subtype(InvField(target, heap), frame));
+    }
+    
+    override public Bpl.Expr! IsLocallyExposed (Bpl.Expr! target, Cci.TypeNode! frame, Bpl.IdentifierExpr! heap) {
+      // in StandardOwnershipModel: target.localinv == base(frame)
+      // here: !(target.validFor[frame]) && target.inv <: frame
+      //  this means 'locally but not additively exposed', otherwise it makes no sense having
+      //  Is Exposed and IsAdditivelyExposed in addition to this!
+      Bpl.Expr c = Bpl.Expr.Not(ValidFor(target, sink.TypeNameExpression(frame), heap));
+      Bpl.Expr d = Bpl.Expr.Subtype(InvField(target, heap), sink.TypeNameExpression(frame));
+      return Bpl.Expr.And(c, d);
+    }
+    
+    override public Bpl.Trigger IsAdditivelyExposedTrigger (Bpl.Expr! target, Cci.TypeNode! frame, Bpl.IdentifierExpr! heap) {
+      return new Bpl.Trigger(NoToken, true, new Bpl.ExprSeq(Bpl.Expr.Subtype(InvField(target, heap), sink.TypeNameExpression(frame))));
+    }
+    
+    override public Bpl.Trigger ExposureTrigger (Bpl.Expr! target, Bpl.IdentifierExpr! heap) {
+      //in StandardOwnershipModel old trigger was: target.inv , target.localinv
+      // Trigger here: target.validFor
+      Bpl.Expr! e = Bpl.Expr.Select(heap, target, sink.Fields.ValidFor);
+      return new Bpl.Trigger(NoToken, true, new ExprSeq(e));
+    }
+    
+    override public Bpl.Expr! ExposureIsUnchanged (Bpl.Expr! target, Bpl.Expr! prevHeapExpr, Bpl.IdentifierExpr! postHeap) {
+      // in StandardOwnershipModel: old(target.inv) = target.inv && old(target.localinv) = target.localinv
+      //here: \forall T: (old(target.validFor[T]) == target.validFor[T]) && old(target.inv) = target.inv 
+      // this is only used 'free' and thus no "typeof(target) <: T" sanity check is required 
+      Bpl.Variable tVar = Sink.BoundVar("$T", sink.TypeType);
+      Bpl.Expr t = Sink.Ident(tVar);
+      Bpl.Expr d = Bpl.Expr.Eq(ValidFor(target, t, prevHeapExpr),ValidFor(target, t, sink.HeapExpr()));
+      Bpl.Expr e = new Bpl.ForallExpr(NoToken, new VariableSeq(tVar), d);
+      return Bpl.Expr.And(e, Bpl.Expr.Eq(InvField(target, prevHeapExpr), InvField(target, Prelude.HeapName)));
+    }
+    
+    private void AssignValidFor (Bpl.Expr! target, Cci.TypeNode! frame, CmdSeq! blockCmds, bool newValue) {
+      Bpl.Type! t = new Bpl.MapType(NoToken, new TypeVariableSeq(), new TypeSeq(sink.TypeType), Bpl.Type.Bool);
+      // target.validFor 
+      Bpl.Expr! e = Bpl.Expr.Select(sink.HeapExpr(), target, sink.Fields.ValidFor);
+      
+      // var tmp: [TName]bool;
+      // tmp := Heap[target, validfor];
+      // tmp[frame] := newValue;
+      // Heap[target, validfor] := tmp;
+      
+      assume sink.InstructionTranslator != null; // don't know what else to do: this needs to be reviewed
+      Bpl.IdentifierExpr! tmp = Sink.Expr(sink.InstructionTranslator.MakeLocal(t));
+      
+      blockCmds.Add(Cmd.SimpleAssign(
+        NoToken,
+        tmp,
+        e));
+      
+      blockCmds.Add(Cmd.MapAssign(
+        NoToken,
+        tmp,
+        sink.TypeNameExpression(frame),
+        Bpl.Expr.Literal(newValue)));
+        
+      blockCmds.Add(Cmd.MapAssign(
+        NoToken,
+        sink.HeapExpr(),
+        target,
+        sink.Fields.ValidFor,
+        tmp));
+    }
+    
+    // in StandardOwnershipModel: o.localinv := typeof(o) 
+    //here: target.validFor[frame] := true
+    override public void LocallyPack (Bpl.Expr! target, Cci.TypeNode! frame, CmdSeq! blockCmds) {
+      AssignValidFor(target, frame, blockCmds, true); 
+      
+      // assume (forall U ::  T <: U && !(BaseClass(T) <: U) => o.validfor[U]);
+      // this is fine because the antecedent means that U == T holds and we just set
+      // o.validfor[T] with the command above, so obviously o.validfor[U] holds,
+      // but somehow the prover can't establish that fact so we give a little help
+      AssumeForValidForPropagation(target, frame, blockCmds);      
+    }
+    
+    // target.validFor[frame] := false
+    override public void LocallyUnpack (Bpl.Expr! target, Cci.TypeNode! frame, CmdSeq! blockCmds) {
+      AssignValidFor(target, frame, blockCmds, false);
+    }
+    
+    // target.validFor[frame] := true
+    override public void AdditivelyPack (Bpl.Expr! target, Cci.TypeNode! frame, CmdSeq! blockCmds) {
+      blockCmds.Add(Cmd.MapAssign(
+        NoToken,
+        sink.HeapExpr(),
+        target,
+        sink.Fields.Inv,
+        sink.TypeNameExpression(frame)));
+      AssignValidFor(target, frame, blockCmds, true);
+      
+      // assume (forall U ::  T <: U && !(BaseClass(T) <: U) => o.validfor[U]);
+      // this is fine because the antecedent means that U == T holds and we just set
+      // o.validfor[T] with the command above, so obviously o.validfor[U] holds,
+      // but somehow the prover can't establish that fact so we give a little help
+      AssumeForValidForPropagation(target, frame, blockCmds);      
+    }
+    
+    private void AssumeForValidForPropagation (Bpl.Expr! target, Cci.TypeNode! frame, CmdSeq! blockCmds) {
+      //(forall U : o.validFor[U] || (typeof(o) <: U && BaseClass(U) <: T)
+      blockCmds.Add(Sink.Assume(IsExposable(target, frame, false, true)));
+    }
+    
+    override public void AdditivelyUnpack (Bpl.Expr! target, Cci.TypeNode! frame, CmdSeq! blockCmds) {
+      blockCmds.Add(Cmd.MapAssign(
+        NoToken,
+        sink.HeapExpr(),
+        target,
+        sink.Fields.Inv,
+        sink.TypeNameExpression(frame.BaseType)));
+      AssignValidFor(target, frame, blockCmds, false);
+    }
+    
+    
+    
+    //*****************************************************
+    // Owner:
+    //*****************************************************
+    
+    // !o.committed  &&  o.inv = typeof(o)  &&  o.localinv = typeof(o)
+    override internal Bpl.Expr! IsConsistent (Bpl.Expr! targetObject, bool mentionWritable, Bpl.Expr! heap)
+    {
+      Bpl.Expr fullyValid = IsFullyValid(targetObject);
+      if (mentionWritable) { 
+        return Bpl.Expr.And(IsObjectWritable(targetObject), fullyValid);
+      } else {
+        return fullyValid;
+      }
+    }
+        
+    /// <summary>
+    /// Returns the expression:
+    ///   (forall p :: p != null AND p.allocated AND p.owner == targetObject.owner
+    ///                ==>
+    ///                p.inv == typeof(p) AND p.localinv == typeof(p))
+    /// </summary>
+    //new: ... => (forall T ::  typeof(p) <: T && T <: System.Object ==> target.validFor(T)) 
+    //            /\ target.validFor(typeof(this))
+    override internal Bpl.Expr! IsPeerValid (Bpl.Expr! targetObject)
+    {
+      Bpl.Variable pVar = Sink.BoundVar("$pc", sink.RefType);
+      Bpl.Expr p = Sink.Ident(pVar);
+      Bpl.Expr c0 = Bpl.Expr.Neq(p, sink.Null);
+      Bpl.Expr c1 = sink.IsAllocatedOfRef(p);
+      Bpl.Expr c2 = Bpl.Expr.Eq(OwnerRef(p, sink.HeapExpr()), OwnerRef(targetObject, sink.HeapExpr()));
+      Bpl.Expr c3 = Bpl.Expr.Eq(OwnerClassFrame(p, sink.HeapExpr()), OwnerClassFrame(targetObject, sink.HeapExpr()));
+      Bpl.Expr d = IsFullyValid(p);
+      Bpl.Expr body = Bpl.Expr.Imp(Bpl.Expr.And(Bpl.Expr.And(c0, c1), Bpl.Expr.And(c2, c3)), d);
+      Bpl.Trigger tr = IsPeerConsistentTrigger(p, sink.HeapExpr());
+      Bpl.Expr peersValid = new Bpl.ForallExpr(NoToken, new VariableSeq(pVar), tr, body);
+      return peersValid;
+    }
+    
+    /// <summary>
+    /// Returns the expression:
+    ///   ! targetObject.Committed  AND
+    /// </summary>
+    override internal Bpl.Expr! NotHasValidOwner (Bpl.Expr! targetObject) {
+      return IsObjectWritable(targetObject);
+    }
+    
+    // replaced 'p.inv' and 'p.localinv' by 'p.validFor'
+    private Bpl.Trigger IsPeerConsistentTrigger (Bpl.Expr! p, Bpl.Expr! heap) {
+      Bpl.Trigger! tr = new Bpl.Trigger(NoToken, true, new ExprSeq(OwnerRef(p, heap)));
+      tr = new Bpl.Trigger(NoToken, true, new ExprSeq(OwnerClassFrame(p, heap)), tr);
+      
+      // Trigger: target.validFor
+      Bpl.Expr! e = Bpl.Expr.Select(heap, p, sink.Fields.ValidFor);
+      tr = new Bpl.Trigger(NoToken, true, new ExprSeq(e), tr);
+      
+      tr = new Bpl.Trigger(NoToken, true, new ExprSeq(sink.Function(Sink.BuiltinFunction.Typeof, p)), tr);
+      return tr;
+    }
+    
+    /*
+    private Bpl.Trigger! ExperimentalTriggerOwner2 (Bpl.Expr! p, Bpl.Expr! heap) {
+      Bpl.Trigger! tr = new Bpl.Trigger(NoToken, true, new ExprSeq(OwnerRef(p, heap)));
+      tr = new Bpl.Trigger(NoToken, true, new ExprSeq(OwnerClassFrame(p, heap)), tr);
+      return tr;
+    }
+    
+    private Bpl.Trigger! ExperimentalTriggerInv2 (Bpl.Expr! p, Bpl.Expr! heap) {
+      Bpl.Trigger! tr = new Bpl.Trigger(NoToken, true, new ExprSeq(InvField(p, heap)));
+      tr = new Bpl.Trigger(NoToken, true, new ExprSeq(LocalInv(p, heap)), tr);
+      return tr;
+    }
+    
+    private Bpl.Trigger! ExperimentalTriggerOwnerInv4 (Bpl.Expr! p, Bpl.Expr! heap) {
+      Bpl.Trigger! tr = new Bpl.Trigger(NoToken, true, new ExprSeq(OwnerRef(p, heap)));
+      tr = new Bpl.Trigger(NoToken, true, new ExprSeq(OwnerClassFrame(p, heap)), tr);
+      tr = new Bpl.Trigger(NoToken, true, new ExprSeq(InvField(p, heap)));
+      tr = new Bpl.Trigger(NoToken, true, new ExprSeq(LocalInv(p, heap)), tr);
+      return tr;
+    }
+    
+    private Bpl.Trigger! ExperimentalTriggerInvTypeof3 (Bpl.Expr! p, Bpl.Expr! heap) {
+      Bpl.Trigger! tr = new Bpl.Trigger(NoToken, true, new ExprSeq(InvField(p, heap)));
+      tr = new Bpl.Trigger(NoToken, true, new ExprSeq(LocalInv(p, heap)), tr);
+      tr = new Bpl.Trigger(NoToken, true, new ExprSeq(Tr.Function(Prelude.TypeOfFunctionName, Bpl.Type.Name, p)), tr);
+      return tr;
+    }
+    
+    private Bpl.Trigger! ExperimentalTriggerInvAllocated3 (Bpl.Expr! p, Bpl.Expr! heap) {
+      Bpl.Trigger! tr = new Bpl.Trigger(NoToken, true, new ExprSeq(InvField(p, heap)));
+      tr = new Bpl.Trigger(NoToken, true, new ExprSeq(LocalInv(p, heap)), tr);
+      tr = new Bpl.Trigger(NoToken, true, new ExprSeq(new Bpl.IndexedExpr(NoToken, heap, p, sink.Fields.Allocated)));
+      return tr;
+    }
+    */
+    
+    override internal Bpl.Expr! IsPrevalid (Bpl.Expr! targetObject, Cci.TypeNode! targetType)
+    {
+      // IsPreValid(o,T) <=> !o.committed  &&  o.inv == superclass(T)  &&  o.localinv = typeof(o) ...
+      sink.AddType(targetType);
+      Bpl.Expr! e = IsExposable(targetObject, targetType.BaseType);
+
+      // ... conjoin that every object in this peer group (with owner (o,T)) is fully valid
+      e = Bpl.Expr.And(e, PeerGroupIsFullyValid(targetObject, sink.TypeNameExpression(targetType)));
+
+      return e;
+    }
+    
+    /// <summary>
+    /// Returns the expression:
+    ///   (forall p :: p != null AND p.allocated AND p.owner == [owRef,owFrame] ==> p.inv == typeof(p) AND p.localinv == typeof(p))
+    /// </summary>
+    override internal Bpl.Expr! PeerGroupIsFullyValid (Bpl.Expr! owRef, Bpl.Expr! owFrame) {
+      Bpl.Variable pVar = Sink.BoundVar("$p", sink.RefType);
+      Bpl.Expr p = Sink.Ident(pVar);
+      Bpl.Expr c0 = Bpl.Expr.Neq(p, sink.Null);
+      Bpl.Expr c1 = sink.IsAllocatedOfRef(p);
+      Bpl.Expr c2 = Bpl.Expr.Eq(OwnerRef(p, sink.HeapExpr()), owRef);
+      Bpl.Expr c3 = Bpl.Expr.Eq(OwnerClassFrame(p, sink.HeapExpr()), owFrame);
+      Bpl.Expr d = IsFullyValid(p);
+      Bpl.Expr body = Bpl.Expr.Imp(Bpl.Expr.And(Bpl.Expr.And(c0, c1), Bpl.Expr.And(c2, c3)), d);
+      Bpl.Expr q = new Bpl.ForallExpr(NoToken, new VariableSeq(pVar), body);
+      return q;
+    }
+    
+    override internal Bpl.Expr! IsValid (Bpl.Expr! targetObject, Cci.TypeNode! targetType)
+    {
+      Bpl.Expr declaredInvariant = sink.GetDeclaredInvariant(targetType, null, Prelude.HeapName);
+      return Bpl.Expr.And(IsPrevalid(targetObject, targetType), declaredInvariant);
+    }
+    
+    /// <summary>
+    /// Returns the expression:  heap[ownedObject, $ownerRef]
+    /// </summary>
+    protected Bpl.Expr! OwnerRef (Bpl.Expr! ownedObject, Bpl.Expr! heap)
+    {
+      return Bpl.Expr.Select(heap, ownedObject, sink.Fields.OwnerRef);
+    }
+    
+    /// <summary>
+    /// Returns the expression:  heap[ownedObject, $ownerFrame]
+    /// </summary>
+    protected Bpl.Expr! OwnerClassFrame (Bpl.Expr! ownedObject, Bpl.Expr! heap)
+    {
+      return Bpl.Expr.Select(heap, ownedObject, sink.Fields.OwnerClassFrame);
+    }
+    
+    /// <summary>
+    /// Returns the expression:  subject.owner == [ownerRef, ownerFrame]
+    /// </summary>
+    override public Bpl.Expr! OwnerIs (Bpl.Expr! subject, Bpl.Expr! ownerRef, Bpl.Expr! ownerFrame, Bpl.Expr! heap)
+    {
+      Bpl.Expr c0 = Bpl.Expr.Eq(OwnerRef(subject, heap), ownerRef);
+      Bpl.Expr c1 = Bpl.Expr.Eq(OwnerClassFrame(subject, heap), ownerFrame);
+      return Bpl.Expr.And(c0, c1);
+    }
+    
+    /// <summary>
+    /// Return the expression:  a.owner == b.owner
+    /// </summary>
+    override public Bpl.Expr! EqualOwners (Bpl.Expr! a, Bpl.Expr! b, Bpl.Expr! heap, bool equal) {
+      Bpl.Expr aRef = OwnerRef(a, heap);
+      Bpl.Expr aFrame = OwnerClassFrame(a, heap);
+      Bpl.Expr bRef = OwnerRef(b, heap);
+      Bpl.Expr bFrame = OwnerClassFrame(b, heap);
+      if (equal) {
+        return Bpl.Expr.And(Bpl.Expr.Eq(aRef, bRef), Bpl.Expr.Eq(aFrame, bFrame));
+      } else {
+        return Bpl.Expr.Or(Bpl.Expr.Neq(aRef, bRef), Bpl.Expr.Neq(aFrame, bFrame));
+      }
+    }
+
+    /// <summary>
+    /// Returns the expression heapName[target, $inv].
+    /// </summary>
+    private Bpl.Expr! InvField (Bpl.Expr! target, string! heapName)
+    {
+      return InvField(target, sink.HeapExpr(heapName));
+    }
+    
+    /// <summary>
+    /// Returns the expression heap[target, $inv].
+    /// </summary>
+    private Bpl.Expr! InvField (Bpl.Expr! target, Bpl.Expr! heap)
+    {
+      return Bpl.Expr.Select(heap, target, sink.Fields.Inv);
+    }  
+
+    /*
+    /// <summary>
+    /// Returns the expression heapName[target, $localinv].
+    /// </summary>
+    private Bpl.Expr! LocalInv (Bpl.Expr! target, string! heapName)
+    {
+      return LocalInv(target, sink.HeapExpr(heapName));
+    }
+    
+    /// <summary>
+    /// Returns the expression heap[target, $localinv].
+    /// </summary>
+    private static Bpl.Expr! LocalInv (Bpl.Expr! target, Bpl.Expr! heap)
+    {
+      return new Bpl.IndexedExpr(NoToken, heap, target, sink.Fields.LocalInv);
+    }
+    */
+    /// <summary>
+    /// Returns the expression heap[target, $validfor][frame].
+    /// </summary>
+    private Bpl.Expr! ValidFor (Bpl.Expr! target, Bpl.Expr! frame, Bpl.Expr! heap)
+    {
+      Bpl.Expr! e = Bpl.Expr.Select(heap, target, sink.Fields.ValidFor);
+      return Bpl.Expr.Select(e, frame, null);
+    } 
+
+    override public Bpl.Expr! IsFullyValid (Bpl.Expr! target) {
+      // in StandardOwnershipModel: target.inv = typeof(target) /\ target.localinv = typeof(target)
+      //here: (forall T ::  target.validFor(T)) /\ target.validFor(typeof(this))
+      Bpl.Variable tVar = Sink.BoundVar("$T", sink.TypeType);
+      Bpl.Expr t = Sink.Ident(tVar);
+      //Bpl.Expr c = Bpl.Expr.Subtype(translator.sink.Function(Sink.BuiltinFunction.Typeof, target), t);
+      Bpl.Expr d = ValidFor(target, t, sink.HeapExpr());
+      // Trigger: target.validFor[T]
+      Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new ExprSeq(ValidFor(target, t, sink.HeapExpr()))); 
+      Bpl.Expr e = new Bpl.ForallExpr(NoToken, new VariableSeq(tVar), tr, d);
+      return Bpl.Expr.And(e, ValidFor(target, sink.Function(Sink.BuiltinFunction.Typeof, target), sink.HeapExpr()));
+    }
+    
+    private Bpl.Expr! IsFullyValid (Bpl.Expr! target, Bpl.Expr! frame) {
+      // (forall T ::  frame <: T && T <: System.Object ==> target.validFor(T)) /\ target.validFor(typeof(this))
+      Bpl.Variable tVar = Sink.BoundVar("$T", sink.TypeType);
+      Bpl.Expr t = Sink.Ident(tVar);
+      Bpl.Expr c0 = Bpl.Expr.Subtype(frame, t);
+      Bpl.Expr c1 = Bpl.Expr.Subtype(t, new Bpl.IdentifierExpr(NoToken, "System.Object", sink.TypeType));
+      Bpl.Expr d = ValidFor(target, t, sink.HeapExpr());
+      Bpl.Expr e = Bpl.Expr.Imp(Bpl.Expr.And(c0, c1), d);
+      // Trigger: target.validFor[T]
+      Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new ExprSeq(ValidFor(target, t, sink.HeapExpr()))); 
+      Bpl.Expr f = new Bpl.ForallExpr(NoToken, new VariableSeq(tVar), tr, e);
+      return Bpl.Expr.And(f, ValidFor(target, sink.Function(Sink.BuiltinFunction.Typeof, target), sink.HeapExpr()));
+    }
+    
+    override public Bpl.Expr! OwnerIsUnchanged (Bpl.Expr! target, Bpl.Expr! preHeap, Bpl.Expr! heap) {
+      // ensures $Heap[this, $ownerRef] == old($Heap)[this, $ownerRef] &&
+      //         $Heap[this, $ownerFrame] == old($Heap)[this, $ownerFrame];
+      // EXCEPT if "this" is captured
+      Bpl.Expr c0 = Bpl.Expr.Eq(
+        OwnerRef(target, heap),
+        OwnerRef(target, preHeap));
+      Bpl.Expr c1 = Bpl.Expr.Eq(
+        OwnerClassFrame(target, heap),
+        OwnerClassFrame(target, preHeap));
+      return Bpl.Expr.And(c0, c1);
+    }
+    
+    override public Bpl.Expr! UnownedPeerGroupSingleton (Bpl.Expr! target, Bpl.Expr! heap, bool afterAllocated) {
+      Bpl.Expr firstCond = null;
+      if (afterAllocated) {
+        // free requires (forall $o :: $o != this ==> $Heap[$o, $ownerRef] != this);
+        Bpl.BoundVariable oVar = new Bpl.BoundVariable(NoToken, new Bpl.TypedIdent(NoToken, "$o", sink.RefType));
+        Bpl.Expr o = Sink.Ident(oVar);
+        Bpl.Expr d0 = Bpl.Expr.Neq(o, target);
+        Bpl.Expr d1 = Bpl.Expr.Neq(OwnerRef(o, heap), target);
+        firstCond = new Bpl.ForallExpr(NoToken, new VariableSeq(oVar), Bpl.Expr.Imp(d0, d1));
+      }
+      
+      // free requires this.owner == [this, $PeerGroupPlaceholder];
+      if (firstCond == null) { 
+        return OwnerIs(target, target, Sink.Ident(Prelude.PeerGroupPlaceholderName, sink.TypeType), sink.HeapExpr());
+      } else {
+        return Bpl.Expr.And(firstCond, OwnerIs(target, target, Sink.Ident(Prelude.PeerGroupPlaceholderName, sink.TypeType), sink.HeapExpr()));
+      }
+    }
+    
+    override public Bpl.Expr! HasNoOwner (Bpl.Expr! target, Bpl.Expr! heap) {
+      return Bpl.Expr.Eq(OwnerClassFrame(target, heap), Sink.Ident(Prelude.PeerGroupPlaceholderName, sink.TypeType));
+    }
+    
+    override public Bpl.Trigger OwnerTrigger (Bpl.Expr! target, Bpl.Expr! heap) {
+      Bpl.Trigger tr = new Bpl.Trigger(NoToken, true, new ExprSeq(OwnerRef(target, heap)));
+      return new Bpl.Trigger(NoToken, true, new ExprSeq(OwnerClassFrame(target, heap)), tr);
+    }
+    
+    override public Bpl.Expr! IsOwnerField (Bpl.Expr! target) {
+      return Bpl.Expr.Or(
+          Bpl.Expr.Eq(target, sink.Fields.OwnerRef),
+          Bpl.Expr.Eq(target, sink.Fields.OwnerClassFrame));
+    }
+    
+    override public void SetSameOwner (Bpl.Expr! target, Bpl.Expr! peer, Bpl.CmdSeq! blockCmds) {
+      Bpl.Cmd c = new Bpl.CallCmd(
+                NoToken,
+                Prelude.SetOwnerProcName,
+                new ExprSeq(target, OwnerRef(peer, sink.HeapExpr()), OwnerClassFrame(peer, sink.HeapExpr())),
+                new IdentifierExprSeq());
+      blockCmds.Add(c);
+    }
+       
+    override public void SetOwner (Bpl.Expr! target, Bpl.Expr! owner, Bpl.Expr! frame, Bpl.CmdSeq! blockCmds) {
+      Bpl.Cmd c = new Bpl.CallCmd(
+        NoToken,
+        Prelude.SetOwnerProcName,
+        new ExprSeq(target, owner, frame),
+        new IdentifierExprSeq());
+      blockCmds.Add(c);
+    }
+    
+    
+    
+    //*****************************************************
+    // Sharing:
+    //*****************************************************
+    
+    override internal Bpl.Expr! IsUnshared (Bpl.Expr! targetObject)
+    {
+      return Bpl.Expr.Eq(Bpl.Expr.Select(sink.HeapExpr(), targetObject, sink.SharingModeField()), Bpl.Expr.Ident(Prelude.SharingModeUnsharedName, sink.SharingMode));
+    }
+
+    override internal Bpl.Expr! IsLockProtected (Bpl.Expr! targetObject)
+    {
+      return Bpl.Expr.Eq(Bpl.Expr.Select(sink.HeapExpr(), targetObject, sink.SharingModeField()), Bpl.Expr.Ident(Prelude.SharingModeLockProtectedName, sink.SharingMode));
+    }
+
+    override public Bpl.Expr! SameSharingMode (Bpl.Variable! target) {
+      Bpl.Expr oldSharing = new OldExpr(Bpl.Token.NoToken,
+              Bpl.Expr.Select(
+                sink.HeapExpr(), Bpl.Expr.Ident(target), sink.SharingModeField()));
+      Bpl.Expr newSharing = Bpl.Expr.Select(
+            sink.HeapExpr(), Bpl.Expr.Ident(target), sink.SharingModeField());
+      return Bpl.Expr.Eq(oldSharing, newSharing);
+    }
+    
+    override public void Share (Bpl.Expr! target, Bpl.CmdSeq! blockCmds) {
+      blockCmds.Add(Cmd.MapAssign(Bpl.Token.NoToken, sink.HeapExpr(), 
+        target, sink.SharingModeField(), 
+        Bpl.Expr.Ident(Prelude.SharingModeLockProtectedName, sink.SharingMode)));
+    }
+    
+    override public Bpl.Trigger SharingTrigger (Bpl.Variable! target) {
+      Bpl.Expr newSharing = Bpl.Expr.Select(
+            sink.HeapExpr(), Bpl.Expr.Ident(target), sink.SharingModeField());
+      return new Bpl.Trigger(NoToken, true, new ExprSeq(newSharing));
+    }
+    
+    
+  }
+  
+}

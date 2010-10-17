@@ -1,0 +1,80 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Net.Sockets
+{
+
+    public class TcpClient
+    {
+
+        public int SendTimeout
+        {
+          get;
+          set;
+        }
+
+        public LingerOption LingerState
+        {
+          get;
+          set;
+        }
+
+        public bool NoDelay
+        {
+          get;
+          set;
+        }
+
+        public int SendBufferSize
+        {
+          get;
+          set;
+        }
+
+        public int ReceiveTimeout
+        {
+          get;
+          set;
+        }
+
+        public int ReceiveBufferSize
+        {
+          get;
+          set;
+        }
+
+        public void Close ();
+
+        public NetworkStream! GetStream ();
+
+        public void Connect (System.Net.IPEndPoint! remoteEP)
+            requires remoteEP != null otherwise ArgumentNullException;
+
+        public void Connect (System.Net.IPAddress! address, int port)
+            requires address != null otherwise ArgumentNullException;
+
+        public void Connect (string! hostname, int port)
+            requires hostname != null otherwise ArgumentNullException;
+
+        public TcpClient (string! hostname, int port)
+            requires hostname != null otherwise ArgumentNullException;
+
+        public TcpClient (AddressFamily family)
+            requires (int)family == 2 || (int)family == 23 otherwise ArgumentException;
+
+        public TcpClient ();
+
+        public TcpClient (System.Net.IPEndPoint! localEP)
+            requires localEP != null otherwise ArgumentNullException;
+    }
+}

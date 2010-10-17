@@ -1,0 +1,230 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="General_MissingService">
+    <value xml:space="preserve">The service '{0}' must be installed for this feature to work.  Ensure that this service is available.</value>
+  </data>
+  <data name="Attributes_ExtensionNeedsDot">
+    <value xml:space="preserve">To register the {0} file extension, you must prefix the extension with a '.'.</value>
+  </data>
+  <data name="Attributes_InvalidFactoryType">
+    <value xml:space="preserve">The factoryType must be of one of those type: Type, Guid, string (representing a Guid).</value>
+  </data>
+  <data name="Attributes_ProductNameNotSpecified">
+    <value xml:space="preserve">No Product Name was specified.  To register as an Installed Product, a Product Name is required.</value>
+  </data>
+  <data name="Package_InvalidServiceInstance">
+    <value xml:space="preserve">The service instance must derive from or implement {0}.</value>
+  </data>
+  <data name="Package_DuplicateService">
+    <value xml:space="preserve">The service {0} already exists in the service container.</value>
+  </data>
+  <data name="Package_SiteAlreadySet">
+    <value xml:space="preserve">A site has already been set on package {0}.</value>
+  </data>
+  <data name="Package_PageNotDialogPage">
+    <value xml:space="preserve">The page class {0} must derive from DialogPage.</value>
+  </data>
+  <data name="Package_PageCtorMissing">
+    <value xml:space="preserve">The page type {0} does not offer an empty constructor.</value>
+  </data>
+  <data name="Package_BadDialogPageType">
+    <value xml:space="preserve">The dialog page type {0} does not derive from DialogPage.</value>
+  </data>
+  <data name="Package_PageMissingInterface">
+    <value xml:space="preserve">The page type {0} does not implement {1}.</value>
+  </data>
+  <data name="Package_BadOptionName">
+    <value xml:space="preserve">The solution option name {0} is invalid.  It cannot contain '.', '/' or other special characters.</value>
+  </data>
+  <data name="Package_OptionNameUsed">
+    <value xml:space="preserve">The solution option name {0} is already used by this package.</value>
+  </data>
+  <data name="Package_MissingService">
+    <value xml:space="preserve">The package requires that service '{0}' be installed.  Ensure that this service is available.</value>
+  </data>
+  <data name="Reg_NotifyAutoLoad">
+    <value xml:space="preserve">Autoload package:         {0}</value>
+  </data>
+  <data name="Reg_NotifyPackage">
+    <value xml:space="preserve">Package:          {0} {1}</value>
+  </data>
+  <data name="Reg_NotifyService">
+    <value xml:space="preserve">Service:          {0}</value>
+  </data>
+  <data name="Reg_NotifyMenuResource">
+    <value xml:space="preserve">Menu:             {0}, {1}</value>
+  </data>
+  <data name="Reg_NotifyExtender">
+    <value xml:space="preserve">Extender:         {0}, {1}</value>
+  </data>
+  <data name="Reg_NotifyToolResource">
+    <value xml:space="preserve">ToolWindow:       {0}, {1}</value>
+  </data>
+  <data name="Reg_NotifyToolVisibility">
+    <value xml:space="preserve">Tool Visibility:  {0}, {1}</value>
+  </data>
+  <data name="Reg_NotifyOptionPage">
+    <value xml:space="preserve">Option Page:      {0}\{1}</value>
+  </data>
+  <data name="Reg_NotifyToolboxPage">
+    <value xml:space="preserve">Toolbox Page:     {0}</value>
+  </data>
+  <data name="Reg_NotifyCreateObject">
+    <value xml:space="preserve">Creatable Object: {0}</value>
+  </data>
+  <data name="Reg_NotifyEditorFactory">
+    <value xml:space="preserve">Editor Factory:   {0}</value>
+  </data>
+  <data name="Reg_NotifyProjectFactory">
+    <value xml:space="preserve">Project Factory:   {0}</value>
+  </data>
+  <data name="Reg_NotifyProjectItems">
+    <value xml:space="preserve">Project Items:     {0}</value>
+  </data>
+  <data name="Reg_NotifyEditorView">
+    <value xml:space="preserve">                  (LOGVIEWID_{0})</value>
+  </data>
+  <data name="Reg_NotifyKeyBinding">
+    <value xml:space="preserve">Key Binding: {0}, {1}</value>
+  </data>
+  <data name="Reg_NotifyEditorExtension">
+    <value xml:space="preserve">Editor Extension: {0}, {1}</value>
+  </data>
+  <data name="Reg_NotifyLanguageExtension">
+    <value xml:space="preserve">Language Extension: {0}, {1}</value>
+  </data>
+  <data name="Reg_NotifyLoadKey">
+    <value xml:space="preserve">LoadKey:          {0} {1}
+                  Version {2}
+                  Edition Required: {3}</value>
+  </data>
+  <data name="Reg_NotifyToolboxItem">
+    <value xml:space="preserve">Toolbox Items:    Version {0} (Formats: {1})</value>
+  </data>
+  <data name="Reg_NotifyToolboxItemConfiguration">
+    <value xml:space="preserve">Toolbox Config:   {0}</value>
+  </data>
+  <data name="Reg_NotifyToolboxItemFilter">
+    <value xml:space="preserve">                  Filter: {0}</value>
+  </data>
+  <data name="Reg_NotifyInstalledProduct">
+    <value xml:space="preserve">Installed Product:   {0}, Version {1}</value>
+  </data>
+  <data name="Reg_NotifyInstalledProductInterface">
+    <value xml:space="preserve">Installed Product:   Using IVsInstalledProduct interface</value>
+  </data>
+</root>

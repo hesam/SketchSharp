@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+    <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+        <xsd:element name="root" msdata:IsDataSet="true">
+            <xsd:complexType>
+                <xsd:choice maxOccurs="unbounded">
+                    <xsd:element name="data">
+                        <xsd:complexType>
+                            <xsd:sequence>
+                                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+                            </xsd:sequence>
+                            <xsd:attribute name="name" type="xsd:string" />
+                            <xsd:attribute name="type" type="xsd:string" />
+                            <xsd:attribute name="mimetype" type="xsd:string" />
+                        </xsd:complexType>
+                    </xsd:element>
+                    <xsd:element name="resheader">
+                        <xsd:complexType>
+                            <xsd:sequence>
+                                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                            </xsd:sequence>
+                            <xsd:attribute name="name" type="xsd:string" use="required" />
+                        </xsd:complexType>
+                    </xsd:element>
+                </xsd:choice>
+            </xsd:complexType>
+        </xsd:element>
+    </xsd:schema>
+    <resheader name="ResMimeType">
+        <value>text/microsoft-resx</value>
+    </resheader>
+    <resheader name="Version">
+        <value>1.0.0.0</value>
+    </resheader>
+    <resheader name="Reader">
+        <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=1.0.3102.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    </resheader>
+    <resheader name="Writer">
+        <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=1.0.3102.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    </resheader>
+    <!-- These strings are used in the [LocCategory] and [LocDescription]
+      custom attributes to localize the properties in the property grid -->
+    <data name="DebugCaption">
+        <value>Debugging</value>
+    </data>
+    <data name="BuildCaption">
+        <value>Build</value>
+    </data>
+    <data name="GeneralCaption">
+        <value>General</value>
+    </data>
+    <data name="Application">
+        <value>Application</value>
+    </data>
+    <data name="Project">
+        <value>Project </value>
+    </data>
+    <data name="WrapperAssembly">
+        <value>Wrapper Assembly for ActiveX/COM Objects</value>
+    </data>
+    <data name="CodeGeneration">
+        <value>Code Generation</value>
+    </data>
+    <data name="ErrorsAndWarnings">
+        <value>Errors and Warnings</value>
+    </data>
+    <data name="Outputs">
+        <value>Outputs</value>
+    </data>
+    <data name="StartAction">
+        <value>Start Action</value>
+    </data>
+    <data name="StartOptions">
+        <value>Start Options</value>
+    </data>
+    <data name="Advanced">
+        <value>Advanced</value>
+    </data>
+    <data name="Misc">
+        <value>Misc</value>
+    </data>
+    <!-- properties -->
+    <data name="AssemblyName">
+        <value>Assembly Name</value>
+    </data>
+    <data name="AssemblyNameDescription">
+        <value>The name of the output file that will hold assembly metadata.</value>
+    </data>
+    <data name="OutputType">
+        <value>Output Type</value>
+    </data>
+    <data name="OutputTypeDescription">
+        <value>The type of application to build.</value>
+    </data>
+    <data name="DefaultNamespace">
+        <value>Default Namespace</value>
+    </data>
+    <data name="DefaultNamespaceDescription">
+        <value>Specifies the default namespace for added items, such as classes, that are added via the Add New Item Dialog Box.</value>
+    </data>
+    <data name="StartupObject">
+        <value>Startup Object</value>
+    </data>
+    <data name="StartupObjectDescription">
+        <value>The name of the class that contains the static Main method that you want called when you launch your application.</value>
+    </data>
+    <data name="ApplicationIcon">
+        <value>Application Icon</value>
+    </data>
+    <data name="ApplicationIconDescription">
+        <value>Sets the .ico file to use as your application icon.</value>
+    </data>
+    <data name="ProjectFile">
+        <value>Project File</value>
+    </data>
+    <data name="ProjectFileDescription">
+        <value>The name of the file containing build, configuration, and other information about the project.</value>
+    </data>
+    <data name="ProjectFolder">
+        <value>Project Folder</value>
+    </data>
+    <data name="ProjectFolderDescription">
+        <value>The absolute location of the project.</value>
+    </data>
+    <data name="OutputFile">
+        <value>Output File</value>
+    </data>
+    <data name="OutputFileDescription">
+        <value>The name of the project's primary output file.</value>
+    </data>
+    <data name="WrapperAssemblyKeyFile">
+        <value>Wrapper Assembly Key File</value>
+    </data>
+    <data name="WrapperAssemblyKeyFileDescription">
+        <value>Specifies the key file to use for ActiveX/COM object wrappers.</value>
+    </data>
+    <data name="WrapperAssemblyKeyName">
+        <value>Wrapper Assembly Key Name</value>
+    </data>
+    <data name="WrapperAssemblyKeyNameDescription">
+        <value>Specifies the Wrapper Assembly Key Name for ActiveX/COM objects.</value>
+    </data>
+    <data name="DefineConstants">
+        <value>Define Constants</value>
+    </data>
+    <data name="DefineConstantsDescription">
+        <value>Specify symbols on which to perform conditional compilation.</value>
+    </data>
+    <data name="OptimizeCode">
+        <value>Optimize Code</value>
+    </data>
+    <data name="OptimizeCodeDescription">
+        <value>Enables or disables optimizations performed by the compiler to make your output file smaller, faster and more efficient.</value>
+    </data>
+    <data name="CheckArithmeticOverflow">
+        <value>Check Arithmetic Overflow</value>
+    </data>
+    <data name="CheckArithmeticOverflowDescription">
+        <value>Check all integer arithmetic for out of bounds results.</value>
+    </data>
+    <data name="AllowUnsafeCode">
+        <value>Allow Unsafe Code</value>
+    </data>
+    <data name="AllowUnsafeCodeDescription">
+        <value>Enable use of the unsafe keyword.</value>
+    </data>
+    <data name="WarningLevel">
+        <value>Warning Level</value>
+    </data>
+    <data name="WarningLevelDescription">
+        <value>Specify the level of detail for compiler warnings.</value>
+    </data>
+    <data name="TreatWarningsAsErrors">
+        <value>Treat Warnings As Errors</value>
+    </data>
+    <data name="TreatWarningsAsErrorsDescription">
+        <value>Indicates whether to treat all compiler warnings as errors.</value>
+    </data>
+    <data name="OutputPath">
+        <value>Output Path</value>
+    </data>
+    <data name="OutputPathDescription">
+        <value>Specifies the location of the output files for this project's configuration.</value>
+    </data>
+    <data name="XMLDocumentationFile">
+        <value>XML Documentation File</value>
+    </data>
+    <data name="XMLDocumentationFileDescription">
+        <value>Specifies the name of the file that is to contain the XML documentation generated by the compiler.</value>
+    </data>
+    <data name="GenerateDebuggingInformation">
+        <value>Generate Debugging Information</value>
+    </data>
+    <data name="GenerateDebuggingInformationDescription">
+        <value>Specifies whether to generate debugging information.</value>
+    </data>
+    <data name="RegisterForCOMInterop">
+        <value>Register For COM Interop</value>
+    </data>
+    <data name="RegisterForCOMInteropDescription">
+        <value>Register the project's output file for use with COM components.  The output file must contain assembly metadata with a strong name.</value>
+    </data>
+    <data name="DebugMode">
+        <value>Debug Mode</value>
+    </data>
+    <data name="DebugModeDescription">
+        <value>Determins whether an appliation, a URL, or the project output will be launched when you start debugging.</value>
+    </data>
+    <data name="StartApplication">
+        <value>Start Application</value>
+    </data>
+    <data name="StartApplicationDescription">
+        <value>Indicates the program that should be started when the project is debugged. </value>
+    </data>
+    <data name="StartURL">
+        <value>Start URL</value>
+    </data>
+    <data name="StartURLDescription">
+        <value>Indicates the URL that should be launched when the application is debugged.</value>
+    </data>
+    <data name="StartPage">
+        <value>Start Page</value>
+    </data>
+    <data name="StartPageDescription">
+        <value>Specifies the page that will launch within the browser when you begin debugging a web project or URL.  </value>
+    </data>
+    <data name="CommandLineArguments">
+        <value>Command Line Arguments</value>
+    </data>
+    <data name="CommandLineArgumentsDescription">
+        <value>Indicates command line arguments to be passed to the program on startup.</value>
+    </data>
+    <data name="WorkingDirectory">
+        <value>Working Directory</value>
+    </data>
+    <data name="WorkingDirectoryDescription">
+        <value>Indicates the working directory from which the project or custom application is launched.</value>
+    </data>
+    <data name="UseInternetExplorer">
+        <value>Use Internet Explorer</value>
+    </data>
+    <data name="UseInternetExplorerDescription">
+        <value>Indicates that Internet Explorer should be used to start the project during debugging.</value>
+    </data>
+    <data name="EnableRemoteDebugging">
+        <value>Enable Remote Debugging</value>
+    </data>
+    <data name="EnableRemoteDebuggingDescription">
+        <value>Enable debugging of the project from a remote machine.</value>
+    </data>
+    <data name="RemoteDebugMachine">
+        <value>Remote Debug Machine</value>
+    </data>
+    <data name="RemoteDebugMachineDescription">
+        <value>Name of the machine to be used for remote debugging.</value>
+    </data>
+    <data name="IncrementalBuild">
+        <value>Incremental Build</value>
+    </data>
+    <data name="IncrementalBuildDescription">
+        <value>Enable the incremental compiler.</value>
+    </data>
+    <data name="BaseAddress">
+        <value>Base Address</value>
+    </data>
+    <data name="BaseAddressDescription">
+        <value>Specify the preferred address at which to load a .dll at run time.</value>
+    </data>
+    <data name="BuildAction">
+        <value>Build Action</value>
+    </data>
+    <data name="BuildActionDescription">
+        <value>How the file relates to the build and deployment process</value>
+    </data>
+    <data name="CustomTool">
+        <value>Custom Tool</value>
+    </data>
+    <data name="CustomToolDescription">
+        <value>Specifies a tool that transforms the file at design time and generating another file that is then included in the build</value>
+    </data>
+    <data name="CustomToolNamespace">
+        <value>Custom Tool Namespace</value>
+    </data>
+    <data name="CustomToolNamespaceDescription">
+        <value>The namespace into which the output of the custom tool is placed</value>
+    </data>
+    <data name="FileName">
+        <value>File Name</value>
+    </data>
+    <data name="FileNameDescription">
+        <value>The name of the file or folder</value>
+    </data>
+    <data name="FullPath">
+        <value>Full Path</value>
+    </data>
+    <data name="FullPathDescription">
+        <value>Location of the file</value>
+    </data>
+    <data name="FileAlignment">
+        <value>File Alignment</value>
+    </data>
+    <data name="FileAlignmentDescription">
+        <value>This advanced property is used for optimizing memory access.</value>
+    </data>
+    <data name="v1">
+        <value>Microsoft .Net Framework v1</value>
+    </data>
+    <data name="v11">
+        <value>Microsoft .Net Framework v1.1</value>
+    </data>
+    <data name="v12">
+        <value>Microsoft .Net Framework v1.2</value>
+    </data>
+    <data name="cli1">
+        <value>ECMA-335 CLI compatible framework (location must be provided)</value>
+    </data>
+    <data name="Exe">
+        <value>Console Application</value>
+    </data>
+    <data name="Library">
+        <value>Class Library</value>
+    </data>
+    <data name="WinExe">
+        <value>Windows Application</value>
+    </data>
+    <data name="Compile">
+        <value>Compile</value>
+    </data>
+    <data name="Content">
+        <value>Content</value>
+    </data>
+    <data name="EmbeddedResource">
+        <value>Embedded Resource</value>
+    </data>
+    <data name="None">
+        <value>None</value>
+    </data>
+    <data name="Program">
+        <value>Program</value>
+    </data>
+    <data name="URL">
+        <value>URL</value>
+    </data>
+    <data name="MaxErrorsReached">
+        <value>sorry, maximal number of error messages reached</value>
+    </data>
+    <data name="BraceMatchStatus">
+        <value>Matches: {0}</value>
+    </data>
+    <data name="TargetPlatform">
+        <value>Target Platform</value>
+    </data>
+    <data name="TargetPlatformDescription">
+        <value>The version of the Common Language Runtime to use for output assembly</value>
+    </data>
+    <data name="TargetPlatformLocation">
+        <value>Target Platform Location</value>
+    </data>
+    <data name="TargetPlatformLocationDescription">
+        <value>The location of the target platform</value>
+    </data>
+</root>

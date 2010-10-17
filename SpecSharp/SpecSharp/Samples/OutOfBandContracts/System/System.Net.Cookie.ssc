@@ -1,0 +1,116 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Net
+{
+
+    public class Cookie
+    {
+
+        public DateTime TimeStamp
+        {
+          get;
+        }
+
+        public string Value
+        {
+          get;
+          set;
+        }
+
+        public string Comment
+        {
+          get;
+          set;
+        }
+
+        public bool Secure
+        {
+          get;
+          set;
+        }
+
+        public string Port
+        {
+          get;
+          set;
+        }
+
+        public DateTime Expires
+        {
+          get;
+          set;
+        }
+
+        public bool Discard
+        {
+          get;
+          set;
+        }
+
+        public string! Name
+        {
+          get;
+          set
+            requires value != null otherwise CookieException;
+        }
+
+        public int Version
+        {
+          get;
+          set;
+        }
+
+        public bool Expired
+        {
+          get;
+          set;
+        }
+
+        public string Path
+        {
+          get;
+          set;
+        }
+
+        public Uri CommentUri
+        {
+          get;
+          set;
+        }
+
+        public string Domain
+        {
+          get;
+          set;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object comparand);
+
+        public Cookie (string name, string value, string path, string domain);
+
+        public Cookie (string name, string value, string path);
+
+        public Cookie (string name, string value);
+
+        public Cookie ();
+    }
+}

@@ -1,0 +1,851 @@
+`/debug+
+:=3
+// Impliciit Interface implementation
+using System;
+namespace N {
+
+  interface C {
+    int f(int x)
+      requires x >= 0;
+  }
+  class D : C {
+    public int f(int x)
+    {
+       return x;
+    }
+  }
+  class M {
+    public static int test_f(C! c, int x) { return c.f(x); }
+    public static void Main(string[]! args){
+      int x = Convert.ToInt32(args[0]);
+      try { D d = new D(); Console.WriteLine(test_f(d,x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+    }
+  }
+}
+`
+3
+No contract violation
+`
+`/debug+
+:=3
+// Expliciit Interface implementation
+using System;
+namespace N {
+
+  interface C {
+    int f(int x)
+      requires x >= 0;
+  }
+  class D : C {
+    int C.f(int x)
+    {
+       return x;
+    }
+  }
+  class M {
+    public static int test_f(C! c, int x) { return c.f(x); }
+    public static void Main(string[]! args){
+      int x = Convert.ToInt32(args[0]);
+      try { D d = new D(); Console.WriteLine(test_f(d,x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+    }
+  }
+}
+`
+3
+No contract violation
+`
+`/debug+
+:=3
+// precondition weakening, implicit interface implementation
+using System;
+namespace N {
+
+  interface C {
+    int f(int x);
+  }
+  class D : C {
+    public int f(int x)
+      requires x >= 0;
+    {
+       return x;
+    }
+  }
+  class M {
+    public static int test_f(C c, int x) { return c.f(x); }
+    public static void Main(string[] args){
+      int x = Convert.ToInt32(args[0]);
+      try { D d = new D(); Console.WriteLine(test_f(d,x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+    }
+  }
+}
+`
+(8,9): error CS2628: Requires not allowed in interface implementation of 'N.C.f(int)'.
+`
+`/debug+
+:=3
+// precondition weakening, explicit interface implementation
+using System;
+namespace N {
+
+  interface C {
+    int f(int x);
+  }
+  class D : C {
+    int C.f(int x)
+      requires x >= 0;
+    {
+       return x;
+    }
+  }
+  class M {
+    public static int test_f(C c, int x) { return c.f(x); }
+    public static void Main(string[] args){
+      int x = Convert.ToInt32(args[0]);
+      try { D d = new D(); Console.WriteLine(test_f(d,x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+    }
+  }
+}
+`
+(8,9): error CS2628: Requires not allowed in interface implementation of 'N.C.f(int)'.
+`
+`/debug+
+:=3
+// implicit interface implementation with dup precondition.
+using System;
+namespace N {
+
+  interface I {
+    int f(int x)
+      requires x > 0;
+  }
+  class C {
+    public virtual int f(int x)
+      requires x > 0;
+    {
+       return x;
+    }
+  }
+  class D : C,I {}
+  class M {
+    public static int test_f(C c, int x) { return c.f(x); }
+    public static void Main(string[] args){
+      int x = Convert.ToInt32(args[0]);
+      try { C c = new C(); Console.WriteLine(test_f(c,x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+      try { D d = new D(); Console.WriteLine(test_f(d,x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+    }
+  }
+}
+`
+(16,9): error CS2633: Cannot add the contract from 'N.I.f(int)' to this type. 
+`
+`/debug+
+:=3
+// explicit interface implementation inherited with dup precondition.
+using System;
+namespace N {
+
+  interface I {
+    int f(int x)
+      requires x > 0;
+  }
+  class C:I {
+    int I.f(int x)
+      requires x > 0;
+    {
+       return x;
+    }
+  }
+  class M {
+    public static int test_f(I i, int x) { return i.f(x); }
+    public static void Main(string[] args){
+      int x = Convert.ToInt32(args[0]);
+      try { C c = new C(); Console.WriteLine(test_f(c,x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+    }
+  }
+}
+`
+(9,9): error CS2628: Requires not allowed in interface implementation of 'N.I.f(int)'.
+`
+`/debug+
+:=-3
+// implicit implementation of two inferefaces.
+using System;
+namespace N {
+
+
+  interface I {
+    int f(int x)
+      requires x >= 0;
+  }
+  interface J {
+    int f(int x)
+      requires x >= 0;
+  }
+  class C:I,J {
+    public virtual int f(int x)
+    {
+       return x;
+    }
+  }
+  class M {
+    public static int test_f(C c, int x) { return c.f(x); }
+    public static void Main(string[] args){
+      int x = Convert.ToInt32(args[0]);
+      try { C c = new C(); Console.WriteLine(test_f(c,x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+    }
+  }
+}
+`
+(15,5): error CS2628: Requires not allowed in interface implementation of 'N.J.f(int)'.
+`
+`/debug+
+:=-3
+// implicit implementation of two inferefaces.
+using System;
+namespace N {
+
+
+  interface I {
+    int f(int x)
+      requires x >= 0;
+  }
+  class C {
+    public virtual int f(int x)
+    {
+       return x;
+    }
+  }
+  class D :C,I { }
+  class M {
+    public static int test_f(C c, int x) { return c.f(x); }
+    public static void Main(string[] args){
+      int x = Convert.ToInt32(args[0]);
+      try { C c = new C(); Console.WriteLine(test_f(c,x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+      try { D d = new D(); Console.WriteLine(test_f(d,x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+    }
+  }
+}
+`
+(16,9): error CS2633: Cannot add the contract from 'N.I.f(int)' to this type. 
+`
+`/debug+
+:=-3
+// implicit implementation of two inferefaces.
+using System;
+namespace N {
+
+
+  interface I {
+    int f(int x)
+      requires x >= 0;
+  }
+  interface J {
+    int f(int x)
+      requires x >= 0;
+  }
+  class C {
+    public virtual int f(int x)
+    {
+       return x;
+    }
+  }
+  class D :C,J,I { }
+  class M {
+    public static int test_f(C c, int x) { return c.f(x); }
+    public static void Main(string[] args){
+      int x = Convert.ToInt32(args[0]);
+      try { C c = new C(); Console.WriteLine(test_f(c,x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+      try { D d = new D(); Console.WriteLine(test_f(d,x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+    }
+  }
+}
+`
+(20,9): error CS2633: Cannot add the contract from 'N.J.f(int)' to this type. 
+(20,9): error CS2633: Cannot add the contract from 'N.I.f(int)' to this type. 
+`
+`/debug+
+// explicit interface implementation, precondition inheritance
+using System;
+namespace N {
+
+  interface I {
+    int f(int x)
+      requires x >= 0;
+    ;
+  }
+  class C : I {
+    int I.f(int x)
+    {
+       return x;
+    }
+  }
+  class D : C,I {}
+  class M {
+    public static void Main(string[] args){
+      I c = new C();
+      I d = new D();
+      int x = -1;
+      try { Console.WriteLine(c.f(x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+      try { Console.WriteLine(d.f(x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+      x = 0;
+      try { Console.WriteLine(c.f(x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+      try { Console.WriteLine(d.f(x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+      x = 1;
+      try { Console.WriteLine(c.f(x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+      try { Console.WriteLine(d.f(x)); Console.WriteLine("No contract violation"); }
+      catch (Exception e) { Console.WriteLine(e.ToString()); }
+    }
+  }
+}
+`
+Microsoft.Contracts.RequiresException: Precondition 'x >= 0' violated from method 'N.C.f(System.Int32)'
+   at N.C.N.I.f(Int32 x)
+   at N.M.Main(String[] args)
+Microsoft.Contracts.RequiresException: Precondition 'x >= 0' violated from method 'N.C.f(System.Int32)'
+   at N.C.N.I.f(Int32 x)
+   at N.M.Main(String[] args)
+0
+No contract violation
+0
+No contract violation
+1
+No contract violation
+1
+No contract violation
+`
+`/debug /d:NONNULLTYPECHECK
+using System;
+using Microsoft.Contracts;
+
+public class MyCheckedException : Exception, ICheckedException { }
+public class MySubException : MyCheckedException { }
+public class MyOtherException : Exception, ICheckedException { }
+
+public abstract class ThrowsOverrides {
+  public abstract void M(int x);
+  public abstract void N(int x)
+    throws MyCheckedException;
+  public abstract void P(int x)
+    throws MyCheckedException;
+}
+
+public interface J
+{
+  void Q(int x)
+    throws MyCheckedException;
+}
+
+
+public class Sub : ThrowsOverrides, J {
+  public override void M(int x)
+    throws MyCheckedException;  // error: cannot weaken throws set
+  {
+  }
+
+  public override void N(int x)
+    throws MyCheckedException;  // OK: doesn't weaken throws set
+    throws MySubException;  // OK: ditto
+  {
+  }
+
+  public override void P(int x)
+    throws MyCheckedException ensures 0 <= x;  // OK
+    throws MySubException ensures 5 <= x;  // OK
+    throws MyOtherException ensures 10 <= x;  // error: cannot weaken throws set
+  {
+  }
+
+  public void Q(int x)
+    // this method follows the same rules as an override, since it implements
+    // a method declared in an interface
+    throws MyCheckedException ensures 0 <= x;  // OK
+    throws MySubException ensures 5 <= x;  // OK
+    throws MyOtherException ensures 10 <= x;  // error: cannot weaken throws set
+  {
+  }
+}
+
+public class Sub2 : J
+{
+  public void Q(int x)
+    // OK: no throws clause: throws set strengthened to empty set
+  {
+    if (x < 0) {
+      throw new MyCheckedException();  // error: not in throws set of method
+    } else {
+      throw new MySubException();  // error: not in throws set of method
+    }
+  }
+}
+
+public class Sub3 : J
+{
+  public void Q(int x)
+    throws MySubException;  // OK: doesn't weaken throws set
+  {
+    if (x < 0) {
+      throw new MyCheckedException();  // error: not in throws set of method
+    } else {
+      throw new MySubException();  // OK
+    }
+  }
+}
+`
+(25,5): error CS2625: 'Sub.M(int)' : Cannot add 'MyCheckedException' to this method's throws set. The method it is overriding does not include this type.
+(38,5): error CS2625: 'Sub.P(int)' : Cannot add 'MyOtherException' to this method's throws set. The method it is overriding does not include this type.
+(47,5): error CS2625: 'Sub.Q(int)' : Cannot add 'MyOtherException' to this method's throws set. The method it is overriding does not include this type.
+(58,7): error CS2609: The checked exception 'MyCheckedException' can be thrown but is not listed in the throws clause for method 'Sub2.Q(int)'.
+(60,7): error CS2609: The checked exception 'MySubException' can be thrown but is not listed in the throws clause for method 'Sub2.Q(int)'.
+(71,7): error CS2609: The checked exception 'MyCheckedException' can be thrown but is not listed in the throws clause for method 'Sub3.Q(int)'.
+`
+interface I {
+  void m() requires true;
+}
+interface J : I{
+}
+class C : I  {
+  public virtual void m() {}
+}
+class D : C, J {
+  public override void m() {}
+  public static void Main(){}
+}
+`
+`
+`/debug
+class A{ public virtual void f(string s){} }
+class B : A{
+  public override void f(string s) requires s != null; {}
+}
+class M{ public static void Main(){} }
+`
+(3,24): error CS2622: 'B.f(string)' : requires clause not allowed in override.
+`
+`/debug
+// Tests to make sure that overrides and implementations of interface methods must
+// declare themselves to be at least as pure as the method they are overriding
+// or implementing.
+using Microsoft.Contracts;
+
+interface I{
+  [Pure]
+  int f();
+}
+
+class GoodExplicit0:I{ // explicit interface implementation
+  [Pure]
+  int I.f(){ return 3; } // OK: match
+}
+class GoodExplicit1:I{ // explicit interface implementation
+  [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+  int I.f(){ return 3; } // OK: strengthen
+}
+class BadExplicit0:I{ // explicit interface implementation
+  int I.f(){ return 3; } // Error: missing
+}
+class BadExplicit1:I{ // explicit interface implementation
+  [Pure][Reads(ReadsAttribute.Reads.Everything)]
+  int I.f(){ return 3; } // Error: weaken
+}
+
+class GoodImplicit0:I{ // implicit interface implementation
+  [Pure]
+  public int f(){ return 3; } // OK: match
+}
+class GoodImplicit1:I{ // implicit interface implementation
+  [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+  public int f(){ return 3; } // OK: strengthen
+}
+class BadImplicit0:I{ // implicit interface implementation
+  public int f(){ return 3; } // Error: missing
+}
+class BadImplicit1:I{ // implicit interface implementation
+  [Pure][Reads(ReadsAttribute.Reads.Everything)]
+  public int f(){ return 3; } // Error: weaken
+}
+
+class Base0{
+  [Pure]
+  protected virtual int f(){ return 3; }
+}
+class GoodSub0:Base0{
+  [Pure]
+  protected override int f(){ return 3; } // OK: match
+}
+class GoodSub1:Base0{
+  [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+  protected override int f(){ return 3; } // OK: strengthen
+}
+class BadSub0:Base0{
+  protected override int f(){ return 3; } // Error: missing
+}
+class BadSub1:Base0{
+  [Pure][Reads(ReadsAttribute.Reads.Everything)]
+  protected override int f(){ return 3; } // Error: weaken
+}
+
+class Top{
+  protected virtual int f(){ return 3; }
+}
+class Middle:Top{
+  [Pure]
+  protected override int f(){ return 3; } // OK: strengthen
+}
+class GoodBottom0:Middle{
+  [Pure]
+  protected override int f(){ return 3; } // OK: match
+}
+class BadBottom0:Middle{
+  protected override int f(){ return 3; } // Error: missing
+}
+class BadBottom1:Middle{
+  [Pure][Reads(ReadsAttribute.Reads.Everything)]
+  protected override int f(){ return 3; } // Error: weaken
+}
+`
+(20,9): error CS2681: 'BadExplicit0.I.f()' is not pure enough. It either overrides or implements 'I.f()' which is marked as '[Pure]'
+(24,9): error CS2681: 'BadExplicit1.I.f()' is not pure enough. It either overrides or implements 'I.f()' which is marked as '[Pure]'
+(36,14): error CS2681: 'BadImplicit0.f()' is not pure enough. It either overrides or implements 'I.f()' which is marked as '[Pure]'
+(40,14): error CS2681: 'BadImplicit1.f()' is not pure enough. It either overrides or implements 'I.f()' which is marked as '[Pure]'
+(56,26): error CS2681: 'BadSub0.f()' is not pure enough. It either overrides or implements 'Base0.f()' which is marked as '[Pure]'
+(60,26): error CS2681: 'BadSub1.f()' is not pure enough. It either overrides or implements 'Base0.f()' which is marked as '[Pure]'
+(75,26): error CS2681: 'BadBottom0.f()' is not pure enough. It either overrides or implements 'Middle.f()' which is marked as '[Pure]'
+(79,26): error CS2681: 'BadBottom1.f()' is not pure enough. It either overrides or implements 'Middle.f()' which is marked as '[Pure]'
+`
+`/debug
+// Tests to make sure that overrides and implementations of interface property
+// getters must declare themselves to be at least as pure as the method they
+// are overriding or implementing.
+// The difference for properties is that the purity marking can be on the
+// property instead of the getter.
+using Microsoft.Contracts;
+
+interface I{
+  bool NoneFoo { get; }
+  [Pure][Reads(ReadsAttribute.Reads.Everything)] bool PureMarkedOnPropertyFoo { get; }
+  [Pure] bool ConfinedMarkedOnPropertyFoo { get; }
+  [Pure][Reads(ReadsAttribute.Reads.Nothing)] bool StateIndependentMarkedOnPropertyFoo { get; }
+  bool PureMarkedOnGetterFoo { [Pure][Reads(ReadsAttribute.Reads.Everything)] get; }
+  bool ConfinedMarkedOnGetterFoo { [Pure] get; }
+  bool StateIndependentMarkedOnGetterFoo { [Pure][Reads(ReadsAttribute.Reads.Nothing)] get; }
+}
+
+class GoodExplicit0:I{ // OK: match purity, marking on method
+  bool I.NoneFoo { get { return true; } }
+  bool I.PureMarkedOnPropertyFoo { [Pure][Reads(ReadsAttribute.Reads.Everything)] get { return true; } }
+  bool I.ConfinedMarkedOnPropertyFoo { [Pure] get { return true; } }
+  bool I.StateIndependentMarkedOnPropertyFoo { [Pure][Reads(ReadsAttribute.Reads.Nothing)] get { return true; } }
+  bool I.PureMarkedOnGetterFoo { [Pure][Reads(ReadsAttribute.Reads.Everything)] get { return true; } }
+  bool I.ConfinedMarkedOnGetterFoo { [Pure] get { return true; } }
+  bool I.StateIndependentMarkedOnGetterFoo { [Pure][Reads(ReadsAttribute.Reads.Nothing)] get { return true; } }
+}
+class GoodExplicit1:I{ // OK: match purity, marking on property
+  bool I.NoneFoo { get { return true; } }
+  [Pure][Reads(ReadsAttribute.Reads.Everything)] bool I.PureMarkedOnPropertyFoo { get { return true; } }
+  [Pure] bool I.ConfinedMarkedOnPropertyFoo { get { return true; } }
+  [Pure][Reads(ReadsAttribute.Reads.Nothing)] bool I.StateIndependentMarkedOnPropertyFoo { get { return true; } }
+  [Pure][Reads(ReadsAttribute.Reads.Everything)] bool I.PureMarkedOnGetterFoo { get { return true; } }
+  [Pure] bool I.ConfinedMarkedOnGetterFoo { get { return true; } }
+  [Pure][Reads(ReadsAttribute.Reads.Nothing)] bool I.StateIndependentMarkedOnGetterFoo { get { return true; } }
+}
+class BadExplicit0:I{ // Error: missing markings
+  bool I.NoneFoo { get { return true; } }
+  bool I.PureMarkedOnPropertyFoo { get { return true; } } // Okay: default is confined which is at least as pure as pure
+  bool I.ConfinedMarkedOnPropertyFoo { get { return true; } } // Okay; default is confined which is at least as pure as confined
+  bool I.StateIndependentMarkedOnPropertyFoo { get { return true; } } // Error: default is confined which is *not* at least as pure as state-independent
+  bool I.PureMarkedOnGetterFoo { get { return true; } } // Okay: default is confined which is at least as pure as pure
+  bool I.ConfinedMarkedOnGetterFoo { get { return true; } } // Okay: default is confined which is at least as pure as pure
+  bool I.StateIndependentMarkedOnGetterFoo { get { return true; } } // Error: default is confined which is *not* at least as pure as state-independent
+}
+class M { public static void Main(){} }
+`
+(40,48): error CS2681: 'BadExplicit0.I.StateIndependentMarkedOnPropertyFoo.get' is not pure enough. It either overrides or implements 'I.StateIndependentMarkedOnPropertyFoo.get' which is marked as '[Pure][Reads(ReadsAttribute.Reads.Nothing)]'
+(43,46): error CS2681: 'BadExplicit0.I.StateIndependentMarkedOnGetterFoo.get' is not pure enough. It either overrides or implements 'I.StateIndependentMarkedOnGetterFoo.get' which is marked as '[Pure][Reads(ReadsAttribute.Reads.Nothing)]'
+`
+`/debug+
+// Methods marked [MustOverride] must be implemented
+using System;
+using Microsoft.Contracts;
+public class B{
+ [MustOverride]
+ public virtual void foo(){}
+ public virtual void bar(){}
+}
+public class C:B{
+}
+public class M{ public static void Main(){ } }
+`
+(9,14): error CS2678: 'C' does not implement the method 'B.foo()' which is marked as MustOverride
+(6,22): (Location of symbol related to previous error)
+`
+`/debug+
+// Methods marked [MustOverride] must be implemented and marked
+using System;
+using Microsoft.Contracts;
+public class B{
+ [MustOverride]
+ public virtual void foo(){}
+ public virtual void bar(){}
+}
+public class C:B{
+ public override void foo(){ }
+}
+public class M{ public static void Main(){ } }
+`
+(9,14): error CS2679: 'C.foo()' must be marked as MustOverride
+`
+`/debug+
+// Methods marked [MustOverride] must be implemented and marked: OK
+using System;
+using Microsoft.Contracts;
+public class B{
+ [MustOverride]
+ public virtual void foo(){}
+ public virtual void bar(){}
+}
+public class C:B{
+ [MustOverride]
+ public override void foo(){ }
+}
+public class M{ public static void Main(){ } }
+`
+`
+`/debug+
+// Abstract classes do not have to implement methods marked [MustOverride]
+using System;
+using Microsoft.Contracts;
+public class B{
+ [MustOverride]
+ public virtual void foo(){}
+ public virtual void bar(){}
+}
+public abstract class C:B{
+}
+public class M{ public static void Main(){ } }
+`
+`
+`/debug+
+// Abstract classes do not have to implement methods marked [MustOverride]
+// but if they do, they must be marked
+using System;
+using Microsoft.Contracts;
+public class B{
+ [MustOverride]
+ public virtual void foo(){}
+ public virtual void bar(){}
+}
+public abstract class C:B{
+ public override void foo(){}
+}
+public class M{ public static void Main(){ } }
+`
+(10,23): error CS2679: 'C.foo()' must be marked as MustOverride
+`
+`/debug+
+// Abstract classes do not have to implement methods marked [MustOverride]
+// but if they do, they must be marked: OK
+using System;
+using Microsoft.Contracts;
+public class B{
+ [MustOverride]
+ public virtual void foo(){}
+ public virtual void bar(){}
+}
+public abstract class C:B{
+ [MustOverride]
+ public virtual void baz(){ }
+}
+public class D:C{
+ [MustOverride]
+ public override void foo(){ }
+ [MustOverride]
+ public override void baz(){ }
+}
+public class M{ public static void Main(){ } }
+`
+`
+`/debug+
+// Overrides can mark methods as [MustOverride] if the virtual wasn't marked that way: OK
+using System;
+using Microsoft.Contracts;
+public class B{
+ public virtual void foo(){}
+ public virtual void bar(){}
+}
+public class C:B{
+ [MustOverride]
+ public override void foo(){}
+}
+public class M{ public static void Main(){ } }
+`
+`
+`/debug+
+// Overrides can mark methods as [MustOverride] if the virtual wasn't marked that way
+// Concrete subtypes must implement the method
+using System;
+using Microsoft.Contracts;
+public class B{
+ public virtual void foo(){}
+ public virtual void bar(){}
+}
+public class C:B{
+ [MustOverride]
+ public override void foo(){}
+}
+public class D:C{
+}
+public class M{ public static void Main(){ } }
+`
+(13,14): error CS2678: 'D' does not implement the method 'C.foo()' which is marked as MustOverride
+(11,23): (Location of symbol related to previous error)
+`
+`/debug+
+// Overrides can mark methods as [MustOverride] if the virtual wasn't marked that way
+// Concrete subtypes must implement the method and mark them
+using System;
+using Microsoft.Contracts;
+public class B{
+ public virtual void foo(){}
+ public virtual void bar(){}
+}
+public class C:B{
+ [MustOverride]
+ public override void foo(){}
+}
+public class D:C{
+ public override void foo(){}
+}
+public class M{ public static void Main(){ } }
+`
+(13,14): error CS2679: 'D.foo()' must be marked as MustOverride
+`
+`/debug+
+// Overrides can mark methods as [MustOverride] if the virtual wasn't marked that way: OK
+using System;
+using Microsoft.Contracts;
+public class B{
+ public virtual void foo(){}
+ public virtual void bar(){}
+}
+public class C:B{
+ [MustOverride]
+ public override void foo(){}
+}
+public class D:C{
+ [MustOverride]
+ public override void foo(){}
+}
+public class M{ public static void Main(){ } }
+`
+`
+`/debug
+// Inheritance of throws clauses
+using System;
+using Microsoft.Contracts;
+public class CEX : CheckedException{
+  public CEX(int i) { ErrorCode = i; }
+  public int ErrorCode;
+}
+public class C{
+  public int x;
+  public virtual int M(int y)
+    ensures result == 3;
+    throws (CEX e) ensures e.ErrorCode == 0 && x >= 0;
+  {
+    throw new CEX(y); 
+  }
+}
+class D : C{
+  public override int M(int y)
+    throws CEX; // inherits ensures clause
+  {
+    throw new CEX(y); 
+  }
+}
+
+class M{
+  public static void Main(){
+    try{
+      Console.WriteLine(new D().M(0));
+    }
+    catch (CEX e) { Console.WriteLine("Caught an e: " + e.ErrorCode); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}  
+`
+Caught an e: 0
+`
+`/debug
+// Inheritance of throws clauses
+using System;
+using Microsoft.Contracts;
+public class CEX : CheckedException{
+  public CEX(int i) { ErrorCode = i; }
+  public int ErrorCode;
+}
+public class C{
+  public int x;
+  public virtual int M(int y)
+    ensures result == 3;
+    throws (CEX e) ensures e.ErrorCode == 0 && x >= 0;
+  {
+    throw new CEX(y); 
+  }
+}
+class D : C{
+  public override int M(int y)
+    throws CEX; // inherits ensures clause
+  {
+     throw new CEX(y); 
+  }
+}
+
+class M{
+  public static void Main(){
+    try{
+      Console.WriteLine(new D().M(1));
+    }
+    catch (CEX e) { Console.WriteLine("Caught an e: " + e.ErrorCode); }
+    catch (Exception e) { Console.WriteLine(e.Message); }
+  }
+}  
+`
+Exceptional postcondition 'e.ErrorCode == 0 && x >= 0' violated from method 'D.M(System.Int32)'
+`
+`/debug
+// Partial test to make sure that contract inheritance works correctly
+using System;
+using System.Collections.Generic;
+using System.Text;
+using Microsoft.Contracts;
+interface J{
+  int M(int x);
+    requires 0 < x;
+}
+// D needs to show up before C in the source
+public class D : C,J{
+}
+public abstract class C : J{
+  public virtual int M(int x)
+  { return x; }
+}
+class M{ public static void Main(){} }
+`
+`

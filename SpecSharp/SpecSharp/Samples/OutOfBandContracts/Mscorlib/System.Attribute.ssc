@@ -1,0 +1,120 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System
+{
+
+    public class Attribute
+    {
+
+        public object TypeId
+        {
+          get;
+        }
+
+        public bool IsDefaultAttribute ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object obj);
+
+        public bool Match (object obj);
+
+        public static Attribute GetCustomAttribute (System.Reflection.Assembly element, Type attributeType, bool inherit);
+
+        public static Attribute GetCustomAttribute (System.Reflection.Assembly element, Type attributeType);
+
+        public static Attribute GetCustomAttribute (System.Reflection.Module element, Type attributeType, bool inherit);
+
+        public static Attribute GetCustomAttribute (System.Reflection.Module element, Type attributeType);
+
+        public static Attribute GetCustomAttribute (System.Reflection.ParameterInfo element, Type attributeType, bool inherit);
+
+        public static Attribute GetCustomAttribute (System.Reflection.ParameterInfo element, Type attributeType);
+
+        public static Attribute GetCustomAttribute (System.Reflection.MemberInfo element, Type attributeType, bool inherit);
+
+        public static Attribute GetCustomAttribute (System.Reflection.MemberInfo element, Type attributeType);
+
+        public static bool IsDefined (System.Reflection.Assembly! element, Type! attributeType, bool inherit)
+            requires element != null otherwise ArgumentNullException;
+            requires attributeType != null otherwise ArgumentNullException;
+
+        public static bool IsDefined (System.Reflection.Assembly element, Type attributeType);
+
+        public static bool IsDefined (System.Reflection.Module! element, Type! attributeType, bool inherit)
+            requires element != null otherwise ArgumentNullException;
+            requires attributeType != null otherwise ArgumentNullException;
+
+        public static bool IsDefined (System.Reflection.Module element, Type attributeType);
+
+        public static bool IsDefined (System.Reflection.ParameterInfo! element, Type! attributeType, bool inherit)
+            requires element != null otherwise ArgumentNullException;
+            requires attributeType != null otherwise ArgumentNullException;
+
+        public static bool IsDefined (System.Reflection.ParameterInfo element, Type attributeType);
+
+        public static bool IsDefined (System.Reflection.MemberInfo! element, Type! attributeType, bool inherit)
+            requires element != null otherwise ArgumentNullException;
+            requires attributeType != null otherwise ArgumentNullException;
+
+        public static bool IsDefined (System.Reflection.MemberInfo element, Type attributeType);
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.Assembly! element, bool inherit)
+            requires element != null otherwise ArgumentNullException;
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.Assembly element);
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.Module! element, bool inherit)
+            requires element != null otherwise ArgumentNullException;
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.Module element);
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.ParameterInfo! element, bool inherit)
+            requires element != null otherwise ArgumentNullException;
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.ParameterInfo element);
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.Assembly! element, Type! attributeType, bool inherit)
+            requires element != null otherwise ArgumentNullException;
+            requires attributeType != null otherwise ArgumentNullException;
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.Assembly element, Type attributeType);
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.Module! element, Type! attributeType, bool inherit)
+            requires element != null otherwise ArgumentNullException;
+            requires attributeType != null otherwise ArgumentNullException;
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.Module element, Type attributeType);
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.ParameterInfo! element, Type! attributeType, bool inherit)
+            requires element != null otherwise ArgumentNullException;
+            requires attributeType != null otherwise ArgumentNullException;
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.ParameterInfo element, Type attributeType);
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.MemberInfo! element, bool inherit)
+            requires element != null otherwise ArgumentNullException;
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.MemberInfo element);
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.MemberInfo! element, Type! type, bool inherit)
+            requires element != null otherwise ArgumentNullException;
+            requires type != null otherwise ArgumentNullException;
+
+        public static Attribute[] GetCustomAttributes (System.Reflection.MemberInfo element, Type type);
+    }
+}

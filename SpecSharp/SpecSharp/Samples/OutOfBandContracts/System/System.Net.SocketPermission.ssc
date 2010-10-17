@@ -1,0 +1,52 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Net
+{
+
+    public class SocketPermission
+    {
+
+        public System.Collections.IEnumerator AcceptList
+        {
+          get;
+        }
+
+        public System.Collections.IEnumerator ConnectList
+        {
+          get;
+        }
+
+        public System.Security.SecurityElement ToXml ();
+
+        public void FromXml (System.Security.SecurityElement! securityElement)
+            requires securityElement != null otherwise ArgumentNullException;
+
+        public bool IsSubsetOf (System.Security.IPermission target);
+
+        public System.Security.IPermission Intersect (System.Security.IPermission target);
+
+        public System.Security.IPermission Union (System.Security.IPermission target);
+
+        public System.Security.IPermission Copy ();
+
+        public bool IsUnrestricted ();
+
+        public void AddPermission (NetworkAccess access, TransportType transport, string! hostName, int portNumber)
+            requires hostName != null otherwise ArgumentNullException;
+
+        public SocketPermission (NetworkAccess access, TransportType transport, string hostName, int portNumber);
+
+        public SocketPermission (System.Security.Permissions.PermissionState state);
+    }
+}

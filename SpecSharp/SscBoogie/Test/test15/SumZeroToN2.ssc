@@ -1,0 +1,23 @@
+class X {
+  int SumTo (int N)
+    requires 0 <= N;
+    ensures result == sum{int k in (1..N); k};
+  {
+    int s = 0; 
+    for (int i = 1; i <= N; i++)
+      ///* missing:*/ invariant i <= N+1;
+      invariant s == sum{int k in (0:i); k}; 
+    {
+      s += i;
+    }
+    return s;
+  }
+}
+
+//current error:
+// Error: Method X.SumTo(int N), unsatisfied postcondition: result == sum{int k in (1..N); k}
+// sumZeroToN1.ssc(13,5):    (trace position related to previous error)
+
+//better error:
+// point to i being strictly larger than N, maybe even much larger!
+// concrete example: N = 0; i = 3, s = 0 , sum{...} = 6;

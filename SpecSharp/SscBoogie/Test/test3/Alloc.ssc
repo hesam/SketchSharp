@@ -1,0 +1,99 @@
+using Microsoft.Contracts;
+
+public static class Alloc {
+  public static void Main() {}
+
+  public static void M0(T a) {
+    T x = GimmieOne();
+    T b = new T();
+    assert a != b;  // easy!
+    assert x != b;  // easy!
+  }
+
+  static T! GimmieOne() {
+    return new T();
+  }
+
+  public static void M1(T! a) {
+    T b = new T();
+    assert a.next != b;
+  }
+
+  public static void M2(T! a)
+    modifies a.*;
+  {
+    T c = a.Next;
+    T d = a.Nx();
+    T b = new T();
+    b.M();
+    assert b != a.next;
+    assert b != c;
+    assert b != d;
+    assert a.next == null || a.next.next != b;
+    assert a.next == null || a.next.next == null || a.next.next.next != b;
+  }
+
+  public static void M3(T! a) {
+    T b = new T();
+    assert b.next == null;  // error: it might not be
+  }
+
+  public static void M4(T! a) {
+    T b = new T();
+    assert b.next != a;
+  }
+
+  static T gt;
+
+  public static void M5()
+  {
+    T old_gt = gt;
+    T b = new T();
+    assume gt == null || gt.IsConsistent;
+    assert b != old_gt;
+    assert b != gt;  // error: b might be gt
+    assert gt == null || gt.next == null || gt.next != b;
+  }
+}
+
+public sealed class T {
+  [Rep] public T next;
+
+  public T Next {
+    [NoDefaultContract]
+    get {
+      return next;
+    }
+  }
+
+  [NoDefaultContract]
+  public T Nx() {
+    return next;
+  }
+
+  public void M() {}
+
+  public void OtherTypes_Struct(Stru s) {
+    T t = new T();
+    assert s.o != t;
+  }
+
+  public void OtherTypes_Array(T[]! a, int j)
+    requires 0 <= j && j < a.Length;
+  {
+    T t = new T();
+    assert a[j] != t;
+  }
+
+  public void OtherTypes_ArrayOfStructs(Stru[]! sa, int j)
+    requires 0 <= j && j < sa.Length;
+  {
+    T t = new T();
+    assert sa[j].o != t;
+  }
+}
+
+public struct Stru {
+  public object o;
+  public int x;
+}

@@ -1,0 +1,31 @@
+class ArrayIndexOutOfBounds {
+  public int readIndexOver(int[]! a, int n) 
+    requires 0 <= n;
+  {
+    return a[n]; //error
+  }
+  public int readIndexUnder(int[]! a, int n) 
+    requires n < a.Length;
+  {
+    return a[n]; //error
+  }
+  public int writeIndexOver(int[]! a, int n) 
+    requires 0 <= n;
+  {
+    a[n] = 42; //error
+    return 0;
+  }
+  public int writeIndexUnder(int[]! a, int n) 
+    requires n < a.Length;
+  {
+    a[n] = 42; //error
+    return 0;
+  }
+
+  public int readIndexOverKnownResult(int[]! a, int i, int j, int k)
+    requires j + k <= i && 0 <= k && i <= j && j == 5; // that means i == 5
+  {
+    return a[i];
+  }
+  
+}

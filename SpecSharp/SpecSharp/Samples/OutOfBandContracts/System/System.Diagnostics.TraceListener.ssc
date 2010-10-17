@@ -1,0 +1,65 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Diagnostics
+{
+
+    public class TraceListener
+    {
+
+        public int IndentLevel
+        {
+          get;
+          set;
+        }
+
+        public string Name
+        {
+          get;
+          set;
+        }
+
+        public int IndentSize
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+        }
+
+        public void WriteLine (object o, string category);
+
+        public void WriteLine (string message, string category);
+
+        public void WriteLine (object o);
+
+        public void WriteLine (string arg0);
+
+        public void Write (object o, string category);
+
+        public void Write (string message, string category);
+
+        public void Write (object o);
+
+        public void Write (string arg0);
+
+        public void Fail (string message, string detailMessage);
+
+        public void Fail (string message);
+
+        public void Flush ();
+
+        public void Close ();
+
+        public void Dispose ();
+    }
+}

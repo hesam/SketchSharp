@@ -1,0 +1,99 @@
+// This file tests .* versus .**
+
+using Microsoft.Contracts;
+
+public class Homeboy {
+  [Peer] public Wallet! w = new Wallet();
+  public int y;
+
+  // ----- Callers -----
+
+  public void A()
+    requires w.x == 10 && y == 20;
+    modifies this.*;
+  {
+    Wallet wa = w;
+    P();
+    assert wa.x == 10;
+    assert y == 20;  // error: P may have changed y
+  }
+
+  public void B()
+    requires w.x == 10 && y == 20;
+    modifies this.*;
+  {
+    P();
+    assert w.x == 10;  // error: P may have changed w (but not old(w).x)
+  }
+
+  public void C()
+    requires w.x == 10 && y == 20;
+    modifies this.**;
+  {
+    Q();
+    assert y == 20;  // error: Q may have changed y
+  }
+
+  public void D()
+    requires w.x == 10 && y == 20;
+    modifies this.**;
+  {
+    Wallet wa = w;
+    Q();
+    assert wa.x == 10;  // error: Q may have changed old(w).x
+  }
+
+  public void E()
+    modifies this.*;
+  {
+    Q();
+  }  // error: violates frame condition
+
+  public void F()
+    modifies this.**;
+  {
+    P();
+    Q();
+  }
+
+  // ----- Callees -----
+
+  public void P()
+    modifies this.*;
+  {
+    expose (this) { y++; }
+  }
+
+  public void Q()
+    modifies this.**;
+  {
+    expose (this) { y++; }
+  }
+
+  public void R()
+    modifies this.**;
+  {
+    expose (this) {
+      y++;
+      w.x++; w.xx++;  // error:  w is not sufficiently exposed
+    }
+  }
+
+  public void S()
+    modifies this.*;
+  {
+    expose (this) { y++; expose (w) { w.x++; w.xx++; } }
+  }  // error: violated frame condition
+
+  public void T()
+    modifies this.**;
+  {
+    expose (this) { y++; expose (w) { w.x++; w.xx++; } }
+  }
+}
+
+public class Wallet {
+  public int x;
+  public int xx;
+  invariant x == xx;  // this invariant will force each update of x to be contained in an expose statement
+}

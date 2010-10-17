@@ -1,0 +1,48 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+namespace Microsoft.Boogie
+{
+  using System;
+  using System.Text;
+  using System.Diagnostics;
+  using System.Collections;
+  using System.Collections.Generic;
+  using Microsoft.Contracts;
+  using Cci = System.Compiler;
+  using Bpl = Microsoft.Boogie;
+
+  /// <summary>
+  /// This is a database of all methods that have been visited so far
+  /// during the translation. We store the signatures of such methods,
+  /// because we might need to look up information such as modifies
+  /// clauses when translating other methods.
+  /// </summary>
+
+  internal class MethodRepository {
+
+    private readonly IDictionary<Cci.Method!, MethodSignature!>! Signatures =
+      new Dictionary<Cci.Method!, MethodSignature!> ();
+
+    private readonly Sink! sink;
+
+    public MethodRepository(Sink! s) {
+      sink = s;
+    }
+
+    internal MethodSignature! this[Cci.Method! method] {
+      get {
+        MethodSignature res;
+        if (!Signatures.TryGetValue(method, out res)) {
+          res = new MethodSignature(method, sink, sink.om, false);
+          Signatures.Add(method, res);
+        }
+        assert res != null;
+        return res;
+      }
+    }    
+
+  }
+}

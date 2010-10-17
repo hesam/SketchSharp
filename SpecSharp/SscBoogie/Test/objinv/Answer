@@ -1,0 +1,38 @@
+
+-------------------- Interval.ssc --------------------
+Interval.ssc(52,7): Error: The call to Cell.Shift(int delta) requires target object to be peer consistent (owner must not be valid)
+Interval.ssc(60,10): Error: The call to Interval.Shift(int delta) requires target object to be peer consistent
+
+Spec# program verifier finished with 7 verified, 2 errors
+
+-------------------- ValidAndPrevalid.ssc --------------------
+ValidAndPrevalid.ssc(48,7): Error: Assertion might not hold: IsPrevalid
+ValidAndPrevalid.ssc(57,10): Error: Assertion might not hold: ((object)this).IsValid
+ValidAndPrevalid.ssc(67,9): Error: Assertion might not hold: IsValid
+ValidAndPrevalid.ssc(87,10): Error: Assertion might not hold: a.Value <= b.Value
+ValidAndPrevalid.ssc(107,13): Error: Assertion might not hold: IsPrevalid
+ValidAndPrevalid.ssc(118,13): Error: Assertion might not hold: IsPrevalid
+ValidAndPrevalid.ssc(129,13): Error: Assertion might not hold: IsPrevalid
+
+Spec# program verifier finished with 8 verified, 7 errors
+
+-------------------- ExposelessUpdates.ssc --------------------
+ExposelessUpdates.ssc(29,5): Error: Assignment to field C.a of non-exposed target object may break invariant: PureMethod() < 65
+ExposelessUpdates.ssc(35,5): Error: Assignment to field C.a of non-exposed target object may break satisfies clause ModelField <= a of modelfield C.ModelField
+ExposelessUpdates.ssc(88,5): Error: Assignment to field C.b of non-exposed target object may break invariant: b <= 100
+ExposelessUpdates.ssc(93,5): Error: Assignment to field C.b of non-exposed target object may break invariant: b <= 100
+
+Spec# program verifier finished with 14 verified, 4 errors
+
+-------------------- BasicMethodology.ssc --------------------
+BasicMethodology.ssc(91,3): warning CS2663: Object invariant possibly does not hold: y <= 80
+BasicMethodology.ssc(90,5): warning CS2663:     (trace position)
+BasicMethodology.ssc(121,5): warning CS2663: Assertion might not hold: t.IsExposable
+BasicMethodology.ssc(129,9): warning CS2663: The call to C.foo() requires target object to be consistent
+BasicMethodology.ssc(141,5): warning CS2663: Object invariant possibly does not hold: f != 0
+BasicMethodology.ssc(141,5): warning CS2663:     (trace position)
+
+-------------------- Pack.ssc --------------------
+Pack.ssc(63,5): warning CS2663: Object invariant possibly does not hold: 0 <= x
+Pack.ssc(96,9): warning CS2663: Object invariant possibly does not hold: 0 <= x
+Pack.ssc(96,9): warning CS2663:     (trace position)

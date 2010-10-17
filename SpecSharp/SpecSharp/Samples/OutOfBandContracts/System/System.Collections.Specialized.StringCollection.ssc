@@ -1,0 +1,69 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Collections.Specialized
+{
+
+    public class StringCollection
+    {
+
+        public bool IsReadOnly
+        {
+          get;
+        }
+
+        public object SyncRoot
+        {
+          get;
+        }
+
+        public bool IsSynchronized
+        {
+          get;
+        }
+
+        public string this [int index]
+        {
+          get;
+          set;
+        }
+
+        public int Count
+        {
+          get;
+        }
+
+        public StringCollection ();
+
+        public void RemoveAt (int index);
+
+        public void Remove (string value);
+
+        public void Insert (int index, string value);
+
+        public int IndexOf (string value);
+
+        public StringEnumerator GetEnumerator ();
+
+        public void CopyTo (String[] array, int index);
+
+        public bool Contains (string value);
+
+        public void Clear ();
+
+        public void AddRange (String[]! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public int Add (string value);
+    }
+}

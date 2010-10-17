@@ -1,0 +1,86 @@
+using Microsoft.Contracts;
+
+internal class C {
+  internal T! t = new T();
+
+  internal void Correct(T! xt)
+    requires Owner.None(this.t);
+    modifies this.t, this.t.x;
+  {
+    this.t.x = 12;  // fine, since the precondition implies that this.t is not committed
+    this.t = xt;
+  }
+
+  internal void Incorrect(T! xt)
+    modifies this.t, this.t.x;
+  {
+    this.t = xt;
+    this.t.x = 12;
+  }  // error: violates modifies clause ("this.t" in "this.t.x" is interpreted in the pre-state)
+}
+
+internal class T {
+  internal int x;
+}
+
+class Arraytests {
+
+  public static void Main() {
+    int[] a = new int[]{5,1,2,3,4,5};
+    M0(a);
+    assert a[0] == 3;
+    assert a[1] == 1;
+    assert a[2] == 100;
+
+    a[0] = 5;
+    M1(a);
+    assert a[0] == 3;
+    assert a[1] == 1;  // error: this is not ensured by the modifies clause of M1
+  }
+  
+  static void M0(int[]! xs) 
+    requires 3 <= xs.Length;
+    requires xs[0] == 5;
+    modifies xs[0], xs[2];
+    ensures xs[0] == 3 && xs[2] == 100;
+  {
+    xs[0] = 3;
+    xs[2] = 100;
+  }
+
+  static void M1(int[]! xs) 
+    requires 3 <= xs.Length;
+    requires xs[0] == 5;
+    modifies xs[*];
+    ensures xs[0] == 3;
+  {
+    xs[0] = 3;
+    xs[1] = 100;
+  }
+
+  static void Bad(int[]! xs) 
+    requires 3 <= xs.Length;
+    modifies xs[0], xs[2];
+  {
+    xs[0] = 3;
+    xs[1] = 100;
+  }  // error: violation of modifies clause
+
+  static void P0(string[,] ss)
+    requires ss != null ==> 5 < ss.GetLength(0) && 20 < ss.GetLength(1);
+    modifies ss[5,12];
+  {
+    if (ss != null) {
+      ss[5,12] = "hello";
+    }
+  }
+
+  static void P1(string[,] ss)
+    requires ss != null ==> 5 < ss.GetLength(0) && 20 < ss.GetLength(1);
+    modifies ss[5,12];
+  {
+    if (ss != null) {
+      ss[4,11] = "hello";  // error: violates modifies clause
+    }
+  }
+}

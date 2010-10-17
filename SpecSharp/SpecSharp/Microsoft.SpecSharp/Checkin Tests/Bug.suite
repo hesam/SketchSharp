@@ -1,0 +1,195 @@
+`
+// This file contains repros for bugs that are filed in ProductStudio.
+// The expected output is the current (unwanted) output. This way,
+// when a bug is fixed, even if inadvertantly, the suite will alert
+// whoever made the change to resolve the bug in the database and to
+// move the repro from this file to the appropriate suite.
+// (Idea due to Manuel.)
+//
+// Please make sure to list both the bug number and the suite the
+// case should be moved into once fixed.
+//
+// Empty test case just to include above comment.
+class M{ public static void Main() {} }
+`
+`
+`/debug
+// bug 11
+// move to SpecSharpConformanceInheritance once fixed
+// Maybe we shouldn't have invariants on interfaces?
+// But it might make sense for model fields on the interface.
+interface I {
+  invariant P > 0;
+  int P { get; }
+}
+
+class C : I {
+  public int P { get { return 3; } }
+}
+
+class M{
+  public static void Main() {}
+}
+// added, mbarnett, 2005/04/19
+// changed, t-bartj, 2005/04/20
+`
+(6,3): error CS2615: Only classes and structs can have invariants 
+`
+using System;
+using System.Collections.Generic;
+public class A
+{
+  static IEnumerable<char> ReverseString(string src)
+  {
+    for (int i = src.Length - 1; i > -1; i--)
+    {
+      try
+      {
+        yield return src[i];
+      }
+      finally
+      {
+        Console.WriteLine("i = {0}, src[i] = {1}", i, src[i]);
+      }
+    }
+  }
+  static void Main()
+  {
+    foreach (char ch in ReverseString("abc")){
+      Console.WriteLine(ch);
+    }
+  }
+}
+`
+(21,25): warning CS2614: Receiver might be null (of type 'System.Collections.Generic.IEnumerable<char>')
+(7,18): warning CS2614: Receiver might be null (of type 'string')
+(15,55): warning CS2614: Receiver might be null (of type 'string')
+c
+i = 2, src[i] = c
+b
+i = 1, src[i] = b
+a
+i = 0, src[i] = a
+`
+`/p:v2
+using System;
+using System.Collections.Generic;
+
+public class Gen<T> : IEnumerable<T>  
+{
+  T[] Values;
+  
+  public Gen(T[] Values)
+  {
+    this.Values = Values;    
+  }
+  
+  public IEnumerator<T>  GetEnumerator()
+  {
+    foreach(T Value in Values)
+    {
+      yield return Value;
+    }
+  }
+
+  System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+  {
+    return this.GetEnumerator();
+  }
+
+  public static void TestForeach<U>(U G, T[] Arr) where U : IEnumerable<T>
+  {
+    ((VerifyIterator<T,U>)
+      delegate(U XG, T[] XArr) 
+      { 
+        int i = 0;
+        foreach(T! val in XG)
+        {
+          Test.Eval(val.Equals(XArr[i++]));
+        }
+      }
+    )(G,Arr); 
+  }
+}
+
+
+public delegate void VerifyIterator<T,U>(U G, T[] Arr) where U : IEnumerable<T>;
+
+public class Test
+{
+  public static int counter = 0;
+  public static bool result = true;
+  public static void Eval(bool exp)
+  {
+    counter++;
+    if (!exp)
+    {
+      result = exp;
+      Console.WriteLine("Test Failed at location: " + counter);
+    }
+  
+  }
+  
+  public static int Main()
+  {
+    Gen<int>.TestForeach<Gen<int>>(new Gen<int>(new int[]{1,2,3,4,5,6,7,8,9}),new int[]{1,2,3,4,5,6,7,8,9});
+    Gen<string>.TestForeach<Gen<string>>(new Gen<string>(new string[]{"1","2","3","4","5","6","7","8","9"}),new string[]{"1","2","3","4","5","6","7","8","9"});
+  
+    if (result)
+    {
+      return 0;
+    }
+    else
+    {
+      return 1;
+    }
+  }
+    
+}
+`
+(15,24): warning CS2638: Using possibly null pointer as array
+(32,27): warning CS2614: Receiver might be null (of type 'object')
+(34,32): warning CS2638: Using possibly null pointer as array
+An attempt was made to load a program with an incorrect format. (Exception from HRESULT: 0x8007000B)
+`
+// bug 191
+// move to SpecSharpConformanceNonNull after fixed?
+using Microsoft.Contracts;
+
+public class Library
+{
+  public class C { public void M() { } }
+
+  private C obj = null;
+  public C Obj { [Pure] get { return obj; } }
+
+  public void Init()
+    ensures Obj != null;
+  {
+    obj = new C();
+  }
+}
+
+public class Client
+{
+  public static void Main()
+  {
+    Library lib = new Library();
+    lib.Init();
+    lib.Obj.M();
+  }
+}
+`
+(25,5): warning CS2614: Receiver might be null (of type 'Library.C')
+`
+class Test{
+    public static int Main()
+    {
+      int? foo = null;
+      int bar = foo ?? 5;
+      return bar - 5;
+    }
+}
+`
+(4,12): warning CS0219: The variable 'foo' is assigned but its value is never used
+`

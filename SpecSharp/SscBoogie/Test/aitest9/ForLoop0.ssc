@@ -1,0 +1,12 @@
+class ForLoop0
+{
+	public void AForLoop(int N)
+	{
+		for(int i = 0; i < N; i++)
+		{
+			assert i>=0;
+			// A body
+		} 
+	}
+	
+}

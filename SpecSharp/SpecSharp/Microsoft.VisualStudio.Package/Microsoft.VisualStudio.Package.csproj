@@ -1,0 +1,292 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
+  <PropertyGroup>
+    <ProjectType>Local</ProjectType>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{74FFF4C7-17CB-40C1-A6FE-3E419237DF61}</ProjectGuid>
+    <SccProjectName>
+    </SccProjectName>
+    <SccLocalPath>
+    </SccLocalPath>
+    <SccProvider>
+    </SccProvider>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <ApplicationIcon>
+    </ApplicationIcon>
+    <AssemblyKeyContainerName>
+    </AssemblyKeyContainerName>
+    <AssemblyName>Microsoft.VisualStudio.Package</AssemblyName>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
+    <DefaultClientScript>JScript</DefaultClientScript>
+    <DefaultHTMLPageLayout>Grid</DefaultHTMLPageLayout>
+    <DefaultTargetSchema>IE50</DefaultTargetSchema>
+    <DelaySign>false</DelaySign>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Microsoft.VisualStudio.Package</RootNamespace>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <StartupObject>
+    </StartupObject>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>2.0</OldToolsVersion>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <OutputPath>bin\</OutputPath>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants>TRACE;DEBUG;WHIDBEY;WHIDBEYwithGenerics;ORCAS</DefineConstants>
+    <DocumentationFile>
+    </DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <IncrementalBuild>false</IncrementalBuild>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn>1699</NoWarn>
+    <Optimize>false</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <OutputPath>bin\</OutputPath>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants>WHIDBEY;WHIDBEYwithGenerics;ORCAS</DefineConstants>
+    <DocumentationFile>
+    </DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <IncrementalBuild>false</IncrementalBuild>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn>1699</NoWarn>
+    <Optimize>true</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'DebugCommandLine'">
+    <OutputPath>bin\</OutputPath>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants>DEBUG;TRACE;WHIDBEY;WHIDBEYwithGenerics</DefineConstants>
+    <DocumentationFile>
+    </DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <IncrementalBuild>true</IncrementalBuild>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn>1699</NoWarn>
+    <Optimize>false</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="Microsoft.VisualStudio.Designer.Interfaces">
+      <Name>Microsoft.VisualStudio.Designer.Interfaces</Name>
+      <HintPath>..\Common\Bin\Microsoft.VisualStudio.Designer.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.OLE.Interop">
+      <Name>microsoft.visualstudio.ole.interop</Name>
+      <HintPath>..\Common\Bin\microsoft.visualstudio.ole.interop.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Shell.Interop">
+      <Name>Microsoft.VisualStudio.Shell.Interop</Name>
+      <HintPath>..\Common\Bin\Microsoft.VisualStudio.Shell.Interop.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Shell.Interop.8.0, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="Microsoft.VisualStudio.TextManager.Interop">
+      <Name>Microsoft.VisualStudio.TextManager.Interop</Name>
+      <HintPath>..\Common\Bin\Microsoft.VisualStudio.TextManager.Interop.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.XML" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\common\include\version.cs">
+      <Link>version.cs</Link>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="AssemblyInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="LanguageService\CodeWindowManager.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="LanguageService\Colorizer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="LanguageService\EditorView.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="LanguageService\LanguageService.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="LanguageService\Scanner.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="LanguageService\Source.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="LanguageService\ViewFilter.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\Automation.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\configprovider.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\DataObject.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\EditorFactory.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\Hierarchy.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\hierarchyitem.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\ImageList.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\Package.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\Project.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\ProjectConfig.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\ProjectFactory.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\PropertyPages.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\PropertySheet.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Project\Registration.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\RgsParser.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\selection.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\TaskItem.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\tracing.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\UIStrings.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\Utilities.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project\VsCommands.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <EmbeddedResource Include="LanguageService\completionset.bmp" />
+    <EmbeddedResource Include="Project\folders.bmp" />
+    <EmbeddedResource Include="Project\InstallDebugger.rgs" />
+    <EmbeddedResource Include="Project\InstallEditor.rgs" />
+    <EmbeddedResource Include="Project\InstallLanguage.rgs" />
+    <EmbeddedResource Include="Project\InstallPackage.rgs" />
+    <EmbeddedResource Include="Project\InstallProject.rgs" />
+    <EmbeddedResource Include="Project\InstallVSIPLicense.rgs" />
+    <EmbeddedResource Include="Project\PropertySheet.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Project\UIStrings.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <AppDesigner Include="Properties\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.VisualStudio.CodeTools\ITaskManager\Microsoft.VisualStudio.CodeTools.ITaskManager.csproj">
+      <Project>{770EFFDC-F67A-4838-A3EC-52C7363DAE00}</Project>
+      <Name>Microsoft.VisualStudio.CodeTools.ITaskManager9</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\System.Compiler.Framework\System.Compiler.Framework.csproj">
+      <Project>{5D3B8B5B-703E-4843-ABF3-A864F5B6ADA3}</Project>
+      <Name>System.Compiler.Framework</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.2.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 2.0 %28x86%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.0 %28x86%29</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
+    <SccAuxPath>
+    </SccAuxPath>
+  </PropertyGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>

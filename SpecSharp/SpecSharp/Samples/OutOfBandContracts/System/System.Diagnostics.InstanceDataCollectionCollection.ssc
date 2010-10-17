@@ -1,0 +1,43 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Diagnostics
+{
+
+    public class InstanceDataCollectionCollection
+    {
+
+        public System.Collections.ICollection Keys
+        {
+          get;
+        }
+
+        public System.Collections.ICollection Values
+        {
+          get;
+        }
+
+        public InstanceDataCollection this [string! counterName]
+        {
+          get
+            requires counterName != null otherwise ArgumentNullException;
+        }
+
+        public InstanceDataCollectionCollection ();
+
+        public void CopyTo (InstanceDataCollection[] counters, int index);
+
+        public bool Contains (string! counterName)
+            requires counterName != null otherwise ArgumentNullException;
+    }
+}

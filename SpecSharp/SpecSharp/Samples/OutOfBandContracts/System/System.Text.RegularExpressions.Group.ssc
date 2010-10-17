@@ -1,0 +1,33 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Text.RegularExpressions
+{
+
+    public class Group
+    {
+
+        public bool Success
+        {
+          get;
+        }
+
+        public CaptureCollection Captures
+        {
+          get;
+        }
+
+        public static Group Synchronized (Group! inner)
+            requires inner != null otherwise ArgumentNullException;
+    }
+}

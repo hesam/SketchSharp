@@ -1,0 +1,40 @@
+using Microsoft.Contracts;
+
+class C {
+  public Coll M0(int n) {
+    Coll coll = new Coll();
+    for (int i = 0; i < n; i++)
+      invariant coll.IsPeerConsistent;  // explicit loop invariant
+    {
+      coll.P();
+    }
+    return coll;
+  }
+
+  public Coll M1(int n) {
+    Coll coll = new Coll();
+    for (int i = 0; i < n; i++)
+    {
+      coll.P();
+    }
+    return coll;
+  }
+
+  public Coll M(Coll coll, int n)  // here, "coll" is allocated already before the method start
+    modifies coll.*;
+  {
+    assume coll != null;
+    for (int i = 0; i < n; i++)
+    {
+      coll.P();
+    }
+    return coll;
+  }
+}
+
+public class T { }
+
+public class Coll {
+  public void P() { }
+}
+

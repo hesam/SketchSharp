@@ -1,0 +1,54 @@
+using Microsoft.Contracts;
+
+[Immutable]
+public class CO {
+  [Rep] W! w;
+
+  public CO() {
+    W w0 = new W();
+    w = w0;
+    w0.MutatingOp();  // fine here while "this" is not yet valid
+    w0.PureOp();
+    w0.ConfinedOp();
+    w0.StateIndependentOp();
+    base();
+  }
+
+  public void M() {
+    w.PureOp();
+    w.ConfinedOp();
+    w.StateIndependentOp();
+  }
+
+  public void P() {
+    w.MutatingOp();  // error: w is committed, thus violating precondition of MutatingOp
+  }
+
+  public void Q() {
+    expose (this) {  // error: cannot expose an Immutable object
+      w.MutatingOp();  // if we ever got here, then w would be not-committed (but we won't ever get this far)
+    }
+  }
+}
+
+public class W {
+  public void MutatingOp()
+    modifies this.*;
+  {
+  }
+
+  [Pure]
+  public void PureOp()
+  {
+  }
+
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public void ConfinedOp()
+  {
+  }
+
+  [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+  public void StateIndependentOp()
+  {
+  }
+}

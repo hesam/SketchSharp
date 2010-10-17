@@ -1,0 +1,72 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.IO.IsolatedStorage
+{
+
+    public class IsolatedStorageFile
+    {
+
+        public UInt64 CurrentSize
+        {
+          get;
+        }
+
+        public UInt64 MaximumSize
+        {
+          get;
+        }
+
+        [Pure] [GlobalAccess(false)]
+        public static System.Collections.IEnumerator! GetEnumerator ([Escapes(true,false)] IsolatedStorageScope scope);
+            ensures result.IsNew;
+
+        public static void Remove (IsolatedStorageScope scope);
+
+        public void Dispose ();
+
+        public void Close ();
+
+        public void Remove ();
+
+        public String[] GetDirectoryNames (string! searchPattern)
+            requires searchPattern != null otherwise ArgumentNullException;
+
+        public String[] GetFileNames (string! searchPattern)
+            requires searchPattern != null otherwise ArgumentNullException;
+
+        public void DeleteDirectory (string! dir)
+            requires dir != null otherwise ArgumentNullException;
+
+        public void CreateDirectory (string! dir)
+            requires dir != null otherwise ArgumentNullException;
+
+        public void DeleteFile (string! file)
+            requires file != null otherwise ArgumentNullException;
+
+        public static IsolatedStorageFile GetStore (IsolatedStorageScope scope, System.Security.Policy.Evidence! domainEvidence, Type domainEvidenceType, System.Security.Policy.Evidence! assemblyEvidence, Type assemblyEvidenceType)
+            requires domainEvidence != null otherwise ArgumentNullException;
+            requires assemblyEvidence != null otherwise ArgumentNullException;
+
+        public static IsolatedStorageFile GetStore (IsolatedStorageScope scope, object! domainIdentity, object! assemblyIdentity)
+            requires domainIdentity != null otherwise ArgumentNullException;
+            requires assemblyIdentity != null otherwise ArgumentNullException;
+
+        public static IsolatedStorageFile GetStore (IsolatedStorageScope scope, Type domainEvidenceType, Type assemblyEvidenceType);
+
+        public static IsolatedStorageFile GetUserStoreForAssembly ();
+
+        public static IsolatedStorageFile GetUserStoreForDomain ();
+    }
+}

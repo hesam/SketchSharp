@@ -1,0 +1,63 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security.Permissions
+{
+
+    public class FileIOPermission
+    {
+
+        public FileIOPermissionAccess AllFiles
+        {
+          get;
+          set;
+        }
+
+        public FileIOPermissionAccess AllLocalFiles
+        {
+          get;
+          set;
+        }
+
+        public void FromXml (System.Security.SecurityElement esd);
+
+        public System.Security.SecurityElement ToXml ();
+
+        public System.Security.IPermission Copy ();
+
+        public System.Security.IPermission Union (System.Security.IPermission other);
+
+        public System.Security.IPermission Intersect (System.Security.IPermission target);
+
+        public bool IsSubsetOf (System.Security.IPermission target);
+
+        public bool IsUnrestricted ();
+
+        public String[] GetPathList (FileIOPermissionAccess access);
+
+        public void AddPathList (FileIOPermissionAccess access, String[] pathList);
+
+        public void AddPathList (FileIOPermissionAccess access, string path);
+
+        public void SetPathList (FileIOPermissionAccess access, String[] pathList);
+
+        public void SetPathList (FileIOPermissionAccess access, string path);
+
+        public FileIOPermission (FileIOPermissionAccess access, String[] pathList);
+
+        public FileIOPermission (FileIOPermissionAccess access, string path);
+
+        public FileIOPermission (PermissionState state)
+            requires (int)state == 1 || (int)state == 0 otherwise ArgumentException;
+    }
+}

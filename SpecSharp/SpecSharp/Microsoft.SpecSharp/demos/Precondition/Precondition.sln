@@ -1,0 +1,19 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{07C4E3D1-6B67-4060-8A92-940DB82041ED}") = "Precondition", "Precondition.sscproj", "{81F1DE28-3DD9-4AB9-9D84-91B6699B9AB7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|.NET = Debug|.NET
+		Release|.NET = Release|.NET
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{81F1DE28-3DD9-4AB9-9D84-91B6699B9AB7}.Debug|.NET.ActiveCfg = Debug|.NET
+		{81F1DE28-3DD9-4AB9-9D84-91B6699B9AB7}.Debug|.NET.Build.0 = Debug|.NET
+		{81F1DE28-3DD9-4AB9-9D84-91B6699B9AB7}.Release|.NET.ActiveCfg = Release|.NET
+		{81F1DE28-3DD9-4AB9-9D84-91B6699B9AB7}.Release|.NET.Build.0 = Release|.NET
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

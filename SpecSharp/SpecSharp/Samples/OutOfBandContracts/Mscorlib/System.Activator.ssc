@@ -1,0 +1,56 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System
+{
+
+    public class Activator
+    {
+
+        public static object! GetObject (Type! type, string url, object state)
+            requires type != null otherwise ArgumentNullException;
+
+        public static object! GetObject (Type type, string url);
+
+        public static System.Runtime.Remoting.ObjectHandle! CreateComInstanceFrom (string assemblyName, string typeName, Byte[] hashValue, System.Configuration.Assemblies.AssemblyHashAlgorithm hashAlgorithm);
+
+        public static System.Runtime.Remoting.ObjectHandle! CreateComInstanceFrom (string assemblyName, string typeName);
+
+        public static System.Runtime.Remoting.ObjectHandle! CreateInstanceFrom (string assemblyFile, string typeName, bool ignoreCase, System.Reflection.BindingFlags bindingAttr, System.Reflection.Binder binder, Object[] args, System.Globalization.CultureInfo culture, Object[] activationAttributes, System.Security.Policy.Evidence securityInfo);
+
+        public static System.Runtime.Remoting.ObjectHandle! CreateInstance (string assemblyName, string typeName, bool ignoreCase, System.Reflection.BindingFlags bindingAttr, System.Reflection.Binder binder, Object[] args, System.Globalization.CultureInfo culture, Object[] activationAttributes, System.Security.Policy.Evidence securityInfo);
+
+        public static System.Runtime.Remoting.ObjectHandle! CreateInstanceFrom (string assemblyFile, string typeName, Object[] activationAttributes);
+
+        public static System.Runtime.Remoting.ObjectHandle! CreateInstanceFrom (string assemblyFile, string typeName);
+
+        public static object! CreateInstance (Type! type, bool nonPublic)
+            requires type != null otherwise ArgumentNullException;
+
+        public static System.Runtime.Remoting.ObjectHandle! CreateInstance (string assemblyName, string typeName, Object[] activationAttributes);
+
+        public static System.Runtime.Remoting.ObjectHandle! CreateInstance (string assemblyName, string typeName);
+
+        public static object! CreateInstance (Type type);
+
+        public static object! CreateInstance (Type type, Object[] args, Object[] activationAttributes);
+
+        public static object! CreateInstance (Type type, Object[] args);
+
+        public static object! CreateInstance (Type! type, System.Reflection.BindingFlags bindingAttr, System.Reflection.Binder binder, Object[] args, System.Globalization.CultureInfo culture, Object[] activationAttributes)
+            requires type != null otherwise ArgumentNullException;
+            requires activationAttributes.Length <= 1 otherwise NotSupportedException;
+
+        public static object! CreateInstance (Type type, System.Reflection.BindingFlags bindingAttr, System.Reflection.Binder binder, Object[] args, System.Globalization.CultureInfo culture);
+    }
+}

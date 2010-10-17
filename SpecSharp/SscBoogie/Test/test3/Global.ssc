@@ -1,0 +1,77 @@
+namespace MyNamespace {
+
+public sealed class Global {
+  public static int g;
+  int x;
+  
+  Global() {}
+
+  int M(int y)
+//    modifies this.x, g;
+    ensures g == y;
+    ensures x == old(g);
+    ensures result == old(x);
+  {
+    expose (this)
+    {
+      int t = x;
+      x = g;
+      g = y;
+      return t;
+    }
+  }
+
+  int N(int y, int oldG, int oldX)
+    requires oldG == g && oldX == x;
+//    modifies this.x, g;
+    ensures g == y;
+    ensures x == oldG;
+    ensures result == oldX;
+  {
+    expose (this)
+    {
+      int t = x;
+      x = g;
+      g = y;
+      return t;
+    }
+  }
+}
+
+public sealed class Old {
+  int x;
+  void IncX()
+//    modifies this.x;
+    ensures old(x) < x;
+  {
+    expose (this)
+    {
+      x++;
+    }
+  }
+  void IncXBad()
+//    modifies this.x;
+    ensures old(x) < x;  // error
+  {
+    expose (this)
+    {
+      x = x % 25;
+    }
+  }
+
+  public static int g;
+  public void IncG()
+//    modifies g;
+    ensures old(g) < g;
+  {
+    g++;
+  }
+  public void IncGBad()
+//    modifies g;
+    ensures old(g) < g;  // error
+  {
+    // incorrect implementation
+  }
+}
+
+}

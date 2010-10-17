@@ -1,0 +1,15 @@
+public class Test
+{
+  public int Irreducible(int x)
+  {
+    if (x > 0) { goto B; } else { goto C; }
+
+    B:
+      x += 1;
+      goto C;
+
+    C:
+      x += 5;
+      goto B;
+  }
+}

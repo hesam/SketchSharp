@@ -1,0 +1,54 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using System.Runtime.InteropServices;
+
+namespace System.Collections {
+  // Summary:
+  //     Defines methods to support the comparison of objects for equality.
+  [ComVisible(true)]
+  public interface IEqualityComparer {
+    // Summary:
+    //     Determines whether the specified objects are equal.
+    //
+    // Parameters:
+    //   y:
+    //     The second object to compare.
+    //
+    //   x:
+    //     The first object to compare.
+    //
+    // Returns:
+    //     true if the specified objects are equal; otherwise, false.
+    //
+    // Exceptions:
+    //   System.ArgumentException:
+    //     x and y are of different types and neither one can handle comparisons with
+    //     the other.
+    bool Equals(object x, object y);
+    //
+    // Summary:
+    //     Returns a hash code for the specified object.
+    //
+    // Parameters:
+    //   obj:
+    //     The System.Object for which a hash code is to be returned.
+    //
+    // Returns:
+    //     A hash code for the specified object.
+    //
+    // Exceptions:
+    //   System.ArgumentNullException:
+    //     The type of obj is a reference type and obj is null.
+    int GetHashCode(object! obj);
+  }
+}

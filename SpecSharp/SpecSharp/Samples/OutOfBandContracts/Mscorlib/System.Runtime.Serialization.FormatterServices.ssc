@@ -1,0 +1,46 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Runtime.Serialization
+{
+
+    public class FormatterServices
+    {
+
+        public static Type GetTypeFromAssembly (System.Reflection.Assembly! assem, string name)
+            requires assem != null otherwise ArgumentNullException;
+
+        public static Object[] GetObjectData (object! obj, System.Reflection.MemberInfo[]! members)
+            requires obj != null otherwise ArgumentNullException;
+            requires members != null otherwise ArgumentNullException;
+
+        public static object PopulateObjectMembers (object! obj, System.Reflection.MemberInfo[]! members, Object[]! data)
+            requires obj != null otherwise ArgumentNullException;
+            requires members != null otherwise ArgumentNullException;
+            requires data != null otherwise ArgumentNullException;
+            requires members.Length == data.Length otherwise ArgumentException;
+
+        public static object GetSafeUninitializedObject (Type! type)
+            requires type != null otherwise ArgumentNullException;
+
+        public static object GetUninitializedObject (Type! type)
+            requires type != null otherwise ArgumentNullException;
+
+        public static void CheckTypeSecurity (Type t, System.Runtime.Serialization.Formatters.TypeFilterLevel securityLevel);
+
+        public static System.Reflection.MemberInfo[] GetSerializableMembers (Type! type, StreamingContext context)
+            requires type != null otherwise ArgumentNullException;
+
+        public static System.Reflection.MemberInfo[] GetSerializableMembers (Type type);
+    }
+}

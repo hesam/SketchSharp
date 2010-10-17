@@ -1,0 +1,153 @@
+//Consistency Checks
+//Note that it is somewhat dangerous to have multiple methods/modelfields with inconsistent contract sitting in one file.
+//The theorem prover might be able to pick up on one or more of them and use them to prove the others. 
+//Currently, that does not seem to be happening, so we will leave all these related checks in one file.
+
+using Microsoft.Contracts;
+
+class OkInt {
+	public int i;
+	invariant this.i == 0;
+
+	[Pure] int m()
+		ensures result == this.i;
+		{return 0;}
+}
+
+class OkBool {
+	public int i;
+	[Pure][Reads(ReadsAttribute.Reads.Owned)]
+        bool b() 
+		ensures result == (this.i == 4);
+	{	return this.i == 4;	}
+}
+
+class OkRefType {
+	[Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        OkRefType t()
+	  ensures result == this;
+	  { return this;  } 
+}
+
+
+//check a more complicate contract 
+class OkComplex { 
+	[Pure] int m2(int i, int j, int k, int l, int m) 
+		requires k > i+3 && k > j+3;  
+		ensures result > i && result > j  && result < k &&  result != l && result != m; 
+	{	
+		int res =  (i > j ? i : j) + 1;
+		if (res == l || res == m) res = res+1;
+		if (res == l || res == m) res = res+1;
+		return res;
+	}
+	
+	protected int i, j, k,  l, m;
+	invariant k > i+3 && k > j+3;  
+	
+	model int mf {		
+		satisfies this.mf > i && this.mf > j  && this.mf < k &&  this.mf != l && this.mf != m; 
+	}
+  
+  OkComplex() {this.k = 5;}
+	
+}
+
+
+public interface IPossibleDivisionByZero {
+	[Pure] int m(int i) 
+		ensures result == 5/i;	//possible division by zero (an error that is currently not picked up)
+}
+
+public class WitnessFromBodyOk {	
+	D d;
+	public int I {
+	  get {return d == null ? 0 : this.d.i; } //infers specification and witness from body
+	}
+}
+
+public class D {
+	public int i;		
+}
+
+
+public class NonNullFromBodyOk {
+	[Rep] D! d;
+	public D! Dgetter {get {return this.d;}}
+	
+	NonNullFromBodyOk() {this.d = new D();}
+}
+
+
+
+//we pick up on the inconsistent ensures.
+class Wrong {
+	[Pure] int m(int i)
+		ensures result > 4 && result < 3;
+		{ while (true) {;} }
+	
+}
+
+
+//Pure void methods are not really usable but should not crash.
+class Weird {
+	int i;
+	[Pure][Reads(ReadsAttribute.Reads.Owned)]
+        void m(int i) 
+		ensures true;
+	{	} //Note that this would/should fail a modifies-clause check
+}
+
+
+
+public class WrongDueToPossiblyFailingCast {
+	model D2 mf {
+		satisfies this.mf == (D2)this; //Error: The type of witness candidate (D2)this is not (a subtype of) the return type
+	}
+
+}
+public class D2 : WrongDueToPossiblyFailingCast {}
+
+
+
+//Although we won't find a witness for this one, want to check if it at least doesn't crash somehow.
+class WontFindWitness {
+	int i;
+
+	[Pure][Reads(ReadsAttribute.Reads.Everything)]
+        WontFindWitness m() 
+	  ensures result.i == 4;  //consistent, but we won't find the witness
+	{WontFindWitness c = new WontFindWitness(); c.i = 4; return c;}
+}
+
+//check that it is allowed to mention result on both sides.
+class BadButYouAreAllowedToTry {
+	[Pure] int m() ensures result == result + 1;  //Error: inconsistent
+	{while (true) {}}
+}
+
+//This looks wrong, but is right because the interface is known not to be instantiated (not public -> sealed)
+//Would be inconsistent if the interface is public or implemented within the assembly
+interface SortOfOk {
+	[Pure] int m(int i)
+		requires i == 0;
+		ensures result == 5 / i;		
+}
+
+
+//Testing property getters (which are pure methods) and implenting interfaces.
+public interface IBadProp {
+	int M {
+		get 
+		ensures result > 4;	
+	}
+}
+
+
+class BadProp : IBadProp {
+	public int M {
+		get 
+		ensures result < 3;
+		{while (true) {;}}		
+	}
+}

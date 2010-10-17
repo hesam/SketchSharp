@@ -1,0 +1,91 @@
+
+-------------------- Chunker0.ssc --------------------
+Chunker0.ssc(9,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: 0 <= length
+Chunker0.ssc(9,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: 0 <= startIndex
+Chunker0.ssc(9,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: startIndex + length <= this.Length
+Chunker0.ssc(9,12): warning CS2663: Possible null dereference
+Chunker0.ssc(9,16): warning CS2614: Receiver might be null (of type 'string')
+
+-------------------- Chunker1.ssc --------------------
+Chunker1.ssc(9,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: 0 <= length
+Chunker1.ssc(9,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: 0 <= startIndex
+Chunker1.ssc(9,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: startIndex + length <= this.Length
+Chunker1.ssc(16,11): warning CS2613: Conversion to 'string!' fails if the value is null
+Chunker1.ssc(16,11): warning CS2663: Use of possibly-null value where non-null value is expected
+
+-------------------- Chunker2.ssc --------------------
+Chunker2.ssc(9,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: 0 <= length
+Chunker2.ssc(9,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: 0 <= startIndex
+Chunker2.ssc(9,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: startIndex + length <= this.Length
+
+-------------------- Chunker3.ssc --------------------
+Chunker3.ssc(10,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: 0 <= length
+Chunker3.ssc(10,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: 0 <= startIndex
+Chunker3.ssc(10,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: startIndex + length <= this.Length
+
+-------------------- Chunker4.ssc --------------------
+Chunker4.ssc(11,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: 0 <= length
+Chunker4.ssc(11,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: startIndex + length <= this.Length
+
+-------------------- Chunker5.ssc --------------------
+Chunker5.ssc(12,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: startIndex + length <= this.Length
+Chunker5.ssc(22,3): warning CS2663: Object invariant possibly does not hold: 0 < ChunkSize
+
+-------------------- Chunker6.ssc --------------------
+Chunker6.ssc(12,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: startIndex + length <= this.Length
+
+-------------------- Chunker7.ssc --------------------
+Chunker7.ssc(9,18): warning CS2663: Method Chunker.NextChunk(), unsatisfied postcondition: result.Length == ChunkSize
+Chunker7.ssc(15,12): warning CS2663:     (trace position)
+Chunker7.ssc(16,7): warning CS2663: Call of string.Substring(int startIndex), unsatisfied precondition: startIndex <= this.Length
+
+-------------------- Chunker8.ssc --------------------
+Chunker8.ssc(18,5): warning CS2663: Assignment to field Chunker.n of non-exposed target object may break invariant: n <= src.Length
+Chunker8.ssc(15,12): warning CS2663:     (trace position)
+
+-------------------- Chunker9.ssc --------------------
+Chunker9.ssc(9,18): warning CS2663: Method Chunker.NextChunk(), unsatisfied postcondition: result.Length == ChunkSize
+Chunker9.ssc(15,12): warning CS2663:     (trace position)
+
+-------------------- Chunker10.ssc --------------------
+
+-------------------- Chunker11.ssc --------------------
+
+-------------------- ChunkerAssume.ssc --------------------
+ChunkerAssume.ssc(17,12): warning CS2663: Possible null dereference
+ChunkerAssume.ssc(17,16): warning CS2614: Receiver might be null (of type 'string')
+ChunkerAssume.ssc(28,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: 0 <= startIndex
+ChunkerAssume.ssc(39,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: 0 <= length
+ChunkerAssume.ssc(50,12): warning CS2663: Call of string.Substring(int startIndex, int length), unsatisfied precondition: startIndex + length <= this.Length
+
+-------------------- Chunker10-old.ssc --------------------
+Chunker10-old.ssc(21,5): warning CS2663: Object invariant possibly does not hold: n <= src.Length
+Chunker10-old.ssc(16,14): warning CS2663:     (trace position)
+Chunker10-old.ssc(21,5): warning CS2663:     (trace position)
+
+-------------------- Chunker11-AdditiveExpose.ssc --------------------
+Chunker11-AdditiveExpose.ssc(18,22): warning CS2663: Object might not be exposable
+Chunker11-AdditiveExpose.ssc(27,5): warning CS2663: Object invariant possibly does not hold: n <= src.Length
+Chunker11-AdditiveExpose.ssc(22,14): warning CS2663:     (trace position)
+Chunker11-AdditiveExpose.ssc(27,5): warning CS2663:     (trace position)
+Chunker11-AdditiveExpose.ssc(33,22): warning CS2663: Object might not be exposable
+Chunker11-AdditiveExpose.ssc(42,5): warning CS2663: Object invariant possibly does not hold: n <= src.Length
+Chunker11-AdditiveExpose.ssc(37,14): warning CS2663:     (trace position)
+Chunker11-AdditiveExpose.ssc(42,5): warning CS2663:     (trace position)
+
+-------------------- Chunker11a.ssc --------------------
+Chunker11a.ssc(23,5): warning CS2663: Object invariant possibly does not hold: n <= src.Length
+Chunker11a.ssc(18,14): warning CS2663:     (trace position)
+Chunker11a.ssc(23,5): warning CS2663:     (trace position)
+
+-------------------- Chunker11b.ssc --------------------
+Chunker11b.ssc(23,5): warning CS2663: Object invariant possibly does not hold: n <= src.Length
+Chunker11b.ssc(18,14): warning CS2663:     (trace position)
+Chunker11b.ssc(23,5): warning CS2663:     (trace position)
+
+-------------------- Chunker11c.ssc --------------------
+Chunker11c.ssc(23,5): warning CS2663: Object invariant possibly does not hold: n <= src.Length
+Chunker11c.ssc(18,14): warning CS2663:     (trace position)
+Chunker11c.ssc(23,5): warning CS2663:     (trace position)
+
+-------------------- Chunker.ssc --------------------

@@ -1,0 +1,38 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Diagnostics
+{
+
+    public class PerformanceCounterPermissionEntry
+    {
+
+        public string MachineName
+        {
+          get;
+        }
+
+        public string CategoryName
+        {
+          get;
+        }
+
+        public PerformanceCounterPermissionAccess PermissionAccess
+        {
+          get;
+        }
+
+        public PerformanceCounterPermissionEntry (PerformanceCounterPermissionAccess permissionAccess, string machineName, string! categoryName)
+            requires categoryName != null otherwise ArgumentNullException;
+    }
+}

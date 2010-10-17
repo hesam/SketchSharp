@@ -1,0 +1,18 @@
+class SimpleWhile2
+{
+
+	public void AMethod()
+	{
+		int i = 300476;					
+		int count = 0;
+
+		while(i > 0) 
+		{
+			i --;
+			count --;
+		}
+
+		assert count <= 0;	// Can prove it
+	}
+
+}

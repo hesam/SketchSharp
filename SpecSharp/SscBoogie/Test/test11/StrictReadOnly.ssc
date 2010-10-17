@@ -1,0 +1,156 @@
+// This file checks that the proper axioms are generated for fields that are declared
+// as [StrictReadOnly]. This is needed, because unlike ordinary fields, such fields
+// are translated as functions and there needs to be axioms about the functions.
+
+// For a strict readonly field C.o of an integral type T:
+//    axiom (forall r: ref ::  $InRange( #C.o(r), T ));
+// If C.o is of a possibly-null reference type T:
+//    axiom (forall r: ref ::  $Is( #C.o(r), T ));
+// If C.o is of a non-null type T!:
+//    axiom (forall r: ref ::   $IsNotNull(#C.o(r), T));
+
+// Also, to maintain soundness, no axiom at all is generated in the event
+// that all of the following conditions are met:
+//         C.o is of a non-null type T!, and
+//         T is an "impossible type" (that is, it is know that there are
+//           never any instances of T or any of its subtypes)
+// This takes a little extra effort to check, but it is worth it
+// (lest we in the future found what when then think is a weird soundness problem).
+
+using Microsoft.Contracts;
+
+internal abstract class Impossible {
+}
+
+internal abstract class ImpossibleSub : Impossible {
+}
+
+public abstract class AlsoImpossible {
+  internal AlsoImpossible() { assert false; } // no problem
+}
+
+internal abstract class AlsoImpossibleSub {
+  public AlsoImpossibleSub(int x) {
+    assert false;  // no problem
+    base();
+  }
+  public AlsoImpossibleSub(bool b) {
+    base();
+    assert false;  // no problem
+  }
+}
+
+class D {
+  internal int foo0(Impossible! c) { assert false; } // no problem, since this method has an impossible parameter
+  internal int foo1(ImpossibleSub! c) { assert false; } // no problem, since this method has an impossible parameter
+  internal int foo2(AlsoImpossible! c) { assert false; } // no problem, since this method has an impossible parameter
+  internal int foo3(AlsoImpossibleSub! c) { assert false; } // no problem, since this method has an impossible parameter
+  internal int foo4(D! d) { assert false; } // error
+}
+
+class C0 {
+  string! s = "abc";
+  string t = "abc";
+  int foo0() { return s.Length; } // no null-dereference warning
+  int foo1() { assert t != null; return 0; } // error
+}
+
+class C1 {
+  Impossible impX;
+  void X0() { assert impX != null; } // error
+  void X1() { assert impX == null; } // in fact, we can deduce it really is null
+
+  [StrictReadonly] readonly Impossible impY;
+  void Y0() { assert impY != null; } // error
+  void Y1() { assert impY == null; } // in fact, we can deduce it really is null
+
+  Impossible M() {
+    while (true) { }
+  }
+  object Z0()
+    ensures result == null;
+  {
+    object o = M();
+    return o;  // we can deduce it really is null
+  }
+  object Z1()
+  {
+    object o = M();
+    assert false;  // error
+  }
+
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  Impossible P() {
+    while (true) { }
+  }
+  object W0()
+    ensures result == null;
+  {
+    object o = P();
+    return o;  // we can deduce it really is null
+  }
+  object W1()
+  {
+    object o = P();
+    assert false;  // error
+  }
+  void W2()
+  {
+    assert P() == null;  // we can deduce it really is null
+  }
+  void W3()
+  {
+    assert P() != null;  // error
+  }
+}
+
+class C2 {
+  public C2() {
+    assert false;  // error (we really can get this far)
+  }
+
+  Impossible! impX;
+  void X0() { assert impX != null; } // error (no axiom is produced for impX)
+  [NoDefaultContract]
+  void X1() { assert impX != null; } // error (no axiom is produced for impX)
+  [NoDefaultContract]
+  void X2() { assert false; } // error (we really can get this far)
+  [NoDefaultContract]
+  void X3() { assert impX == null; } // error
+
+  [StrictReadonly] readonly Impossible! impY;
+  void Y0() { assert impY != null; } // error (no axiom is produced for impY)
+  [NoDefaultContract]
+  void Y1() { assert impY != null; } // error (no axiom is produced for impY)
+  [NoDefaultContract]
+  void Y2() { assert false; } // error (we really can get this far)
+  [NoDefaultContract]
+  void Y3() { assert impY == null; } // error
+
+  Impossible! M() {
+    while (true) { }
+  }
+  object Z0()
+  {
+    object o = M();
+    assert false;  // no problem, since M's return-value postcondition implies false
+  }
+
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  Impossible! P() {
+    while (true) { }
+  }
+  object W0()
+  {
+    object o = P();
+    assert false;  // no problem, since P's return-value postcondition implies false
+  }
+  void W1()
+  {
+    assert P() == null;  // error
+  }
+  void W2()
+  {
+    assert P() != null;  // error
+  }
+}

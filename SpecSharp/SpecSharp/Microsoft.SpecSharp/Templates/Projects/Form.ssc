@@ -1,0 +1,17 @@
+using System;
+using System.Windows.Forms;
+using Microsoft.Contracts;
+
+public class SpecSharpForm : Form
+{
+  [NotDelayed]
+  SpecSharpForm()
+  {
+    Text = "Spec# Says Hello!";
+  }
+
+  static void Main()
+  {
+    Application.Run(new SpecSharpForm());
+  }
+}

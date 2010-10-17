@@ -1,0 +1,205 @@
+
+-------------------- ExistsUnique --------------------
+ExistsUnique.ssc(14,5): Error: Call of C.foo(int[]! xs), unsatisfied precondition: exists unique{int i in (0:xs.Length); xs[i] == 4}
+
+Spec# program verifier finished with 4 verified, 1 error
+
+-------------------- IntArrayRanges --------------------
+IntArrayRanges.ssc(12,7): Error: Assertion might not hold: short.MinValue <= a[x]
+IntArrayRanges.ssc(18,7): Error: Assertion might not hold: int.MinValue <= a[x]
+IntArrayRanges.ssc(31,7): Error: Assertion might not hold: bytes[x] < 100
+IntArrayRanges.ssc(30,7): Related information:     (trace position)
+
+Spec# program verifier finished with 3 verified, 3 errors
+
+-------------------- LoopInvariantForQuantifiers --------------------
+Error: Array index possibly below lower bound
+Error: Array index possibly below lower bound
+
+Spec# program verifier finished with 13 verified, 2 errors
+
+-------------------- ArgList --------------------
+ArgList.ssc(16,5): Error: Call of C.foo(int x), unsatisfied precondition: x == 2
+ArgList.ssc(19,5): Error: Call of C.foo(int x), unsatisfied precondition: 0 < x
+
+Spec# program verifier finished with 3 verified, 2 errors
+
+-------------------- Summations --------------------
+Summations.ssc(184,17): Error: After loop iteration: Loop invariant might not hold: s == sum{int i in (0: m), i % 2 == 0, b,
+                         int j in (0: a.GetLength(1)), i < j, j < 100;
+                         a[i,j]}
+Summations.ssc(181,9): Related information:     (trace position)
+Summations.ssc(188,7): Related information:     (trace position)
+Summations.ssc(189,18): Related information:     (trace position)
+Summations.ssc(182,41): Related information:     (trace position)
+Summations.ssc(191,21): Error: After loop iteration: Loop invariant might not hold: s ==  // error: loop invariant is not maintained
+            sum{int i in (0: m), i % 2 == 0, b, int j in (0: a.GetLength(1)), i < j, j < 100; a[i,j]} +
+            sum{int j in (0: n), m < j, j <= /* should be < to be correct */ 100; a[m,j]}
+Summations.ssc(181,9): Related information:     (trace position)
+Summations.ssc(188,7): Related information:     (trace position)
+Summations.ssc(189,18): Related information:     (trace position)
+Summations.ssc(195,11): Related information:     (trace position)
+Summations.ssc(189,45): Related information:     (trace position)
+Error: Method C.M8a(int[]! a), unsatisfied postcondition: forall{int k in (0: a.Length);
+                      a[k] + result ==
+                      sum{int h in (0: a.Length), forall{int i in (0: a.Length); a[h] <= a[i] + k}; 5}}
+Error: Method C.M8b(int[]! a), unsatisfied postcondition: forall{int k in (0: a.Length), exists{int j in (0: a.Length); a[j] == k};
+                      a[k] + result ==
+                      sum{int h in (0: a.Length), forall{int i in (0: a.Length); a[h] <= a[i] + k}; 5}}
+Summations.ssc(262,5): Error: Assertion might not hold: x == y
+Summations.ssc(507,5): Error: Assertion might not hold: x + D == y
+Summations.ssc(515,5): Error: Assertion might not hold: a.Length != 0 ==> x + D == y
+Summations.ssc(559,5): Error: Assertion might not hold: exists unique{a <= 0, a >= 0}
+
+Spec# program verifier finished with 28 verified, 8 errors
+
+-------------------- Product --------------------
+
+Spec# program verifier finished with 2 verified, 0 errors
+
+-------------------- ImplicitInterfaceImplementation --------------------
+
+Spec# program verifier finished with 9 verified, 0 errors
+
+-------------------- ErrorTraceTestLoopInvViolation --------------------
+ErrorTraceTestLoopInvViolation.ssc(9,27): Error: Initially: Loop invariant might not hold: val == 1
+ErrorTraceTestLoopInvViolation.ssc(18,27): Error: Initially: Loop invariant might not hold: val == 1
+ErrorTraceTestLoopInvViolation.ssc(26,27): Error: After loop iteration: Loop invariant might not hold: val == 0
+ErrorTraceTestLoopInvViolation.ssc(34,5): Error: Assertion might not hold: val == 1
+ErrorTraceTestLoopInvViolation.ssc(41,7): Error: Assertion might not hold: val == 2
+ErrorTraceTestLoopInvViolation.ssc(50,7): Error: Assertion might not hold: val == 0
+
+Spec# program verifier finished with 2 verified, 6 errors
+
+-------------------- ErrorTraceTestDefaultLoopInvViolation --------------------
+ErrorTraceTestDefaultLoopInvViolation.ssc(12,14): Error: assignment to location may violate the modifies clause
+ErrorTraceTestDefaultLoopInvViolation.ssc(23,27): Error: After loop iteration: In a loop, an owner is allowed to be changed only for captured parameters and objects allocated during the loop iteration
+
+Spec# program verifier finished with 3 verified, 2 errors
+
+-------------------- DelayedPreconditions --------------------
+DelayedPreconditions.ssc(12,5): Error: Assertion might not hold: 0 <= c.x
+DelayedPreconditions.ssc(21,5): Error: Assertion might not hold: 0 <= x
+Error: Method C(float d), unsatisfied postcondition: Y == 5
+DelayedPreconditions.ssc(65,5): Error: Assertion might not hold: Y == 5
+DelayedPreconditions.ssc(84,5): Error: Assertion might not hold: Y == 5
+
+Spec# program verifier finished with 15 verified, 5 errors
+
+-------------------- ArrayCopy --------------------
+ArrayCopy.ssc(113,5): Error: Assertion might not hold: b[18] == y
+ArrayCopy.ssc(128,5): Error: Assertion might not hold: x == a[18]
+
+Spec# program verifier finished with 9 verified, 2 errors
+
+-------------------- PreviousErrorRelated --------------------
+PreviousErrorRelated.ssc(24,5): Error: Assertion might not hold: val == 0
+PreviousErrorRelated.ssc(34,5): Error: Assertion might not hold: val == 0
+PreviousErrorRelated.ssc(42,17): Error: After loop iteration: Loop invariant might not hold: (val == 0)
+PreviousErrorRelated.ssc(44,7): Related information:     (trace position)
+PreviousErrorRelated.ssc(54,17): Error: Initially: Loop invariant might not hold: (val == 1)
+PreviousErrorRelated.ssc(71,5): Error: Assertion might not hold: false
+PreviousErrorRelated.ssc(67,7): Related information:     (trace position)
+PreviousErrorRelated.ssc(84,5): Error: Assertion might not hold: false
+PreviousErrorRelated.ssc(82,7): Related information:     (trace position)
+PreviousErrorRelated.ssc(91,5): Error: Assertion might not hold: false
+PreviousErrorRelated.ssc(91,5): Related information:     (trace position)
+PreviousErrorRelated.ssc(98,5): Error: Assertion might not hold: false
+PreviousErrorRelated.ssc(98,5): Related information:     (trace position)
+PreviousErrorRelated.ssc(110,5): Error: Assertion might not hold: false
+PreviousErrorRelated.ssc(107,14): Related information:     (trace position)
+PreviousErrorRelated.ssc(122,5): Error: Assertion might not hold: false
+PreviousErrorRelated.ssc(119,14): Related information:     (trace position)
+PreviousErrorRelated.ssc(134,5): Error: Assertion might not hold: false
+PreviousErrorRelated.ssc(132,15): Related information:     (trace position)
+PreviousErrorRelated.ssc(181,5): Error: Assertion might not hold: false
+PreviousErrorRelated.ssc(142,7): Related information:     (trace position)
+PreviousErrorRelated.ssc(151,7): Related information:     (trace position)
+PreviousErrorRelated.ssc(156,5): Related information:     (trace position)
+PreviousErrorRelated.ssc(159,5): Related information:     (trace position)
+PreviousErrorRelated.ssc(169,14): Related information:     (trace position)
+PreviousErrorRelated.ssc(177,15): Related information:     (trace position)
+PreviousErrorRelated.ssc(188,17): Error: After loop iteration: Loop invariant might not hold: x != 5
+PreviousErrorRelated.ssc(190,7): Related information:     (trace position)
+PreviousErrorRelated.ssc(192,9): Related information:     (trace position)
+PreviousErrorRelated.ssc(205,17): Error: After loop iteration: Loop invariant might not hold: x != 5
+PreviousErrorRelated.ssc(207,7): Related information:     (trace position)
+PreviousErrorRelated.ssc(208,9): Related information:     (trace position)
+PreviousErrorRelated.ssc(220,5): Error: Assertion might not hold: false
+
+Spec# program verifier finished with 2 verified, 15 errors
+
+-------------------- OwnershipTest --------------------
+
+Spec# program verifier finished with 9 verified, 0 errors
+
+-------------------- Test1 --------------------
+Test1.ssc(11,5): Error: Assertion might not hold: false
+Test1.ssc(24,7): Error: illegal assignment to array element, RHS may already have a different owner
+Test1.ssc(30,7): Error: illegal assignment to array element, RHS may already have a different owner
+Test1.ssc(36,7): Error: illegal assignment to array element, RHS may already have a different owner
+Test1.ssc(60,7): Error: illegal assignment to array element, RHS may already have a different owner
+Test1.ssc(69,7): Error: illegal assignment to array element, RHS may already have a different owner
+Test1.ssc(77,7): Error: illegal assignment to array element, RHS may already have a different owner
+Test1.ssc(94,7): Error: illegal assignment to array element, RHS may already have a different owner
+Test1.ssc(103,7): Error: illegal assignment to ElementsRep field, elements may already have different owners
+Test1.ssc(111,7): Error: illegal assignment to ElementsPeer field, elements may have different owners
+Test1.ssc(143,5): Error: Assertion might not hold: Owner.Same((!)ra[0],this)
+Test1.ssc(150,5): Error: Assertion might not hold: Owner.Same((!)aa[0],this)
+Test1.ssc(167,5): Error: Assertion might not hold: Owner.Same(o1,o2)
+Test1.ssc(203,5): Error: Assertion might not hold: Owner.Same(o1, t1)
+Test1.ssc(209,5): Error: Assertion might not hold: Owner.Is(Owner.ElementProxy(pa),this,typeof(Test1))
+Test1.ssc(214,5): Error: Assertion might not hold: Owner.Same(Owner.ElementProxy(aa),this)
+Test1.ssc(219,5): Error: Assertion might not hold: Owner.Different(Owner.ElementProxy(pa),this)
+Test1.ssc(243,7): Error: assigning an owner requires the subject to be un-owned
+Test1.ssc(282,5): Error: Assertion might not hold: Owner.Same((!)oa[0], (!)oa[1])
+Test1.ssc(313,7): Error: assigning an owner requires the subject to be un-owned
+Test1.ssc(326,5): Error: illegal assignment to array element, RHS may already have a different owner
+
+Spec# program verifier finished with 18 verified, 21 errors
+
+-------------------- GenericOwnership --------------------
+GenericOwnership.ssc(116,3): Error: illegal assignment to ElementsPeer field, elements may have different owners
+
+Spec# program verifier finished with 15 verified, 1 error
+
+-------------------- Param --------------------
+
+Spec# program verifier finished with 7 verified, 0 errors
+
+-------------------- TwoTypes --------------------
+TwoTypes.ssc(13,7): Error: Assertion might not hold: b
+TwoTypes.ssc(11,14): Related information:     (trace position)
+TwoTypes.ssc(12,12): Related information:     (trace position)
+TwoTypes.ssc(13,7): Related information:     (trace position)
+
+Spec# program verifier finished with 1 verified, 1 error
+
+-------------------- Enums --------------------
+Enums.ssc(30,5): Error: Assignment to enum may be outside its range
+Enums.ssc(39,5): Error: Assignment to enum may be outside its range
+Enums.ssc(42,7): Error: Assignment to enum may be outside its range
+Enums.ssc(58,5): Error: Assignment to enum may be outside its range
+Error: Assignment to enum may be outside its range
+Enums.ssc(84,7): Error: Type cast might fail
+Enums.ssc(89,14): Error: Type cast might fail
+
+Spec# program verifier finished with 5 verified, 7 errors
+
+-------------------- PeerElementsAndCapture --------------------
+
+Spec# program verifier finished with 32 verified, 0 errors
+
+-------------------- UseAssertInitialized --------------------
+UseAssertInitialized.ssc(16,5): Error: Argument to Microsoft.Contracts.NonNullType.AssertInitialized must not be null
+UseAssertInitialized.ssc(20,5): Error: Argument to Microsoft.Contracts.NonNullType.AssertInitialized must not be null
+UseAssertInitialized.ssc(28,5): Error: Elements of array argument to Microsoft.Contracts.NonNullType.AssertInitialized must all be non-null
+UseAssertInitialized.ssc(36,5): Error: Elements of array argument to Microsoft.Contracts.NonNullType.AssertInitialized must all be non-null
+UseAssertInitialized.ssc(63,5): Error: Elements of array argument to Microsoft.Contracts.NonNullType.AssertInitialized must all be non-null
+UseAssertInitialized.ssc(69,5): Error: Elements of array argument to Microsoft.Contracts.NonNullType.AssertInitialized must all be non-null
+UseAssertInitialized.ssc(75,5): Error: Elements of array argument to Microsoft.Contracts.NonNullType.AssertInitialized must all be non-null
+UseAssertInitialized.ssc(88,12): Error: Cast to non-null type may fail
+UseAssertInitialized.ssc(86,7): Related information:     (trace position)
+UseAssertInitialized.ssc(137,5): Error: Elements of array argument to Microsoft.Contracts.NonNullType.AssertInitialized must all be non-null
+
+Spec# program verifier finished with 9 verified, 9 errors

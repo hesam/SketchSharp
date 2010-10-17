@@ -1,0 +1,20 @@
+public class Cell
+{
+    public int Value;
+
+    public Cell()
+        ensures Value == 1;
+    {
+        assert Value == 0;
+        Value++;
+    }
+}
+
+public class Test
+{
+    static void Main()
+    {
+        Cell cell = new Cell();
+        assert cell.Value == 1;
+    }
+}

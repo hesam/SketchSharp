@@ -1,0 +1,37 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security.Cryptography
+{
+
+    public class DSA
+    {
+
+        public void ImportParameters (DSAParameters arg0);
+
+        public DSAParameters ExportParameters (bool arg0);
+
+        public string ToXmlString (bool includePrivateParameters);
+
+        public void FromXmlString (string! xmlString)
+            requires xmlString != null otherwise ArgumentNullException;
+
+        public bool VerifySignature (Byte[] arg0, Byte[] arg1);
+
+        public Byte[] CreateSignature (Byte[] arg0);
+
+        public static DSA Create (string algName);
+
+        public static DSA Create ();
+    }
+}

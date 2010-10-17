@@ -1,0 +1,23 @@
+class X {
+  int Factorial (int N)
+    requires 0 <= N;
+    ensures result == product{int k in (1..N+1); k};  // (written to match erroneous invariant)
+  {
+    int f = 1; 
+    for (int i = 1; i <= N; i++)
+      invariant i <= N+1;
+      invariant f == product{int k in (1..i); k}; // ERROR: (1:i) correct
+    {
+      f *= i;
+    }
+    return f;
+  }
+}
+
+//current error:
+// Error: Method X.Factorial(int N), unsatisfied postcondition: result == product{int k in (1..N); k}
+// Factorial1.ssc(13,5):    (trace position related to previous error)
+
+//better error:
+// point to i being included in the interval while it should not be included;
+// concrete example: i = 2, f = 1 , product{...} = 2;

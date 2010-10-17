@@ -1,0 +1,49 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Reflection.Emit
+{
+
+    public class SignatureHelper
+    {
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public Byte[] GetSignature ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object obj);
+
+        public void AddSentinel ();
+
+        public void AddArgument (Type clsArgument);
+
+        public static SignatureHelper GetPropertySigHelper (System.Reflection.Module mod, Type returnType, Type[] parameterTypes);
+
+        public static SignatureHelper GetMethodSigHelper (System.Reflection.Module mod, Type returnType, Type[] parameterTypes);
+
+        public static SignatureHelper GetMethodSigHelper (System.Reflection.Module mod, System.Reflection.CallingConventions callingConvention, Type returnType);
+
+        public static SignatureHelper GetFieldSigHelper (System.Reflection.Module mod);
+
+        public static SignatureHelper GetLocalVarSigHelper (System.Reflection.Module mod);
+
+        public static SignatureHelper GetMethodSigHelper (System.Reflection.Module mod, System.Runtime.InteropServices.CallingConvention unmanagedCallConv, Type returnType)
+            requires (int)unmanagedCallConv == 2 || (int)unmanagedCallConv == 3 || (int)unmanagedCallConv == 4 || (int)unmanagedCallConv == 5 otherwise ArgumentException;
+    }
+}

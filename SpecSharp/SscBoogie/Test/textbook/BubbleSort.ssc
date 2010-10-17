@@ -1,0 +1,44 @@
+// Bubble sort
+// Rustan Leino, 29 April 2009
+
+public class Bubble {
+  static void Sort_Forall(int[]! a)
+    modifies a[*];
+    ensures forall{int i in (0: a.Length), int j in (0: a.Length), i <= j; a[i] <= a[j]};
+  {
+    for (int n = a.Length; 0 <= --n; )
+      invariant 0 <= n && n <= a.Length;
+      invariant forall{int i in (n: a.Length), int k in (0: i); a[k] <= a[i]};
+    {
+      for (int j = 0; j < n; j++)
+        invariant j <= n;
+        invariant forall{int i in (n+1: a.Length), int k in (0: i); a[k] <= a[i]};
+        invariant forall{int k in (0: j); a[k] <= a[j]};
+      {
+        if (a[j+1] < a[j]) {
+          int tmp = a[j];  a[j] = a[j+1];  a[j+1] = tmp;
+        }
+      }
+    }
+  }
+
+  static void Sort_Max(int[]! a)
+    modifies a[*];
+    ensures forall{int i in (0: a.Length), int j in (0: a.Length), i <= j; a[i] <= a[j]};
+  {
+    for (int n = a.Length; 0 <= --n; )
+      invariant 0 <= n && n <= a.Length;
+      invariant forall{int i in (n: a.Length); a[i] == max{int k in (0..i); a[k]}};
+    {
+      for (int j = 0; j < n; j++)
+        invariant j <= n;
+        invariant forall{int i in (n+1: a.Length); a[i] == max{int k in (0..i); a[k]}};
+        invariant a[j] == max{int k in (0..j); a[k]};
+      {
+        if (a[j+1] < a[j]) {
+          int tmp = a[j];  a[j] = a[j+1];  a[j+1] = tmp;
+        }
+      }
+    }
+  }
+}

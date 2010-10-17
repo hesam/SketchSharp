@@ -1,0 +1,76 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Globalization
+{
+
+    public class JulianCalendar
+    {
+
+        public Int32[] Eras
+        {
+          get;
+        }
+
+        public int TwoDigitYearMax
+        {
+          get;
+          set
+            requires value >= 100 otherwise ArgumentOutOfRangeException;
+        }
+
+        public int ToFourDigitYear (int year);
+
+        public DateTime ToDateTime (int year, int month, int day, int hour, int minute, int second, int millisecond, int era)
+            requires millisecond >= 0 otherwise ArgumentOutOfRangeException;
+            requires millisecond < 1000 otherwise ArgumentOutOfRangeException;
+            requires hour >= 0 otherwise ArgumentOutOfRangeException;
+            requires hour < 24 otherwise ArgumentOutOfRangeException;
+            requires minute >= 0 otherwise ArgumentOutOfRangeException;
+            requires minute < 60 otherwise ArgumentOutOfRangeException;
+            requires second >= 0 otherwise ArgumentOutOfRangeException;
+            requires second < 60 otherwise ArgumentOutOfRangeException;
+
+        public bool IsLeapYear (int year, int era);
+
+        public bool IsLeapMonth (int year, int month, int era);
+
+        public bool IsLeapDay (int year, int month, int day, int era);
+
+        public int GetYear (DateTime time);
+
+        public int GetMonthsInYear (int year, int era);
+
+        public int GetMonth (DateTime time);
+
+        public int GetEra (DateTime time);
+
+        public int GetDaysInYear (int year, int era);
+
+        public int GetDaysInMonth (int year, int month, int era);
+
+        public int GetDayOfYear (DateTime time);
+
+        public DayOfWeek GetDayOfWeek (DateTime time);
+
+        public int GetDayOfMonth (DateTime time);
+
+        public DateTime AddYears (DateTime time, int years);
+
+        public DateTime AddMonths (DateTime time, int months)
+            requires months >= -120000 otherwise ArgumentOutOfRangeException;
+            requires months <= 120000 otherwise ArgumentOutOfRangeException;
+
+        public JulianCalendar ();
+    }
+}

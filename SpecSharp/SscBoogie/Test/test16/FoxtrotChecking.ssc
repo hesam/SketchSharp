@@ -1,0 +1,139 @@
+using Microsoft.Contracts;
+
+public class C {
+  int x;
+  int y;
+  invariant x <= y;
+
+  public T! t = new T();
+
+  public C() {
+    y = 5;
+  }
+
+  public C(int n) {
+    y = n;
+    x = 0;
+  }  // error: invariant not satisfied
+
+  public void M0() {
+    y++;
+    x++;
+  }
+
+  public void M1() {
+    x++;
+    y++;
+    x++;
+  }  // error: invariant violation
+
+  public object N() {
+    double[] a = new double[y - x];
+    y++;
+    return a;
+  }
+
+  public void P() {
+    assert t.k < 10;
+    t.k = (t.k + 1) % 10;
+    t.Mx();
+  }
+
+  public void Q() {
+    t.k++;
+    t.Mx();  // error: invariant of t might not hold
+  }
+
+  public void R() {
+    x = 6;
+    y = 4;  // this temporarily violates the invariant
+    t.Nx();
+  }  // error: invariant of "this" violated
+
+  public void S0() {
+    t.k = 20;  // this temporarily violates t's invariant
+    Sx();  // since t is not an explicit parameter of Sx, the invariant violation goes undetected
+    t.k = 2;  // this restores t's invariant
+  }
+  public void S1() {
+    t.k = 20;  // this violates t's invariant
+    Sx();  // since t is not an explicit parameter of Sx, the invariant violation is not detected here
+  }  // error: violation of t's invariant
+  public void Sx() {
+    t.Mx();
+  }
+
+  public void A0() {
+    x = y + 1;  // this violates the invariant
+    Bprivate();  // error: invariant violation
+    x = y;
+  }
+  public void A1() {
+    x = y + 1;  // this violates the invariant
+    Binside();  // ...but that's okay, since Binside takes "this" as an [Inside] parameter
+    x = y;
+  }
+  public void A2() {
+    x = y + 1;  // this violates the invariant
+    BSinside(15, this, this);  // error: parameter c0 does not satisfy its invariant
+    x = y;
+  }
+  public void A3() {
+    BSinside(15, this, this);
+  }
+  public void A4(C! c)
+    requires c != this;
+  {
+    c.x = c.y + 1;
+    BSinside(15, c, this);  // error: parameter c0 does not satisfy its invariant
+    c.x = c.y;
+  }
+  public void A5(C! c)
+    requires c != this;
+  {
+    c.x = c.y + 1;
+    BSinside(15, this, c);  // all is fine
+    c.x = c.y;
+  }
+  private void Bprivate() {
+    assert x <= y;
+  }
+  [Inside]
+  private void Binside() {
+    assert x <= y;  // error (we don't get to assume the invariant of an [Inside] parameter
+  }
+  public static void BSinside(int q, C! c0, [Inside] C! c1) {
+    assert c0.x <= c0.y;  // fine
+    assert c1.x <= c1.y;  // error: this is not certain to hold for an [Inside] parameter
+  }
+
+  public void W() {
+    T u = new T();
+    assert u.k < 10;
+    u.Nx();
+    if (t != null) {
+      t.k -= u.k;
+      if (t.k < 0) {
+        t.k += 10;
+      }
+    }
+  }
+}
+
+public class T {
+  public int k;
+  invariant 0 <= k && k < 10;
+
+  public void Mx() {
+    assert k < 10;
+  }
+
+  public void Nx()
+    modifies k;
+  {
+    k++;
+    if (k == 10) {
+      k = 0;
+    }
+  }
+}

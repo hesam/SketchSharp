@@ -1,0 +1,54 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Security.Policy
+{
+
+    public class StrongName
+    {
+
+        public System.Security.Permissions.StrongNamePublicKeyBlob PublicKey
+        {
+          get;
+        }
+
+        public Version Version
+        {
+          get;
+        }
+
+        public string Name
+        {
+          get;
+        }
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object o);
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public string ToString ();
+
+        public object Copy ();
+
+        public System.Security.IPermission CreateIdentityPermission (Evidence evidence);
+
+        public StrongName (System.Security.Permissions.StrongNamePublicKeyBlob! blob, string! name, Version! version)
+            requires name != null otherwise ArgumentNullException;
+            requires blob != null otherwise ArgumentNullException;
+            requires version != null otherwise ArgumentNullException;
+    }
+}

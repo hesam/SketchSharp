@@ -1,0 +1,23 @@
+using System;
+using Microsoft.SpecSharp;
+
+//[assembly: PostCompilationPlugin(typeof(Microsoft.Boogie.BoogiePlugin))]
+
+public class Demo{
+  public static Uri! FileNameToUri(string! fileName){
+    Uri result = new Uri(fileName);
+    return result;
+  }
+  public static string! UriToFileName(Uri! uri)
+    requires uri.IsFile;
+  {
+    return uri.LocalPath;
+  }  
+  public static void Main(){
+    string str = "abc";
+    Uri uri = Demo.FileNameToUri(str);
+    str = UriToFileName(uri);
+    uri = Demo.FileNameToUri(str);
+  }
+}
+

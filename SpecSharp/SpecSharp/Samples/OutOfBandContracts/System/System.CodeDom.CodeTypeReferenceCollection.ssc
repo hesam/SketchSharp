@@ -1,0 +1,54 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.CodeDom
+{
+
+    public class CodeTypeReferenceCollection
+    {
+
+        public CodeTypeReference this [int index]
+        {
+          get;
+          set;
+        }
+
+        public void Remove (CodeTypeReference value);
+
+        public void Insert (int index, CodeTypeReference value);
+
+        public int IndexOf (CodeTypeReference value);
+
+        public void CopyTo (CodeTypeReference[] array, int index);
+
+        public bool Contains (CodeTypeReference value);
+
+        public void AddRange (CodeTypeReferenceCollection! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public void AddRange (CodeTypeReference[]! value)
+            requires value != null otherwise ArgumentNullException;
+
+        public void Add (Type value);
+
+        public void Add (string value);
+
+        public int Add (CodeTypeReference value);
+
+        public CodeTypeReferenceCollection (CodeTypeReference[] value);
+
+        public CodeTypeReferenceCollection (CodeTypeReferenceCollection value);
+
+        public CodeTypeReferenceCollection ();
+    }
+}

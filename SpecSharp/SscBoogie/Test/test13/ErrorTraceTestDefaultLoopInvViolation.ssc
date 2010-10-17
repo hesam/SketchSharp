@@ -1,0 +1,41 @@
+namespace Microsoft.Contracts
+{
+
+public class ErrorTraceTestDefaultLoopInvViolation {
+  public int val;
+
+  [Rep] public RepFieldClass o;
+  
+  // modifies violated
+  public void modifiesLoopInvInitViolation() modifies this.0; {
+    while(true) invariant true; { 
+      expose(this){
+        val = 0;
+      }
+    }
+  }
+
+  // ownership violated
+  public void ownershipLoopInvInitViolation() 
+    modifies this.o;
+  {
+    RepFieldClass p = new RepFieldClass();
+    while(true) invariant true; { 
+      expose(this){
+        o = p;
+      }
+    }
+  }
+  
+  
+  public static void Main(string[] args) {
+    
+  }
+}
+
+
+public class RepFieldClass {
+
+}
+
+}

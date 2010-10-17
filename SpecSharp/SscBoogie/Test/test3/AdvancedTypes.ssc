@@ -1,0 +1,84 @@
+// These "advanced" tests rely on knowing the entire assembly
+
+public class AdvancedTypes {
+  public static void Main() {}
+
+  void Advanced0(InternalSubClass! sc, K! k, InternalClass! ic) {
+    assert sc is J;
+    assert sc is InternalClass;
+
+    // since InternalSubClass is internal, we actually know about all of its subtypes
+    object ok = k;
+    assert !(ok is InternalSubClass);
+
+    // since InternalSubClass internal, we know all of its subclasses, and since it is
+    // abstract, we know that "ic" is not an InternalClass proper
+    assert ic is InternalSubClass || ic is AnotherSubClass;
+  }
+
+  void Advanced1(SubLessType slt) {
+    assert slt == null;
+  }
+
+  void Advanced2(SubLessType! slt) {
+    assert false;
+  }
+
+  void Advanced3(W! w) {
+    assert w is X;  // error
+  }
+
+  void Advanced4(X! x) {
+    if (x is Y0) {
+    } else if (x is Z0) {
+    } else if (x is Z1) {
+    } else if (x is Y2) {
+    } else {
+      assert false;  // fine
+    }
+  }
+
+  J Advanced4(P! p) {
+    return (J)p;  // fine, because every P is a Q, which is a J
+  }
+
+  K Advanced5(P! p) {
+    return (K)p;  // error: a P is never a K
+  }
+
+  void Advanced6(JKL! jkl) {
+    assert jkl is P_JKL;
+  }
+}
+
+// -------------------------------------------------------------------------------
+
+public interface J {}
+  public interface K : J {}
+  abstract class InternalClass : J {}
+    class InternalSubClass : InternalClass {}
+    class AnotherSubClass : InternalClass {}
+
+// -------------------------------------------------------------------------------
+
+abstract class SubLessType {}
+
+// -------------------------------------------------------------------------------
+
+public class W { }
+  abstract class X : W { }
+  class Y0 : X { }
+  abstract class Y1 : X { }
+    class Z0 : Y1 { }
+    class Z1 : Y1 { }
+  class Y2 : X { }
+
+// -------------------------------------------------------------------------------
+
+abstract class P { }
+  class Q : P, J { }
+
+// -------------------------------------------------------------------------------
+
+interface JKL { }
+  public class P_JKL : JKL { }

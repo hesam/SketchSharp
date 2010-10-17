@@ -1,0 +1,35 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Runtime.InteropServices
+{
+
+    public class TypeLibConverter
+    {
+
+        public TypeLibConverter ();
+
+        public bool GetPrimaryInteropAssembly (Guid g, int major, int minor, int lcid, ref string asmName, ref string asmCodeBase);
+
+        public object ConvertAssemblyToTypeLib (System.Reflection.Assembly assembly, string strTypeLibName, TypeLibExporterFlags flags, ITypeLibExporterNotifySink notifySink);
+
+        public System.Reflection.Emit.AssemblyBuilder ConvertTypeLibToAssembly (object! typeLib, string! asmFileName, TypeLibImporterFlags flags, ITypeLibImporterNotifySink! notifySink, Byte[]! publicKey, System.Reflection.StrongNameKeyPair! keyPair, string asmNamespace, Version asmVersion)
+            requires typeLib != null otherwise ArgumentNullException;
+            requires asmFileName != null otherwise ArgumentNullException;
+            requires notifySink != null otherwise ArgumentNullException;
+            requires asmFileName.Length <= 260 otherwise ArgumentException;
+            requires (int)((int)flags & 1) == 0 || publicKey != null || keyPair != null otherwise InvalidOperationException;
+
+        public System.Reflection.Emit.AssemblyBuilder ConvertTypeLibToAssembly (object typeLib, string asmFileName, int flags, ITypeLibImporterNotifySink notifySink, Byte[] publicKey, System.Reflection.StrongNameKeyPair keyPair, bool unsafeInterfaces);
+    }
+}

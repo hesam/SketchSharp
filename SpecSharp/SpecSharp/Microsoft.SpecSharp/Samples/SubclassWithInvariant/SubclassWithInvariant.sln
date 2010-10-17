@@ -1,0 +1,19 @@
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{07C4E3D1-6B67-4060-8A92-940DB82041ED}") = "SubclassWithInvariant", "SubclassWithInvariant.sscproj", "{2D79215C-00BD-4182-8585-5E4D1708E98F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|.NET = Debug|.NET
+		Release|.NET = Release|.NET
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2D79215C-00BD-4182-8585-5E4D1708E98F}.Debug|.NET.ActiveCfg = Debug|.NET
+		{2D79215C-00BD-4182-8585-5E4D1708E98F}.Debug|.NET.Build.0 = Debug|.NET
+		{2D79215C-00BD-4182-8585-5E4D1708E98F}.Release|.NET.ActiveCfg = Release|.NET
+		{2D79215C-00BD-4182-8585-5E4D1708E98F}.Release|.NET.Build.0 = Release|.NET
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

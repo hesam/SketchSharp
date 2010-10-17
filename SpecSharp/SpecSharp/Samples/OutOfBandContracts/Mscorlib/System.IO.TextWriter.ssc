@@ -1,0 +1,127 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.IO
+{
+
+    public class TextWriter
+    {
+
+        public IFormatProvider FormatProvider
+        {
+          get;
+        }
+
+        public string NewLine
+        {
+          get;
+          set;
+        }
+
+        public System.Text.Encoding Encoding
+        {
+          get;
+        }
+
+        public void WriteLine (string! format, params object[]! args)
+            requires format != null otherwise ArgumentNullException;
+            requires args != null otherwise ArgumentNullException;
+
+        public void WriteLine (string! format, object arg0, object arg1, object arg2)
+            requires format != null otherwise ArgumentNullException;
+
+        public void WriteLine (string! format, object arg0, object arg1)
+            requires format != null otherwise ArgumentNullException;
+
+        public void WriteLine (string! format, object arg0)
+            requires format != null otherwise ArgumentNullException;
+
+        public void WriteLine (object value);
+
+        public void WriteLine (string value);
+
+        public void WriteLine (Decimal value);
+
+        public void WriteLine (double value);
+
+        public void WriteLine (Single value);
+
+        public void WriteLine (ulong value);
+
+        public void WriteLine (long value);
+
+        public void WriteLine (uint value);
+
+        public void WriteLine (int value);
+
+        public void WriteLine (bool value);
+
+        public void WriteLine (char[] buffer, int index, int count);
+
+        public void WriteLine (char[] buffer);
+
+        public void WriteLine (char value);
+
+        public void WriteLine ();
+
+        public void Write (string! format, params object[]! args)
+            requires format != null otherwise ArgumentNullException;
+            requires args != null otherwise ArgumentNullException;
+
+        public void Write (string! format, object arg0, object arg1, object arg2)
+            requires format != null otherwise ArgumentNullException;
+
+        public void Write (string! format, object arg0, object arg1)
+            requires format != null otherwise ArgumentNullException;
+
+        public void Write (string! format, object arg0)
+            requires format != null otherwise ArgumentNullException;
+
+        public void Write (object value);
+
+        public void Write (string value);
+
+        public void Write (Decimal value);
+
+        public void Write (double value);
+
+        public void Write (Single value);
+
+        public void Write (ulong value);
+
+        public void Write (long value);
+
+        public void Write (uint value);
+
+        public void Write (int value);
+
+        public void Write (bool value);
+
+        public void Write (char[]! buffer, int index, int count)
+            requires buffer != null otherwise ArgumentNullException;
+            requires index >= 0 otherwise ArgumentOutOfRangeException;
+            requires count >= 0 otherwise ArgumentOutOfRangeException;
+            requires (buffer.Length - index) >= count otherwise ArgumentException;
+
+        public void Write (char[] buffer);
+
+        public void Write (char value);
+
+        public static TextWriter Synchronized (TextWriter! writer)
+            requires writer != null otherwise ArgumentNullException;
+
+        public void Flush ();
+
+        public void Close ();
+    }
+}

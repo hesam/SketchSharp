@@ -1,0 +1,5 @@
+
+-------------------- Delegate --------------------
+Delegate.ssc(7,6): Error: Cast to non-null type may fail
+
+Spec# program verifier finished with 13 verified, 1 error

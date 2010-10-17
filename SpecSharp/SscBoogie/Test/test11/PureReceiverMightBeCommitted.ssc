@@ -1,0 +1,32 @@
+using Microsoft.Contracts;
+
+public class C {
+  int x;
+  [Rep] T! tt = new T();
+
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  int M() {
+    T t = new T();
+    return t.P();
+  }
+
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  int N() {
+    int a = x;
+    T t = new T();
+    int b = t.P();
+    assert a == x;
+    return b;
+  }
+
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  int O() {
+    return tt.Q();
+  }
+}
+
+public class T {
+  public int P() { return 0; }
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public int Q() { return 0; }
+}

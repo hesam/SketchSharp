@@ -1,0 +1,27 @@
+using Microsoft.Contracts;
+
+class T {
+  [Pure] public int M() { return 0;}
+}
+
+class A {
+  [Rep] protected T! t = new T();
+  
+  void R() {
+    t.M();
+  }
+
+  [Additive] public virtual void Q() {
+    t.M();
+  }
+}
+
+class B : A {
+  void P() {
+    t.M();
+  }
+
+  [Additive] public override void Q() {
+    t.M();
+  }
+}

@@ -1,0 +1,22 @@
+using Microsoft.Contracts;
+
+class C {
+  int f;
+
+  [Pure][ResultNotNewlyAllocated]
+  object M() {
+    return new object();        // error: does return newly allocated object
+  }
+
+  public virtual C! O()
+    ensures result.IsNew;
+  {
+    return new C();           // ok: returns new object but not marked RNNA
+  }
+
+  C P() {
+    C c = O();
+    c.f = 5;
+    return c;                  // ok: returns new object but not marked RNNA
+  }
+}

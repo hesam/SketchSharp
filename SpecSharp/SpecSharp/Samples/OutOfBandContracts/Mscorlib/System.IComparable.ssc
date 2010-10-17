@@ -1,0 +1,35 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System {
+  // Summary:
+  //     Defines a generalized comparison method that a value type or class implements
+  //     to create a type-specific comparison method for ordering instances.
+  public interface IComparable<T> {
+    // Summary:
+    //     Compares the current object with another object of the same type.
+    //
+    // Parameters:
+    //   other:
+    //     An object to compare with this object.
+    //
+    // Returns:
+    //     A 32-bit signed integer that indicates the relative order of the objects
+    //     being compared. The return value has the following meanings: Value Meaning
+    //     Less than zero This object is less than the other parameter.Zero This object
+    //     is equal to other. Greater than zero This object is greater than other. 
+    [Pure][Reads(ReadsAttribute.Reads.Owned)]
+    int CompareTo(T other);
+  }
+}

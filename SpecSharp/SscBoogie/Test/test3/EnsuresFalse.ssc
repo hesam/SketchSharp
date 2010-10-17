@@ -1,0 +1,8 @@
+using System;
+class C{
+  public int foo()
+    ensures false;
+  {
+    Console.WriteLine("foo"); 
+  }
+}

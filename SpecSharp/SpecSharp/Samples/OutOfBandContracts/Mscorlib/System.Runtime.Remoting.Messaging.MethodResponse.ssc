@@ -1,0 +1,109 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Runtime.Remoting.Messaging
+{
+
+    public class MethodResponse
+    {
+
+        public Object[] OutArgs
+        {
+          get;
+        }
+
+        public int ArgCount
+        {
+          get;
+        }
+
+        public string Uri
+        {
+          get;
+          set;
+        }
+
+        public bool HasVarArgs
+        {
+          get;
+        }
+
+        public int OutArgCount
+        {
+          get;
+        }
+
+        public System.Collections.IDictionary Properties
+        {
+          get;
+        }
+
+        public Object[] Args
+        {
+          get;
+        }
+
+        public object ReturnValue
+        {
+          get;
+        }
+
+        public Exception Exception
+        {
+          get;
+        }
+
+        public object MethodSignature
+        {
+          get;
+        }
+
+        public LogicalCallContext LogicalCallContext
+        {
+          get;
+        }
+
+        public string TypeName
+        {
+          get;
+        }
+
+        public System.Reflection.MethodBase MethodBase
+        {
+          get;
+        }
+
+        public string MethodName
+        {
+          get;
+        }
+
+        public string GetOutArgName (int index);
+
+        public object GetOutArg (int argNum);
+
+        public string GetArgName (int index)
+            requires index >= 0 otherwise ArgumentOutOfRangeException;
+
+        public object GetArg (int argNum);
+
+        public void GetObjectData (System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context);
+
+        public void RootSetObjectData (System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext ctx);
+
+        public object HeaderHandler (Header[] h);
+
+        public MethodResponse (Header[] h1, IMethodCallMessage! mcm)
+            requires mcm != null otherwise ArgumentNullException;
+    }
+}

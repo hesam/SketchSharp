@@ -1,0 +1,132 @@
+------------------------------ AddMethod.ssc ---------------------
+
+Spec# program verifier finished with 5 verified, 0 errors
+------------------------------ Array.ssc ---------------------
+Array.ssc(51,13): Error: Array size possibly negative
+Error: Method test3.MyClass.DimLengthRank1(string[*,*]! a), unsatisfied postcondition: result == 173
+
+Spec# program verifier finished with 7 verified, 2 errors
+------------------------------ Array2.ssc ---------------------
+Array2.ssc(28,7): Error: Array index possibly above upper bound
+Array2.ssc(28,7): Error: Array index possibly above upper bound
+
+Spec# program verifier finished with 3 verified, 2 errors
+------------------------------ AssertFalse.ssc ---------------------
+AssertFalse.ssc(9,5): Error: Assertion might not hold: false
+AssertFalse.ssc(16,7): Error: Assertion might not hold: false
+AssertFalse.ssc(25,7): Error: Assertion might not hold: false
+AssertFalse.ssc(38,7): Error: Assertion might not hold: false
+
+Spec# program verifier finished with 2 verified, 4 errors
+------------------------------ Strings.ssc ---------------------
+Strings.ssc(15,7): Error: Call of string.Insert(int startIndex, string! value), unsatisfied precondition: 0 <= startIndex
+Strings.ssc(93,24): Error: strings are not allowed to be exposed
+Strings.ssc(113,9): Error: RHS might be immutable, and not allowed in rep fields
+Strings.ssc(119,9): Error: RHS might be immutable, and not allowed in peer fields
+Strings.ssc(132,9): Error: RHS might be immutable, and not allowed in rep fields
+Strings.ssc(140,9): Error: RHS might be immutable, and not allowed in peer fields
+Strings.ssc(149,24): Error: Additive expose is not allowed at System.Object
+Strings.ssc(156,7): Error: the given peer object might be immutable, and its owner is not allowed to be assigned
+Strings.ssc(161,7): Error: the subject might be immutable, and its owner is not allowed to be assigned
+
+Spec# program verifier finished with 12 verified, 9 errors
+------------------------------ Immutable.ssc ---------------------
+Immutable.ssc(44,9): Error: RHS might be immutable, and not allowed in rep fields
+Immutable.ssc(50,9): Error: RHS might be immutable, and not allowed in peer fields
+Immutable.ssc(56,9): Error: RHS might be immutable, and not allowed in rep fields
+Immutable.ssc(62,9): Error: RHS might be immutable, and not allowed in peer fields
+Immutable.ssc(69,9): Error: RHS might be immutable, and not allowed in peer fields
+Immutable.ssc(94,23): Error: Objects of Immutable types are not allowed to be exposed
+Immutable.ssc(98,14): Error: Objects of Immutable types are not allowed to be exposed
+Immutable.ssc(127,15): Error: Objects of Immutable types are not allowed to be exposed
+Immutable.ssc(133,7): Error: Assertion might not hold: false
+
+Spec# program verifier finished with 19 verified, 9 errors
+------------------------------ B.ssc BClient.ssc ---------------------
+BClient.ssc(33,5): Error: Call of MyClass.M(int x, bool b, bool c), unsatisfied precondition: x == 12 ? b : c
+BClient.ssc(60,5): Error: Call of MyClass.M(int x, bool b, bool c), unsatisfied precondition: x == 12 ? b : c
+BClient.ssc(60,5): Error: method invocation may violate the modifies clause of the enclosing method
+BClient.ssc(65,5): Error: Call of MyClass.M(int x, bool b, bool c), unsatisfied precondition: x == 12 ? b : c
+BClient.ssc(65,5): Error: method invocation may violate the modifies clause of the enclosing method
+BClient.ssc(69,5): Error: method invocation may violate the modifies clause of the enclosing method
+BClient.ssc(70,5): Error: Call of MyClass.M(int x, bool b, bool c), unsatisfied precondition: x == 12 ? b : c
+BClient.ssc(70,5): Error: method invocation may violate the modifies clause of the enclosing method
+
+Spec# program verifier finished with 5 verified, 8 errors
+------------------------------ Call.ssc ---------------------
+Call.ssc(18,5): Error: Call of Call.M(int y), unsatisfied precondition: x + y == 10
+
+Spec# program verifier finished with 2 verified, 1 error
+------------------------------ Global.ssc ---------------------
+Error: Method MyNamespace.Old.IncXBad(), unsatisfied postcondition: old(x) < x
+Error: Method MyNamespace.Old.IncGBad(), unsatisfied postcondition: old(g) < g
+
+Spec# program verifier finished with 6 verified, 2 errors
+------------------------------ Types.ssc ---------------------
+Types.ssc(81,5): Error: Assertion might not hold: (object)c != (object)d
+Types.ssc(94,5): Error: Assertion might not hold: !(ok is A)
+Types.ssc(98,5): Error: Assertion might not hold: !(k is L)
+Types.ssc(103,5): Error: Assertion might not hold: !(ok is System.Array)
+Types.ssc(127,5): Error: Assertion might not hold: (object)aA != (object)aJ
+Types.ssc(131,5): Error: Assertion might not hold: (object)aB != (object)aJ
+Types.ssc(135,5): Error: Assertion might not hold: (object)aB != (object)aA
+Types.ssc(139,5): Error: Assertion might not hold: (object)aObject != (object)aJ
+Types.ssc(143,5): Error: Assertion might not hold: (object)aObject != (object)aB
+
+Spec# program verifier finished with 26 verified, 9 errors
+------------------------------ DynamicTypes.ssc ---------------------
+Error: Method DynamicTypes.N1(), unsatisfied postcondition: result.GetType() == typeof(Sub0)
+DynamicTypes.ssc(32,5): Error: Assertion might not hold: t0 == t1
+DynamicTypes.ssc(39,5): Error: Assertion might not hold: t0 == t1
+Error: Method Sub0.M(), unsatisfied postcondition: result.GetType() == this.GetType()
+Error: Method Sub1.M(), unsatisfied postcondition: result.GetType() == this.GetType()
+
+Spec# program verifier finished with 11 verified, 5 errors
+------------------------------ AdvancedTypes.ssc ---------------------
+AdvancedTypes.ssc(28,5): Error: Assertion might not hold: w is X
+AdvancedTypes.ssc(46,5): Error: Type cast might fail
+
+Spec# program verifier finished with 22 verified, 2 errors
+------------------------------ ExactTypes.ssc ---------------------
+ExactTypes.ssc(43,3): Error: Object invariant possibly does not hold: w.GetType() == typeof(W) || w.GetType() == typeof(Y0)
+ExactTypes.ssc(50,5): Error: Object invariant possibly does not hold: xs.GetType() == typeof(X[])
+ExactTypes.ssc(56,5): Error: Type cast might fail
+ExactTypes.ssc(69,5): Error: RHS might not be a subtype of the element type of the array being assigned
+ExactTypes.ssc(81,5): Error: RHS might not be a subtype of the element type of the array being assigned
+
+Spec# program verifier finished with 12 verified, 5 errors
+------------------------------ ConstructorVisibility.ssc ---------------------
+ConstructorVisibility.ssc(49,5): Error: Assertion might not hold: false
+
+Spec# program verifier finished with 9 verified, 1 error
+------------------------------ Alloc.ssc ---------------------
+Alloc.ssc(38,5): Error: Assertion might not hold: b.next == null
+Alloc.ssc(54,5): Error: Assertion might not hold: b != gt
+
+Spec# program verifier finished with 13 verified, 2 errors
+------------------------------ Strengthen.ssc ---------------------
+Strengthen.ssc(31,5): warning CS2663: Assertion might not hold: o != null
+------------------------------ Generic.ssc ---------------------
+------------------------------ ParamInAssert.ssc ---------------------
+ParamInAssert.ssc(14,5): warning CS2663: Assertion might not hold: 0 <= x
+------------------------------ Typeof.ssc ---------------------
+Typeof.ssc(10,5): warning CS2663: Assertion might not hold: t is string
+------------------------------ Subclass.ssc ---------------------
+Subclass.ssc(14,5): warning CS2663: Assertion might not hold: false
+------------------------------ Iff.ssc ---------------------
+Error: Method Iff.R(bool x, bool y), unsatisfied postcondition: result <==> x == y
+Iff.ssc(46,5): Related information:     (trace position)
+Iff.ssc(48,3): Related information:     (trace position)
+
+Spec# program verifier finished with 4 verified, 1 error
+------------------------------ Operators.ssc ---------------------
+
+Spec# program verifier finished with 3 verified, 0 errors
+------------------------------ EnsuresFalse.ssc ---------------------
+Error: Method C.foo(), unsatisfied postcondition: false
+
+Spec# program verifier finished with 1 verified, 1 error
+------------------------------ Main.ssc ---------------------
+Main.ssc(16,11): warning CS0219: The variable 'x' is assigned but its value is never used
+
+Spec# program verifier finished with 2 verified, 0 errors

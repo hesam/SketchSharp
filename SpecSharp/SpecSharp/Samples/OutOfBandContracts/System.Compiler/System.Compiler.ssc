@@ -1,0 +1,1294 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+namespace System.Compiler{
+    using System;
+    using System.Collections;
+    using System.Reflection;
+    using System.Reflection.Emit;
+    using Microsoft.Contracts;  //PM: needed to refer to Pure, etc.
+    
+    public class AddressDereference{
+    public Expression! Address{get; set; }
+    }
+    
+    public class ArrayType{
+    public TypeNode! ElementType { get; set; }
+    }
+    
+  public class AssemblyNode{
+    public virtual string! StrongName { get; }
+  }
+
+  public class AssemblyReference {
+    public IdentifierList Aliases;
+    protected internal AssemblyNode assembly;
+    protected string strongName;
+
+    public AssemblyReference();
+    public AssemblyReference(AssemblyNode assembly);
+    public AssemblyReference(string assemblyStrongName);
+    public AssemblyReference(string assemblyStrongName, SourceContext sctx);
+
+    public virtual AssemblyNode Assembly { get; set; }
+    public string Culture { get; set; }
+    public AssemblyFlags Flags { get; set; }
+    public byte[] HashValue { get; set; }
+    public string Location { get; set; }
+    public string Name { get; set; }
+    public byte[] PublicKeyOrToken { get; set; }
+    public byte[] PublicKeyToken { get; }
+    public virtual string StrongName { get; }
+    public Version Version { get; set; }
+
+    public bool Matches(string name, Version version, string culture, byte[] publicKeyToken);
+    public bool MatchesIgnoringVersion(AssemblyReference aRef);
+  }
+  
+  //PM: needed to prove a loop invariant
+  public sealed class AttributeList{
+    public int Length { [Pure][Reads(ReadsAttribute.Reads.Owned)] get; }
+  }
+  
+  public class BinaryExpression {
+     public Expression! Operand1{get; set; }
+     public Expression! Operand2{get; set; }
+  }
+  public class Block{
+    public StatementList! Statements{    
+      get;
+      set;
+    }    
+  }
+  
+  public class BlockExpression{
+    public Block! Block;
+  }
+  
+  
+  public class Comprehension{
+    public ExpressionList! BindingsAndFilters;
+    public ExpressionList! Elements;
+  }
+  
+  public class ComprehensionBinding : Expression{
+    public TypeNode! TargetVariableType;
+    public Expression! TargetVariable;
+  }  
+  
+  public class DelegateNode{
+    public virtual ParameterList! Parameters{get; set; }
+  }
+    
+  public class Expression{
+    public virtual TypeNode! Type{ get; set; }
+  }
+  
+  public class Field  {
+    protected FieldInfo fieldInfo;
+    public Event ForEvent;
+    protected string fullName;
+    public bool HasOutOfBandContract;
+    public InterfaceList ImplementedInterfaceExpressions;
+    public InterfaceList ImplementedInterfaces;
+    //
+    // Summary:
+    //     Provides a value that is assigned to the field upon initialization.
+    public Expression Initializer;
+    public TypeNode TypeExpression;
+
+    public Field();
+    public Field(Identifier name);
+    public Field(TypeNode declaringType, AttributeList attributes, FieldFlags flags, Identifier name, TypeNode Type, Literal defaultValue);
+
+    // Summary:
+    //     The compile-time value to be substituted for references to this field if
+    //     it is a literal.
+    public Literal DefaultValue { get; set; }
+    public FieldFlags Flags { get; set; }
+    public virtual string FullName { get; }
+    public byte[] InitialData { get; set; }
+    public virtual bool IsAssembly { get; }
+    public virtual bool IsCompilerControlled { get; }
+    public virtual bool IsFamily { get; }
+    public virtual bool IsFamilyAndAssembly { get; }
+    public virtual bool IsFamilyOrAssembly { get; }
+    //
+    // Summary:
+    //     True if the field may only be assigned to inside the constructor.
+    public virtual bool IsInitOnly { get; }
+    //
+    // Summary:
+    //     True if all references to the field are replaced with a value that is determined
+    //     at compile-time.
+    public virtual bool IsLiteral { get; }
+    public bool IsLockProtected { get; }
+    public bool IsOwned { get; }
+    public bool IsPeer { get; }
+    public virtual bool IsPrivate { get; }
+    public virtual bool IsPublic { get; }
+    public bool IsRef { get; }
+    public virtual bool IsSpecialName { get; }
+    public virtual bool IsStatic { get; }
+    public bool IsStrictReadonly { get; }
+    public virtual bool IsVisibleOutsideAssembly { get; }
+    //
+    // Summary:
+    //     True if the field may not be cached. Used for sharing data between multiple
+    //     threads.
+    public bool IsVolatile { get; set; }
+    public MarshallingInformation MarshallingInformation { get; set; }
+    public int Offset { get; set; }
+    public ReferenceFieldSemantics ReferenceSemantics { get; }
+    public PESection Section { get; set; }
+    //
+    // Summary:
+    //     The type of values that may be stored in the field.
+    public TypeNode! Type { get; set; }
+
+    protected virtual Identifier GetDocumentationId();
+    public static Field GetField(FieldInfo fieldInfo);
+    public virtual FieldInfo GetFieldInfo();
+    public virtual Literal GetValue(Literal targetObject);
+    public virtual object GetValue(object targetObject);
+    public virtual void SetValue(Literal targetObject, Literal value);
+    public virtual void SetValue(object targetObject, object value);
+    public virtual string ToString();
+  }
+  
+  public class FunctionPointer{
+    public TypeNodeList! ParameterTypes{get; set;}
+    public TypeNode! ReturnType{get; set;}
+  }
+  
+    public class Identifier{
+        public string! Name { get; }
+    public static Identifier! For(string! name);
+    public static Identifier! For(SourceContext sctx);
+    public static Identifier! Empty;
+    }
+    
+    public class Indexer{
+      public Expression! Object{ get; set; }
+    }
+    
+    public class Member{
+      public TypeNode! Declaringtype { get; set;}
+    public Identifier! Name {
+      get;
+      set;
+    }    
+  }
+  
+  public class MemberBinding{
+    public Member! BoundMember{get; set; }
+  }
+    
+  public class Method : Member {
+    protected internal Block body;
+    protected string conditionalSymbol;
+
+
+
+    protected internal MethodContract/*?*/ contract;
+    /// <summary>The preconditions, postconditions, and modifies clauses of this method.</summary>
+    public virtual MethodContract/*?*/ Contract {
+      get;
+        ensures result != null ==> Owner.Is(result, this, typeof(Method));        
+      set; 
+    }
+
+    protected bool doesNotHaveAConditionalSymbol;
+    protected ExceptionHandlerList exceptionHandlers;
+    protected internal string fullName;
+    public bool HasCompilerGeneratedSignature;
+    public bool HasOutOfBandContract;
+    public TypeNodeList ImplementedTypeExpressions;
+    public TypeNodeList ImplementedTypes;
+    public MethodList ImplicitImplementedInterfaceMethods;
+    protected InstructionList instructions;
+    protected bool isNormalized;
+    protected TrivialHashtable Locals;
+    protected TypeNode[] parameterTypes;
+    public Method.MethodBodyProvider ProvideBody;
+    public object ProviderHandle;
+    public TypeNode ReturnTypeExpression;
+    //
+    // Summary:
+    //     Provides a way to retrieve the parameters and local variables defined in
+    //     this method given their names.
+    public MethodScope Scope;
+    //
+    // Summary:
+    //     Contains declarative security information associated with this method.
+    public SecurityAttributeList SecurityAttributes;
+
+    public Method();
+    public Method(Method.MethodBodyProvider provider, object handle);
+    public Method(TypeNode declaringType, AttributeList attributes, Identifier name, ParameterList parameters, TypeNode returnType, Block body);
+
+    public bool ApplyDefaultActivity { get; }
+    public bool ApplyDefaultContract { get; }
+    //
+    // Summary:
+    //     The instructions constituting the body of this method, in the form of a tree.
+    public virtual Block Body { get; set; }
+    public CallingConventionFlags CallingConvention { get; set; }
+    public string ConditionalSymbol { get; set; }
+    //
+    // Summary:
+    //     Provides the declaring event or property of an accessor.
+    public Member DeclaringMember { get; set; }
+    public virtual ExceptionHandlerList ExceptionHandlers { get; set; }
+    public MethodFlags Flags { get; set; }
+    public virtual string FullName { get; }
+    public virtual string HelpText { get; set; }
+    public virtual Member HiddenMember { get; set; }
+    public virtual Method HiddenMethod { get; set; }
+    public MethodList ImplementedInterfaceMethods { get; set; }
+    public MethodImplFlags ImplFlags { get; set; }
+    //
+    // Summary:
+    //     True if all local variables are to be initialized to default values before
+    //     executing the method body.
+    public bool InitLocals { get; set; }
+    //
+    // Summary:
+    //     The instructions constituting the body of this method, in the form of a linear
+    //     list of Instruction nodes.
+    public virtual InstructionList Instructions { get; set; }
+    public virtual bool IsAbstract { get; }
+    public virtual bool IsAssembly { get; }
+    public virtual bool IsCompilerControlled { get; }
+    public bool IsConfined { get; }
+    public virtual bool IsExtern { get; }
+    public virtual bool IsFamily { get; }
+    public virtual bool IsFamilyAndAssembly { get; }
+    public virtual bool IsFamilyOrAssembly { get; }
+    public virtual bool IsFinal { get; }
+    //
+    // Summary:
+    //     True if this method is a template that conforms to the rules for a CLR generic
+    //     method.
+    public bool IsGeneric { get; set; }
+    public virtual bool IsNonSealedVirtual { get; }
+    public virtual bool IsNormalized { get; set; }
+    public virtual bool IsPrivate { get; }
+    public bool IsPropertyGetter { get; }
+    public virtual bool IsPublic { get; }
+    public bool IsPure { get; }
+    public virtual bool IsSpecialName { get; }
+    public bool IsStateIndependent { get; }
+    public virtual bool IsStatic { get; }
+    //
+    // Summary:
+    //     True if this method can in principle be overridden by a method in a derived
+    //     class.
+    public virtual bool IsVirtual { get; }
+    public virtual bool IsVirtualAndNotDeclaredInStruct { get; }
+    public virtual bool IsVisibleOutsideAssembly { get; }
+    public virtual Member OverriddenMember { get; set; }
+    public virtual Method OverriddenMethod { get; set; }
+    //
+    // Summary:
+    //     The parameters this method has to be called with.
+    public ParameterList! Parameters { get; set; }
+    public PInvokeFlags PInvokeFlags { get; set; }
+    public string PInvokeImportName { get; set; }
+    public Module PInvokeModule { get; set; }
+    //
+    // Summary:
+    //     Attributes that apply to the return value of this method.
+    public AttributeList ReturnAttributes { get; set; }
+    //
+    // Summary:
+    //     The type of value that this method may return.
+    public TypeNode! ReturnType { get; set; }
+    public MarshallingInformation ReturnTypeMarshallingInformation { get; set; }
+    //
+    // Summary:
+    //     The (generic) method template from which this method was instantiated. Null
+    //     if this is not a (generic) method template instance.
+    public Method Template { get; set; }
+    //
+    // Summary:
+    //     The arguments used when this (generic) method template instance was instantiated.
+    public TypeNodeList TemplateArguments { get; set; }
+    public virtual TypeNodeList TemplateParameters { get; set; }
+    public This! ThisParameter { get; set; }
+
+    public Method CreateExplicitImplementation(TypeNode implementingType, ParameterList parameters, StatementList body);
+    protected virtual Identifier GetDocumentationId();
+    public virtual string GetFullUnmangledNameWithTypeParameters();
+    public virtual string GetFullUnmangledNameWithTypeParameters(bool omitParameterTypes);
+    public bool GetIsCompilerGenerated();
+    //
+    // Summary:
+    //     Returns the local associated with the given field, allocating a new local
+    //     if necessary.
+    public virtual Local GetLocalForField(Field f);
+    public virtual TypeNode[] GetParameterTypes();
+    public virtual Method GetTemplateInstance(TypeNode referringType, params TypeNode[] typeArguments);
+    public virtual Method GetTemplateInstance(TypeNode referringType, TypeNodeList typeArguments);
+    public virtual string GetUnmangledNameWithoutTypeParameters();
+    public virtual string GetUnmangledNameWithoutTypeParameters(bool omitParameterTypes);
+    public virtual string GetUnmangledNameWithTypeParameters();
+    public virtual string GetUnmangledNameWithTypeParameters(bool omitParameterTypes);
+    public static MethodFlags GetVisibilityUnion(Method m1, Method m2);
+    public static MethodFlags GetVisibilityUnion(MethodFlags vis1, MethodFlags vis2);
+    public virtual Literal Invoke(Literal targetObject, params Literal[] arguments);
+    public virtual object Invoke(object targetObject, params object[] arguments);
+    public virtual bool ParametersMatch(ParameterList parameters);
+    public virtual bool ParametersMatchExceptLast(ParameterList parameters);
+    public virtual bool ParametersMatchIncludingOutFlag(ParameterList parameters);
+    public virtual bool ParametersMatchStructurally(ParameterList parameters);
+    public virtual bool ParametersMatchStructurallyExceptLast(ParameterList parameters);
+    public virtual bool ParametersMatchStructurallyIncludingOutFlag(ParameterList parameters);
+    public virtual bool ParametersMatchStructurallyIncludingOutFlag(ParameterList parameters, bool allowCoVariance);
+    public virtual bool ParameterTypesMatch(TypeNodeList argumentTypes);
+    public virtual bool ParameterTypesMatchStructurally(TypeNodeList argumentTypes);
+    public virtual bool TemplateParametersMatch(TypeNodeList templateParameters);
+    public virtual string ToString();
+    public virtual bool TypeParameterCountsMatch(Method meth2);
+
+    public delegate void MethodBodyProvider(Method method, object handle, bool asInstructionList);
+  }
+  
+  public class TypeModifier{
+    public TypeNode! ModifiedType { get; set; }
+    public TypeNode! ModifierType { get; set; }
+  }
+
+  public class Module{
+    public AssemblyReferenceList! AssemblyReferences{
+      get;
+      set;
+    }
+  }
+  
+  public class OldExpression{
+    public Expression! expression;
+  }
+  
+  public class Parameter{
+  }
+  
+  public class Pointer{
+    public TypeNode! ElementType { get; set; }
+  }
+  
+  public class Quantifier{
+    public NodeType QuantifierType;
+    public TypeNode! SourceType;
+    public Comprehension! Comprehension;
+  }
+  
+  public class Reference{
+    public TypeNode! ElementType { get; set; }
+  }
+
+  public sealed class StatementList{
+    [Pure][Reads(ReadsAttribute.Reads.Owned)] public Enumerator GetEnumerator();
+    public struct Enumerator{
+       public Statement Current{
+        [Pure] get;
+      }
+      public bool MoveNext();
+      public void Reset();
+    }
+  }
+  
+  public sealed class RequiresList{
+    [Pure][Reads(ReadsAttribute.Reads.Owned)] public Enumerator GetEnumerator();
+    public struct Enumerator{
+       public Statement Current{
+        [Pure] get;
+      }
+      public bool MoveNext();
+      public void Reset();
+    }
+  }
+
+  public sealed class EnsuresList{
+    [Pure][Reads(ReadsAttribute.Reads.Owned)] public Enumerator GetEnumerator();
+    public struct Enumerator{
+       public Statement Current{
+        [Pure] get;
+      }
+      public bool MoveNext();
+      public void Reset();
+    }
+  }
+
+  public sealed class ExpressionList{
+    [Pure][Reads(ReadsAttribute.Reads.Owned)] public Enumerator GetEnumerator();
+    public struct Enumerator{
+       public Statement Current{
+        [Pure] get;
+      }
+      public bool MoveNext();
+      public void Reset();
+    }
+  }
+  
+  //PM: purity and modified clauses of enumerator needed to prove loop invariants    
+  public sealed class StringList{
+    [Pure][Reads(ReadsAttribute.Reads.Owned)] public Enumerator GetEnumerator();
+    public struct Enumerator{
+      public Enumerator(StringList/*!*/ list) ;
+      public String Current{
+        get;
+      }
+      public bool MoveNext();
+      public void Reset();
+    }
+  }
+        
+  public sealed class SystemTypes {
+    public static Class __HandleProtector;
+    public static Class Activator;
+    public static Class AdditiveAttribute;
+    public static Class AllowPartiallyTrustedCallersAttribute;
+    public static TypeNode AnonymityEnum;
+    public static Class AnonymousAttribute;
+    public static Class AppDomain;
+    public static Class ApplicationException;
+    public static Class ArgumentException;
+    public static Class ArgumentNullException;
+    public static Class ArgumentOutOfRangeException;
+    public static Class ArrayList;
+    public static Class Assembly;
+    public static Class AssemblyCompanyAttribute;
+    public static Class AssemblyConfigurationAttribute;
+    public static Class AssemblyCopyrightAttribute;
+    public static Class AssemblyCultureAttribute;
+    public static Class AssemblyDelaySignAttribute;
+    public static Class AssemblyDescriptionAttribute;
+    public static Class AssemblyFileVersionAttribute;
+    public static Class AssemblyFlagsAttribute;
+    public static Class AssemblyInformationalVersionAttribute;
+    public static Class AssemblyKeyFileAttribute;
+    public static Class AssemblyKeyNameAttribute;
+    public static Class AssemblyProductAttribute;
+    public static Class AssemblyTitleAttribute;
+    public static Class AssemblyTrademarkAttribute;
+    public static Class AssemblyVersionAttribute;
+    public static Class AssertException;
+    public static Class AssertHelpers;
+    public static Class AssumeException;
+    public static DelegateNode AsyncCallback;
+    public static Class AttributeUsageAttribute;
+    public static Class CapturedAttribute;
+    public static EnumNode CciMemberKind;
+    public static Class CciMemberKindAttribute;
+    public static Class CheckedException;
+    public static DelegateNode CheckInvariantDelegate;
+    public static Class ClassInterfaceAttribute;
+    public static Class CLSCompliantAttribute;
+    public static Class CodeAccessPermission;
+    public static Class CollectionBase;
+    public static Class ComImportAttribute;
+    public static Class ComposerAttribute;
+    public static Class ComRegisterFunctionAttribute;
+    public static Class ComSourceInterfacesAttribute;
+    public static Class ComUnregisterFunctionAttribute;
+    public static Class ComVisibleAttribute;
+    public static Class ConditionalAttribute;
+    public static Class ConfinedAttribute;
+    public static Class ContractException;
+    public static Class ContractMarkerException;
+    public static Class CultureInfo;
+    public static Class CustomVisitorAttribute;
+    public static Struct DateTime;
+    public static Class DBNull;
+    public static Class DebuggableAttribute;
+    public static Class DebuggerHiddenAttribute;
+    public static Class DebuggerStepThroughAttribute;
+    public static EnumNode DebuggingModes;
+    public static Struct Decimal;
+    public static Class DefaultMemberAttribute;
+    public static Class DictionaryBase;
+    public static Struct DictionaryEntry;
+    public static Class DllImportAttribute;
+    public static Class DoesAttribute;
+    public static Class DoesException;
+    public static Class DuplicateWaitObjectException;
+    public static Class ElementTypeAttribute;
+    public static Class EnsuresAttribute;
+    public static Class EnsuresException;
+    public static Class Environment;
+    public static Class EventArgs;
+    public static Class ExecutionEngineException;
+    public static Class FieldOffsetAttribute;
+    public static Class FlagsAttribute;
+    public static DelegateNode FrameGuardGetter;
+    public static Class GC;
+    public static Struct GenericArraySegment;
+    public static Class GenericArrayToIEnumerableAdapter;
+    public static Struct GenericBoxed;
+    public static Class GenericDictionary;
+    public static Interface GenericICollection;
+    public static Interface GenericIComparable;
+    public static Interface GenericIComparer;
+    public static Interface GenericIDictionary;
+    public static Interface GenericIEnumerable;
+    public static Class GenericIEnumerableToGenericIListAdapter;
+    public static Interface GenericIEnumerator;
+    public static Interface GenericIList;
+    public static Struct GenericInvariant;
+    public static Struct GenericKeyValuePair;
+    public static Class GenericList;
+    public static Struct GenericNonEmptyIEnumerable;
+    public static Struct GenericNonNull;
+    public static Struct GenericNullable;
+    public static Class GenericQueue;
+    public static Class GenericSortedDictionary;
+    public static Class GenericStack;
+    public static Class GenericStreamUtility;
+    public static Class GenericUnboxer;
+    public static Class Guard;
+    public static DelegateNode GuardThreadStart;
+    public static Struct Guid;
+    public static Class GuidAttribute;
+    public static Struct HandleRef;
+    public static Class Hashtable;
+    public static Interface IAggregate;
+    public static Interface IAggregateGroup;
+    public static Interface IASyncResult;
+    public static Interface ICheckedException;
+    public static Interface ICloneable;
+    public static Interface ICollection;
+    public static Interface IComparable;
+    public static Interface IComparer;
+    public static Interface IDbConnection;
+    public static Interface IDbTransactable;
+    public static Interface IDbTransaction;
+    public static Interface IDictionary;
+    public static Interface IDisposable;
+    public static Interface IEnumerable;
+    public static Interface IEnumerator;
+    public static Interface IFormatProvider;
+    public static Interface IHashCodeProvider;
+    public static Interface IList;
+    public static Class IllegalUpcastException;
+    public static Interface IMembershipCondition;
+    public static Class ImmutableAttribute;
+    public static Class ImportedFromTypeLibAttribute;
+    public static Class InAttribute;
+    public static Class IndexerNameAttribute;
+    public static Class IndexOutOfRangeException;
+    public static DelegateNode InitGuardSetsDelegate;
+    public static Class InterfaceTypeAttribute;
+    public static Class InternalsVisibleToAttribute;
+    public static Interface INullable;
+    public static Class InvalidCastException;
+    public static Class InvalidContractException;
+    public static Class InvalidOperationException;
+    public static Class InvariantAttribute;
+    public static Class InvariantException;
+    public static Interface IPermission;
+    public static Interface ISerializable;
+    public static EnumNode IsolationLevel;
+    public static Interface IStackWalk;
+    public static Class LockProtectedAttribute;
+    public static Class Marshal;
+    public static Class MarshalByRefObject;
+    public static Class MemberInfo;
+    public static Class MethodImplAttribute;
+    public static Class ModelAttribute;
+    public static Class ModifiesAttribute;
+    public static Class ModifiesException;
+    public static Class Monitor;
+    public static Struct NativeOverlapped;
+    public static Class NoChoiceException;
+    public static Class NoDefaultActivityAttribute;
+    public static Class NoDefaultContractAttribute;
+    public static Class NonSerializedAttribute;
+    public static Class NotSupportedException;
+    public static Class NullReferenceException;
+    public static Class NullTypeException;
+    public static Class ObjectInvariantException;
+    public static Class ObsoleteAttribute;
+    public static Class OptionalAttribute;
+    public static Class OutAttribute;
+    public static Class OutOfMemoryException;
+    public static Class OwnedAttribute;
+    public static Class ParamArrayAttribute;
+    public static Class ParameterInfo;
+    public static Class PureAttribute;
+    /* Diego's Attributes */
+    public static Class WriteConfinedAttribute;
+    public static Class GlobalReadAttribute;
+    public static Class GlobalWriteAttribute;
+    public static Class GlobalAccessAttribute;
+    public static Class FreshAttribute;
+    public static Class EscapesAttribute;
+    /* */
+    public static Class Queue;
+    public static Class Range;
+    public static Class ReaderAttribute;
+    public static Class ReadOnlyCollectionBase;
+    public static Class RequiresAttribute;
+    public static Class RequiresCanWriteAttribute;
+    public static Class RequiresException;
+    public static Class RequiresImmutableAttribute;
+    public static Class RequiresLockProtectedAttribute;
+    public static Class ResourceManager;
+    public static Class ResourceSet;
+    public static Class RuntimeCompatibilityAttribute;
+    public static Class SatelliteContractVersionAttribute;
+    public static EnumNode SecurityAction;
+    public static Class SecurityAttribute;
+    public static Class SecurityCriticalAttribute;
+    public static Class SecurityTransparentAttribute;
+    public static Class SecurityTreatAsSafeAttribute;
+    public static Class SerializableAttribute;
+    public static Class SerializationInfo;
+    public static Class ShadowsAssemblyAttribute;
+    public static Class SpecInternalAttribute;
+    public static Class SpecProtectedAttribute;
+    public static Class SpecPublicAttribute;
+    public static Struct SqlBinary;
+    public static Struct SqlBoolean;
+    public static Struct SqlByte;
+    public static Struct SqlDateTime;
+    public static Struct SqlDecimal;
+    public static Struct SqlDouble;
+    public static Class SqlFunctions;
+    public static Struct SqlGuid;
+    public static EnumNode SqlHint;
+    public static Struct SqlInt16;
+    public static Struct SqlInt32;
+    public static Struct SqlInt64;
+    public static Struct SqlMoney;
+    public static Struct SqlSingle;
+    public static Struct SqlString;
+    public static Class Stack;
+    public static Class StackOverflowException;
+    public static Class StateIndependentAttribute;
+    public static Class STAThreadAttribute;
+    public static Class Stream;
+    public static Struct StreamingContext;
+    public static Class StreamNotSingletonException;
+    public static Class StringBuilder;
+    public static Class StringComparer;
+    public static EnumNode StringComparison;
+    public static Class StructLayoutAttribute;
+    public static Class SuppressMessageAttribute;
+    public static Class SuppressUnmanagedCodeSecurityAttribute;
+    public static AssemblyNode SystemDataAssembly;
+    public static Class SystemException;
+    public static AssemblyNode SystemXmlAssembly;
+    public static Class TemplateAttribute;
+    public static Class TemplateInstanceAttribute;
+    public static Class TemplateParameterFlagsAttribute;
+    public static Class Thread;
+    public static DelegateNode ThreadConditionDelegate;
+    public static DelegateNode ThreadStart;
+    public static Class ThrowsAttribute;
+    public static Class ThrowsException;
+    public static Struct TimeSpan;
+    public static Class UnmanagedStructTemplateParameterAttribute;
+    public static Class UnreachableException;
+    public static Class WindowsImpersonationContext;
+    public static Class XmlAttributeAttributeClass;
+    public static Class XmlChoiceIdentifierAttributeClass;
+    public static Class XmlElementAttributeClass;
+    public static Class XmlIgnoreAttributeClass;
+    public static Class XmlTypeAttributeClass;
+    public static Struct ArgIterator { get; }
+    public static Class Array { get; }
+    public static Class Attribute { get; }
+    public static Struct Boolean { get; }
+    public static Struct Char { get; }
+    public static Interface ConstrainedType { get; }
+    public static Class Delegate { get; }
+    public static Struct Double { get; }
+    public static Struct DynamicallyTypedReference { get; }
+    public static Class EncodedTypeSpecAttribute { get; }
+    public static Class Enum { get; }
+    public static Class Exception { get; }
+    public static char GenericTypeNamesMangleChar { get; }
+    public static Struct Int16 { get; }
+    public static Struct Int32 { get; }
+    public static Struct Int64 { get; }
+    public static Struct Int8 { get; }
+    public static Struct IntPtr { get; }
+    public static Class IsVolatile { get; }
+    public static Interface ITemplateParameter { get; }
+    public static Class MulticastDelegate { get; }
+    public static Class NonNullType { get; }
+    public static Class NotNullAttribute { get; }
+    public static Class NotNullGenericArgumentsAttribute { get; }
+    public static Class Object { get; }
+    public static Struct RuntimeArgumentHandle { get; }
+    public static Struct RuntimeTypeHandle { get; }
+    public static Struct Single { get; }
+    public static Class String { get; }
+    public static AssemblyNode SystemAssembly { get; set; }
+    public static AssemblyNode SystemCompilerRuntimeAssembly { get; set; }
+    public static Interface TupleType { get; }
+    public static Class Type { get; }
+    public static Interface TypeAlias { get; }
+    public static Interface TypeDefinition { get; }
+    public static Interface TypeIntersection { get; }
+    public static Interface TypeUnion { get; }
+    public static Struct UInt16 { get; }
+    public static Struct UInt32 { get; }
+    public static Struct UInt64 { get; }
+    public static Struct UInt8 { get; }
+    public static Struct UIntPtr { get; }
+    public static Class ValueType { get; }
+    public static Struct Void { get; }
+
+    public static void Clear();
+    public static void Initialize(bool doNotLockFile, bool getDebugInfo);
+  }
+    
+  public class TernaryExpression {
+     public Expression! Operand1{get; set; }
+     public Expression! Operand2{get; set; }
+     public Expression! Operand3{get; set; }
+  }
+  
+  public abstract class TypeNode {
+    protected internal TrivialHashtable arrayTypes;
+    protected static Module cachingModuleForGenericInstances;
+    protected internal TypeNodeList consolidatedTemplateParameters;
+    protected internal MemberList constructors;
+    //
+    // Summary:
+    //     The invariants associated with this type (for now only classes, interfaces,
+    //     structs).
+    public TypeContract Contract;
+    protected internal MemberList defaultMembers;
+    protected internal TrivialHashtable explicitCoercionFromTable;
+    protected internal MemberList explicitCoercionMethods;
+    protected internal TrivialHashtable explicitCoercionToTable;
+    protected string fullName;
+    protected internal TrivialHashtable implicitCoercionFromTable;
+    protected internal MemberList implicitCoercionMethods;
+    protected internal TrivialHashtable implicitCoercionToTable;
+    public InterfaceList InterfaceExpressions;
+    protected InterfaceList interfaces;
+    //
+    // Summary:
+    //     If this type is the combined result of a number of partial type definitions,
+    //     this lists the partial definitions.
+    public TypeNodeList IsDefinedBy;
+    protected bool isGeneric;
+    protected bool isNormalized;
+    //
+    // Summary:
+    //     True if this type is the result of a template instantiation with arguments
+    //     that are themselves template parameters.  Used to model template instantiations
+    //     occurring inside templates.
+    public bool IsNotFullySpecialized;
+    protected static readonly char[] MangleChars;
+    protected internal int memberCount;
+    protected internal MemberList members;
+    protected internal bool membersBeingPopulated;
+    protected internal TrivialHashtable memberTable;
+    protected static readonly Method MethodDoesNotExist;
+    protected internal TypeNodeList nestedTypes;
+    public bool NewTemplateInstanceIsRecursive;
+    protected Method opFalse;
+    protected Method opTrue;
+    //
+    // Summary:
+    //     If this type is a partial definition, the value of this is the combined type
+    //     resulting from all the partial definitions.
+    public TypeNode PartiallyDefines;
+    protected internal Pointer pointerType;
+    //
+    // Summary:
+    //     A delegate that is called the first time NestedTypes is accessed, if non-null.
+    public TypeNode.NestedTypeProvider ProvideNestedTypes;
+    //
+    // Summary:
+    //     Opaque information passed as a parameter to the delegates in ProvideTypeMembers
+    //     et al.  Typically used to associate this namespace instance with a helper
+    //     object.
+    public object ProviderHandle;
+    //
+    // Summary:
+    //     A delegate that is called the first time Attributes is accessed, if non-null.
+    //      Provides for incremental construction of the type node.  Must not leave
+    //     Attributes null.
+    public TypeNode.TypeAttributeProvider ProvideTypeAttributes;
+    //
+    // Summary:
+    //     A delegate that is called the first time Members is accessed, if non-null.
+    //      Provides for incremental construction of the type node.  Must not leave
+    //     Members null.
+    public TypeNode.TypeMemberProvider ProvideTypeMembers;
+    protected internal Reference referenceType;
+    protected internal Type runtimeType;
+    protected SecurityAttributeList securityAttributes;
+    protected internal TrivialHashtableUsingWeakReferences structurallyEquivalentMethod;
+    protected internal TrivialHashtable szArrayTypes;
+    protected TypeNode template;
+    public TypeNodeList TemplateArgumentExpressions;
+    protected TypeNodeList templateArguments;
+    public TypeNode TemplateExpression;
+
+    [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+    public static bool operator!=(TypeNode t1, TypeNode t2);
+    //
+    // Summary:
+    //     Return whether t1 represents the same type as t2 (or both are null).  This
+    //     copes with the cases where t1 and/or t2 may be type views and/or type extensions,
+    //     as in Extensible Sing#.
+    [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+    public static bool operator==(TypeNode t1, TypeNode t2);
+
+    public virtual AttributeList Attributes { get; set; }
+    //
+    // Summary:
+    //     The type from which this type is derived. Null in the case of interfaces
+    //     and System.Object.
+    public virtual TypeNode BaseType { get; }
+    //
+    // Summary:
+    //     Specifies the total size in bytes of instances of types with prescribed layout.
+    public int ClassSize { get; set; }
+    public virtual TypeNodeList ConsolidatedTemplateArguments { get; set; }
+    public virtual TypeNodeList ConsolidatedTemplateParameters { get; set; }
+    //
+    // Summary:
+    //     Return the name the constructor should have in this type node.  By default,
+    //     it's the same as the name of the enclosing type node, but it can be different
+    //     in e.g.  extensions in Extensible Sing#
+    public virtual Identifier ConstructorName { get; }
+    //
+    // Summary:
+    //     The module or assembly to which the compiled type belongs.
+    public Module DeclaringModule { get; set; }
+    //
+    // Summary:
+    //     A list of any members of this type that have the DefaultMember attribute.
+    public virtual MemberList DefaultMembers { get; set; }
+    //
+    // Summary:
+    //     If the receiver is a type extension, return the extendee, otherwise return
+    //     the receiver.  [The identity function, except for dialects (e.g. Extensible
+    //     Sing#) that allow extensions and differing views of types]
+    public virtual TypeNode EffectiveTypeNode { get; }
+    public virtual MemberList ExplicitCoercionMethods { get; }
+    //
+    // Summary:
+    //     The property that should be accessed by clients to get the list of extensions
+    //     of this type.
+    public TypeNodeList Extensions { get; set; }
+    //
+    // Summary:
+    //     When duplicating a type node, we want to transfer the extensions and the
+    //     extensionsExamined flag without treating this as a "touch" that sets the
+    //     examined flag.  Pretty ugly, though.
+    public TypeNodeList ExtensionsNoTouch { get; }
+    public TypeFlags Flags { get; set; }
+    public virtual string FullName { get; }
+    public virtual MemberList ImplicitCoercionMethods { get; }
+    //
+    // Summary:
+    //     The interfaces implemented by this class or struct, or the extended by this
+    //     interface.
+    public virtual InterfaceList! Interfaces { get; set; }
+    //
+    // Summary:
+    //     True if the type is an abstract class or an interface.
+    public virtual bool IsAbstract { get; }
+    public virtual bool IsAssembly { get; }
+    public virtual bool IsCompilerControlled { get; }
+    public virtual bool IsFamily { get; }
+    public virtual bool IsFamilyAndAssembly { get; }
+    public virtual bool IsFamilyOrAssembly { get; }
+    //
+    // Summary:
+    //     True if this type is a template conforming to the rules of a generic type
+    //     in the CLR.
+    public virtual bool IsGeneric { get; set; }
+    public virtual bool IsNestedAssembly { get; }
+    public virtual bool IsNestedFamily { get; }
+    public virtual bool IsNestedFamilyAndAssembly { get; }
+    public virtual bool IsNestedInternal { get; }
+    public virtual bool IsNestedPublic { get; }
+    public virtual bool IsNonPublic { get; }
+    //
+    // Summary:
+    //     True if the type node is in "normal" form. A node is in "normal" form if
+    //     it is effectively a node in an AST formed directly from CLR module or assembly.
+    //     Such a node can be written out as compiled code to an assembly or module
+    //     without further processing.
+    public virtual bool IsNormalized { get; set; }
+    public bool IsObjectReferenceType { get; }
+    //
+    // Summary:
+    //     True if underlying type (modulo type modifiers) is a pointer type (Pointer)
+    public virtual bool IsPointerType { get; }
+    //
+    // Summary:
+    //     True if values of this type can be processed by CLR IL instructions.
+    public virtual bool IsPrimitive { get; }
+    //
+    // Summary:
+    //     True if values of this type can be compared directly in CLR IL instructions.
+    public virtual bool IsPrimitiveComparable { get; }
+    //
+    // Summary:
+    //     True if values of this type are integers that can be processed by CLR IL
+    //     instructions.
+    public virtual bool IsPrimitiveInteger { get; }
+    //
+    // Summary:
+    //     True if values of this type are integers or floating point numbers that can
+    //     be processed by CLR IL instructions.
+    public virtual bool IsPrimitiveNumeric { get; }
+    public virtual bool IsPrivate { get; }
+    public virtual bool IsPublic { get; }
+    //
+    // Summary:
+    //     True if the type cannot be derived from.
+    public virtual bool IsSealed { get; }
+    public virtual bool IsSpecialName { get; }
+    public virtual bool IsStatic { get; }
+    //
+    // Summary:
+    //     True if the identity of the type depends on its structure rather than its
+    //     name.  Arrays, pointers and generic type instances are examples of such types.
+    public virtual bool IsStructural { get; }
+    //
+    // Summary:
+    //     True if the type serves as a parameter to a type template.
+    public virtual bool IsTemplateParameter { get; }
+    //
+    // Summary:
+    //     True if the type is a value type containing only fields of unmanaged types.
+    public virtual bool IsUnmanaged { get; }
+    //
+    // Summary:
+    //     True if values of this type are unsigned integers that can be processed by
+    //     CLR IL instructions.
+    public virtual bool IsUnsignedPrimitiveNumeric { get; }
+    //
+    // Summary:
+    //     True if instances of this type have no identity other than their value and
+    //     are copied upon assignment.
+    public virtual bool IsValueType { get; }
+    public virtual bool IsVisibleOutsideAssembly { get; }
+    //
+    // Summary:
+    //     The list of members contained inside this type, by default ignoring any extensions
+    //     of this type.  (Subclasses in the Extensible Sing# dialect virtual this
+    //     to include members of visible extensions.) If the value of members is null
+    //     and the value of ProvideTypeMembers is not null, the TypeMemberProvider delegate
+    //     is called to fill in the value of this property.
+    public virtual MemberList! Members { get; set; }
+    //
+    // Summary:
+    //     The namespace to which this type belongs. Null if the type is nested inside
+    //     another type.
+    public Identifier Namespace { get; set; }
+    public virtual TypeNodeList NestedTypes { get; set; }
+    //
+    // Summary:
+    //     Specifies the alignment of fields within types with prescribed layout.
+    public int PackingSize { get; set; }
+    //
+    // Summary:
+    //     Contains declarative security information associated with the type.
+    public SecurityAttributeList SecurityAttributes { get; set; }
+    //
+    // Summary:
+    //     A list of the types that contribute to the structure of a structural type.
+    public virtual TypeNodeList StructuralElementTypes { get; }
+    //
+    // Summary:
+    //     The (generic) type template from which this type was instantiated. Null if
+    //     this is not a (generic) type template instance.
+    public virtual TypeNode Template { get; set; }
+    //
+    // Summary:
+    //     The arguments used when this (generic) type template instance was instantiated.
+    public virtual TypeNodeList TemplateArguments { get; set; }
+    //
+    // Summary:
+    //     Contains all the types instantiated from this non generic template type.
+    public TypeNodeList TemplateInstances { get; set; }
+    //
+    // Summary:
+    //     The type parameters of this type. Null if this type is not a (generic) type
+    //     template.
+    public virtual TypeNodeList TemplateParameters { get; set; }
+    //
+    // Summary:
+    //     The System.TypeCode value that Convert.GetTypeCode will return pass an instance
+    //     of this type as parameter.
+    public virtual TypeCode TypeCode { get; }
+
+    protected internal virtual void ApplyOutOfBandContracts();
+    protected virtual void CopyContractToMethod(Method contractMethod, Method codeMethod);
+    //
+    // Summary:
+    //     Copy a (possibly transformed) set of extensions from source to the receiver,
+    //     including whether or not the extensions have been examined.
+    public void DuplicateExtensions(TypeNode source, TypeNodeList newExtensions);
+    public virtual bool Equals(object other);
+    protected virtual Method FindNearestOverriddenMethod(Method method);
+    protected virtual string FullStrippedName(Method m);
+    //
+    // Summary:
+    //     Returns the methods of an abstract type that have been left unimplemented.
+    //     Includes methods inherited from base classes and interfaces, and methods
+    //     from any (known) extensions.
+    //
+    // Parameters:
+    //   result:
+    //     A method list to which the abstract methods must be appended.
+    public virtual void GetAbstractMethods(MethodList result);
+    //
+    // Summary:
+    //     Returns a type representing an array whose elements are of this type. Will
+    //     always return the same instance for the same rank.
+    //
+    // Parameters:
+    //   rank:
+    //     The number of dimensions of the array.
+    public virtual ArrayType GetArrayType(int rank);
+    public virtual ArrayType GetArrayType(int rank, bool lowerBoundIsUnknown);
+    //
+    // Summary:
+    //     Returns a type representing an array whose elements are of this type. Will
+    //     always return the same instance for the same rank, sizes and bounds.
+    //
+    // Parameters:
+    //   rank:
+    //     The number of dimensions of the array.
+    //
+    //   sizes:
+    //     The size of each dimension.
+    //
+    //   loBounds:
+    //     The lower bound for indices. Defaults to zero.
+    public virtual ArrayType GetArrayType(int rank, int[] sizes, int[] loBounds);
+    protected virtual TypeNodeList GetConsolidatedTemplateArguments();
+    protected virtual TypeNodeList GetConsolidatedTemplateArguments(TypeNodeList typeArgs);
+    protected virtual TypeNodeList GetConsolidatedTemplateParameters();
+    //
+    // Summary:
+    //     Returns the constructor with the specified parameter types. Returns null
+    //     if this type has no such constructor.
+    public virtual InstanceInitializer GetConstructor(params TypeNode[] types);
+    public virtual MemberList GetConstructors();
+    protected virtual Identifier GetDocumentationId();
+    //
+    // Summary:
+    //     Returns the first event declared by this type with the specified name.  Returns
+    //     null if this type has no such event.
+    public virtual Event GetEvent(Identifier name);
+    public virtual Method GetExplicitCoercionFromMethod(TypeNode sourceType);
+    public virtual Method GetExplicitCoercionToMethod(TypeNode targetType);
+    //
+    // Summary:
+    //     Returns the first field declared by this type with the specified name. Returns
+    //     null if this type has no such field.
+    public virtual Field GetField(Identifier name);
+    public virtual string GetFullUnmangledNameWithoutTypeParameters();
+    public virtual string GetFullUnmangledNameWithTypeParameters();
+    public virtual TypeNode GetGenericTemplateInstance(Module module, TypeNodeList consolidatedArguments);
+    public virtual int GetHashCode();
+    public Method GetImplementingMethod(Method meth, bool checkPublic);
+    public virtual Method GetImplicitCoercionFromMethod(TypeNode sourceType);
+    public virtual Method GetImplicitCoercionToMethod(TypeNode targetType);
+    public virtual Identifier GetMangledTemplateInstanceName(TypeNodeList templateArguments, out Identifier uniqueManagledName, out bool notFullySpecialized);
+    public Method GetMatchingMethod(Method method);
+    //
+    // Summary:
+    //     Returns a list of all the members declared directly by this type with the
+    //     specified name.  Returns an empty list if this type has no such members.
+    public virtual MemberList GetMembersNamed(Identifier name);
+    //
+    // Summary:
+    //     Returns the first method declared by this type with the specified name and
+    //     parameter types. Returns null if this type has no such method.
+    public virtual Method GetMethod(Identifier name, params TypeNode[] types);
+    //
+    // Summary:
+    //     Returns the first nested type declared by this type with the specified name.
+    //     Returns null if this type has no such nested type.
+    public virtual TypeNode GetNestedType(Identifier name);
+    public virtual Method GetOpFalse();
+    public virtual Method GetOpTrue();
+    protected virtual TypeNodeList GetOwnTemplateArguments(TypeNodeList consolidatedTemplateArguments);
+    public virtual Pointer GetPointerType();
+    //
+    // Summary:
+    //     Returns the first property declared by this type with the specified name
+    //     and parameter types. Returns null if this type has no such property.
+    public virtual Property GetProperty(Identifier name, params TypeNode[] types);
+    public virtual Reference GetReferenceType();
+    //
+    // Summary:
+    //     Gets a System.Type instance corresponding to this type. The assembly containin
+    //     this type must be normalized and must have a location on disk or must have
+    //     been loaded via AssemblyNode.GetRuntimeAssembly.
+    //
+    // Returns:
+    //     A System.Type instance. (A runtime type.)
+    public virtual Type GetRuntimeType();
+    public virtual string GetSerializedTypeName();
+    public virtual TypeNode GetTemplateInstance(Module module, params TypeNode[] typeArguments);
+    //
+    // Summary:
+    //     Gets an instance for the given template arguments of this (generic) template
+    //     type.
+    //
+    // Parameters:
+    //   referringType:
+    //     The type in which the reference to the template instance occurs. If the template
+    //     is not generic, the instance becomes a nested type of the referring type
+    //     so that it has the same access privileges as the code referrring to the instance.
+    //
+    //   templateArguments:
+    //     The template arguments.
+    //
+    // Returns:
+    //     An instance of the template. Always the same instance for the same arguments.
+    public virtual TypeNode GetTemplateInstance(TypeNode referringType, params TypeNode[] templateArguments);
+    //
+    // Summary:
+    //     Gets an instance for the given template arguments of this (generic) template
+    //     type.
+    //
+    // Parameters:
+    //   referringType:
+    //     The type in which the reference to the template instance occurs. If the template
+    //     is not generic, the instance becomes a nested type of the referring type
+    //     so that it has the same access privileges as the code referrring to the instance.
+    //
+    //   templateArguments:
+    //     The template arguments.
+    //
+    // Returns:
+    //     An instance of the template. Always the same instance for the same arguments.
+    public virtual TypeNode GetTemplateInstance(TypeNode referringType, TypeNodeList templateArguments);
+    public virtual TypeNode GetTemplateInstance(Module module, TypeNode referringType, TypeNode declaringType, TypeNodeList templateArguments);
+    //
+    // Summary:
+    //     Gets a TypeNode instance corresponding to the given System.Type instance.
+    //
+    // Parameters:
+    //   type:
+    //     A runtime type.
+    //
+    // Returns:
+    //     A TypeNode instance.
+    public static TypeNode GetTypeNode(Type type);
+    public virtual string GetUnmangledNameWithoutTypeParameters();
+    public virtual string GetUnmangledNameWithTypeParameters();
+    public static TypeFlags GetVisibilityIntersection(TypeFlags vis1, TypeFlags vis2);
+    public static bool HasModifier(TypeNode t, TypeNode modifier);
+    public bool ImplementsExplicitly(Method meth);
+    //
+    // Summary:
+    //     Returns true if the CLR CTS allows a value of this type may be assigned to
+    //     a variable of the target type (possibly after boxing), either because the
+    //     target type is the same or a base type, or because the target type is an
+    //     interface implemented by this type or the implementor of this type, or because
+    //     this type and the target type are zero based single dimensional arrays with
+    //     assignment compatible reference element types
+    public virtual bool IsAssignableTo(TypeNode targetType);
+    //
+    // Summary:
+    //     Returns true if this type is assignable to some instance of the given template.
+    public virtual bool IsAssignableToInstanceOf(TypeNode targetTemplate);
+    //
+    // Summary:
+    //     Returns true if this type is assignable to some instance of the given template.
+    public virtual bool IsAssignableToInstanceOf(TypeNode targetTemplate, out TypeNodeList templateArguments);
+    //
+    // Summary:
+    //     Returns true if otherType is the base class of this type or if the base class
+    //     of this type is derived from otherType.
+    public virtual bool IsDerivedFrom(TypeNode otherType);
+    public virtual bool IsInheritedFrom(TypeNode otherType);
+    public virtual bool IsNestedIn(TypeNode tObType);
+    public virtual bool IsStructurallyEquivalentList(TypeNodeList list1, TypeNodeList list2);
+    public virtual bool IsStructurallyEquivalentTo(TypeNode type);
+    //
+    // Summary:
+    //     Record another extension of this type.
+    //
+    // Parameters:
+    //   extension:
+    public void RecordExtension(TypeNode extension);
+    public static TypeNode StripModifier(TypeNode t, TypeNode modifier);
+    public static TypeNode StripModifiers(TypeNode t);
+    public TypeNode StripOptionalModifiers(out bool nonNull);
+    public virtual string ToString();
+    protected virtual void TryToFindExistingInstance(Module module, TypeNode declaringType, TypeNodeList templateArguments, Identifier mangledName, Identifier uniqueMangledName, out TypeNode result, out Identifier unusedMangledName);
+    protected virtual void UpdateMemberTable(int n);
+    protected static MemberList WeedOutNonSpecialMethods(MemberList members, MethodFlags mask);
+
+    // Summary:
+    //     The type of delegates that fill in the NestedTypes property of the given
+    //     type.
+    public delegate void NestedTypeProvider(TypeNode type, object handle);
+
+    // Summary:
+    //     The type of delegates that fill in the Attributes property of the given type.
+    public delegate void TypeAttributeProvider(TypeNode type, object handle);
+
+    // Summary:
+    //     The type of delegates that fill in the Members property of the given type.
+    public delegate void TypeMemberProvider(TypeNode type, object handle);
+  }
+    
+    public class TypeContract{
+        public InvariantList! Invariants { get; }
+    }
+    
+  public sealed class TypeNodeList {
+    public TypeNodeList();
+    public TypeNodeList(int capacity);
+    public TypeNodeList(params TypeNode[] elements);
+
+    public int Count { get; }
+    [Obsolete("Use Count property instead.")]
+    public int Length { get; }
+
+    public TypeNode this[int index] { get; set; }
+
+    public void Add(TypeNode element);
+    public TypeNodeList Clone();
+    public TypeNodeList.Enumerator GetEnumerator();
+    public void Insert(TypeNode element, int index);
+    public int SearchFor(TypeNode element);
+
+    public struct Enumerator {
+      public Enumerator(TypeNodeList list);
+
+      public TypeNode Current { get; }
+
+      public bool MoveNext();
+      public void Reset();
+    }
+  }
+  public class UnaryExpression {
+     public Expression! Operand{get; set; }
+  }
+  public class Variable{
+    public Identifier! Name{
+      get;
+      set;
+    }
+  }
+} // System.Compiler

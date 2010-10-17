@@ -1,0 +1,40 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Net.Sockets {
+  // Summary:
+  //     Defines socket option levels for the System.Net.Sockets.Socket.SetSocketOption(System.Net.Sockets.SocketOptionLevel,System.Net.Sockets.SocketOptionName,System.Int32)
+  //     and System.Net.Sockets.Socket.GetSocketOption(System.Net.Sockets.SocketOptionLevel,System.Net.Sockets.SocketOptionName)
+  //     methods.
+  public enum SocketOptionLevel {
+    // Summary:
+    //     System.Net.Sockets.Socket options apply only to IP sockets.
+    IP = 0,
+    //
+    // Summary:
+    //     System.Net.Sockets.Socket options apply only to TCP sockets.
+    Tcp = 6,
+    //
+    // Summary:
+    //     System.Net.Sockets.Socket options apply only to UDP sockets.
+    Udp = 17,
+    //
+    // Summary:
+    //     System.Net.Sockets.Socket options apply only to IPv6 sockets.
+    IPv6 = 41,
+    //
+    // Summary:
+    //     System.Net.Sockets.Socket options apply to all sockets.
+    Socket = 65535,
+  }
+}

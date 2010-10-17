@@ -1,0 +1,90 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Security.Cryptography
+{
+
+    public class RSACryptoServiceProvider
+    {
+
+        public static bool UseMachineKeyStore
+        {
+          get;
+          set;
+        }
+
+        public bool PersistKeyInCsp
+        {
+          get;
+          set;
+        }
+
+        public string SignatureAlgorithm
+        {
+          get;
+        }
+
+        public string KeyExchangeAlgorithm
+        {
+          get;
+        }
+
+        public int KeySize
+        {
+          get;
+        }
+
+        public Byte[] EncryptValue (Byte[] rgb);
+
+        public Byte[] DecryptValue (Byte[] rgb);
+
+        public Byte[] Decrypt (Byte[] rgb, bool fOAEP);
+            // INVALID BECUASE IT MENTIONS PRIVATE FIELD
+            //requires System.Security.Cryptography.RSACryptoServiceProvider._runningWin2KOrLaterCrypto != false otherwise CryptographicException;
+
+        public Byte[] Encrypt (Byte[] rgb, bool fOAEP);
+            // INVALID BECUASE IT MENTIONS PRIVATE FIELD
+            //requires System.Security.Cryptography.RSACryptoServiceProvider._runningWin2KOrLaterCrypto != false otherwise CryptographicException;
+
+        public bool VerifyHash (Byte[]! rgbHash, string str, Byte[]! rgbSignature)
+            requires rgbHash != null otherwise ArgumentNullException;
+            requires rgbSignature != null otherwise ArgumentNullException;
+            requires rgbHash.Length == 20 otherwise CryptographicException;
+            requires rgbHash.Length == 16 otherwise CryptographicException;
+
+        public Byte[] SignHash (Byte[]! rgbHash, string str)
+            requires rgbHash != null otherwise ArgumentNullException;
+            requires rgbHash.Length == 20 otherwise CryptographicException;
+            requires rgbHash.Length == 16 otherwise CryptographicException;
+
+        public bool VerifyData (Byte[] buffer, object halg, Byte[] signature);
+
+        public Byte[] SignData (Byte[] buffer, int offset, int count, object halg);
+
+        public Byte[] SignData (Byte[] buffer, object halg);
+
+        public Byte[] SignData (System.IO.Stream inputStream, object halg);
+
+        public void ImportParameters (RSAParameters parameters);
+
+        public RSAParameters ExportParameters (bool includePrivateParameters);
+
+        public RSACryptoServiceProvider (int dwKeySize, CspParameters parameters);
+
+        public RSACryptoServiceProvider (CspParameters parameters);
+
+        public RSACryptoServiceProvider (int dwKeySize);
+
+        public RSACryptoServiceProvider ();
+    }
+}

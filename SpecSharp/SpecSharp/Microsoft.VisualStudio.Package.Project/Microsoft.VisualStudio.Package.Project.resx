@@ -1,0 +1,320 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AddToNullProjectError">
+    <value xml:space="preserve">Failed to add file '{0}' to project as project is null.</value>
+  </data>
+  <data name="Advanced">
+    <value xml:space="preserve">Advanced</value>
+    <comment xml:space="preserve">Project Property Page Caption</comment>
+  </data>
+  <data name="AttributeLoad">
+    <value xml:space="preserve">Could not load attribute '{0}' from project file '{1}'.</value>
+  </data>
+  <data name="BuildAction">
+    <value xml:space="preserve">Build Action</value>
+    <comment xml:space="preserve">Project Build Property Name</comment>
+  </data>
+  <data name="BuildActionDescription">
+    <value xml:space="preserve">How the file relates to the build and deployment process</value>
+    <comment xml:space="preserve">Project Build Property Description</comment>
+  </data>
+  <data name="BuildVerbosity">
+    <value xml:space="preserve">Verbosity</value>
+  </data>
+  <data name="BuildVerbosityDescription">
+    <value xml:space="preserve">Specify how much information is included in the build output</value>
+  </data>
+  <data name="CancelQueryEdit">
+    <value xml:space="preserve">The command you are attempting cannot be completed because the file '{0}' that must be modified cannot be changed. If the file is under source control, you may want to check it out; if the file is read-only on disk, you may want to change its attributes.</value>
+    <comment xml:space="preserve">MsgBox</comment>
+  </data>
+  <data name="cli1">
+    <value xml:space="preserve">ECMA-335 CLI compatible framework (location must be provided)</value>
+    <comment xml:space="preserve">Target platform drop down option</comment>
+  </data>
+  <data name="Compile">
+    <value xml:space="preserve">Compile</value>
+    <comment xml:space="preserve">Build Action - drop down option</comment>
+  </data>
+  <data name="ConfirmExtensionChange">
+    <value xml:space="preserve">If you change a file name extension, the file may become unusable. Are you sure you want to change it?</value>
+  </data>
+  <data name="Content">
+    <value xml:space="preserve">Content</value>
+    <comment xml:space="preserve">Build Action - drop down option</comment>
+  </data>
+  <data name="CopyToLocal">
+    <value xml:space="preserve">Copy Local</value>
+    <comment xml:space="preserve">File property</comment>
+  </data>
+  <data name="CopyToLocalDescription">
+    <value xml:space="preserve">Indicates whether the reference will be copied to the output directory.</value>
+  </data>
+  <data name="Detailed">
+    <value xml:space="preserve">Detailed</value>
+  </data>
+  <data name="Diagnostic">
+    <value xml:space="preserve">Diagnostic</value>
+  </data>
+  <data name="EditorViewError">
+    <value xml:space="preserve">Error opening specified view '{0}' using editor '{1}'</value>
+  </data>
+  <data name="EmbeddedResource">
+    <value xml:space="preserve">Embedded Resource</value>
+    <comment xml:space="preserve">Build Action - drop down option</comment>
+  </data>
+  <data name="Error">
+    <value xml:space="preserve">Error</value>
+  </data>
+  <data name="ErrorInvalidFileName">
+    <value xml:space="preserve">The file name is not valid.</value>
+  </data>
+  <data name="ErrorInvalidProjectName">
+    <value xml:space="preserve">The name you provided is not a valid project name.</value>
+  </data>
+  <data name="ErrorMsBuildRegistration">
+    <value xml:space="preserve">MSBuild path not found in registry. Please reinstall to fix the problem.</value>
+  </data>
+  <data name="ErrorSaving">
+    <value xml:space="preserve">Error Saving File</value>
+  </data>
+  <data name="Exe">
+    <value xml:space="preserve">Console Application</value>
+  </data>
+  <data name="FailedToGetService">
+    <value xml:space="preserve">Failed to retrive service {0}.</value>
+  </data>
+  <data name="FileAlreadyExists">
+    <value xml:space="preserve">A file with the same name '{0}' already exists. Do you want to overwrite it?</value>
+  </data>
+  <data name="FileAlreadyExistsCaption">
+    <value xml:space="preserve">Destination File Exists</value>
+  </data>
+  <data name="FileAlreadyInProject">
+    <value xml:space="preserve">A file of this name is already part of the project. Do you want to overwrite it?</value>
+  </data>
+  <data name="FileAlreadyInProjectCaption">
+    <value xml:space="preserve">Destination File Exists</value>
+  </data>
+  <data name="FileCopyError">
+    <value xml:space="preserve">Error Copying File</value>
+  </data>
+  <data name="FileName">
+    <value xml:space="preserve">File Name</value>
+  </data>
+  <data name="FileNameDescription">
+    <value xml:space="preserve">The name of the file or folder</value>
+  </data>
+  <data name="FolderName">
+    <value xml:space="preserve">Folder Name</value>
+  </data>
+  <data name="FolderNameDescription">
+    <value xml:space="preserve">Name of this folder</value>
+  </data>
+  <data name="FullPath">
+    <value xml:space="preserve">Full Path</value>
+  </data>
+  <data name="FullPathDescription">
+    <value xml:space="preserve">Location of the file</value>
+  </data>
+  <data name="Library">
+    <value xml:space="preserve">Class Library</value>
+  </data>
+  <data name="Minimal">
+    <value xml:space="preserve">Minimal</value>
+  </data>
+  <data name="Misc">
+    <value xml:space="preserve">Misc</value>
+  </data>
+  <data name="None">
+    <value xml:space="preserve">None</value>
+  </data>
+  <data name="Normal">
+    <value xml:space="preserve">Normal</value>
+  </data>
+  <data name="Program">
+    <value xml:space="preserve">Program</value>
+  </data>
+  <data name="Project">
+    <value xml:space="preserve">Project</value>
+  </data>
+  <data name="ProjectFile">
+    <value xml:space="preserve">Project File</value>
+  </data>
+  <data name="ProjectFileDescription">
+    <value xml:space="preserve">The name of the file containing build, configuration, and other information about the project.</value>
+  </data>
+  <data name="ProjectFolder">
+    <value xml:space="preserve">Project Folder</value>
+  </data>
+  <data name="ProjectFolderDescription">
+    <value xml:space="preserve">The absolute location of the project.</value>
+  </data>
+  <data name="Quiet">
+    <value xml:space="preserve">Quiet</value>
+  </data>
+  <data name="RefName">
+    <value xml:space="preserve">Name</value>
+  </data>
+  <data name="RefNameDescription">
+    <value xml:space="preserve">Display name of the reference</value>
+  </data>
+  <data name="RenameFolder">
+    <value xml:space="preserve">Rename directory failed. {0}</value>
+  </data>
+  <data name="RTL">
+    <value xml:space="preserve">RTL_False</value>
+  </data>
+  <data name="SaveCaption">
+    <value xml:space="preserve">Save?</value>
+  </data>
+  <data name="SaveModifiedDocuments">
+    <value xml:space="preserve">Do you want to save modified documents?</value>
+  </data>
+  <data name="SccNotSupported">
+    <value xml:space="preserve">The project '{0}' is under source control. This version of Visual Studio .NET does not support source controlled projects. Any changes that you make to this project will not be propagated to source control.</value>
+    <comment xml:space="preserve">MsgBox</comment>
+  </data>
+  <data name="SccRegistrationFailure">
+    <value xml:space="preserve">The project '{0}' is under source control. An error occurred registering this project with source control. It is recommended that you do not make any changes to this project.</value>
+    <comment xml:space="preserve">MsgBox</comment>
+  </data>
+  <data name="StandardEditorViewError">
+    <value xml:space="preserve">Error opening specified view '{0}' using standard editor.</value>
+  </data>
+  <data name="URL">
+    <value xml:space="preserve">URL</value>
+  </data>
+  <data name="UseOfDeletedItemError">
+    <value xml:space="preserve">You are trying to use an item that has already been deleted or that does not exist.</value>
+  </data>
+  <data name="v1">
+    <value xml:space="preserve">Microsoft .Net Framework v1.0</value>
+  </data>
+  <data name="v11">
+    <value xml:space="preserve">Microsoft .Net Framework v1.1</value>
+  </data>
+  <data name="v2">
+    <value xml:space="preserve">Microsoft .Net Framework v2.0</value>
+  </data>
+  <data name="Warning">
+    <value xml:space="preserve">Warning</value>
+  </data>
+  <data name="WinExe">
+    <value xml:space="preserve">Windows Application</value>
+  </data>
+</root>

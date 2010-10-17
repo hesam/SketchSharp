@@ -1,0 +1,198 @@
+using System;
+using System.Collections.Generic;
+using Microsoft.Contracts;
+
+class A {
+  public int x;
+  public int y;
+
+  [Pure]
+  public int SumXYAxiomFromPost()
+    ensures result == x + y;
+  { 
+    int temp = x + y; 
+    return temp;
+  }
+
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public int SumXYAxiomFromBody() { 
+    return x + y;
+  }
+
+  [Pure]
+  public int SumXYNoAxiom1() { // will not result in an axiom (body doesn't match)
+    int temp = x + y; 
+    return temp;
+  }
+
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public int SumXYNoAxiom2()  // will not result in an axiom (2 ensures)
+    requires x > 0 && y > 0;
+    ensures result > 0; 
+    ensures result == x + y;
+  { 
+    return x + y;
+  }
+}
+
+class B {
+  public A a = new A();
+
+  void Dummy1()
+    requires a != null && a.IsPeerConsistent;
+    ensures a.x + a.y == a.SumXYAxiomFromPost();
+    ensures a.x + a.y == a.SumXYAxiomFromBody();
+    ensures a.x + a.y == a.SumXYNoAxiom1();     // error: cannot determine
+  {  }
+
+  void Dummy2()
+    requires a != null && a.IsPeerConsistent;
+    ensures a.x + a.y == a.SumXYNoAxiom2();     // error: cannot determine
+  {  }
+}
+
+class UnsoundSpec {
+
+  [Pure]
+  int Unsound()
+    ensures false;         // naive approach would generate axiom out of this
+  { while(true) { } }
+
+  void Dummy1() 
+    ensures Unsound() == Unsound() + 1;  // error (goes through with naive approach)
+  { }
+
+}
+
+class Getter {
+  public int value;
+
+  public int Value {
+    get { return value;}
+    set 
+      requires this.IsPeerConsistent;
+      ensures this.value == value;
+      modifies this.value;
+    { this.value = value;}
+  }
+}
+
+class GetterClient {
+  int value;
+  Getter! g = new Getter();
+
+  void Dummy()
+    requires g.IsPeerConsistent;
+    modifies g.value;
+  {
+    g.Value = 5;
+    assert g.Value == 5;
+    g.value = 6;
+    assert g.Value == 6;
+  }
+}
+
+
+class C {
+//checking for unsoundness due to unsatisfyability
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  int M(int x)
+    ensures result == x + 1;
+  {
+    while (x == int.MaxValue) { /* loop forever */ }
+    return x + 1;
+  }
+
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  D! N(C! c)
+    ensures result == (object)c;
+  {
+    while (!(c is D)) { /* loop forever */ }
+    return (D)c;
+  }
+}
+
+class D : C { }
+
+
+public class TrExprRegressionTest
+{
+  invariant forall{int k in (0: 10); Read(k) < 100};
+  
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  [NoDefaultContract]
+  internal uint Read(int index)
+    requires 0 <= index && index <= Count;
+    ensures result == (uint)index;
+  {
+    uint u = (uint)index;
+    assume u == index;
+    return u;
+  }
+  
+  internal int Count { 
+    [Pure][Reads(ReadsAttribute.Reads.Owned)]
+    [NoDefaultContract]
+    get
+    { return 1000; } 
+  }
+}
+
+internal class TypeOfAndInImplicitPostcondition
+{
+  private const int FL_ROLL = 16;
+  private const int FL_MASK = 16383;
+  private int rdes0;
+
+  internal int FrameLength
+  {
+    get {
+      return (rdes0 >> FL_ROLL) & FL_MASK;
+    }
+  }
+}
+
+public class TX {
+  static void Test(List<TX!>! listA, List<TX!>! listB, TX! elmnt)
+    requires listA != listB;
+    requires Owner.Same(elmnt, Owner.ElementProxy(listA));
+    modifies listA.*;
+  {
+    assume listB.Count == 2;
+    listA.Add(elmnt);
+    assert listB.Count == 2;
+  }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+namespace BiggerTest
+{
+  [Immutable]
+  class Nary {
+    [Rep]
+    public readonly List<Nary!>! Args;
+    
+    public Nary([Captured] List<Nary!>! args)
+      modifies args.*;
+    {
+      this.Args = args;
+      base();
+    }
+
+    void CollectArguments(List<Nary!>! list)
+      modifies list.*;
+    {
+    }
+
+    Nary CollectAnte(List<Nary!>! antecedent)
+      modifies antecedent.*;
+    {
+      assume Args.Count == 2;
+
+      Nary conj = Args[0];
+      conj.CollectArguments(antecedent);
+      return Args[1];  // it is still known that Args.Count == 2, so this should work
+    }
+  }
+}

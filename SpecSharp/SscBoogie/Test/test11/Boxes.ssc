@@ -1,0 +1,81 @@
+using Microsoft.Contracts;
+
+public class Boxes<T,U> where U : T {
+
+  public int M(int x) {
+    object o = (object)x;
+    int y = (int)o;
+    return y;
+  }
+
+  public bool N(int x) {
+    object o = (object)x;
+    bool y = (bool)o;  // error: cannot unbox to this type
+    return y;
+  }
+
+  public T P0(T x) {
+    object o = (object)x;
+    T y = (T)o;
+    return y;
+  }
+
+  public T P1(U x)
+    requires Owner.Same(Owner.ElementProxy(this,0), Owner.ElementProxy(this,1));
+  {
+    object o = (object)x;
+    T y = (T)o;
+    return y;
+  }
+
+  public T P2(U x) 
+    requires Owner.Same(Owner.ElementProxy(this,0), Owner.ElementProxy(this,1));
+  {
+    T y = x;
+    return y;
+  }
+
+  public void Q(int x) {
+    object o = (object)x;
+    T y = (T)o;  // error: cannot unbox to this type
+    o = y;
+  }
+
+  public bool R(T/*!*/ x) {
+    object o = (object)x;
+    bool y = (bool)o;  // error: cannot unbox to this type
+    return y;
+  }
+
+  public bool S0(T x) {
+    if (x is bool) {
+      bool y = (bool)(object)x;
+      return y;
+    } else {
+      return false;
+    }
+  }
+
+  public bool S1(T x) {
+    object o = (object)x;
+    if (x is bool && o != null) {
+      int y = (int)o;  // error: cannot unbox to this type
+      return y < 8;
+    } else {
+      return false;
+    }
+  }
+
+  object A() {
+    Boxes<int,int> b = new Boxes<int,int>();
+    return b;
+  }
+}
+
+public class XYZ {
+  public static void Main() {
+    Boxes<bool,bool> b = new Boxes<bool,bool>();
+    b.R(false);
+    b.S1(false);  // this call will trigger the bug in S1
+  }
+}

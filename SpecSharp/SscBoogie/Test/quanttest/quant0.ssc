@@ -1,0 +1,37 @@
+using Microsoft.Contracts;
+
+class Test
+{
+    [Pure] public static bool Blah(int i)
+    {
+        return true;
+    }
+
+    public static void Foo()
+        requires forall{int i in (0: 10); Blah(i)};
+    {
+    }
+
+    public static void Main(string![]! args)
+    {
+        // To satisfy the CLR's search for a Main method, the compiler erases the bangs in the
+        // signature of this method.  Currently, Boogie does not put them back in, although
+        // that's something we should probably do.  This means that the following assertion is
+        // not provable here:
+        //   assert forall{int i in (0: args.Length); args[i] != null};
+        // However, the compiler does allow us to call MainX, whose type signature does not
+        // go through any erasure, and so the assert will verify there.
+        assume args != null;
+        MainX(args);
+    }
+
+    public static void MainX(string![]! args)
+    {
+        assert forall{int i in (0: args.Length); args[i] != null};  // follows from the type
+    }
+
+    public static void DeprivedMain(string[]! args)
+    {
+        assert forall{int i in (0: args.Length); args[i] != null};  // error: this property is not guaranteed by the type
+    }
+}

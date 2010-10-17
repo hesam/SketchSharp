@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VisualStudioProject>
+  <XEN ProjectType="Local"
+     SchemaVersion="1.0"
+     Name="Microsoft.SpecSharp.Runtime"
+     ProjectGuid="76439ea5-a08d-4b58-bf7b-be6d68668885"
+    >
+    <Build>
+      <Settings ApplicationIcon=""
+         AssemblyName="Microsoft.SpecSharp.Runtime"
+         OutputType="Library"
+         RootNamespace="Microsoft.SpecSharp.Runtime"
+         StartupObject=""
+         StandardLibraryLocation=""
+         TargetPlatformLocation=""
+         NoStandardLibraries="True"
+         ShadowedAssembly=""
+         TargetPlatform="v2"
+        >
+        <Config Name="Debug"
+           AllowUnsafeBlocks="False"
+           BaseAddress="285212672"
+           CheckForOverflowUnderflow="False"
+           ConfigurationOverrideFile=""
+           DefineConstants="DEBUG;TRACE"
+           DocumentationFile=""
+           DebugSymbols="True"
+           FileAlignment="4096"
+           IncrementalBuild="True"
+           Optimize="False"
+           OutputPath="bin"
+           RegisterForComInterop="False"
+           RemoveIntegerChecks="false"
+           TreatWarningsAsErrors="False"
+           WarningLevel="4"
+           />
+        <Config Name="Release"
+           AllowUnsafeBlocks="False"
+           BaseAddress="285212672"
+           CheckForOverflowUnderflow="False"
+           ConfigurationOverrideFile=""
+           DefineConstants="TRACE"
+           DocumentationFile=""
+           DebugSymbols="True"
+           FileAlignment="4096"
+           IncrementalBuild="false"
+           Optimize="True"
+           OutputPath="bin"
+           RegisterForComInterop="False"
+           RemoveIntegerChecks="false"
+           TreatWarningsAsErrors="False"
+           WarningLevel="4"
+           />
+      </Settings>
+      <References>
+        <Reference Name="mscorlib"
+             AssemblyName="mscorlib"
+             Private="false"
+             />
+        <Reference Name="System.Compiler.Runtime"
+             AssemblyName="System.Compiler.Runtime"
+             Private="true"
+             HintPath="..\..\System.Compiler.Runtime\bin\System.Compiler.Runtime.dll"
+             />
+        <Reference Name="Mscorlib.Contracts"
+             AssemblyName="Mscorlib.Contracts"
+             Private="true"
+             HintPath="..\..\Samples\OutOfBandContracts\Mscorlib\bin\Mscorlib.Contracts.dll"
+             />
+        <Reference Name="System"
+             AssemblyName="System"
+             Private="false"
+             />
+        <Reference Name="System.Contracts"
+             AssemblyName="System.Contracts"
+             Private="true"
+             HintPath="..\..\Samples\OutOfBandContracts\System\bin\System.Contracts.dll"
+             />
+      </References>
+    </Build>
+    <Files>
+      <Include>
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="..\..\Common\include\version.cs"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="AssemblyInfo.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="Classes.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="Pair.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="RedBlackTree.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="Reductions.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="Seq.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="Set.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="Vector.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="Class1.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="LinkedList.ssc"
+                 />
+        <File BuildAction="Compile"
+                 SubType="Code"
+                 RelPath="Map.ssc"
+                 />
+      </Include>
+    </Files>
+  </XEN>
+</VisualStudioProject>

@@ -1,0 +1,100 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Reflection.Emit
+{
+
+    public class PropertyBuilder
+    {
+
+        public Type ReflectedType
+        {
+          get;
+        }
+
+        public bool CanRead
+        {
+          get;
+        }
+
+        public bool CanWrite
+        {
+          get;
+        }
+
+        public Type PropertyType
+        {
+          get;
+        }
+
+        public Type DeclaringType
+        {
+          get;
+        }
+
+        public System.Reflection.PropertyAttributes Attributes
+        {
+          get;
+        }
+
+        public string Name
+        {
+          get;
+        }
+
+        public PropertyToken PropertyToken
+        {
+          get;
+        }
+
+        public bool IsDefined (Type attributeType, bool inherit);
+
+        public Object[] GetCustomAttributes (Type attributeType, bool inherit);
+
+        public Object[] GetCustomAttributes (bool inherit);
+
+        public System.Reflection.ParameterInfo[] GetIndexParameters ();
+
+        public System.Reflection.MethodInfo GetSetMethod (bool nonPublic);
+
+        public System.Reflection.MethodInfo GetGetMethod (bool nonPublic);
+
+        public System.Reflection.MethodInfo[] GetAccessors (bool nonPublic);
+
+        public void SetValue (object obj, object value, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, Object[] index, System.Globalization.CultureInfo culture);
+
+        public void SetValue (object obj, object value, Object[] index);
+
+        public object GetValue (object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, Object[] index, System.Globalization.CultureInfo culture);
+
+        public object GetValue (object obj, Object[] index);
+
+        public void SetCustomAttribute (CustomAttributeBuilder! customBuilder)
+            requires customBuilder != null otherwise ArgumentNullException;
+
+        public void SetCustomAttribute (System.Reflection.ConstructorInfo! con, Byte[]! binaryAttribute)
+            requires con != null otherwise ArgumentNullException;
+            requires binaryAttribute != null otherwise ArgumentNullException;
+
+        public void AddOtherMethod (MethodBuilder! mdBuilder)
+            requires mdBuilder != null otherwise ArgumentNullException;
+
+        public void SetSetMethod (MethodBuilder! mdBuilder)
+            requires mdBuilder != null otherwise ArgumentNullException;
+
+        public void SetGetMethod (MethodBuilder! mdBuilder)
+            requires mdBuilder != null otherwise ArgumentNullException;
+
+        public void SetConstant (object defaultValue);
+    }
+}

@@ -1,0 +1,1 @@
+The icons were created using the corresponding Adobe Illustrator (.ai) files.

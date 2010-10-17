@@ -1,0 +1,104 @@
+all: IPropertyPane.dll \
+  ContractsPropertyPane.dll \
+  ITaskManager.dll \
+  Microsoft.VisualStudio.OLE.Interop.dll \
+  Microsoft.VisualStudio.Designer.Interfaces.dll \
+  Microsoft.VisualStudio.Shell.Interop.dll  \
+  Microsoft.VisualStudio.TextManager.Interop.dll \
+  Microsoft.VisualStudio.Package.dll \
+  Microsoft.VisualStudio.IntegrationHelper.dll \
+  PropertyPage.dll \
+  1033\PropertyPageUI.dll \
+  System.Compiler.dll \
+  System.Compiler.Runtime.dll \
+  System.Compiler.Framework.dll \
+  Microsoft.SpecSharp.Runtime.dll \
+  Microsoft.SpecSharp.dll \
+  Mscorlib.Contracts.dll \
+  System.Contracts.dll \
+  System.Xml.Contracts.dll \
+  System.Compiler.Contracts.dll \
+  System.Compiler.Framework.Contracts.dll \
+  1033\Microsoft.SpecSharp.resources.dll \
+  TaskManager.dll \
+  1033\TaskManagerUI.dll \
+  ssc.exe \
+
+ContractsPropertyPane.dll: ..\..\Microsoft.VisualStudio.CodeTools\ContractsPropertyPane\bin\$(BUILD)\$@
+  Register ..\..\Microsoft.VisualStudio.CodeTools\ContractsPropertyPane\bin\$(BUILD)\$@ $@
+  
+IPropertyPane.dll: ..\..\Microsoft.VisualStudio.CodeTools\IPropertyPane\bin\$(BUILD)\$@
+  CopyBits ..\..\Microsoft.VisualStudio.CodeTools\IPropertyPane\bin\$(BUILD)\$@ $@
+
+ITaskManager.dll: ..\..\Microsoft.VisualStudio.CodeTools\ITaskManager\bin\$(BUILD)\$@
+  CopyBits ..\..\Microsoft.VisualStudio.CodeTools\ITaskManager\bin\$(BUILD)\$@ $@
+
+Microsoft.VisualStudio.OLE.Interop.dll: ..\..\Common\bin\$@  
+  CopyBits ..\..\Common\bin\$@ $@
+
+Microsoft.VisualStudio.Designer.Interfaces.dll: ..\..\Common\bin\$@  
+  CopyBits ..\..\Common\bin\$@ $@
+
+Microsoft.VisualStudio.Shell.Interop.dll: ..\..\Common\bin\$@
+  CopyBits ..\..\Common\bin\$@ $@
+
+Microsoft.VisualStudio.TextManager.Interop.dll: ..\..\Common\bin\$@
+  CopyBits ..\..\Common\bin\$@ $@
+  
+Microsoft.VisualStudio.Package.dll: ..\..\Microsoft.VisualStudio.Package\bin\$@
+  Register ..\..\Microsoft.VisualStudio.Package\bin\$@ $@
+  
+Microsoft.VisualStudio.IntegrationHelper.dll: ..\..\Microsoft.VisualStudio.IntegrationHelper\bin\$@
+  CopyBits ..\..\Microsoft.VisualStudio.IntegrationHelper\bin\$@ $@
+  
+PropertyPage.dll: ..\..\Microsoft.VisualStudio.CodeTools\PropertyPage\bin\$(BUILD)\$@
+  CopyBits ..\..\Microsoft.VisualStudio.CodeTools\PropertyPage\bin\$(BUILD)\$@ $@
+
+1033\PropertyPageUI.dll: ..\..\Microsoft.VisualStudio.CodeTools\PropertyPage\bin\$(BUILD)\$@ 
+  if not exist 1033 mkdir 1033
+  copy ..\..\Microsoft.VisualStudio.CodeTools\PropertyPage\bin\$(BUILD)\$@ $@
+    
+System.Compiler.dll : ..\..\System.Compiler\bin\$@
+  CopyBits ..\..\System.Compiler\bin\$@ $@
+
+System.Compiler.Runtime.dll : ..\..\System.Compiler.Runtime\bin\$@  
+  CopyBits ..\..\System.Compiler.Runtime\bin\$@ $@
+
+System.Compiler.Framework.dll : ..\..\System.Compiler.Framework\bin\$@
+  CopyBits ..\..\System.Compiler.Framework\bin\$@ $@
+
+Microsoft.SpecSharp.Runtime.dll : ..\Runtime\bin\$@
+  CopyBits ..\Runtime\bin\$@ $@
+
+Microsoft.SpecSharp.dll : ..\bin\$@
+  RegInstall ..\bin\$@ $@
+
+Mscorlib.Contracts.dll : ..\..\Samples\OutOfBandContracts\Mscorlib\bin\$@
+  CopyBits ..\..\Samples\OutOfBandContracts\Mscorlib\bin\$@ $@
+
+System.Contracts.dll : ..\..\Samples\OutOfBandContracts\System\bin\$@
+  CopyBits ..\..\Samples\OutOfBandContracts\System\bin\$@ $@
+
+System.Xml.Contracts.dll : ..\..\Samples\OutOfBandContracts\System.Xml\bin\$@
+  CopyBits ..\..\Samples\OutOfBandContracts\System.Xml\bin\$@ $@
+
+System.Compiler.Contracts.dll : ..\..\Samples\OutOfBandContracts\System.Compiler\bin\$@
+  CopyBits ..\..\Samples\OutOfBandContracts\System.Compiler\bin\$@ $@
+
+System.Compiler.Framework.Contracts.dll : ..\..\Samples\OutOfBandContracts\System.Compiler.Framework\bin\$@
+  CopyBits ..\..\Samples\OutOfBandContracts\System.Compiler.Framework\bin\$@ $@
+
+1033\Microsoft.SpecSharp.resources.dll: ..\Resources\Microsoft.SpecSharp.resources.dll
+  if not exist 1033 mkdir 1033
+  copy ..\Resources\Microsoft.SpecSharp.resources.dll $@
+  rem devenv /setup
+  
+TaskManager.dll: ..\..\Microsoft.VisualStudio.CodeTools\TaskManager\bin\$(BUILD)\$@ 
+  CopyBits ..\..\Microsoft.VisualStudio.CodeTools\TaskManager\bin\$(BUILD)\$@ $@
+  
+1033\TaskManagerUI.dll: ..\..\Microsoft.VisualStudio.CodeTools\TaskManager\bin\$(BUILD)\$@ 
+  if not exist 1033 mkdir 1033
+  copy ..\..\Microsoft.VisualStudio.CodeTools\TaskManager\bin\$(BUILD)\$@ $@
+  
+ssc.exe: ..\CommandLineCompiler\bin\ssc.exe
+  CopyBits ..\CommandLineCompiler\bin\$@ $@

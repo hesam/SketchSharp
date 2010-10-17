@@ -1,0 +1,118 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Runtime.Serialization
+{
+
+    public class SerializationInfo
+    {
+
+        public string! AssemblyName
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public int MemberCount
+        {
+          get;
+        }
+
+        public string! FullTypeName
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string GetString (string name);
+
+        public DateTime GetDateTime (string name);
+
+        public Decimal GetDecimal (string name);
+
+        public double GetDouble (string name);
+
+        public Single GetSingle (string name);
+
+        public UInt64 GetUInt64 (string name);
+
+        public Int64 GetInt64 (string name);
+
+        public UInt32 GetUInt32 (string name);
+
+        public int GetInt32 (string name);
+
+        public UInt16 GetUInt16 (string name);
+
+        public Int16 GetInt16 (string name);
+
+        public byte GetByte (string name);
+
+        public SByte GetSByte (string name);
+
+        public Char GetChar (string name);
+
+        public bool GetBoolean (string name);
+
+        public object GetValue (string name, Type! type)
+            requires type != null otherwise ArgumentNullException;
+
+        public void AddValue (string name, DateTime value);
+
+        public void AddValue (string name, Decimal value);
+
+        public void AddValue (string name, double value);
+
+        public void AddValue (string name, Single value);
+
+        public void AddValue (string name, UInt64 value);
+
+        public void AddValue (string name, Int64 value);
+
+        public void AddValue (string name, UInt32 value);
+
+        public void AddValue (string name, int value);
+
+        public void AddValue (string name, UInt16 value);
+
+        public void AddValue (string name, Int16 value);
+
+        public void AddValue (string name, byte value);
+
+        public void AddValue (string name, SByte value);
+
+        public void AddValue (string name, Char value);
+
+        public void AddValue (string name, bool value);
+
+        public void AddValue (string name, object value);
+
+        public void AddValue (string! name, object value, Type! type)
+            requires name != null otherwise ArgumentNullException;
+            requires type != null otherwise ArgumentNullException;
+
+        [Pure] [GlobalAccess(false)] [Escapes(true,false)]
+        public SerializationInfoEnumerator! GetEnumerator ();
+            ensures result.IsNew;
+
+        public void SetType (Type! type)
+            requires type != null otherwise ArgumentNullException;
+
+        public SerializationInfo (Type! type, IFormatterConverter! converter)
+            requires type != null otherwise ArgumentNullException;
+            requires converter != null otherwise ArgumentNullException;
+    }
+}

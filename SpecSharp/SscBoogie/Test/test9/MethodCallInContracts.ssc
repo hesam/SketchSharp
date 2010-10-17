@@ -1,0 +1,31 @@
+using Microsoft.Contracts;
+
+class NonGenericClass{
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public T Identity<T>(string s, T t, bool b) { return t; }
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public T Identity<T,U>(T t, int x, U u) where T : class { return t; }
+
+  public void OKTest(){
+    assert this.Identity<int>("abc", 0, true) == 0;
+  }
+  public void ErrorTest(){
+    assert this.Identity<int>("abc", 0, true) == 1;
+  }
+}
+public class GenericClass<T>{
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public T Identity(string s, T t, bool b) { return t; }
+  [Pure][Reads(ReadsAttribute.Reads.Owned)]
+  public T Identity<U>(T t, int x, U u) { return t; }
+
+}
+
+public class Client{
+  public void OKTest(GenericClass<int>! gc){
+    assert gc.Identity("abc", 0, true) == 0;
+  }
+  public void ErrorTest(GenericClass<int>! gc){
+    assert gc.Identity("abc", 0, true) == 1;
+  }
+}

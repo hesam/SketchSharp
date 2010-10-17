@@ -1,0 +1,220 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Globalization
+{
+
+    public class NumberFormatInfo
+    {
+
+        public string! PerMilleSymbol
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string! CurrencySymbol
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string! NaNSymbol
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string PercentDecimalSeparator
+        {
+          get;
+          set;
+        }
+
+        public Int32[] PercentGroupSizes
+        {
+          get;
+          set;
+        }
+
+        public int PercentPositivePattern
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+            requires value <= 2 otherwise ArgumentOutOfRangeException;
+        }
+
+        public int NumberNegativePattern
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+            requires value <= 4 otherwise ArgumentOutOfRangeException;
+        }
+
+        public static NumberFormatInfo CurrentInfo
+        {
+          get;
+        }
+
+        public int CurrencyDecimalDigits
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+            requires value <= 99 otherwise ArgumentOutOfRangeException;
+        }
+
+        public int NumberDecimalDigits
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+            requires value <= 99 otherwise ArgumentOutOfRangeException;
+        }
+
+        public int PercentNegativePattern
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+            requires value <= 2 otherwise ArgumentOutOfRangeException;
+        }
+
+        public Int32[] CurrencyGroupSizes
+        {
+          get;
+          set;
+        }
+
+        public string! PercentSymbol
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string! PositiveInfinitySymbol
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string! PositiveSign
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public string! NegativeInfinitySymbol
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public int PercentDecimalDigits
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+            requires value <= 99 otherwise ArgumentOutOfRangeException;
+        }
+
+        public string CurrencyGroupSeparator
+        {
+          get;
+          set;
+        }
+
+        public Int32[] NumberGroupSizes
+        {
+          get;
+          set;
+        }
+
+        public string NumberDecimalSeparator
+        {
+          get;
+          set;
+        }
+
+        public int CurrencyPositivePattern
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+            requires value <= 3 otherwise ArgumentOutOfRangeException;
+        }
+
+        public string NumberGroupSeparator
+        {
+          get;
+          set;
+        }
+
+        public string PercentGroupSeparator
+        {
+          get;
+          set;
+        }
+
+        public int CurrencyNegativePattern
+        {
+          get;
+          set
+            requires value >= 0 otherwise ArgumentOutOfRangeException;
+            requires value <= 15 otherwise ArgumentOutOfRangeException;
+        }
+
+        public string! NegativeSign
+        {
+          get;
+          set
+            requires value != null otherwise ArgumentNullException;
+        }
+
+        public bool IsReadOnly
+        {
+          get;
+        }
+
+        public static NumberFormatInfo InvariantInfo
+        {
+          get;
+        }
+
+        public string CurrencyDecimalSeparator
+        {
+          get;
+          set;
+        }
+
+        public static NumberFormatInfo ReadOnly (NumberFormatInfo! nfi)
+            requires nfi != null otherwise ArgumentNullException;
+
+        public object GetFormat (Type formatType);
+
+        public object Clone ();
+
+        public static NumberFormatInfo GetInstance (IFormatProvider formatProvider);
+
+        public NumberFormatInfo ();
+    }
+}

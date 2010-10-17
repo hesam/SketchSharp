@@ -1,0 +1,39 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+using Microsoft.Contracts;
+
+namespace System.Runtime.Remoting.Activation
+{
+
+    public class UrlAttribute
+    {
+
+        public string UrlValue
+        {
+          get;
+        }
+
+        public void GetPropertiesForNewContext (IConstructionCallMessage ctorMsg);
+
+        public bool IsContextOK (System.Runtime.Remoting.Contexts.Context ctx, IConstructionCallMessage msg);
+
+        [Pure][Reads(ReadsAttribute.Reads.Owned)]
+        public int GetHashCode ();
+
+        [Pure][Reads(ReadsAttribute.Reads.Nothing)]
+        public bool Equals (object o);
+
+        public UrlAttribute (string! callsiteURL)
+            requires callsiteURL != null otherwise ArgumentNullException;
+    }
+}

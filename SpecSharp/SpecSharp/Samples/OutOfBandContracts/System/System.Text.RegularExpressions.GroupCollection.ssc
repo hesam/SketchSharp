@@ -1,0 +1,50 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Text.RegularExpressions
+{
+
+    public class GroupCollection
+    {
+
+        public bool IsReadOnly
+        {
+          get;
+        }
+
+        public object SyncRoot
+        {
+          get;
+        }
+
+        public bool IsSynchronized
+        {
+          get;
+        }
+
+        public Group this [int groupnum]
+        {
+          get;
+        }
+
+        public int Count
+        {
+          get;
+        }
+
+        public System.Collections.IEnumerator GetEnumerator ();
+
+        public void CopyTo (Array! array, int arrayIndex)
+            requires array != null otherwise ArgumentNullException;
+    }
+}

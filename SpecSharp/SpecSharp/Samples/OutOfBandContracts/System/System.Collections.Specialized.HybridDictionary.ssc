@@ -1,0 +1,82 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+/*\
+ *     IMPORTANT! This is an unofficial contract.
+ *                It may be inaccurate and incomplete.
+ *                It is being provided only as a sample of how to write
+ *                out-of-band contracts.
+\*/
+using System;
+
+namespace System.Collections.Specialized
+{
+
+    public class HybridDictionary
+    {
+
+        public object this [object! key]
+        {
+          get
+            requires key != null otherwise ArgumentNullException;
+          set;
+        }
+
+        public int Count
+        {
+          get;
+        }
+
+        public System.Collections.ICollection Values
+        { [ElementCollection] 
+          get;
+        }
+
+        public object SyncRoot
+        {
+          get;
+        }
+
+        public bool IsSynchronized
+        {
+          get;
+        }
+
+        public bool IsFixedSize
+        {
+          get;
+        }
+
+        public System.Collections.ICollection Keys
+        { [ElementCollection] 
+          get;
+        }
+
+        public bool IsReadOnly
+        {
+          get;
+        }
+
+        public void Remove (object key);
+
+        public System.Collections.IDictionaryEnumerator GetEnumerator ();
+
+        public void CopyTo (Array array, int index);
+
+        public bool Contains (object key);
+
+        public void Clear ();
+
+        public void Add (object key, object value);
+
+        public HybridDictionary (int initialSize, bool caseInsensitive);
+
+        public HybridDictionary (bool caseInsensitive);
+
+        public HybridDictionary (int initialSize);
+
+        public HybridDictionary ();
+    }
+}

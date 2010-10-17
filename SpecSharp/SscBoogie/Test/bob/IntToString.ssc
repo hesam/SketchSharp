@@ -1,0 +1,7 @@
+class Test
+{
+    static void Main()
+    {
+        System.Console.WriteLine(5.ToString());
+    }
+}

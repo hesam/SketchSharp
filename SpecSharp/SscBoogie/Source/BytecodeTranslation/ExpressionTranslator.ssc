@@ -1,0 +1,1038 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright (C) Microsoft Corporation.  All Rights Reserved.
+//
+//-----------------------------------------------------------------------------
+namespace Microsoft.Boogie
+{
+  using System;
+  using System.Text;
+  using System.Diagnostics;
+  using System.Collections;
+  using System.Collections.Generic;
+  using Microsoft.Contracts;
+  using Microsoft.Basetypes;
+  using Cci = System.Compiler;
+  using Bpl = Microsoft.Boogie;
+
+  public partial class ExpressionTranslator {
+    private Sink! sink;
+    private OwnershipModel! om;
+    // just an abbreviation
+    protected static Bpl.IToken! NoToken = Bpl.Token.NoToken; 
+
+    // Context variables for TranslateExpression
+    // (Turn this into a separate class someday...)
+    
+    private Hashtable/*<Cci.Parameter, Bpl.Variable>*/ paramMap;
+    private Hashtable/*<Cci.Parameter, Bpl.Variable>*/ preStateParamMap;
+    private Bpl.Expr thisReplacement;  // if set, this takes precedence over the way "this" is translated
+    private Bpl.Expr resultReplacement;  // if set, this takes precedence over the way "result" is translated
+    
+    private ILocalVariableSink? ilocalSink;
+
+//    internal ExpressionTranslator(Sink! sink)
+//      : this(sink, null, null, sink.MethodSignature.currentParamMap, sink.MethodSignature.PreStateParamMap)
+//    {
+//    }
+//    internal ExpressionTranslator(Bpl.Expr thisReplacement)
+//      : this(thisReplacement, null)
+//    {
+//    }
+//    internal ExpressionTranslator(Bpl.Expr thisReplacement, Bpl.Expr resultReplacement)
+//      : this(thisReplacement, resultReplacement, null)
+//    {
+//    }
+//    internal ExpressionTranslator(Bpl.Expr thisReplacement, Bpl.Expr resultReplacement, Hashtable currentParamMap)
+//      : this(thisReplacement,resultReplacement,currentParamMap,null)
+//    {
+//    }
+    internal ExpressionTranslator(Sink! sink, Bpl.Expr thisReplacement, Bpl.Expr resultReplacement, Hashtable currentParamMap, Hashtable preStateParamMap, ILocalVariableSink? ilocalSink, Dictionary<Cci.Field!,Bpl.BoundVariable!>! enclosingBoundVariables){
+      this.sink = sink;
+      this.om = sink.om;
+      this.thisReplacement = thisReplacement;
+      this.resultReplacement = resultReplacement;
+      this.paramMap = currentParamMap;
+      this.preStateParamMap = preStateParamMap;
+      this.ilocalSink = ilocalSink;
+      this.enclosingBoundVariables = enclosingBoundVariables;
+    }
+    internal ExpressionTranslator(Sink! sink, Bpl.Expr thisReplacement, Bpl.Expr resultReplacement, Hashtable currentParamMap, Hashtable preStateParamMap, ILocalVariableSink? ilocalSink){
+      this(sink, thisReplacement, resultReplacement, currentParamMap, preStateParamMap, ilocalSink, new Dictionary<Cci.Field!,Bpl.BoundVariable!>());
+    }
+    internal ExpressionTranslator(Sink! sink, Bpl.Expr thisReplacement, Bpl.Expr resultReplacement, Hashtable currentParamMap, Hashtable preStateParamMap){
+      this(sink, thisReplacement, resultReplacement, currentParamMap, preStateParamMap, null, new Dictionary<Cci.Field!,Bpl.BoundVariable!>());
+    }
+
+    internal Bpl.Expr! TranslateBinaryExpr (Cci.NodeType @operator, Bpl.Expr! op0, Bpl.Expr! op1, Bpl.Type resultType, Bpl.Type! operandType)
+    {
+      Bpl.Expr! binaryExpression;
+
+      switch (@operator)
+      {
+        case Cci.NodeType.Add: case Cci.NodeType.Add_Ovf: case Cci.NodeType.Add_Ovf_Un:
+          if (resultType == null || resultType.IsInt) {
+            return Bpl.Expr.Add(op0, op1);
+          } else if (resultType.Equals(sink.RealType)) {
+            return sink.Function(Prelude.RealAdd, sink.RealType, op0, op1);
+          } else {
+            throw new NotImplementedException("cannot translate addition for the result type '" + resultType + "'");
+          }
+
+        case Cci.NodeType.Sub: case Cci.NodeType.Sub_Ovf: case Cci.NodeType.Sub_Ovf_Un: 
+          if (resultType == null || resultType.IsInt) {
+            return Bpl.Expr.Sub(op0, op1);
+          } else if (resultType.Equals(sink.RealType)) {
+            return sink.Function(Prelude.RealSub, sink.RealType, op0, op1);
+          } else {
+            throw new NotImplementedException("cannot translate subtraction for the result type '" + resultType + "'");
+          }
+
+        case Cci.NodeType.Mul: case Cci.NodeType.Mul_Ovf: case Cci.NodeType.Mul_Ovf_Un: 
+          if (resultType == null || resultType.IsInt) {
+            return Bpl.Expr.Mul(op0, op1);
+          } else if (resultType.Equals(sink.RealType)) {
+            return sink.Function(Prelude.RealMul, sink.RealType, op0, op1);
+          } else {
+            throw new NotImplementedException("cannot translate multiplication for the result type '" + resultType + "'");
+          }
+
+        case Cci.NodeType.Div: case Cci.NodeType.Div_Un:
+          if (resultType == null || resultType.IsInt) {
+            return Bpl.Expr.Div(op0, op1);
+          } else if (resultType.Equals(sink.RealType)) {
+            return sink.Function(Prelude.RealDiv, sink.RealType, op0, op1);
+          } else {
+            throw new NotImplementedException("cannot translate division for the result type '" + resultType + "'");
+          }
+
+        case Cci.NodeType.Rem: case Cci.NodeType.Rem_Un:
+          if (resultType == null || resultType.IsInt) {
+            return Bpl.Expr.Mod(op0, op1);
+          } else if (resultType.Equals(sink.RealType)) {
+            return sink.Function(Prelude.RealMod, sink.RealType, op0, op1);
+          } else {
+            throw new NotImplementedException("cannot translate modulus for the result type '" + resultType + "'");
+          }
+
+        case Cci.NodeType.Ceq:
+        case Cci.NodeType.Eq:
+          if (operandType.Equals(sink.RealType)) {
+            return sink.Function(Prelude.RealEq, Bpl.Type.Bool, op0, op1);
+          } else {
+            return Bpl.Expr.Eq(op0, op1);
+          }
+
+        case Cci.NodeType.Ne:
+          if (operandType.Equals(sink.RealType)) {
+            return sink.Function(Prelude.RealNeq, Bpl.Type.Bool, op0, op1);
+          } else {
+            return Bpl.Expr.Neq(op0, op1);
+          }
+
+        case Cci.NodeType.Lt:
+        case Cci.NodeType.Clt:
+          if (operandType.Equals(sink.RealType)) {
+            return sink.Function(Prelude.RealLess, Bpl.Type.Bool, op0, op1);
+          } else {
+            return Bpl.Expr.Lt(op0, op1);
+          }
+          
+        case Cci.NodeType.Le:
+          if (operandType.Equals(sink.RealType)) {
+            return sink.Function(Prelude.RealAtmost, Bpl.Type.Bool, op0, op1);
+          } else {
+            return Bpl.Expr.Le(op0, op1);
+          }
+
+        case Cci.NodeType.Ge:
+          if (operandType.Equals(sink.RealType)) {
+            return sink.Function(Prelude.RealAtleast, Bpl.Type.Bool, op0, op1);
+          } else {
+            return Bpl.Expr.Ge(op0, op1);
+          }
+
+        case Cci.NodeType.Gt:
+        case Cci.NodeType.Cgt:
+        case Cci.NodeType.Cgt_Un:
+          if (operandType.Equals(sink.RealType)) {
+            return sink.Function(Prelude.RealGreater, Bpl.Type.Bool, op0, op1);
+          } else {
+            return Bpl.Expr.Gt(op0, op1);
+          }
+
+        case Cci.NodeType.LogicalAnd:
+          return Bpl.Expr.And(op0, op1);
+
+        case Cci.NodeType.LogicalOr:
+          return Bpl.Expr.Or(op0, op1);
+
+        case Cci.NodeType.And: // bitwise or logical
+          if (resultType == null || resultType.IsBool) {
+            return Bpl.Expr.And(op0, op1);
+          } else {
+            return sink.Function(Prelude.BitwiseAnd, Bpl.Type.Int, op0, op1); 
+          }
+
+        case Cci.NodeType.Or: // bitwise or logical
+          if (resultType == null || resultType.IsBool) {
+            return Bpl.Expr.Or(op0, op1);
+          } else {
+            return sink.Function(Prelude.BitwiseOr, Bpl.Type.Int, op0, op1); 
+          }
+
+        case Cci.NodeType.Iff:
+          return Bpl.Expr.Iff(op0, op1);
+    
+        case Cci.NodeType.Implies:
+          return Bpl.Expr.Imp(op0, op1);
+
+        case Cci.NodeType.Xor:
+          if (resultType == null || resultType.IsBool) {
+            return Bpl.Expr.Iff(op0, Bpl.Expr.Not(op1));
+          } else {
+            return sink.Function(Prelude.BitwiseXor, Bpl.Type.Int, op0, op1);
+          }
+
+        case Cci.NodeType.Shl:
+          return sink.Function(Prelude.BitwiseShl, Bpl.Type.Int, op0, op1);
+
+        case Cci.NodeType.Shr:
+        case Cci.NodeType.Shr_Un:
+          return sink.Function(Prelude.BitwiseShr, Bpl.Type.Int, op0, op1);
+
+        default:
+          throw new NotImplementedException("unknown binary operator " + @operator);
+      }
+    }
+    
+    internal Bpl.Expr! TranslateUnaryExpr (Cci.NodeType @operator, Bpl.Expr! operand, Bpl.Type opType, Cci.TypeNode! cciOpType, Cci.TypeNode! cciResultType)
+    {
+      switch (@operator)
+      {
+        case Cci.NodeType.Not: 
+          assert opType == null || opType.IsInt;
+          return sink.Function(Prelude.BitwiseNeg, Bpl.Type.Int, operand);
+
+        case Cci.NodeType.LogicalNot:
+          if (opType == null || opType.IsBool) {
+            if (operand is Bpl.LiteralExpr) {
+              bool b = ((Bpl.LiteralExpr)operand).asBool;
+              return Bpl.Expr.Literal(!b);
+            }
+            return Bpl.Expr.Not(operand);
+          } else if (opType.IsInt){
+            return Bpl.Expr.Eq(operand,Bpl.Expr.Literal(0));
+          }else {
+            return Bpl.Expr.Eq(operand, sink.Null);
+          }
+
+        case Cci.NodeType.UnaryPlus:
+          return operand;
+
+        case Cci.NodeType.Ldlen:
+          return sink.ArrayLength(operand);
+          
+        case Cci.NodeType.Neg:
+          if (opType == null || opType.IsInt) {
+            return Bpl.Expr.Sub(new LiteralExpr(NoToken, BigNum.ZERO), operand);
+          } else if (opType.Equals(sink.RealType)) {
+            return sink.Function(Prelude.RealNeg, sink.RealType, operand);
+          } else {
+            assert false;  // unexpected type
+          }
+
+        case Cci.NodeType.Conv_I:
+        case Cci.NodeType.Conv_I1:
+        case Cci.NodeType.Conv_I2:
+        case Cci.NodeType.Conv_I4:
+        case Cci.NodeType.Conv_I8:
+        case Cci.NodeType.Conv_U:
+        case Cci.NodeType.Conv_U1:
+        case Cci.NodeType.Conv_U2:
+        case Cci.NodeType.Conv_U4:
+        case Cci.NodeType.Conv_U8:
+        case Cci.NodeType.Conv_Ovf_I:
+        case Cci.NodeType.Conv_Ovf_I1:
+        case Cci.NodeType.Conv_Ovf_I1_Un:
+        case Cci.NodeType.Conv_Ovf_I2:
+        case Cci.NodeType.Conv_Ovf_I2_Un:
+        case Cci.NodeType.Conv_Ovf_I4:
+        case Cci.NodeType.Conv_Ovf_I4_Un:
+        case Cci.NodeType.Conv_Ovf_I8:
+        case Cci.NodeType.Conv_Ovf_I8_Un:
+        case Cci.NodeType.Conv_Ovf_I_Un:
+        case Cci.NodeType.Conv_Ovf_U:
+        case Cci.NodeType.Conv_Ovf_U1:
+        case Cci.NodeType.Conv_Ovf_U1_Un:
+        case Cci.NodeType.Conv_Ovf_U2:
+        case Cci.NodeType.Conv_Ovf_U2_Un:
+        case Cci.NodeType.Conv_Ovf_U4:
+        case Cci.NodeType.Conv_Ovf_U4_Un:
+        case Cci.NodeType.Conv_Ovf_U8:
+        case Cci.NodeType.Conv_Ovf_U8_Un:
+        case Cci.NodeType.Conv_Ovf_U_Un:
+        {
+          if (opType != null && opType.IsInt) {
+            return IntConversion(operand, cciOpType, cciResultType);
+          } else {
+            Bpl.Expr fromType = this.sink.TypeNameExpression(cciOpType);
+            Bpl.Expr toType = this.sink.TypeNameExpression(cciResultType);
+            return sink.Function(Prelude.RealToIntFunctionName, Bpl.Type.Int, operand, fromType, toType);
+          }
+        }
+         
+        case Cci.NodeType.Conv_R_Un:
+        case Cci.NodeType.Conv_R4:
+        case Cci.NodeType.Conv_R8:
+        {
+          Bpl.Expr fromType = this.sink.TypeNameExpression(cciOpType);
+          Bpl.Expr toType = this.sink.TypeNameExpression(cciResultType);
+          if (opType != null && opType.Equals(sink.RealType)) {
+            return sink.Function(Prelude.RealToRealFunctionName, sink.RealType, operand, fromType, toType);
+          } else {
+            return sink.Function(Prelude.IntToRealFunctionName, sink.RealType, operand, fromType, toType);
+          }
+        }
+          
+        case Cci.NodeType.Typeof:
+          return this.sink.TypeObject(operand);
+
+        default:
+          throw new NotImplementedException("unknown unary operator " + @operator);
+      }
+    }
+
+    internal Bpl.Expr! TranslateExpression (Cci.Expression! expression, string! heapName)
+    {
+      switch (expression.NodeType)
+      {
+        case Cci.NodeType.Construct:
+        {
+          this.sink.NotSupported(expression, "This object creation expression is treated as 'null' by the Program Verifier because the Program Verifier does not yet support object creation expressions in pure contexts.");
+          return sink.Null;
+        }
+        
+        case Cci.NodeType.OldExpression:
+        {
+          Cci.OldExpression! e = (Cci.OldExpression) expression;
+          // NB! This assumes old expressions do not themselves contain old expressions!
+          Bpl.Expr translatedOldExpr = new ExpressionTranslator(sink,thisReplacement,resultReplacement,this.preStateParamMap, this.preStateParamMap,null,this.enclosingBoundVariables).TranslateExpression(e.expression, heapName);
+          Bpl.Expr! result = new Bpl.OldExpr(NoToken, translatedOldExpr);
+          return result;
+        }
+          
+        case Cci.NodeType.AddressOf:
+        {
+          // This is probably a receiver argument to a call on a struct, or a ref argument
+          Cci.UnaryExpression! e = (Cci.UnaryExpression) expression;
+          return TranslateExpression(e.Operand, heapName);
+        }
+        
+        case Cci.NodeType.AddressDereference:
+        {
+          // This is probably a ref parameter
+          Cci.AddressDereference! e = (Cci.AddressDereference) expression;
+          return TranslateExpression(e.Address, heapName);
+        }
+        
+        case Cci.NodeType.ExplicitCoercion:
+        case Cci.NodeType.Castclass:
+        case Cci.NodeType.UnboxAny:
+        {
+          Cci.BinaryExpression! e = (Cci.BinaryExpression) expression;
+          return TranslateExpression(e.Operand1, heapName);
+        }
+        
+        case Cci.NodeType.Isinst:
+        {
+          Cci.BinaryExpression! e = (Cci.BinaryExpression) expression;
+          Bpl.Expr! operand = TranslateExpression(e.Operand1, heapName);
+          Cci.TypeNode! targetType = (Cci.TypeNode!) ((Cci.Literal!) e.Operand2).Value;
+          this.sink.AddType(targetType);
+          if (this.sink.Convert(targetType).Equals(sink.RefType)) {
+            // $As(operand, type)
+            return sink.Function(Sink.BuiltinFunction.As, operand, this.sink.TypeNameExpression(targetType));
+          } else {
+            // BoxTester(operand, type)
+            return sink.Function(Sink.BuiltinFunction.BoxTester, operand, this.sink.TypeNameExpression(targetType));
+          }
+        }
+        
+        case Cci.NodeType.Parentheses:
+        {
+          Cci.UnaryExpression! e = (Cci.UnaryExpression) expression;
+          return TranslateExpression(e.Operand, heapName);
+        }
+        
+        case Cci.NodeType.Identifier:
+        {
+          Cci.Variable! v = (Cci.Variable!) expression;
+          return Sink.Ident(Sink.NameOf(v.Name), this.sink.Convert(v.Type));
+        }
+        
+        case Cci.NodeType.This:
+        case Cci.NodeType.ImplicitThis:
+        {
+            if (this.thisReplacement != null) {
+              return this.thisReplacement;
+            }
+            if (this.paramMap != null && sink.currentMethod != null)
+            {
+              Bpl.Variable v = (Bpl.Variable) this.paramMap[sink.currentMethod.ThisParameter];
+              if (v != null)
+                return Sink.IdentWithClean(v);
+            }
+            Cci.TypeNode t = expression.Type;
+            while (t is Cci.Reference) {
+              t = ((Cci.Reference)t).ElementType;
+            }
+            return Sink.Ident("this", this.sink.Convert(t));
+        }
+
+        case Cci.NodeType.Parameter:
+        {
+          Cci.Parameter! parameter = (Cci.Parameter!) expression;
+          if (this.paramMap != null)
+          {
+            Bpl.Variable v = (Bpl.Variable) this.paramMap[parameter];
+            if (v != null)
+              return Sink.IdentWithClean(v);
+          }
+          Sink.ParameterDirection dir = ((parameter.Flags & Cci.ParameterFlags.Out) == 0) ? Sink.ParameterDirection.In : Sink.ParameterDirection.Out;
+          string name = Sink.NameOf(parameter.Name);
+          assert name != null && name.Length > 0;
+          Cci.TypeNode t = Sink.ParameterType(parameter);
+          return Sink.Ident(Sink.ParameterName(name, dir), this.sink.Convert(t));
+        }
+        
+        case Cci.NodeType.Literal:
+        {
+          Cci.Literal lit = (Cci.Literal) expression;
+          return this.sink.Literal(lit.Value);
+        }
+
+        case Cci.NodeType.Is:
+        {
+          Cci.BinaryExpression! bexp = (Cci.BinaryExpression!) expression;                    
+          Cci.Literal! literal = (Cci.Literal!) bexp.Operand2;          
+          Cci.TypeNode! rhsType = (Cci.TypeNode!) literal.Value;          
+          //first test if left-hand side is always/never of the right-hand side type.
+          //In particular, this prevents the generation of the boogie test function $IsNotNull(arg, type) (see below) when arg is an int,
+          //which is essential as $IsNotNull expects a ref.
+          //this check is very similar to the check in Cci.Checker.CoerceOperandsForIs
+          //differences: this test does not use getTypeView, and we have to account for non-null types (when calling isAssignableTo).
+          Cci.TypeNode! lhsTypeNoModifiers = bexp.Operand1.Type;
+          if (lhsTypeNoModifiers is Cci.OptionalModifier) 
+            lhsTypeNoModifiers = ((!)(lhsTypeNoModifiers as Cci.OptionalModifier)).ModifiedType;            
+          Cci.TypeNode! rhsTypeNoModifiers = rhsType;
+          if (rhsType is Cci.OptionalModifier) 
+            rhsTypeNoModifiers = ((!)(rhsType as Cci.OptionalModifier)).ModifiedType;                             
+          if (lhsTypeNoModifiers != null && lhsTypeNoModifiers.IsAssignableTo(rhsType) && lhsTypeNoModifiers.IsValueType && lhsTypeNoModifiers.Template != Cci.SystemTypes.GenericBoxed) {        
+            return Bpl.Expr.True; //the left-hand side is always of the right-hand side type.
+          }
+          if (lhsTypeNoModifiers != null && !(lhsTypeNoModifiers is Cci.ITypeParameter) && !(lhsTypeNoModifiers is Cci.Interface) && !(rhsTypeNoModifiers is Cci.Interface && !rhsTypeNoModifiers.IsSealed) && !lhsTypeNoModifiers.IsAssignableTo(rhsTypeNoModifiers) && !rhsTypeNoModifiers.IsAssignableTo(lhsTypeNoModifiers)) {        
+            return Bpl.Expr.False; //bexpr is never of type type.
+          }
+          Bpl.Expr arg = TranslateExpression(bexp.Operand1, heapName);
+          if (rhsType == Cci.SystemTypes.ValueType){
+            // $IsValueType(UnboxedType(arg))
+            return sink.Function(Sink.BuiltinFunction.IsValueType,sink.Function(Sink.BuiltinFunction.UnboxedType, arg));
+          } else if (rhsType == Cci.SystemTypes.Object) {
+            return Bpl.Expr.Neq(arg, sink.Null);
+          } else if (this.sink.Convert(rhsType).Equals(sink.RefType)) {
+              // $IsNotNull(arg, type)
+              return this.sink.NotNull(arg, rhsType);
+          } else {
+              // UnboxedType(arg) == type;
+              this.sink.AddType(rhsType);
+              Bpl.Expr ty = this.sink.TypeNameExpression(rhsType);
+              return Bpl.Expr.Eq(sink.Function(Sink.BuiltinFunction.UnboxedType, arg), ty);
+          }                
+        }
+
+        case Cci.NodeType.MemberBinding:
+            {
+              Cci.MemberBinding bind = (Cci.MemberBinding) expression;
+              if (bind.BoundMember is Cci.ParameterField)
+              {
+                  Cci.ParameterField! param = (Cci.ParameterField!) bind.BoundMember;
+                  return TranslateExpression((Cci.Parameter!)param.Parameter, heapName);
+              }
+              else if (bind.BoundMember is Cci.TypeParameter)
+              {
+                  Cci.TypeParameter type = (Cci.TypeParameter!)bind.BoundMember;
+                  this.sink.AddType(type);
+                  return this.sink.TypeNameExpression(type);
+              }
+              else if (bind.BoundMember is Cci.TypeNode)
+              {   
+                Cci.TypeNode type = (Cci.TypeNode!)bind.BoundMember;               
+                this.sink.AddType(type);
+                return this.sink.TypeNameExpression(type);              
+              }
+              else
+              {
+                Cci.Field! field = (Cci.Field!)bind.BoundMember;
+                if (field.DeclaringType is Cci.BlockScope) // Quantifier variable or local variable
+                {
+                  Bpl.BoundVariable bv = GetRegisteredBoundVariable(field);
+                  if (bv != null) {
+                    return Sink.Ident(bv);  // bound variable
+                  } else {
+                    // local variable
+                    // We expect local variables to appear only in assert/assume/loop-invariant statements, and those
+                    // create their own ExpressionTranslator with an ilocalSink.  Hence, the following assumption:
+                    assume ilocalSink != null;
+                    Bpl.TypedIdent ident = Sink.TypedIdent(Sink.CleanUpName(field.Name.Name), this.sink.Convert(field.Type));
+                    Bpl.LocalVariable var = ilocalSink.TranslateLocal(ident, field.Type);
+                    return Sink.Ident(var);
+                  }
+                }
+                this.sink.AddField(field);
+                Cci.Expression target = bind.TargetObject;
+                if (target == null) {
+                  return this.sink.StaticFieldAccess(field, heapName);
+                } else {
+                  Expr! targetExpr = TranslateExpression(target, heapName);
+                  return this.sink.FieldAccess(targetExpr, field, heapName);
+                }
+              }
+              break;
+            }
+
+        case Cci.NodeType.Conditional:
+        {
+          Cci.TernaryExpression cond = (Cci.TernaryExpression) expression;
+          Bpl.NAryExpr ife = sink.Function(Sink.BuiltinFunction.IfThenElse,
+              TranslateExpression(cond.Operand1, heapName),
+              TranslateExpression(cond.Operand2, heapName),
+              TranslateExpression(cond.Operand3, heapName));
+          return ife;
+        }
+
+        case Cci.NodeType.Call:
+        case Cci.NodeType.MethodCall:
+        case Cci.NodeType.Callvirt:
+        {
+            Cci.MethodCall! call = (Cci.MethodCall!) expression;
+            return TranslateCall(call, heapName);
+        }
+
+        case Cci.NodeType.Local:
+          Cci.Local local = (Cci.Local) expression;
+          //HACK: could be the allocation of a struct (which 'hides' as a local .newObj of the right type)
+          //code only deals with struct, and is not integrated with InstructionTranslator code.
+          //Also, the ZeroInitStruct function needs an axiomatization.
+          if (local.Name.Name == ((!)Cci.StandardIds.NewObj).Name) {
+            Bpl.Expr zeroInitCall = sink.Function(Sink.BuiltinFunction.ZeroInitStruct, this.sink.TypeNameExpression(local.Type));          
+            return zeroInitCall;
+          }
+          
+          return Sink.Ident(Sink.CleanUpName(local.Name.Name), this.sink.Convert(local.Type));
+
+        case Cci.NodeType.ReturnValue:
+          // this is what we get from CCI now to refer to the result in a post condition.
+          Cci.ReturnValue retval = (Cci.ReturnValue) expression;
+          if (resultReplacement != null) {
+            return resultReplacement;
+          } else {
+            return Sink.Ident(Prelude.ResultVariableName, this.sink.Convert(retval.Type));
+          }
+
+        case Cci.NodeType.Indexer:
+            Cci.Indexer indexer = (Cci.Indexer) expression;
+            assume indexer.Operands != null;
+            Bpl.Expr[] operands = new Bpl.Expr[indexer.Operands.Count];
+            for (int j=0; j<indexer.Operands.Count; j++) 
+            {
+                 operands[j] = TranslateExpression((!) indexer.Operands[j], heapName); 
+            }
+            return
+                sink.ArrayGet(
+                    TranslateExpression(indexer.Object, heapName),
+                    sink.Convert(indexer.Type),
+                    operands,
+                    heapName);
+
+        case Cci.NodeType.Quantifier:
+        {
+            Cci.Quantifier! quant = (Cci.Quantifier!) expression;
+            switch (quant.QuantifierType)
+            {
+              case Cci.NodeType.Forall:
+              case Cci.NodeType.Exists:
+              case Cci.NodeType.ExistsUnique:
+              {
+                if (quant.Comprehension.IsDisplay) {
+                  return TranslateDisplay(quant.QuantifierType, quant.Comprehension, heapName);
+                }
+                // Q{R(xs); P(xs}
+                // gets translated into:
+                // (Q xs :: T(xs))
+                // where Q is the quantifier type (forall, exists, etc.)
+                VariableSeq! xs = new VariableSeq();
+                bool universal;
+                Bpl.Expr! T_xs = TranslateQuantifierPieces(quant, xs, null, heapName, null, out universal);
+                if (universal) {
+                  // Then T(xs) == R(xs) ==> P(xs)
+                  return new Bpl.ForallExpr(Bpl.Token.NoToken, xs, T_xs);
+                } else {
+                  if (quant.QuantifierType == Cci.NodeType.Exists){
+                  // Then T(xs) == R(xs) && P(xs)
+                    return new Bpl.ExistsExpr(Bpl.Token.NoToken, xs, T_xs);
+                  } else if (quant.QuantifierType == Cci.NodeType.ExistsUnique) {
+                  // Then T(xs) == R(xs) && P(xs)
+                    // exists unique{R(xs); P(xs)}
+                    // gets translated into
+                    // (exists xs :: T(xs)) && (forall xs,ys :: T(xs) && T(ys) ==> xs == ys)
+                    // note that "xs" and "ys" are sequences of bound variables, so the equality
+                    // between them is the conjunction of all of the pointwise equalities.
+                    Bpl.VariableSeq ys = new Bpl.VariableSeq();
+                    Dictionary<Cci.Field!,Bpl.BoundVariable!> oldEnclosingBoundVariables = enclosingBoundVariables;
+                    enclosingBoundVariables = new Dictionary<Cci.Field!,Bpl.BoundVariable!>();
+                    Bpl.Expr! T_ys = TranslateQuantifierPieces(quant, ys, null, heapName, "unique#", out universal);
+                    enclosingBoundVariables = oldEnclosingBoundVariables;
+                    Bpl.Expr equalities = Bpl.Expr.True;
+                    for (int i = 0; i < xs.Length; i++){
+                      TypedIdent! a = ((!)xs[i]).TypedIdent;
+                      TypedIdent! b = ((!)ys[i]).TypedIdent;
+                      equalities = Bpl.Expr.And(equalities, Bpl.Expr.Eq(Sink.Expr(a),Sink.Expr(b)));
+                    }
+                    Bpl.VariableSeq bothVars = new Bpl.VariableSeq();
+                    bothVars.AddRange(xs);
+                    bothVars.AddRange(ys);
+                    Bpl.Expr bothPreds = Bpl.Expr.And(T_xs,T_ys);
+                    return Bpl.Expr.And(
+                      new Bpl.ExistsExpr(Bpl.Token.NoToken, xs, T_xs),
+                      new Bpl.ForallExpr(Bpl.Token.NoToken, bothVars, Bpl.Expr.Imp(bothPreds,equalities)));
+                  } else {
+                    assert false; // should be unreachable
+                  }
+                }
+              }
+
+              case Cci.NodeType.Sum:
+              case Cci.NodeType.Count:
+              case Cci.NodeType.Product:
+              case Cci.NodeType.Min:
+              case Cci.NodeType.Max:
+                return TranslateSumLikeQuantifier(quant, heapName);
+
+              default:
+                assert false;  // unexpected quantification type
+            }
+        }
+            
+        case Cci.NodeType.Box:
+          {
+            Cci.BinaryExpression bin = (Cci.BinaryExpression!)expression;
+            // Produce an expression that returns the boxed value.  Note, at run time, the box operation
+            // may return a newly allocated value each time.  To mimic this in a functional setting, we
+            // wrap each call to BoxFunc in a call to NewInstance, which takes enough parameters that each instantiation of BoxFunc can
+            // be viewed as potentially returning a different value.
+            //
+            // To this end, we add not just the value to be boxed (bin.Operand1) and its unboxed type
+            // (bin.Operand2), but also, as arguments to NewInstance, a value that is unique for each occurrence (defined below) of a
+            // Box expression and a value signifying the activity in the execution.
+            //
+            // The activity is determined by the global variable $ActivityIndicator, which our translation
+            // updates on every loop-iteration and method boundary.  This means that it has a potentially
+            // different value each time execution reaches a particular specification expression.
+            //
+            // We also need to distinguish all occurrences of a Box expression inside a particular
+            // specification expression.  To a first order of approximation, this is done by using an
+            // unspecified constant (provided by sink.NonDeterministicValue()) for every static occurrence
+            // of a Box expression.  However, a particular Box expression can also be evaluated multiple
+            // times within one evaluation of the specification expression--this happens if the Box occurs
+            // inside a quantifier.  Therefore, we meld the statically determined value with the values
+            // of the enclosing bound variables.
+            //
+            // The claim is that this parameterization simulates getting a potentially different value each
+            // time a Box expression is evaluated.
+            Bpl.Expr occurrence = sink.NonDeterministicValue();
+            foreach (BoundVariable bvar in enclosingBoundVariables.Values) {
+              occurrence = sink.Function(Sink.BuiltinFunction.MeldNondets, occurrence, Sink.Ident(bvar));
+            }
+            Bpl.Expr o = TranslateExpression(bin.Operand1, heapName);
+            Bpl.Expr t = TranslateExpression(bin.Operand2, heapName);
+            return sink.Function(Sink.BuiltinFunction.NewInstance, sink.Function(Sink.BuiltinFunction.BoxFunc, o, t), occurrence, sink.ActivityIndicator());            
+          }
+        case Cci.NodeType.Unbox:
+        {
+          Cci.BinaryExpression bin = (Cci.BinaryExpression)expression;
+          Bpl.Expr o = TranslateExpression(bin.Operand1, heapName);
+          return sink.FunctionSpecial(Sink.BuiltinFunction.Unbox, sink.Convert(bin.Operand2.Type), o);            
+        }
+
+        case Cci.NodeType.BlockExpression:
+          Cci.BlockExpression blexp = (Cci.BlockExpression!)expression;
+          // This must be a non-null coercion block of the form
+          // {
+          //   temp = exp;
+          //   Call AssertNotNull(temp);
+          //   temp;
+          // }
+          // or 
+          // {
+          //   Call AssertNotNull(var-or-const);
+          //   var-or-const;
+          // }
+          // In either case, we just ignore the assert and translate the original expression
+          if (blexp.Block.Statements.Count == 2) {
+            Cci.ExpressionStatement expst = (Cci.ExpressionStatement!)blexp.Block.Statements[1];
+            return TranslateExpression((!)expst.Expression, heapName);
+          }
+          if (blexp.Block.Statements.Count == 3) {
+            Cci.AssignmentStatement astmt = (Cci.AssignmentStatement!)blexp.Block.Statements[0];
+            return TranslateExpression((!)astmt.Source, heapName);
+          }
+          throw new NotImplementedException("cannot translate weird block-expression");
+
+        default:
+          break;
+      }
+
+      if (expression is Cci.BinaryExpression) {
+        Cci.BinaryExpression bin = (Cci.BinaryExpression)expression;
+        Bpl.Expr left = TranslateExpression(bin.Operand1, heapName);
+        Bpl.Expr right = TranslateExpression(bin.Operand2, heapName);
+        return TranslateBinaryExpr(bin.NodeType, left, right,
+          bin.Type == null ? null : this.sink.Convert(bin.Type),
+          this.sink.Convert(bin.Operand1.Type));
+
+      } else if (expression is Cci.UnaryExpression) {
+        Cci.UnaryExpression un = (Cci.UnaryExpression)expression;
+        Bpl.Expr operand = TranslateExpression(un.Operand, heapName);
+        return TranslateUnaryExpr(un.NodeType, operand,
+          un.Operand.Type == null ? null : this.sink.Convert(un.Operand.Type),
+          un.Operand.Type, un.Type);
+      }
+
+      throw new NotImplementedException("cannot translate expression " + expression.NodeType);
+    }
+
+
+    private Bpl.Expr! TranslateCall (Cci.MethodCall! call, string! heapName)
+    {
+    
+      Cci.Method! callee = (Cci.Method!) ((Cci.MemberBinding!)call.Callee).BoundMember;
+      assume callee.ReturnType != null;
+      assume callee.Name != null;
+      string! calleeName = Sink.UniqueProcedureName(callee);
+
+      Cci.ExpressionList operands = call.Operands != null ? call.Operands : new Cci.ExpressionList(0);
+      
+      if (calleeName == "Microsoft.Contracts.NonNullType.IsNonNullImplicit$System.Object" ||
+          calleeName.StartsWith("Microsoft.Contracts.NonNullType.IsNonNullImplicitGeneric"))
+      {
+        return TranslateExpression((!) operands[0], heapName);
+      }
+      
+      Cci.Expression receiver = ((Cci.MemberBinding)call.Callee).TargetObject;
+      
+      if (callee.DeclaringType == Cci.SystemTypes.Guard)
+      {
+        switch (callee.Name.Name)
+        {
+          case "get_IsExposable":
+          {
+            Cci.MethodCall! receiverCall = (Cci.MethodCall!) receiver;
+            Cci.MemberBinding! receiverCallee = (Cci.MemberBinding!) receiverCall.Callee;
+            assert receiverCallee.BoundMember.Name.Name == "get_SpecSharp::FrameGuard";
+            Bpl.Expr! targetObject = TranslateExpression((!)receiverCallee.TargetObject, heapName);
+            Cci.TypeNode! targetType = (!)receiverCallee.BoundMember.DeclaringType;
+            return om.IsExposable(targetObject, targetType);
+          }
+          case "FrameIsExposable":
+          {
+            Bpl.Expr! targetObject = TranslateExpression((!) operands[0], heapName);
+            Cci.UnaryExpression! arg1 = (Cci.UnaryExpression!) operands[1];
+            assert arg1.NodeType == Cci.NodeType.Typeof;
+            Cci.Literal! literal = (Cci.Literal!) arg1.Operand;
+            Cci.TypeNode! targetType = (Cci.TypeNode!) literal.Value;
+            return om.IsExposable(targetObject, targetType);
+          }
+          case "get_IsExposed":
+          {
+            Cci.MethodCall! receiverCall = (Cci.MethodCall!) receiver;
+            Cci.MemberBinding! receiverCallee = (Cci.MemberBinding!) receiverCall.Callee;
+            assert receiverCallee.BoundMember.Name.Name == "get_SpecSharp::FrameGuard";
+            Bpl.Expr! targetObject = TranslateExpression((!)receiverCallee.TargetObject, heapName);
+            Cci.TypeNode! targetType = (!)receiverCallee.BoundMember.DeclaringType;
+            return om.IsAdditivelyExposed(targetObject, targetType);
+          }
+          case "FrameIsExposed":
+          {
+            Bpl.Expr! targetObject = TranslateExpression((!) operands[0], heapName);
+            Cci.UnaryExpression! arg1 = (Cci.UnaryExpression!) operands[1];
+            assert arg1.NodeType == Cci.NodeType.Typeof;
+            Cci.Literal! literal = (Cci.Literal!) arg1.Operand;
+            Cci.TypeNode! targetType = (Cci.TypeNode!) literal.Value;
+            return om.IsAdditivelyExposed(targetObject, targetType);
+          }
+          case "FrameIsPrevalid":
+          {
+            Bpl.Expr! targetObject = TranslateExpression((!) operands[0], heapName);
+            Cci.UnaryExpression! arg1 = (Cci.UnaryExpression!) operands[1];
+            assert arg1.NodeType == Cci.NodeType.Typeof;
+            Cci.Literal! literal = (Cci.Literal!) arg1.Operand;
+            Cci.TypeNode! targetType = (Cci.TypeNode!) literal.Value;
+			// For objects of static type 'object', IsPrevalid always returns false; one could also prevent such expressions statically in the compiler
+            if(targetType == Cci.SystemTypes.Object) 
+              return Bpl.Expr.False;
+            return om.IsPrevalid(targetObject, targetType);
+          }
+          case "FrameIsValid":
+          {
+            Bpl.Expr! targetObject = TranslateExpression((!) operands[0], heapName);
+            Cci.UnaryExpression! arg1 = (Cci.UnaryExpression!) operands[1];
+            assert arg1.NodeType == Cci.NodeType.Typeof;
+            Cci.Literal! literal = (Cci.Literal!) arg1.Operand;
+            Cci.TypeNode! targetType = (Cci.TypeNode!) literal.Value;
+            // This definition, which corresponds to what in papers we refer to as "the object is [additively] valid for T",
+            // says it means the object is additively valid for the given class frame.
+            return om.IsExposable(targetObject, targetType, true, false);
+          }
+          case "IsConsistent":
+          {
+            Bpl.Expr! targetObject = TranslateExpression((!) operands[0], heapName);
+            return om.IsConsistent(targetObject, true, sink.HeapExpr());
+          }
+          case "IsPeerConsistent":
+          {
+            Bpl.Expr! targetObject = TranslateExpression((!) operands[0], heapName);
+            return om.IsPeerConsistent(targetObject, true);
+          }
+          case "IsNew":
+          {
+            // translate as:
+            //   heapName[o,$ownerFrame]==PeerGroupPlaceholder &&
+            //   all objects in the peer group of o are fresh
+            Bpl.Expr! targetObject = TranslateExpression((!) operands[0], heapName);
+            Bpl.Expr unowned = om.HasNoOwner(targetObject, sink.HeapExpr(heapName));
+            // More precisely: (forall $pc :: $pc != null AND old($pc.allocated) ==> $pc.owner != targetObject.owner)
+            Bpl.Variable pVar = Sink.BoundVar("$fpc", sink.RefType);
+            Bpl.Expr p = Sink.Ident(pVar);
+            Bpl.Expr c = Bpl.Expr.Neq(p, sink.Null);
+            c = Bpl.Expr.And(c, sink.IsAllocatedOfRef(p, new Bpl.OldExpr(NoToken, sink.HeapExpr(heapName)), true));
+            Bpl.Expr d = Bpl.Expr.Not(om.EqualOwners(p, targetObject, sink.HeapExpr(heapName)));
+            Bpl.Expr peersAreFresh = new Bpl.ForallExpr(NoToken, new VariableSeq(pVar), Bpl.Expr.Imp(c, d));
+
+            return Bpl.Expr.And(unowned, peersAreFresh);
+          }
+          case "IsLockProtected":
+          {
+            Bpl.Expr! targetObject = TranslateExpression((!) operands[0], heapName);
+            return om.IsLockProtected(targetObject);
+          }
+        }
+      }
+      switch (calleeName) {
+        case "Microsoft.Contracts.Owner.Is$System.Object$notnull$System.Object$notnull$System.Type$notnull":
+        {
+          assert operands.Count == 3;
+          // translate as:
+          //   arg0.$ownerRef == arg1 && arg0.$ownerFrame == TypeName(arg2)
+          Bpl.Expr! subject = TranslateExpression((!) operands[0], heapName);
+          Bpl.Expr! owner = TranslateExpression((!) operands[1], heapName);
+          Bpl.Expr! frameTypeObject = TranslateExpression((!) operands[2], heapName);
+          return om.OwnerIs(subject, owner, sink.Function(Sink.BuiltinFunction.TypeName, frameTypeObject), sink.HeapExpr(heapName));
+        }
+        case "Microsoft.Contracts.Owner.Same$System.Object$notnull$System.Object$notnull":
+        {
+          assert operands.Count == 2;
+          // translate as:
+          //   arg0.$ownerRef == arg1.$ownerRef && arg0.$ownerFrame == arg1.$ownerFrame
+          Bpl.Expr! arg0 = TranslateExpression((!) operands[0], heapName);
+          Bpl.Expr! arg1 = TranslateExpression((!) operands[1], heapName);
+          return om.EqualOwners(arg0, arg1, sink.HeapExpr(heapName));
+        }
+        case "Microsoft.Contracts.Owner.Different$System.Object$notnull$System.Object$notnull":
+        {
+          assert operands.Count == 2;
+          // translate as:
+          //   !(arg0.$ownerRef == arg1.$ownerRef && arg0.$ownerFrame == arg1.$ownerFrame)
+          Bpl.Expr! arg0 = TranslateExpression((!) operands[0], heapName);
+          Bpl.Expr! arg1 = TranslateExpression((!) operands[1], heapName);
+          return Bpl.Expr.Not(om.EqualOwners(arg0, arg1, sink.HeapExpr(heapName)));
+        }
+        case "Microsoft.Contracts.Owner.None$System.Object$notnull":
+        {
+          assert operands.Count == 1;
+          // translate as:
+          //   arg0.$ownerFrame == $PeerGroupPlaceholder
+          Bpl.Expr! arg = TranslateExpression((!) operands[0], heapName);
+          return om.HasNoOwner(arg, sink.HeapExpr(heapName));
+        }
+        case "Microsoft.Contracts.Owner.New$System.Object$notnull":
+        {
+          assert operands.Count == 1;
+          // translate as:
+          //   arg0.$ownerRef == arg0 && arg0.$ownerFrame == $PeerGroupPlaceholder
+          Bpl.Expr! arg = TranslateExpression((!) operands[0], heapName);
+          return om.UnownedPeerGroupSingleton(arg, sink.HeapExpr(heapName), false); 
+        }
+        case "Microsoft.Contracts.Owner.ElementProxy$System.Object$notnull":
+        {
+          assert operands.Count == 1;
+          // translate as:
+          //   $ElementProxy(arg0,pos)
+          Bpl.Expr! subject = TranslateExpression((!) operands[0], heapName);
+          List<int>! positions = (!)Microsoft.SpecSharp.Util.ElementsPositions(((!)operands[0]).Type);
+          int pos = (positions.Count > 0) ? positions[0] : -5;
+          return sink.ElementProxy(subject, Expr.Literal(pos));
+        }
+        case "Microsoft.Contracts.Owner.ElementProxy$System.Object$notnull$System.Int32":
+        {
+          assert operands.Count == 2;
+          // translate as:
+          //   $ElementProxy(arg0,arg1)
+          Bpl.Expr! subject = TranslateExpression((!) operands[0], heapName);
+          Bpl.Expr! pos = TranslateExpression((!) operands[1], heapName);
+          return sink.ElementProxy(subject, pos);
+        }
+      }
+      
+      // Look for other special cases
+      string[] specialNames = new string[] {
+        "System.Array.get_Length",
+        "System.Array.get_Rank",
+        "System.Array.GetLength$System.Int32",
+        "System.Array.GetLowerBound$System.Int32",
+        "System.Array.GetUpperBound$System.Int32",
+        "System.String.get_Length",
+      };
+      string[] translatedSpecialNames = { // keep this in sync with specialNames
+        Prelude.ArrayLengthName,
+        Prelude.ArrayRankName,
+        Prelude.ArrayDimLengthName,
+        Prelude.ArrayLBoundName,
+        Prelude.ArrayUBoundName,
+        Prelude.StringLengthName,
+      };
+      int index = Array.IndexOf(specialNames, calleeName);
+      // if "0 <= index", then we have one of these special cases
+
+      //
+      // Prepare parameters for the call
+      //
+      
+      List<Bpl.Expr/* preferably !, but Sink.Function below won't accept that*/> args = new List<Bpl.Expr>();
+      
+      if (index < 0 && calleeName != "System.Object.GetType")
+      {
+        args.Add(sink.HeapExpr(heapName));
+      }
+
+      if (!callee.IsStatic)
+      {
+        if (callee is Cci.InstanceInitializer)
+        {
+          Bpl.Expr occurrence = sink.NonDeterministicValue();
+          foreach (BoundVariable bvar in enclosingBoundVariables.Values) {
+            occurrence = sink.Function(Sink.BuiltinFunction.MeldNondets, occurrence, Sink.Ident(bvar));
+          }
+          Bpl.Expr t = sink.TypeNameExpression((!)callee.DeclaringType);
+          args.Add(sink.Function(Sink.BuiltinFunction.NewInstance, sink.Function(Sink.BuiltinFunction.AllocFunc, t), occurrence, sink.ActivityIndicator()));            
+        } 
+        else 
+        {     
+          assert receiver != null;
+          Cci.BlockExpression blockExpr = receiver as Cci.BlockExpression;
+          if (blockExpr != null) {  
+            // This is probably a call of the form {newLocal = e; &newLocal; }.M(...)
+            // where M.DeclaringType is Struct
+            // We simply extract e
+            Cci.Block! block = (!)blockExpr.Block;
+            assert block.Statements.Count == 2;
+            Cci.AssignmentStatement! a = (Cci.AssignmentStatement!) block.Statements[0];
+            Cci.ExpressionStatement! es = (Cci.ExpressionStatement!) block.Statements[1];
+            Cci.UnaryExpression! ue = (Cci.UnaryExpression!) es.Expression;
+            assert a.Target is Cci.Local;
+            assert ue.NodeType == Cci.NodeType.AddressOf && ue.Operand == a.Target;
+            receiver = (!)a.Source;
+          }
+          args.Add(TranslateExpression(receiver, heapName));
+        }
+      }
+      for (int i=0; i<operands.Count; i++)
+      {
+        Cci.Expression operand = operands[i];
+        assert operand != null;
+        args.Add(TranslateExpression(operand, heapName));
+      }
+      
+      //
+      // Make the call
+      //
+      
+      // special case:  System.Object.GetType
+      if (calleeName == "System.Object.GetType") {
+        return this.sink.TypeObject(sink.Function(Prelude.TypeOfFunctionName, sink.TypeType, args.ToArray()));
+      }
+
+      string! funcName;
+      if (0 <= index) {
+        // other special cases
+        funcName = (!)translatedSpecialNames[index];
+        sink.translatedMethodsInContracts.Add(funcName);
+      } else {
+        // the non-special case
+        if (!(callee.IsPure || callee.IsConfined || callee.IsStateIndependent)) {
+          // This is an error.  If the compiler performs the appropriate context checks and Boogie is invoked with
+          // the same set of out-of-band contracts, then the method will be pure/confined/state-independent.
+          // We report an error and then try to carry on.
+          sink.NotSupported(call, "Method '{0}' expected to be declared with Pure, Confined, or StateIndependent (perhaps you have forgotten to reference the method's out-of-band contracts?)", callee.FullName);
+
+          Bpl.Type returnType = (callee is Cci.InstanceInitializer ? sink.Convert((!)callee.DeclaringType) : sink.Convert(callee.ReturnType));
+          return this.sink.ZeroEquiv(returnType);
+        }
+
+        Bpl.Expr oldReplacement = this.thisReplacement;
+        this.thisReplacement = null;
+        funcName = MethodSignature.GetFunctionForPureMethod(callee, sink);        
+        assert this.thisReplacement == null;
+        this.thisReplacement = oldReplacement;
+      }
+      return sink.Function(funcName, this.sink.Convert(callee.ReturnType), args.ToArray());
+    }
+
+    internal Bpl.Expr! IntConversion(Bpl.Expr! operand, Cci.TypeNode! fromType, Cci.TypeNode! toType) {
+      if (fromType == toType) {
+        // identity conversion
+        return operand;
+      }
+      int fromWidth = BitWidth(fromType);
+      int toWidth = BitWidth(toType);
+      if (0 <= fromWidth && fromWidth < toWidth) {
+        // going to something with strictly more bits, so we don't insert any conversion operator
+        return operand;
+      }
+      
+      // do an int-to-int conversion
+      Bpl.Expr from = this.sink.TypeNameExpression(fromType);
+      Bpl.Expr to = this.sink.TypeNameExpression(toType);
+      return sink.Function(Prelude.IntToIntFunctionName, Bpl.Type.Int, operand, from, to);
+    }
+    private static int BitWidth (Cci.TypeNode! type) {
+      switch(type.TypeCode){
+        case TypeCode.SByte:
+        case TypeCode.Byte:
+          return 8;
+        case TypeCode.Int16:
+        case TypeCode.UInt16:
+        case TypeCode.Char:
+          return 16;
+        case TypeCode.Int32:
+        case TypeCode.UInt32:
+          return 32; 
+        case TypeCode.Int64: 
+        case TypeCode.UInt64:
+          return 64;
+        default:
+          return -1;
+      }
+    }
+  } // end class
+}

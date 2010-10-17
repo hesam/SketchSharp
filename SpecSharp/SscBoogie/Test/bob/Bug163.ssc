@@ -1,0 +1,17 @@
+struct S1
+{
+   S1 Foo()
+   {
+      return this;
+   }
+}
+
+struct S2
+{
+    int x;
+
+    public int Foo(S2 s)
+    {
+        return s.x;
+    }
+}

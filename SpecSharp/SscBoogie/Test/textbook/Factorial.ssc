@@ -1,0 +1,21 @@
+/* Factorial.ssc - iterative solution
+   Rosemary Monahan, March 13th 2007
+   Rustan Leino, 27 June 2007
+*/
+
+public class Factorial
+{
+  public int F(int n)
+    requires 0 <= n;
+    ensures result == product{int k in (1..n); k};
+  {
+    int f = 1;
+    for (int i = 1; i <= n; i++)
+      invariant i <= n+1;
+      invariant f == product{int k in (1: i); k};
+    {
+      f *= i;
+    }
+    return f;
+  }
+}

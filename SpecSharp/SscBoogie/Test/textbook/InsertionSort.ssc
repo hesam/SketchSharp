@@ -1,0 +1,77 @@
+/* Insertion Sort
+ * Rosemary Monahan & Rustan Leino
+ * 5th March 2007
+ * added other versions 14 January 2008
+ */
+ 
+using System;
+using Microsoft.Contracts;
+
+class ArraySort
+{
+  // Insertion Sort Method
+  public static void SortArray0(int[]! a)
+    modifies a[*];
+    ensures forall{int j in (0: a.Length), int i in (0: j); a[i] <= a[j]};
+  {
+    for (int k = 0; k < a.Length; k++)
+      invariant 0 <= k && k <= a.Length;
+      invariant forall{int j in (0: k), int i in (0: j); a[i] <= a[j]};
+    {  
+      for(int t = k; 0 < t && a[t] < a[t-1]; t--)
+        invariant 0 <= t && t <= k;
+        invariant forall{int j in (0: t), int i in (0: j); a[i] <= a[j]};
+        invariant forall{int j in (t: k+1), int i in (t: j); a[i] <= a[j]};
+        invariant forall{int j in (t+1: k+1), int i in (0: t); a[i] <= a[j]};
+      { 
+        int temp = a[t];
+        a[t] = a[t-1];
+        a[t-1] = temp;
+      } 
+    } 
+  }
+
+  // Insertion Sort Method, same as above, but writing the ranges of i and j in a different way
+  public static void SortArray1(int[]! a)
+    modifies a[*];
+    ensures forall{int i in (0: a.Length), int j in (i: a.Length); a[i] <= a[j]};
+  {
+    for (int k = 0; k < a.Length; k++)
+      invariant 0 <= k && k <= a.Length;
+      invariant forall{int i in (0: k), int j in (i: k); a[i] <= a[j]};
+    {  
+      for(int t = k; 0 < t && a[t] < a[t-1]; t--)
+        invariant 0 <= t && t <= k;
+        invariant forall{int i in (0: t), int j in (i: t); a[i] <= a[j]};
+        invariant forall{int i in (t: k+1), int j in (i: k+1); a[i] <= a[j]};
+        invariant forall{int i in (0: t), int j in (t+1: k+1); a[i] <= a[j]};
+      { 
+        int temp = a[t];
+        a[t] = a[t-1];
+        a[t-1] = temp;
+      } 
+    } 
+  }
+
+  // Insertion Sort Method, same as above, but this time using filters
+  public static void SortArray2(int[]! a)
+    modifies a[*];
+    ensures forall{int i in (0: a.Length), int j in (0: a.Length), i <= j; a[i] <= a[j]};
+  {
+    for (int k = 0; k < a.Length; k++)
+      invariant 0 <= k && k <= a.Length;
+      invariant forall{int i in (0: k), int j in (0: k), i <= j; a[i] <= a[j]};
+    {  
+      for(int t = k; 0 < t && a[t] < a[t-1]; t--)
+        invariant 0 <= t && t <= k;
+        invariant forall{int i in (0: t), int j in (0: t), i <= j; a[i] <= a[j]};
+        invariant forall{int i in (t: k+1), int j in (t: k+1), i <= j; a[i] <= a[j]};
+        invariant forall{int i in (0: t), int j in (t+1: k+1); a[i] <= a[j]};
+      { 
+        int temp = a[t];
+        a[t] = a[t-1];
+        a[t-1] = temp;
+      } 
+    } 
+  }
+}
