@@ -1,8 +1,8 @@
 Skottie: Sketching using Boogie
 
 This tool is a fork starting from:
-    Boogie v54898
-    SpecSharp v54900
+    Boogie v54898 (http://boogie.codeplex.com/)
+    SpecSharp v54900 (http://specsharp.codeplex.com/)
 
 
 BUILD INSTRUCTIONS
