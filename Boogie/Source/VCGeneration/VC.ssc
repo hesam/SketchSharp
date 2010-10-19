@@ -1710,7 +1710,7 @@ namespace VC
 				      Hashtable! currVals = (Hashtable!) curr[2]; 
 				      IdentifierExpr! vE = new IdentifierExpr(Token.NoToken, v);
 				      AddArrayLengthAssertion(impl, tc, translator, gen, exprs, vE, l);
-				      if (ln > 0 /*&& currVals.Length > 0*/)
+				      if (ln > 0)
 					  AddArrayElementAssertion(impl, tc, translator, gen, exprs, vE, ln, currVals, false);
 				  } else {
 				      //field...
@@ -1720,7 +1720,6 @@ namespace VC
                               }
                           expr = gen.NAry(VCExpressionGenerator.AndOp, exprs);
                       }
-                  //ch.TheoremProver.PushVCExpression(expr);
                   asserts.Add(expr);
               }
 
@@ -3765,27 +3764,27 @@ namespace VC
 		// give default values to fields not set...
 		Hashtable typeFields = impl.TypeFields;
 		if (typeFields != null) {
-		    foreach (int obj in objTypes.Keys) {
-			int tp = (int) ((!) objTypes[obj]);
-			if (!refTypeVals.ContainsKey(obj))
-			    {
-				List<object> objVal = new List<object>();
-				refTypeVals[obj] = objVal;
-				objVal.Add(false);
-				objVal.Add(aDefVal);
-				Hashtable! tmp2 = new Hashtable();
-				objVal.Add(tmp2);
-			    }
-			Hashtable! rVals = (Hashtable!) ((List<object>!) refTypeVals[obj])[2];
-			string! tpN = ((List<string!>!)errModel.partitionToIdentifiers[tp])[0];
-			List<Variable!>! tpFlds = (List<Variable!>!) ((Hashtable!) typeFields[tpN])["int"]; //FIXME
-			foreach (Variable! fld in tpFlds) {
-			    string! fldN = fld.Name;
-			    if (!rVals.ContainsKey(fldN)) {
-				rVals[fldN] = aDefVal; //FIXME
-			    }
-			}
+		  foreach (int obj in objTypes.Keys) {
+		    int tp = (int) ((!) objTypes[obj]);
+		    if (!refTypeVals.ContainsKey(obj))
+		      {
+			List<object> objVal = new List<object>();
+			refTypeVals[obj] = objVal;
+			objVal.Add(false);
+			objVal.Add(aDefVal);
+			Hashtable! tmp2 = new Hashtable();
+			objVal.Add(tmp2);
+		      }
+		    Hashtable! rVals = (Hashtable!) ((List<object>!) refTypeVals[obj])[2];
+		    string! tpN = ((List<string!>!)errModel.partitionToIdentifiers[tp])[0];
+		    List<Variable!>! tpFlds = (List<Variable!>!) ((Hashtable!) typeFields[tpN])["int"]; //FIXME
+		    foreach (Variable! fld in tpFlds) {
+		      string! fldN = fld.Name;
+		      if (!rVals.ContainsKey(fldN)) {
+			rVals[fldN] = aDefVal; //FIXME
+		      }
 		    }
+		  }
 		}
 		// read in array element values...
 		if (hasArrayValAsserts)
@@ -4809,27 +4808,13 @@ namespace VC
                                   toVars[vi.Name] = vi;
                                   toBoogieVars[vi.Name] = translator.LookupVariable(vi);
                               }
-                      }
-                  
-		  // check if this has array fields... //FIXME?
+                      }                  
+		  // check if this has array fields... ///HACK FIXME...
 		  if (!CommandLineOptions.Clo.SynOpt_UnboundRandInpArrLen) {
-		      bool hasArrFld = false;
-		      Hashtable! arrFlds = new Hashtable();
-		      if (!impl.IsStatic) {
-			  Hashtable! flds = translator.GetFieldsForTypes();
-			  impl.TypeFields = flds;
-			  foreach (string! k in flds.Keys)
-			      foreach (Variable! k2 in (List<Variable!>!) ((Hashtable!) flds[k])["ref"]) {
-			      hasArrFld = true;
-			      if (!arrFlds.ContainsKey(k))
-				  arrFlds[k] = new List<Variable!>();
-			      ((List<Variable!>!) arrFlds[k]).Add(k2);
-			  }
-		      }  
-		      //for array args, assert a true formula just so model
+		      impl.TypeFields = translator.GetFieldsForTypes(); //HACK FIXME
 		      //gives concrete values for its elements:
-		      if (impl.NumRefTypeParams > 0  || hasArrFld)
-			  AddTrivialArrayAssertions(impl, translator, tc, gen, toVars, toBoogieVars, exprs, arrFlds, hasArrFld);
+		      if (impl.NumRefTypeParams > 0)
+			  AddTrivialArrayAssertions(impl, translator, tc, gen, toVars, toBoogieVars, exprs);
 		  }
 		  
                   //also require distinct tuples:
@@ -4966,65 +4951,66 @@ namespace VC
       
       // add assetions that dont affect the formula, but ensure the model
       // is complete...
-    public static void AddTrivialArrayAssertions(Implementation! impl, Boogie2VCExprTranslator! translator, TypecheckingContext! tc, VCExpressionGenerator! gen, Hashtable! toVars, Hashtable! toBoogieVars, List<VCExpr!>! exprs, Hashtable! arrFlds, bool hasArrFld)
-      {
-          Variable! nullVar = translator.LookupUnboundVariable("null");
-	  VCExpr! right1 = translator.LookupVariable(nullVar);
-          FunctionCall aL = new FunctionCall((!) impl.ArrayLengthFn);
-	  Expr right5 = new LiteralExpr(Token.NoToken, BigNum.FromInt(CommandLineOptions.Clo.SynOpt_RandGenArrayLengthBound));
-          VariableSeq! refTypeFrms = (!) impl.RefTypeInParams;
-          foreach (Variable! v in refTypeFrms)
-              {
-                  for (int j = 0; j < impl.NumRandomInputGenerations; j++)
-                      {
-                          String addr = "_" + j;
-                          Variable! vi = (Variable!) toVars[v.Name+addr];
-                          VCExpr! left1 = (VCExpr!) toBoogieVars[v.Name+addr];
-                          VCExpr! arrayNullityExpr = gen.Neq(left1, right1);
-                          ExprSeq! es = new ExprSeq();
-                          IdentifierExpr! vE = new IdentifierExpr(Token.NoToken, vi);
-                          es.Add(vE);
-                          Expr left0 = new NAryExpr(Token.NoToken, aL, es);
-                          left0.Typecheck(tc);                          
-                          Expr e2 = Expr.Le(left0, right5); 
-                          e2.Typecheck(tc);
-                          VCExpr! arrayLengthExpr = translator.Translate(e2);
-                          VCExpr! f = gen.Implies(arrayNullityExpr, arrayLengthExpr);
-                          exprs.Add(f);
-                      }
-              }
-	  if (hasArrFld)
-	      {
-		  Expr! heapVar = new IdentifierExpr(Token.NoToken, (!) impl.HeapVar);
-		  List<Expr!>! args;
-		  foreach (string! k in arrFlds.Keys)
-		      foreach (Variable! k2 in (List<Variable!>!) arrFlds[k]) {
-		      Expr! fieldVar = new IdentifierExpr(Token.NoToken, k2);
-		      for (int j = 0; j < impl.NumRandomInputGenerations; j++)
-			  {
-			      String addr = "_" + j;
-			      Variable! vi = translator.LookupUnboundVariable("this" + addr);
-			      IdentifierExpr! vE = new IdentifierExpr(Token.NoToken, vi);
-			      args = new List<Expr!>();
-			      args.Add(vE);
-			      args.Add(fieldVar);			  
-			      Expr left0 = Expr.Select(heapVar, args);
-			      left0.Typecheck(tc);
-			      VCExpr! left1 = translator.Translate(left0);
-			      VCExpr! arrayNullityExpr = gen.Neq(left1, right1);
-			      ExprSeq! es = new ExprSeq();
-			      es.Add(left0);
-			      Expr left2 = new NAryExpr(Token.NoToken, aL, es);
-			      left2.Typecheck(tc);
-			      Expr e2 = Expr.Le(left2, right5); 
-			      e2.Typecheck(tc);
-			      VCExpr! arrayLengthExpr = translator.Translate(e2);
-			      VCExpr! f = gen.Implies(arrayNullityExpr, arrayLengthExpr);
-			      exprs.Add(f);
-			  }
-		  }
-	      }
-      }
+    public static void AddTrivialArrayAssertions(Implementation! impl, Boogie2VCExprTranslator! translator, TypecheckingContext! tc, VCExpressionGenerator! gen, Hashtable! toVars, Hashtable! toBoogieVars, List<VCExpr!>! exprs) //, Hashtable! arrFlds, bool hasFields)
+    {
+	Variable! nullVar = translator.LookupUnboundVariable("null");
+	VCExpr! right1 = translator.LookupVariable(nullVar);
+	FunctionCall aL = new FunctionCall((!) impl.ArrayLengthFn);
+	Expr right5 = new LiteralExpr(Token.NoToken, BigNum.FromInt(CommandLineOptions.Clo.SynOpt_RandGenArrayLengthBound));
+	foreach (Variable! v in (!) impl.ArrayInParams)
+	    {
+		for (int j = 0; j < impl.NumRandomInputGenerations; j++)
+		    {
+			String addr = "_" + j;
+			Variable! vi = (Variable!) toVars[v.Name+addr];
+			VCExpr! left1 = (VCExpr!) toBoogieVars[v.Name+addr];
+			VCExpr! arrayNullityExpr = gen.Neq(left1, right1);
+			ExprSeq! es = new ExprSeq();
+			IdentifierExpr! vE = new IdentifierExpr(Token.NoToken, vi);
+			es.Add(vE);
+			Expr left0 = new NAryExpr(Token.NoToken, aL, es);
+			left0.Typecheck(tc);                          
+			Expr e2 = Expr.Le(left0, right5); 
+			e2.Typecheck(tc);
+			VCExpr! arrayLengthExpr = translator.Translate(e2);
+			VCExpr! f = gen.Implies(arrayNullityExpr, arrayLengthExpr);
+			exprs.Add(f);
+		    }
+	    }
+	Hashtable typeFlds = (!) impl.TypeFields;
+	foreach (Variable! v in (!) impl.RefTypeInParams)
+	    {
+		string! tp = (string!) ((!) impl.InParamsTypes)[v];
+		Expr! heapVar = new IdentifierExpr(Token.NoToken, (!) impl.HeapVar);
+		List<Expr!>! args;
+		foreach (Variable! fld in (List<Variable!>!) ((Hashtable!) typeFlds[tp])["ref"]) {
+		    Expr! fieldVar = new IdentifierExpr(Token.NoToken, fld);
+		    for (int j = 0; j < impl.NumRandomInputGenerations; j++)
+			{
+			    String addr = "_" + j;
+			    Variable! vi = (Variable!) toVars[v.Name+addr];
+			    IdentifierExpr! vE = new IdentifierExpr(Token.NoToken, vi);
+			    args = new List<Expr!>();
+			    args.Add(vE);
+			    args.Add(fieldVar);			  
+			    Expr left0 = Expr.Select(heapVar, args);
+			    left0.Typecheck(tc);
+			    VCExpr! left1 = translator.Translate(left0);
+			    VCExpr! arrayNullityExpr = gen.Neq(left1, right1);
+			    ExprSeq! es = new ExprSeq();
+			    es.Add(left0);
+			    Expr left2 = new NAryExpr(Token.NoToken, aL, es);
+			    left2.Typecheck(tc);
+			    Expr e2 = Expr.Le(left2, right5); 
+			    e2.Typecheck(tc);
+			    VCExpr! arrayLengthExpr = translator.Translate(e2);
+			    VCExpr! f = gen.Implies(arrayNullityExpr, arrayLengthExpr);
+			    exprs.Add(f);
+			}
+		}
+	    }
+    }
+
     private static Hashtable/* Block --> VCExprVar */! BlockVariableMap(List<Block!>! blocks, string! suffix,
                                                                         Microsoft.Boogie.VCExpressionGenerator! gen)
     {

@@ -6,7 +6,7 @@ class Test {
     public int fa;
     public int fb;
     public int[] fc;
-  
+
     //methods
     void f0(int[]! somearr)
 	requires fa == fb;
@@ -17,6 +17,7 @@ class Test {
     }
 
     void f1(int t, int[]! a)
+        requires a.Length <= 5;
 	ensures fa == t + a.Length;
     {
 	fa = ?!(fa, t, a.Length);
@@ -39,6 +40,14 @@ class Test {
         ensures fa == other.fa;
     {
 	fa = other.fa + ?!;
+    }
+
+     static void f5(Test! one)
+       requires one.fc != null;
+       modifies one.fa;
+       ensures one.fa == one.fc.Length;
+    {
+      one.fa = ?!(one.fc.Length);
     }
 
     static int bool0()
@@ -253,9 +262,9 @@ class Test {
         return ?!;
     }
 
-    /*
+  /*
 
-    */
+   */
 
     /*
     DOES NOT WORK YET:

@@ -1661,8 +1661,8 @@ namespace Microsoft.Boogie
       public int NumHoles, HoleIdxL, HoleIdxU;
       public int NumParams, NumIntParams, NumRefTypeParams;
       public int NumRandomInputGenerations, NumInputGenerations;
-      public VariableSeq RefTypeInParams;
-      public Hashtable TypeFields;
+      public VariableSeq RefTypeInParams, ArrayInParams;
+      public Hashtable InParamsTypes, TypeFields;
 
       //HS D: HACK FIXME ALL       
       public Function ArrayLengthFn, ArrayGetFn;
@@ -2308,47 +2308,82 @@ namespace Microsoft.Boogie
           this.Proc.CheckIntAttribute("inline", ref inline);
           
           bool res = false;
+          foreach (Variable! lvar in this.LocVars)
+	      if (lvar is Hole)
+		  {
+		      res = true;
+		      break;
+		  }	            
+	  if (!res)
+	      return false;
+
           Hashtable tmp = new Hashtable();
+	  Hashtable types = new Hashtable();
           int n = 0;
-          int ni = 0, nr = 0;
+          int ni = 0, na = 0, nr = 0;
           int iMin = -1;
           int iMax = -1;
           foreach (Variable! lvar in this.LocVars) {
-              // HS D
-              if (lvar is Hole)
-                  {
-                      tmp[lvar.Name] = lvar;
-                      res = true;
-                      n++;
-                      int i = ((Hole) lvar).id;
-                      if (i > iMax || iMax == -1)
-                          iMax = i;
-                      if (i < iMin || iMin == -1)
-                          iMin = i;
+	      // HS D
+	      string! varN = lvar.Name;
+	      if (lvar is Hole)
+		  {
+		      tmp[varN] = lvar;
+		      n++;
+		      int i = ((Hole) lvar).id;
+		      if (i > iMax || iMax == -1)
+			  iMax = i;
+		      if (i < iMin || iMin == -1)
+			  iMin = i;
                   }
-          }
-	  if (!res)
-	    return false;
-
+	      types[varN + "$in"] = lvar.TypedIdent.WhereExpr;
+          }	  
           this.HoleIdxL = iMin;
           this.HoleIdxU = iMax;
 	  this.HoleVars = tmp; 
 	  this.NumHoles = tmp.Count;
 	  this.RefTypeInParams = new VariableSeq();
-          for (int k = 0; k < this.InParams.Length; k++)
+	  this.ArrayInParams = new VariableSeq();
+	  this.InParamsTypes = new Hashtable();
+	  int sIdx = 0;
+	  if (!IsStatic)
+	    {
+	      string! thisTp = this.Name.Substring(0, this.Name.IndexOf(".")); //FIXME
+	      sIdx = 1;
+	      Variable! v = (!) this.InParams[0];
+	      nr++;
+	      this.RefTypeInParams.Add(v);
+	      this.InParamsTypes[v] = thisTp;
+
+	    }
+          for (int k = sIdx; k < this.InParams.Length; k++)
               {
                   Variable! v = (!) this.InParams[k];
+		  
                   if (v.TypedIdent.Type.IsInt) //FIXME
                       ni++;
 		  else 
 		    {
-		      nr++;
-		      this.RefTypeInParams.Add(v);
+		      //check if array or ref type
+		      string! vN = v.Name;
+		      Expr! wh = (Expr!) types[vN];
+		      object! tp = (!) ((NAryExpr!) ((NAryExpr!) wh).Args[0]).Args[1]; //HACK FIXME
+		      if (tp is NAryExpr) //HACK FIXME
+			{
+			  na++;
+			  this.ArrayInParams.Add(v);
+			}
+		      else 
+			{
+			  nr++;
+			  this.RefTypeInParams.Add(v);
+			  this.InParamsTypes[v] = tp.ToString();
+			}		      
 		    }
               }
           this.NumIntParams = ni;
-	  this.NumRefTypeParams = nr;
-          this.NumParams = ni + nr;
+	  this.NumRefTypeParams = na + nr;
+          this.NumParams = ni + this.NumRefTypeParams;
           if (this.NumParams == 0 && IsStatic)
               {
                   this.NumRandomInputGenerations = 1;
@@ -2356,7 +2391,7 @@ namespace Microsoft.Boogie
               }
           else
               {
-                  this.NumRandomInputGenerations = CommandLineOptions.Clo.SynOpt_NumRandomInputGenerations; //this.NumParams * CommandLineOptions.Clo.SynOpt_NumRandomInputGenerations;
+                  this.NumRandomInputGenerations = CommandLineOptions.Clo.SynOpt_NumRandomInputGenerations;
                   this.NumInputGenerations = this.NumRandomInputGenerations + CommandLineOptions.Clo.SynOpt_NumCEGARIterations;
               }
           return true;
