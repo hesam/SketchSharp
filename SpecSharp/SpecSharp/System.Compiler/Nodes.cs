@@ -19104,7 +19104,7 @@ namespace System.Compiler{
   public class Hole : Local{
     static int ctr = 0;
     public Hole(SourceContext sctx)
-      : base(new Identifier("?!_" + ctr++), CoreSystemTypes.Int32, sctx){
+      : base(new Identifier("?!_" + ctr++), CoreSystemTypes.Int8, sctx){
     }
   }
 

@@ -238,11 +238,11 @@ namespace Microsoft.Boogie
       //HS D
       //Synthesis Options
       public int SynOpt_NumThreads = 0; 
-      public int SynOpt_NumRandomInputGenerations = 20;
+      public int SynOpt_NumRandomInputGenerations = 1;
       public int SynOpt_NumCEGARIterations = 20;
       public int SynOpt_RandGenArrayLengthBound = 10;
       public bool SynOpt_UnboundRandInpArrLen = false;
-
+      public Cci.TypeNode! SynOpt_IntBitWidth = (!) Cci.SystemTypes.Int8;
 
     // whether procedure inlining is enabled at call sites.
     public enum Inlining { None, Assert, Assume, Spec };
@@ -1219,9 +1219,25 @@ namespace Microsoft.Boogie
                  }
                }
              }
-             break;
-          
-             //HS D
+             break;          
+        //HS D
+        case "-intBits":
+        case "/intBits":
+            if (ps.ConfirmArgumentCount(1)) {
+                int bw = System.Convert.ToInt32(args[ps.i]);
+		if (bw == 8)
+		    this.SynOpt_IntBitWidth = (!) Cci.SystemTypes.Int8;
+		else if (bw == 16)
+		    this.SynOpt_IntBitWidth = (!) Cci.SystemTypes.Int16;
+		else if (bw == 32)
+		    this.SynOpt_IntBitWidth = (!) Cci.SystemTypes.Int32;
+		else
+		    ps.Error("Invalid argument \"{0}\" to option {1}.\nValid values are: 8 (default), 16, 32 ", args[ps.i], ps.s);
+		    
+            } else 
+                ps.Error("Invalid argument \"{0}\" to option {1}", args[ps.i], ps.s);
+            break;
+	//HS D
         case "-numRandInpGen":
         case "/numRandInpGen":
             if (ps.ConfirmArgumentCount(1))

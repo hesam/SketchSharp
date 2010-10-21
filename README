@@ -67,8 +67,12 @@ $SKOTTIE\SpecSharp\SscBoogie\Binaries\SscBoogie.exe /sketch <Options> <FILENAME>
 
         /numRandInpGen:N       
 
-            number of random tuples for CEGAR synthesis (default = 20)
+            number of random tuples for CEGAR synthesis (default = 1)
 
+	/intBits:N
+	
+	    bit width for integer holes (allowed = {8, 16, 32}, default = 8)
+	
         /numThreads:N
 
             runs Parallel Z3 with N threads (default = 0)

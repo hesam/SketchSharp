@@ -191,7 +191,15 @@ namespace Microsoft.Boogie
       if (newVar == null)
       {
           //HS D
-          newVar = IsHole(ident.Name) ? new Bpl.Hole(NoToken, ident) : new Bpl.LocalVariable(NoToken, ident);  
+	  if (IsHole(ident.Name)) 
+	      {
+		  // change hole int hole bit width here...
+		  if (translatedType.IsInt)
+		      variableType = CommandLineOptions.Clo.SynOpt_IntBitWidth;
+		  newVar = new Bpl.Hole(NoToken, ident);
+	      } 
+	  else
+	      newVar = new Bpl.LocalVariable(NoToken, ident);  
           newVar.TypedIdent.WhereExpr = Bpl.Expr.And(sink.TypeAssumption(ident.Name, variableType, translatedType), sink.IsAllocated(newVar.TypedIdent));
           this.AddLocal(newVar);
       }

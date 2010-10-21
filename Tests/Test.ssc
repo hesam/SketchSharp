@@ -1,7 +1,7 @@
 using Microsoft.Contracts;
 
 class Test {
-    
+
     // fields
     public int fa;
     public int fb;
@@ -262,14 +262,12 @@ class Test {
         return ?!;
     }
 
-  /*
+    /*
 
    */
 
     /*
     DOES NOT WORK YET:
-
-    static void m2() { int i = ?!; }
 
     */
 
