@@ -241,6 +241,7 @@ class Test {
     }
 
     static bool aEq(int[]! a, int[]! b) 
+	requires a.Length + b.Length <= 10;
         ensures result == (a.Length == b.Length);
     {
         return a.Length + ?! == b.Length;
@@ -271,6 +272,10 @@ class Test {
 
     */
 
+    [Verify(false)]
+    Test() { }
+
+    [Verify(false)]
     public static void Main(string[] args) { }
 
 }

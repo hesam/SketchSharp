@@ -588,6 +588,20 @@ namespace Microsoft.Boogie
         return PipelineOutcome.FatalError;
       }
       
+      //HS D
+      if (CommandLineOptions.Clo.Sketching) 
+	  {
+              Console.WriteLine();
+              Console.WriteLine("Synthesis options:");
+	      Console.WriteLine("..................................................................");
+	      Console.WriteLine("                         logfile path: {0}", CommandLineOptions.Clo.SimplifyLogFilePath);
+	      Console.WriteLine("                         int bitwidth: {0}", CommandLineOptions.Clo.SynOpt_IntBitWidth);
+	      Console.WriteLine("  number of initial input generations: {0}", CommandLineOptions.Clo.SynOpt_NumRandomInputGenerations);
+	      Console.WriteLine("             max number of iterations: {0}", CommandLineOptions.Clo.SynOpt_NumCEGARIterations);
+	      Console.WriteLine("..................................................................");
+              Console.WriteLine();
+	  }
+
       foreach ( Declaration! decl in program.TopLevelDeclarations )
       {
         Implementation impl = decl as Implementation;
