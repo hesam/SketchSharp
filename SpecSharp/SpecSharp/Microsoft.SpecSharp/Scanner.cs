@@ -2611,6 +2611,7 @@ namespace Microsoft.SpecSharp{
     NullCoalescingOp, //??
     NotEqual, // !=
     Object,
+    Operation, // operation //HS D 
     Operator,
     Old,
     Out,
@@ -2667,6 +2668,7 @@ namespace Microsoft.SpecSharp{
     This,
     Throw,
     Throws,
+    Transformable, // transformable //HS D
     True,
     Try,
     Typeof,
@@ -2884,11 +2886,12 @@ namespace Microsoft.SpecSharp{
       keywords['m' - 'a'] = keyword;
       // o
       keyword = new Keyword(Token.Otherwise, "otherwise");
+      keyword = new Keyword(Token.Operation, "operation", keyword); //HS D
       keyword = new Keyword(Token.Override, "override", keyword); 
       keyword = new Keyword(Token.Operator, "operator", keyword);
-      keyword = new Keyword(Token.Object, "object", keyword);      
+      keyword = new Keyword(Token.Object, "object", keyword); 
       keyword = new Keyword(Token.Out, "out", keyword);
-      keyword = new Keyword(Token.Old, "old", true, keyword); 
+      keyword = new Keyword(Token.Old, "old", true, keyword);      
       keywords['o' - 'a'] = keyword;
       // p
       keyword = new Keyword(Token.Protected, "protected");
@@ -2921,7 +2924,10 @@ namespace Microsoft.SpecSharp{
       keyword = new Keyword(Token.Set, "set", keyword);
       keywords['s' - 'a'] = keyword;
       // t
-      keyword = new Keyword(Token.Typeof, "typeof");
+      keyword = new Keyword(Token.Transformable, "transformable"); //HS D     
+      //HS D
+      //keyword = new Keyword(Token.Typeof, "typeof");
+      keyword = new Keyword(Token.Typeof, "typeof", keyword);
       keyword = new Keyword(Token.Throws, "throws", true, keyword);
       keyword = new Keyword(Token.Throw, "throw", keyword);
       keyword = new Keyword(Token.True, "true", keyword);

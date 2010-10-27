@@ -1655,26 +1655,26 @@ namespace Microsoft.Boogie
     [Rep] public List<Block!>! Blocks;
     public Procedure Proc;
  
-      //HS D
-      public bool IsStatic;
-      public Hashtable/*<string,Hole>*/ HoleVars;
-      public int NumHoles, HoleIdxL, HoleIdxU;
-      public int NumParams, NumIntParams, NumRefTypeParams;
-      public int NumRandomInputGenerations, NumInputGenerations;
-      public VariableSeq RefTypeInParams, ArrayInParams;
-      public Hashtable InParamsTypes, TypeFields;
-
-      //HS D: HACK FIXME ALL       
-      public Function ArrayLengthFn, ArrayGetFn;
-      public GlobalVariable HeapVar;
-
+    //HS D
+    public bool IsStatic, HasBlockHole;
+    public Hashtable/*<string,Hole>*/ HoleVars;
+    public int NumHoles, HoleIdxL, HoleIdxU;
+    public int NumParams, NumIntParams, NumRefTypeParams;
+    public int NumRandomInputGenerations, NumInputGenerations;
+    public VariableSeq RefTypeInParams, ArrayInParams;
+    public Hashtable InParamsTypes, TypeFields;
+    
+    //HS D: HACK FIXME ALL       
+    public Function ArrayLengthFn, ArrayGetFn;
+    public GlobalVariable HeapVar;
+    
     // Blocks before applying passification etc.
     // Both are used only when /inline is set.
     public List<Block!>? OriginalBlocks;
     public VariableSeq? OriginalLocVars;
-
-      //HS D: needed for sketching since we revert impl and redo vcgen
-      // once for sketching once for verification
+    
+    //HS D: needed for sketching since we revert impl and redo vcgen
+    // once for sketching once for verification
     public List<Block!>? OriginalBlocks2;
     public VariableSeq? OriginalLocVars2;
 
@@ -2303,20 +2303,24 @@ namespace Microsoft.Boogie
       //HS D
       public bool IsSketchingAndInit()
       {
-          ((!)this.Proc).CheckBooleanAttribute("IsStatic", ref IsStatic);
+	  Procedure! proc = (!) this.Proc;
           int inline = -1;
-          this.Proc.CheckIntAttribute("inline", ref inline);
+          proc.CheckIntAttribute("inline", ref inline);
+	  proc.CheckBooleanAttribute("HasBlockHole", ref HasBlockHole);
           
-          bool res = false;
-          foreach (Variable! lvar in this.LocVars)
-	      if (lvar is Hole)
-		  {
-		      res = true;
-		      break;
-		  }	            
-	  if (!res)
-	      return false;
-
+	  if (!HasBlockHole) {
+	      bool res = false;
+	      foreach (Variable! lvar in this.LocVars)
+		  if (lvar is Hole)
+		      {
+			  res = true;
+			  break;
+		      }	            
+	      if (!res)
+		  return false;
+	  }
+	  
+          proc.CheckBooleanAttribute("IsStatic", ref IsStatic);
           Hashtable tmp = new Hashtable();
 	  Hashtable types = new Hashtable();
           int n = 0;

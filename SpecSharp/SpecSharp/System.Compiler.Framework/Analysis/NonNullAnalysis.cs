@@ -1284,7 +1284,6 @@ namespace System.Compiler{
 
       return base.VisitBlock (block, newState);
     }
-
     /// <summary>
     /// It visit individual statement. It is called from VisitBlock.
     /// 

@@ -99,8 +99,7 @@ namespace Microsoft.Boogie
     
     protected override object VisitNop (Cci.Statement statement, object nothingInteresting)
     {
-        if (statement == null) return null;
-    
+        if (statement == null) return null;    
         this.sink.Comment(statement, "nop");
         return nothingInteresting;
     }

@@ -432,7 +432,7 @@ namespace Microsoft.Boogie
             
             public override Cci.Method VisitMethod (Cci.Method method)
             {
-                if (method == null) { return null; }
+                if (method == null) { return null; }		
 
                 // Ignore methodology methods.
                 if (method.CciKind != Cci.CciMemberKind.Regular)
@@ -440,7 +440,7 @@ namespace Microsoft.Boogie
 
                 if (!ShouldVerify(method))
                     return method;
-                    
+
                 // base.VisitMethod(method);   (Rethink lack of recursion in C#2.0)
                 if ( method.IsAbstract ||
                      method.DeclaringType is Cci.DelegateNode ) // Methods of a delegate class are magic, so just emit a procedure.

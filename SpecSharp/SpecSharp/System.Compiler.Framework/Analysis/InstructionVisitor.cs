@@ -137,7 +137,7 @@ namespace System.Compiler{
 
         case NodeType.Assertion:
           return VisitAssertion((Assertion) stat, arg);
-
+	  
         default:
           throw new UnknownInstructionException("untreated statement " + CodePrinter.StatementToString(stat));					
       }
@@ -833,6 +833,8 @@ namespace System.Compiler{
         {
             return DefaultVisit(assertion, arg);
         }
+
+
 
 		/// <summary>
 		/// Default visitor called by each non-overridden visitor above.

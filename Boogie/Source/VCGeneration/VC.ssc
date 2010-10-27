@@ -3661,7 +3661,6 @@ namespace VC
 			  continue;
 		      }
 		      typeOf[entry[0]] = objTp;
-		      //Console.WriteLine("HS D - obj {0} tp {1}", entry[0], objTp);
 		  }
 	  }
 
@@ -3725,7 +3724,6 @@ namespace VC
 			bool isArray = !typeOf.ContainsKey(obj);
 			List<string!>! strFld = (List<string!>!) errModel.partitionToIdentifiers[subject];
 			string! fld = strFld[0];
-			//Console.WriteLine("HS D - hi {0} {1} {2} {3}", obj, fld, isArray, IsFieldName(fld));
 			if (isArray) 
 			    {
 				heap2Array[entry[3]] = obj;
@@ -3745,14 +3743,12 @@ namespace VC
 				    }
 				Hashtable! rVals = (Hashtable!) ((List<object>!) refTypeVals[obj])[2];
 				objTypes[obj] = typeOf[obj];
-				//Console.WriteLine("HS D - hi {0} {1} {2}", obj, fld, u2Int.ContainsKey(v));
 				if (u2Int.ContainsKey(v)) //HACK FIXME
 				    {
 					rVals[fld] = (BigNum) ((!) errModel.partitionToValue[(int) ((!) u2Int[v])]);
 				    }
 				else //must be array field
 				  {
-				      //Console.WriteLine("HS D - tofix {0} {1} {2}", obj, fld, v);
 				      heap2Array[entry[3]] = entry[1];
 				      List<object!> vl = new List<object!>();
 				      vl.Add(fld);
@@ -3831,7 +3827,6 @@ namespace VC
 		    {
 			List<object!>! vl = (List<object!>!) refsToFix[vs];
 			vs[vl[0]] = (List<object!>) refTypeVals[(int) vl[1]];
-			//Console.WriteLine("HS D - fixing fld {1} to val {2}", vl[0], vl[1]);
 		    }
 	    }
       }

@@ -102,10 +102,6 @@ namespace Microsoft.Boogie
 
       bool isPure = method.IsPure || method.IsConfined || method.IsStateIndependent;
       bool isConsistencyCheckMethod = method.Name.Name.StartsWith("Boogie.ContractConsistencyCheck"); //true if this is a methodology method whose specification is be special-cased.
-
-      //HS D
-      if (method.GetAttribute(Cci.SystemTypes.InlineAttribute) != null) 
-              method.Inline = true;
       
       if ( ! method.IsStatic)
       {
@@ -2028,8 +2024,7 @@ namespace Microsoft.Boogie
 
     internal void GenerateMethodPrelude (Cci.Method! method, MethodSignature! sig, Cci.CfgBlock! entry) 
     {
-       
-        // Need to copy the in and out parameters because there cannot be any
+	// Need to copy the in and out parameters because there cannot be any
         // where clauses on formals in implementations.
         Bpl.VariableSeq! InParameters = new Bpl.VariableSeq();
         Bpl.VariableSeq! OutParameters = new Bpl.VariableSeq();

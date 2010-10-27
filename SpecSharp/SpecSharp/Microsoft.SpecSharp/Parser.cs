@@ -1267,6 +1267,8 @@ namespace Microsoft.SpecSharp{
           case Token.Readonly:
           case Token.Volatile:
           case Token.Virtual:
+	  case Token.Operation: //HS D
+	  case Token.Transformable: //HS D
           case Token.Override:
           case Token.Extern:
             if (parsingInterface && this.currentToken != Token.Readonly && this.currentToken != Token.Static)
@@ -1305,6 +1307,7 @@ namespace Microsoft.SpecSharp{
       TypeFlags result = TypeFlags.None;
       for(int i = 0, n = modifierTokens.Length; i < n; i++){
         switch(modifierTokens[i]){
+
           case Token.New:
             if (ntype.HidesBaseClassMember)
               this.HandleError(modifierContexts[i], Error.DuplicateModifier, "new");             
@@ -1463,6 +1466,8 @@ namespace Microsoft.SpecSharp{
         case Token.Readonly:
         case Token.Volatile:
         case Token.Virtual:
+        case Token.Operation: //HS D
+        case Token.Transformable: //HS D
         case Token.Override:
         case Token.Extern:
         case Token.Unsafe:
@@ -3070,8 +3075,27 @@ namespace Microsoft.SpecSharp{
       this.ParseMethodContract(m, followers|Token.LeftBrace|Token.Semicolon, ref swallowedSemicolonAlready);
       if (!abstractMethod) {
         m.Body = this.ParseBody(m, sctx, followers, swallowedSemicolonAlready);
-        if (m.Body != null)
+        if (m.Body != null) {
           m.SourceContext.EndPos = m.Body.SourceContext.EndPos;
+	  //HS D: see if there are block holes in the body...
+	  //HACK FIXME
+	  if (m.Body.Statements != null) {
+	      bool hasBlockHole = false;
+	      //ExpressionList bHoles = new ExpressionList();
+	      foreach (Statement s in m.Body.Statements)
+		  if (s is BlockHole) {
+		      BlockHole bh = (BlockHole) s;
+		      hasBlockHole = true;
+		      ///bHoles.Add(bh.Repeat);
+		      break;
+		  }
+	      if (hasBlockHole) {
+		  InstanceInitializer oCtor = SystemTypes.HasBlockHoleAttribute.GetConstructor();
+		  AttributeNode attr = new AttributeNode(new MemberBinding(null, oCtor), null, AttributeTargets.Method);
+		  m.Attributes.Add(attr);
+	      }
+	  }
+	}
       } else if (!swallowedSemicolonAlready) {
         m.SourceContext.EndPos = this.scanner.endPos;
         this.SkipSemiColon(followers);
@@ -3522,6 +3546,14 @@ namespace Microsoft.SpecSharp{
             }
             this.inUnsafeCode = true;
             break;
+	  //HS D
+          case Token.Operation:
+	      result |= MethodFlags.Operation;
+	      break;
+	  //HS D
+          case Token.Transformable:
+	      result |= MethodFlags.Transformable;
+	      break;
           default:
             Debug.Assert(false);
             this.HandleError(member.Name.SourceContext, Error.InvalidModifier, modifierContexts[i].SourceText);
@@ -3653,6 +3685,11 @@ namespace Microsoft.SpecSharp{
             goto case Token.Ref;
           }
           break;
+	  //HS D
+          case Token.Transformable:
+	      p.Flags = ParameterFlags.Transformable;
+	      this.GetNextToken();
+	      break;
       }
       bool voidParam = false;
       if (this.currentToken == Token.Void){
@@ -4112,6 +4149,9 @@ namespace Microsoft.SpecSharp{
             }
           }
           goto default;
+	//HS D: a block hole...
+        case Token.Hole:
+	    return this.ParseBlockHole(followers);
         default:
           return this.ParseExpressionStatementOrDeclaration(false, followers, preferExpressionToDeclaration, true);
       }
@@ -4134,6 +4174,62 @@ namespace Microsoft.SpecSharp{
       result.Condition = this.ParseExpression(followers|Token.Semicolon);
       this.SkipSemiColon(followers);
       return result;
+    }
+    
+    //HS D
+    private BlockHole ParseBlockHole(TokenSet followers){	
+	Debug.Assert(this.currentToken == Token.Hole);
+	Hashtable templateParams = new Hashtable();
+	this.GetNextToken();
+	this.Skip(Token.LeftBrace);
+	if (this.currentToken != Token.RightBrace){
+	    string templateParam = this.scanner.GetTokenSource();
+	    this.GetNextToken();
+	    this.Skip(Token.Colon);
+	    Expression templateParamVal = this.currentToken == Token.IntegerLiteral ? this.ParseIntegerLiteral() : this.ParseCommaSeparetedIdentifierSet();
+	    templateParams[templateParam] = templateParamVal;
+	    while (this.currentToken == Token.Comma){
+		this.GetNextToken();
+		templateParam = this.scanner.GetTokenSource();
+		this.GetNextToken();
+		this.Skip(Token.Colon);
+		templateParamVal = this.currentToken == Token.IntegerLiteral ? this.ParseIntegerLiteral() : this.ParseCommaSeparetedIdentifierSet();
+		templateParams[templateParam] = templateParamVal;
+	    }
+	}
+	this.Skip(Token.RightBrace);
+	Literal one = new Literal(1);
+	ConstructArray empty = new ConstructArray();
+	Literal repeat = templateParams.ContainsKey("repeat") ? (Literal) templateParams["repeat"] : one;
+	Literal ifbranches = templateParams.ContainsKey("ifbranches") ? (Literal) templateParams["ifbranches"] : one;
+	Literal branchops = templateParams.ContainsKey("branchops") ? (Literal) templateParams["branchops"] : one;
+	Literal conjunctions = templateParams.ContainsKey("conjunctions") ? (Literal) templateParams["conjunctions"] : one;
+	ConstructArray ops = templateParams.ContainsKey("ops") ? (ConstructArray) templateParams["ops"] : empty;
+	ConstructArray condvars = templateParams.ContainsKey("condvars") ? (ConstructArray) templateParams["condvars"] : empty;
+	ConstructArray argvars = templateParams.ContainsKey("argvars") ? (ConstructArray) templateParams["argvars"] : empty;
+	SourceContext sctx = this.scanner.CurrentSourceContext;
+	BlockHole result = new BlockHole(sctx, repeat, ifbranches, branchops, conjunctions, ops, condvars, argvars); 
+	result.SourceContext = sctx;
+	return result;
+    }
+    
+    //HS D
+    private Expression ParseCommaSeparetedIdentifierSet() {
+	this.Skip(Token.LeftBrace);
+	ExpressionList identifiers = new ExpressionList();
+	if (this.currentToken != Token.RightBrace){
+	    identifiers.Add(this.ParsePrefixedIdentifier());
+	    while (this.currentToken == Token.Comma){	    
+		this.GetNextToken();
+		identifiers.Add(this.ParsePrefixedIdentifier());
+	    }
+	}
+	this.Skip(Token.RightBrace);
+        ConstructArray consArr = new ConstructArray();
+        consArr.SourceContext = this.scanner.CurrentSourceContext;
+        consArr.Initializers = identifiers;
+	return consArr;
+	
     }
 
     static int InvariantCt;
@@ -6590,7 +6686,7 @@ namespace Microsoft.SpecSharp{
               }
               this.scanner.startPos = savedStartPos;
               this.scanner.endPos = savedEndPos;
-            }
+            }	    
             int endCol;
             ExpressionList indices = this.ParseIndexList(followersOrContinuers, lbCtx, out endCol);
             Indexer indexer = new Indexer(expression, indices);
@@ -6632,7 +6728,7 @@ namespace Microsoft.SpecSharp{
             }
             if (expression is TemplateInstance)
               ((TemplateInstance)expression).IsMethodTemplate = true;
-            //HS D: make a linear combination of arguments for hole
+            //HS D: a lambda hole... : make a linear comb of args for hole
             if (expression is Hole) {
                 SourceContext sctx = expression.SourceContext;
                 Expression res = expression;
@@ -7520,6 +7616,8 @@ namespace Microsoft.SpecSharp{
       AddOrRemoveOrModifier |= Token.Readonly;
       AddOrRemoveOrModifier |= Token.Volatile;
       AddOrRemoveOrModifier |= Token.Virtual;
+      AddOrRemoveOrModifier |= Token.Operation; //HS D
+      AddOrRemoveOrModifier |= Token.Transformable; //HS D
       AddOrRemoveOrModifier |= Token.Override;
       AddOrRemoveOrModifier |= Token.Extern;
       AddOrRemoveOrModifier |= Token.Unsafe;
@@ -7591,6 +7689,8 @@ namespace Microsoft.SpecSharp{
       GetOrLeftBracketOrSetOrModifier |= Token.Readonly;
       GetOrLeftBracketOrSetOrModifier |= Token.Volatile;
       GetOrLeftBracketOrSetOrModifier |= Token.Virtual;
+      GetOrLeftBracketOrSetOrModifier |= Token.Operation; //HS D
+      GetOrLeftBracketOrSetOrModifier |= Token.Transformable; //HS D
       GetOrLeftBracketOrSetOrModifier |= Token.Override;
       GetOrLeftBracketOrSetOrModifier |= Token.Extern;
       GetOrLeftBracketOrSetOrModifier |= Token.Unsafe;
@@ -7699,6 +7799,7 @@ namespace Microsoft.SpecSharp{
       ParameterTypeStart |= Token.Ref;
       ParameterTypeStart |= Token.Out;
       ParameterTypeStart |= Token.Params;
+      ParameterTypeStart |= Token.Transformable; //HS D
 
       PrimaryStart = new TokenSet();
       PrimaryStart |= Parser.IdentifierOrNonReservedKeyword;
@@ -7776,6 +7877,8 @@ namespace Microsoft.SpecSharp{
       TypeMemberStart |= Token.Readonly;
       TypeMemberStart |= Token.Volatile;
       TypeMemberStart |= Token.Virtual;
+      TypeMemberStart |= Token.Operation; //HS
+      TypeMemberStart |= Token.Transformable; //HS
       TypeMemberStart |= Token.Override;
       TypeMemberStart |= Token.Extern;
       TypeMemberStart |= Token.Unsafe;

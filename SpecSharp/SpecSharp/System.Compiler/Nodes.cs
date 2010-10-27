@@ -1715,6 +1715,8 @@ namespace System.Compiler{
     Static = 0x0010,
     Final = 0x0020,
     Virtual = 0x0040,
+    Operation = 0x0060, //HS D: FIXME?!
+    Transformable = 0x1100, //HS D: FIXME?!
     HideBySig = 0x0080,
     VtableLayoutMask = 0x0100,
     ReuseSlot = 0x0000,
@@ -1744,6 +1746,7 @@ namespace System.Compiler{
     None = 0x0000,
     In = 0x0001,
     Out = 0x0002,
+    Transformable = 0x0004, //HS D //FIXME?!
     Optional = 0x0010,
     ReservedMask = 0xf000,
     HasDefault = 0x1000,
@@ -3723,6 +3726,7 @@ namespace System.Compiler{
     public bool IsUnsafe;
     public BlockScope Scope;
 #endif
+
     public Block()
       : base(NodeType.Block){
     }
@@ -3760,6 +3764,30 @@ namespace System.Compiler{
       set{this.statements = value;}
     }
   }
+
+  //HS D
+  public class BlockHole : Statement {
+      public int HoleId;
+      public Literal Repeat;
+      public Literal IfBranches;
+      public Literal BranchOps;
+      public Literal Conjunctions;
+      public ConstructArray Ops;
+      public ConstructArray CondVars;
+      public ConstructArray ArgVars;
+      public BlockHole(SourceContext sourceContext, Literal repeat, Literal ifbranches, Literal branchops, Literal conjunctions, ConstructArray ops, ConstructArray condvars, ConstructArray argvars) 
+	  : base(NodeType.Nop){
+	  this.HoleId = Hole.Ctr++;
+	  this.Repeat = repeat;
+	  this.IfBranches = ifbranches;
+	  this.BranchOps = branchops;
+	  this.Conjunctions = conjunctions;
+	  this.Ops = ops;
+	  this.CondVars = condvars;
+	  this.ArgVars = argvars;
+      }
+  }
+
 #if !MinimalReader
   public class LabeledStatement : Block{
     public Identifier Label;
@@ -16035,9 +16063,6 @@ namespace System.Compiler{
     }
 #endif
 
-    //HS D
-    public bool Inline;
-
 #if ExtendedRuntime
     protected internal MethodContract/*?*/ contract;
     internal static readonly MethodContract/*!*/ DummyContract = new MethodContract(null);
@@ -16798,6 +16823,18 @@ namespace System.Compiler{
     /// </summary>
     public virtual bool IsVirtual{
       get{return (this.Flags & MethodFlags.Virtual) != 0;}
+    }
+    //HS D
+    public virtual bool Inline {
+	get{return this.GetAttribute(Cci.SystemTypes.InlineAttribute) != null;}
+    }
+    //HS D
+    public virtual bool IsOperation{
+	get{return (this.Flags & MethodFlags.Operation) != 0;}
+    }
+    //HS D
+    public virtual bool IsTransformable{
+	get{return (this.Flags & MethodFlags.Transformable) != 0;}
     }
 #if !MinimalReader
     public virtual bool IsNonSealedVirtual{
@@ -19102,9 +19139,9 @@ namespace System.Compiler{
 
   //HS D
   public class Hole : Local{
-    static int ctr = 0;
+    public static int Ctr = 0;
     public Hole(SourceContext sctx)
-      : base(new Identifier("?!_" + ctr++), CoreSystemTypes.Int8, sctx){
+      : base(new Identifier("?!_" + Ctr++), CoreSystemTypes.Int8, sctx){
     }
   }
 

@@ -1150,7 +1150,6 @@ namespace Microsoft.Boogie
         if (cfgBlock == null) { return null; }
     
         Cci.Block! block = (!) this.ConvertBlock(cfgBlock);
-
         TypeAssignmentInstructionVisitor instructionVisitor = new TypeAssignmentInstructionVisitor(this.method);
 
         // The dataflow engine demands that we treat dataflowState functionally, so clone it.

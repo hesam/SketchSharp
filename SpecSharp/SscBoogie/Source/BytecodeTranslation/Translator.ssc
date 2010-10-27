@@ -69,6 +69,13 @@ namespace Microsoft.Boogie
       base();
     }
 
+     static ICollection/*<Cci.Variable>*/! GetLocals (Cci.Method method)
+     {
+        LocalGatherer g = new LocalGatherer();
+        g.Visit(method);
+        return g.Locals;
+     }
+
     public void Translate (Cci.Method! method)
     {
         string! fullName = (method.FullName == null) ? "" : method.FullName;

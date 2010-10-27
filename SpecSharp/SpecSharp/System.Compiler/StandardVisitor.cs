@@ -766,7 +766,7 @@ namespace System.Compiler{
       return binaryExpression;
     }
     public virtual Block VisitBlock(Block block){
-      if (block == null) return null;
+      if (block == null) return null;      
       block.Statements = this.VisitStatementList(block.Statements);
       return block;
     }
@@ -1496,7 +1496,7 @@ namespace System.Compiler{
     public virtual StatementList VisitStatementList(StatementList statements){
       if (statements == null) return null;
       for (int i = 0, n = statements.Count; i < n; i++)
-        statements[i] = (Statement)this.Visit(statements[i]);
+	  statements[i] = (Statement)this.Visit(statements[i]);
       return statements;
     }
 #if !MinimalReader
@@ -1976,6 +1976,7 @@ namespace System.Compiler{
         this.CurrentStatementList = savedStatementList;
       }
     }
+
     public override CompilationUnit VisitCompilationUnitSnippet(CompilationUnitSnippet snippet){
       if (snippet == null) return null;
       Document doc = snippet.SourceContext.Document;

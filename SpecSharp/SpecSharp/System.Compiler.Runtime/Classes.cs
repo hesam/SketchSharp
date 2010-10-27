@@ -6599,6 +6599,21 @@ namespace Microsoft.Contracts{
   [AttributeUsage(AttributeTargets.Method, AllowMultiple=false)]
   public sealed class InlineAttribute : Attribute{
   }
+    //HS D
+  /// <summary>
+  /// Indicates 
+  /// </summary>
+  [AttributeUsage(AttributeTargets.Method, AllowMultiple=false)]
+  public sealed class IsOperationAttribute : Attribute{
+  }
+    //HS D
+  /// <summary>
+  /// Indicates 
+  /// </summary>
+  [AttributeUsage(AttributeTargets.Method, AllowMultiple=false)]
+  public sealed class HasBlockHoleAttribute : Attribute{
+  }
+
   [AttributeUsage(AttributeTargets.Field, AllowMultiple = true, Inherited = false)]
   public sealed class DependentAttribute : Attribute {
     /// <summary>

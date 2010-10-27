@@ -2071,11 +2071,25 @@ namespace Microsoft.Boogie
           sig.Requires, sig.Modifies, sig.Ensures);
 
         //HS D: FIXME:
-        if (CommandLineOptions.Clo.Sketching)
+        if (CommandLineOptions.Clo.Sketching) {
             if (method.IsStatic)            
                 procedure.AddAttribute("IsStatic", Bpl.Expr.True);
             if (method.Inline)
                 procedure.AddAttribute("inline", new Bpl.LiteralExpr(NoToken, BigNum.FromInt(1))); //HS D - FIXME
+            if (method.IsOperation) {           
+                procedure.AddAttribute("IsOperation", Bpl.Expr.True);
+		if (method.IsTransformable)            
+		    procedure.AddAttribute("IsTransformable", Bpl.Expr.True);
+		bool[]! trPrms = new bool[method.Parameters.Count];
+		for (int i = 0; i < method.Parameters.Count; i++) {
+		    Cci.Parameter! p = (!) method.Parameters[i];
+		    trPrms[i] = (p.Flags & Cci.ParameterFlags.Transformable) > 0;
+		}
+		procedure.AddAttribute("TransformableParams", trPrms);
+	    }
+	    if (method.GetAttribute(Cci.SystemTypes.HasBlockHoleAttribute) != null)
+		procedure.AddAttribute("HasBlockHole", Bpl.Expr.True);
+	}
 
         this.toplevelDeclarations.Add(procedure);
 

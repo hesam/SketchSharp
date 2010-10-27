@@ -478,7 +478,6 @@ namespace System.Compiler{
 			// if we get the assertion to fail, check that there are no statements with nested blocks below them.
 			return block;
 		}
-
 		// the source context of the currently simplified top level statement
 		private SourceContext current_source_context;
 
@@ -1380,7 +1379,5 @@ namespace System.Compiler{
 			}
 			return bl;
 		}
-
-
 	}
 }
