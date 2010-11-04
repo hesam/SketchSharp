@@ -82,6 +82,6 @@ $SKOTTIE\SpecSharp\SscBoogie\Binaries\SscBoogie.exe /sketch <Options> <FILENAME>
             do not impose implicit array length bound (= 10) when generating random arrays as input
 
 CONTACT
--------------------
+------------------
 Please send mail to Hesam Samimi (hesam@ucla.edu) if there are any problems
 
