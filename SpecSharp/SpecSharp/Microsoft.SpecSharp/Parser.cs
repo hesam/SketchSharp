@@ -54,7 +54,11 @@ namespace Microsoft.SpecSharp{
     internal bool parsingStatement = false;
     private SpecSharpCompilerOptions options;
 
+
     private static Guid dummyGuid = new Guid();
+   
+    public static Hashtable opMethods = new Hashtable(); //HS D: HACK FIXME
+    private Method currMethod; //HS D: HACK FIXME
 
     public Parser(Module symbolTable){
       this.module = symbolTable;
@@ -3074,31 +3078,42 @@ namespace Microsoft.SpecSharp{
       }
       this.ParseMethodContract(m, followers|Token.LeftBrace|Token.Semicolon, ref swallowedSemicolonAlready);
       if (!abstractMethod) {
+	  this.currMethod = m; //HS D: HACK FIXME
         m.Body = this.ParseBody(m, sctx, followers, swallowedSemicolonAlready);
         if (m.Body != null) {
-          m.SourceContext.EndPos = m.Body.SourceContext.EndPos;
+          m.SourceContext.EndPos = m.Body.SourceContext.EndPos;	  
+	  /*
 	  //HS D: see if there are block holes in the body...
 	  //HACK FIXME
 	  if (m.Body.Statements != null) {
-	      bool hasBlockHole = false;
-	      //ExpressionList bHoles = new ExpressionList();
-	      foreach (Statement s in m.Body.Statements)
+	      TypeNode intTp = CoreSystemTypes.Int32;
+	      TypeNode strTp = CoreSystemTypes.String.GetArrayType(1);
+	      ExpressionList bHoles = new ExpressionList();
+	      StatementList sl = m.Body.Statements;
+	      for (int i = 0; i < sl.Count; i++) {
+		  Statement s = sl[i];
 		  if (s is BlockHole) {
 		      BlockHole bh = (BlockHole) s;
-		      hasBlockHole = true;
-		      ///bHoles.Add(bh.Repeat);
+		      bHoles.Add(new Literal(i, intTp));
+		      bHoles.Add(bh.Repeat);
+		      bHoles.Add(bh.IfBranches);
+		      bHoles.Add(bh.BranchOps);
+		      bHoles.Add(bh.Conjunctions);
+		      bHoles.Add(bh.Ops);
+		      bHoles.Add(bh.CondVars);
+		      bHoles.Add(bh.ArgVars);
+		      InstanceInitializer oCtor = SystemTypes.HasBlockHoleAttribute.GetConstructor(intTp, intTp, intTp, intTp, intTp, strTp, strTp, strTp);
+		      AttributeNode attr = new AttributeNode(new MemberBinding(null, oCtor), bHoles, AttributeTargets.Method);
+		      m.Attributes.Add(attr);
 		      break;
 		  }
-	      if (hasBlockHole) {
-		  InstanceInitializer oCtor = SystemTypes.HasBlockHoleAttribute.GetConstructor();
-		  AttributeNode attr = new AttributeNode(new MemberBinding(null, oCtor), null, AttributeTargets.Method);
-		  m.Attributes.Add(attr);
 	      }
 	  }
+	  */
 	}
       } else if (!swallowedSemicolonAlready) {
-        m.SourceContext.EndPos = this.scanner.endPos;
-        this.SkipSemiColon(followers);
+	  m.SourceContext.EndPos = this.scanner.endPos;
+	  this.SkipSemiColon(followers);
       }
     }
     
@@ -3549,6 +3564,7 @@ namespace Microsoft.SpecSharp{
 	  //HS D
           case Token.Operation:
 	      result |= MethodFlags.Operation;
+	      opMethods[member.Name.Name] = member; //HACK FIXME
 	      break;
 	  //HS D
           case Token.Transformable:
@@ -4186,14 +4202,20 @@ namespace Microsoft.SpecSharp{
 	    string templateParam = this.scanner.GetTokenSource();
 	    this.GetNextToken();
 	    this.Skip(Token.Colon);
-	    Expression templateParamVal = this.currentToken == Token.IntegerLiteral ? this.ParseIntegerLiteral() : this.ParseCommaSeparetedIdentifierSet();
+	    Expression templateParamVal = 
+		this.currentToken == Token.IntegerLiteral ? this.ParseIntegerLiteral() : 
+		(this.currentToken == Token.RealLiteral ? 
+		 this.ParseRealLiteral() : this.ParseCommaSeparetedIdentifierSet());
 	    templateParams[templateParam] = templateParamVal;
 	    while (this.currentToken == Token.Comma){
 		this.GetNextToken();
 		templateParam = this.scanner.GetTokenSource();
 		this.GetNextToken();
 		this.Skip(Token.Colon);
-		templateParamVal = this.currentToken == Token.IntegerLiteral ? this.ParseIntegerLiteral() : this.ParseCommaSeparetedIdentifierSet();
+		templateParamVal = 
+		    this.currentToken == Token.IntegerLiteral ? this.ParseIntegerLiteral() : 
+		    (this.currentToken == Token.RealLiteral ? 
+		     this.ParseRealLiteral() : this.ParseCommaSeparetedIdentifierSet());
 		templateParams[templateParam] = templateParamVal;
 	    }
 	}
@@ -4208,7 +4230,7 @@ namespace Microsoft.SpecSharp{
 	ConstructArray condvars = templateParams.ContainsKey("condvars") ? (ConstructArray) templateParams["condvars"] : empty;
 	ConstructArray argvars = templateParams.ContainsKey("argvars") ? (ConstructArray) templateParams["argvars"] : empty;
 	SourceContext sctx = this.scanner.CurrentSourceContext;
-	BlockHole result = new BlockHole(sctx, repeat, ifbranches, branchops, conjunctions, ops, condvars, argvars); 
+	BlockHole result = new BlockHole(sctx, repeat, ifbranches, branchops, conjunctions, ops, condvars, argvars, this.currMethod, opMethods); 
 	result.SourceContext = sctx;
 	return result;
     }
@@ -4218,18 +4240,18 @@ namespace Microsoft.SpecSharp{
 	this.Skip(Token.LeftBrace);
 	ExpressionList identifiers = new ExpressionList();
 	if (this.currentToken != Token.RightBrace){
-	    identifiers.Add(this.ParsePrefixedIdentifier());
+	    identifiers.Add(new Literal(this.ParsePrefixedIdentifier().ToString())); //FIXME
 	    while (this.currentToken == Token.Comma){	    
 		this.GetNextToken();
-		identifiers.Add(this.ParsePrefixedIdentifier());
+		identifiers.Add(new Literal(this.ParsePrefixedIdentifier().ToString())); //FIXME
 	    }
 	}
 	this.Skip(Token.RightBrace);
         ConstructArray consArr = new ConstructArray();
         consArr.SourceContext = this.scanner.CurrentSourceContext;
         consArr.Initializers = identifiers;
-	return consArr;
-	
+	//consArr.ElementType = TypeNode.GetTypeNode(??); //FIXME
+	return consArr;	
     }
 
     static int InvariantCt;

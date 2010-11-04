@@ -2070,13 +2070,15 @@ namespace Microsoft.Boogie
           sig.InParameters, sig.OutParameters,
           sig.Requires, sig.Modifies, sig.Ensures);
 
+
         //HS D: FIXME:
         if (CommandLineOptions.Clo.Sketching) {
             if (method.IsStatic)            
                 procedure.AddAttribute("IsStatic", Bpl.Expr.True);
             if (method.Inline)
                 procedure.AddAttribute("inline", new Bpl.LiteralExpr(NoToken, BigNum.FromInt(1))); //HS D - FIXME
-            if (method.IsOperation) {           
+	    /*
+            if (method.IsOperation) {
                 procedure.AddAttribute("IsOperation", Bpl.Expr.True);
 		if (method.IsTransformable)            
 		    procedure.AddAttribute("IsTransformable", Bpl.Expr.True);
@@ -2087,8 +2089,19 @@ namespace Microsoft.Boogie
 		}
 		procedure.AddAttribute("TransformableParams", trPrms);
 	    }
-	    if (method.GetAttribute(Cci.SystemTypes.HasBlockHoleAttribute) != null)
+	    Cci.AttributeNode blockHoleAttr = method.GetAttribute(Cci.SystemTypes.HasBlockHoleAttribute);
+	    if (blockHoleAttr != null) {		
 		procedure.AddAttribute("HasBlockHole", Bpl.Expr.True);
+		procedure.AddAttribute("BlockHoleStmtIdx", (!) ((!) blockHoleAttr.Expressions)[0]);
+		procedure.AddAttribute("BlockHoleInfo", blockHoleAttr.Expressions);
+		
+		foreach (Cci.Literal bhe in blockHoleAttr.Expressions) {
+		    Console.WriteLine("HS D - wow attr block hole {0}:{1}", bhe.Value, bhe.Value.GetType());		    
+		}
+		int blockHoleStmtIdx = (int) ((Cci.Literal) (blockHoleAttr.Expressions[0])).Value;
+		Console.WriteLine("HS D - bh idx is {0}", blockHoleStmtIdx);			
+	    }
+	    */
 	}
 
         this.toplevelDeclarations.Add(procedure);

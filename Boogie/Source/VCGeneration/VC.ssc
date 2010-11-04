@@ -1818,6 +1818,18 @@ namespace VC
                 CommandLineOptions.Clo.PrintErrorModel = 4; //FIXME
                 CommandLineOptions.Clo.PrintErrorModelFile = "C:\\Temp\\z3_model"; //FIXME
                 impl.CloneImpl();
+		if (ReportSynOpts) {
+		    Console.WriteLine();
+		    Console.WriteLine("Synthesis options:");
+		    Console.WriteLine("..................................................................");
+		    Console.WriteLine("                         logfile path: {0}", CommandLineOptions.Clo.SimplifyLogFilePath);
+		    Console.WriteLine("                         int bitwidth: {0}", CommandLineOptions.Clo.SynOpt_IntBitWidth);
+		    Console.WriteLine("  number of initial input generations: {0}", CommandLineOptions.Clo.SynOpt_NumRandomInputGenerations);
+		    Console.WriteLine("             max number of iterations: {0}", CommandLineOptions.Clo.SynOpt_NumCEGARIterations);
+		    Console.WriteLine("..................................................................");
+		    Console.WriteLine();
+		    ReportSynOpts = false;
+		}
             }
         
         //return VerifyImplementation(impl, program, callback, isSketching, 0, false, false, null);

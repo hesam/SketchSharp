@@ -25,6 +25,7 @@ using Class = Microsoft.Cci.ClassNode;
 using Interface = Microsoft.Cci.InterfaceNode;
 using Event = Microsoft.Cci.EventNode;
 using Throw = Microsoft.Cci.ThrowNode;
+
 #endif
 #if CCINamespace
 namespace Microsoft.Cci{
@@ -67,6 +68,7 @@ namespace System.Compiler{
   public
 #endif  
   class StandardVisitor: Visitor{
+
 #if !MinimalReader
     public Visitor callingVisitor;
 #endif
@@ -152,6 +154,9 @@ namespace System.Compiler{
 #endif
         case NodeType.Block : 
           return this.VisitBlock((Block)node);
+	  //HS D
+        case NodeType.BlockHole :
+          return this.VisitBlockHole((BlockHole)node);
 #if !MinimalReader
         case NodeType.BlockExpression :
           return this.VisitBlockExpression((BlockExpression)node);
@@ -770,6 +775,210 @@ namespace System.Compiler{
       block.Statements = this.VisitStatementList(block.Statements);
       return block;
     }
+
+    //HS D
+    //FIXME: move!
+    public virtual Statement VisitBlockHole(BlockHole block){
+	if (block == null) return null;
+	//HACK FIXME...
+	int repeatN = (int) block.Repeat.Value;
+	object ifBranchesOrig = block.IfBranches.Value;	
+	bool ifBranchesNoElse = !(ifBranchesOrig is int);
+	int ifBranches = ifBranchesNoElse ? 
+	    (int) ((double) ifBranchesOrig) : (int) ifBranchesOrig;
+	int branchOps = (int) block.BranchOps.Value;
+        int conjunctions = (int) block.Conjunctions.Value;
+        ExpressionList ops = block.Ops.Initializers;
+        ExpressionList condVars = block.CondVars.Initializers;
+        ExpressionList argVars = block.ArgVars.Initializers;
+	SourceContext sctx = block.SourceContext;
+	Method declaringMethod = block.DeclaringMethod;
+	Hashtable classOpMethods = block.ClassOpMethods;
+	ParameterList callingMtdParams = declaringMethod.Parameters;
+	Identifier opN = (Identifier) ((Literal) ops[0]).Value; //FIXME:
+	Method op = (Method) classOpMethods[opN.Name]; //HACK FIXME
+	Debug.Assert (op != null, "Did you forget to mark method " + opN.Name + " as operation?"); //FIXME	//op.IsOperation
+	bool isVoid = IsVoidType(op.ReturnType);
+	Expression tgt = new MemberBinding(null, op); //op.Name;	
+	ParameterList ps = op.Parameters;
+	bool opTr = op.IsTransformable;
+	bool[] trPrms = new bool[ps.Count];
+	for (int i = 0; i < ps.Count; i++) {
+	    Parameter p = ps[i];
+	    trPrms[i] = (p.Flags & ParameterFlags.Transformable) > 0;
+	}
+	StatementList stmts = new StatementList();
+	for(int i = 1; i <= repeatN; i++)
+	    stmts.Add(GenIfBranch(sctx, ifBranches, ifBranchesNoElse, conjunctions, tgt, condVars, argVars, ps, isVoid, opTr, trPrms, callingMtdParams));
+	Block res = new Block(stmts);	
+	Console.WriteLine("HS D - block hole...\n");
+	PrintMe(0, res);
+	return res;
+    }
+    
+
+
+    //HS D
+    public static Statement GenIfBranch(SourceContext sctx, int ifBranches, bool ifBranchesNoElse, int conjunctions, Expression tgt, ExpressionList condVars, ExpressionList argVars, ParameterList ps, bool isVoid, bool opTr, bool[] trPrms, ParameterList callingMtdParams) {
+	Statement[] opCalls = new Statement[ifBranches];
+	Statement res = GenOpCall(sctx, tgt, argVars, ps, isVoid, opTr, trPrms, callingMtdParams);
+	if (ifBranchesNoElse) {
+	    Expression opCond = GenCond(sctx, conjunctions, condVars);
+	    Block trueBlk = new Block(new StatementList(res));
+	    res = new If(opCond, trueBlk, null);
+	}	    
+	if (ifBranches > 1) {
+	    for(int i = 1; i < ifBranches; i++) {
+		Expression opCond = GenCond(sctx, conjunctions, condVars);
+		Statement curr = GenOpCall(sctx, tgt, argVars, ps, isVoid, opTr, trPrms, callingMtdParams);
+		Block trueBlk = new Block(new StatementList(curr));
+		res = new If(opCond, trueBlk, new Block(new StatementList(res)));
+	    }
+	}
+	return res;       
+    }
+
+    //HS D
+    public static Expression GenCond(SourceContext sctx, int conjunctions, ExpressionList condVars) {
+	Expression res = GenLambdaHole(sctx, condVars, true);
+	for(int i = 1; i < conjunctions; i++) {
+	    res = new BinaryExpression(res, GenLambdaHole(sctx, condVars, true), NodeType.LogicalAnd, sctx);
+	    res.Type = CoreSystemTypes.Boolean;
+	}
+	return res;
+    }
+
+    //HS D
+    public static Statement GenOpCall(SourceContext sctx, Expression tgt, ExpressionList argVars, ParameterList ps, bool isVoid, bool opTr, bool[] trPrms, ParameterList callingMtdParams) {
+	ExpressionList args = new ExpressionList();
+	for (int i = 0; i < ps.Count; i++) {
+	    Parameter p = ps[i];
+	    ParameterFlags flags = p.Flags;
+	    Expression arg;
+	    bool pTr = trPrms[i];
+	    if (pTr) {
+		arg = GenLambdaHole(sctx, argVars, false);
+	    } else {
+		arg = callingMtdParams[i].Name;
+		if (p.TypeExpression is ReferenceTypeExpression)
+		    arg = new UnaryExpression(arg, p.IsOut ? NodeType.OutAddress : NodeType.RefAddress, sctx);
+	    }
+	    args.Add(arg);
+	}
+	MethodCall c = new MethodCall(tgt, args);
+ 	Statement res = isVoid ? new ExpressionStatement(c) : new Return(c);
+	return res;
+    }
+
+    //HS D
+    public static Expression GenLambdaHole(SourceContext sctx, ExpressionList argVars, bool isBool) {
+	Expression res;
+	if (argVars.Count > 0)
+	    {
+		res = new BinaryExpression(new Hole(sctx), (Identifier) ((Literal) argVars[0]).Value, NodeType.Mul, sctx);
+		res.Type = CoreSystemTypes.Int32;
+		for (int i = 1; i < argVars.Count; i++) {
+		    res = new BinaryExpression(res, new BinaryExpression(new Hole(sctx), (Identifier) ((Literal) argVars[i]).Value, NodeType.Mul, sctx), NodeType.Add, sctx);
+		    res.Type = CoreSystemTypes.Int32;
+		}
+		res = new LambdaHole(res, new Hole(sctx), NodeType.Add, sctx);
+		res.Type = CoreSystemTypes.Int32;
+	    }
+	else {
+	    res = new Hole(sctx);
+	}
+	if (isBool)
+	    res = new BinaryExpression(res, new Literal(0), NodeType.Ge, sctx);
+	return res;
+    }
+
+    public static bool IsVoidType(TypeNode type){
+      TypeExpression tExpr = type as TypeExpression;
+      if (tExpr == null) return false;
+      Literal lit = tExpr.Expression as Literal;
+      if (lit == null) return false;
+      if (!(lit.Value is TypeCode)) return false;
+      return TypeCode.Empty == (TypeCode)lit.Value;
+    }
+
+    //HS D
+    public static void PrintMe(int indent, Node n) {
+	for (int i = 0; i < indent; i++)
+	    Console.Write(" ");
+	switch (n.NodeType) {
+	case NodeType.Block: 
+	    Block b = (Block) n;
+	    if (b.Statements == null)
+		return;
+	    Console.WriteLine("{");
+	    foreach (Statement s in b.Statements)
+		PrintMe(indent + 2, s);
+	    Console.WriteLine("}");
+	    break;
+	case NodeType.If:
+	    If i = (If) n;
+	    Console.Write("if (");
+	    PrintMe(0, i.Condition);
+	    Console.WriteLine(") {");
+	    PrintMe(indent + 2, i.TrueBlock);
+	    if (i.FalseBlock != null) {
+		Console.WriteLine("else");
+		PrintMe(indent + 2, i.FalseBlock);
+		Console.WriteLine("}");
+	    }
+	    break;
+	case NodeType.MethodCall:
+	    MethodCall c = (MethodCall) n;
+	    PrintMe(0, c.Callee);
+	    Console.Write("(");
+	    foreach (Expression s in c.Operands) {
+		PrintMe(0, s);
+		Console.Write(", ");
+	    }
+	    Console.WriteLine(")");
+	    break;
+	case NodeType.LogicalAnd:
+	case NodeType.LogicalOr:
+        case NodeType.Eq : 
+        case NodeType.Ge : 
+        case NodeType.Gt : 
+        case NodeType.Le : 
+        case NodeType.Lt : 
+        case NodeType.Sub : 
+        case NodeType.Add : 
+        case NodeType.Mul :
+        case NodeType.Div :
+	    BinaryExpression e1 = (BinaryExpression) n;
+	    Console.Write("( ");
+	    PrintMe(0, e1.Operand1);
+	    Console.Write(" {0} ", n.NodeType);
+	    PrintMe(0, e1.Operand2);
+	    Console.Write(" )");
+	    break;
+	case NodeType.Return :
+	    Console.Write("return ");
+	    ExpressionStatement e4 = (ExpressionStatement) n;	    
+	    PrintMe(0, e4.Expression);
+	    break;
+        case NodeType.ExpressionStatement :
+	    ExpressionStatement e2 = (ExpressionStatement) n;	    
+	    PrintMe(0, e2.Expression);
+	    break;
+        case NodeType.MemberBinding :
+	    PrintMe(0, ((MemberBinding) n).BoundMember.Name);
+	    break;
+        case NodeType.RefAddress :
+        case NodeType.OutAddress :
+	    UnaryExpression e3 = (UnaryExpression) n;	    
+	    Console.Write("{0} ", n.NodeType);
+	    PrintMe(0, e3.Operand);
+	    break;	   
+	default:	    
+	    Console.Write("{0}", n.ToString());
+	    break;
+	}
+    }
+
 #if !MinimalReader
     public virtual Expression VisitBlockExpression(BlockExpression blockExpression){
       if (blockExpression == null) return null;
@@ -1254,7 +1463,7 @@ namespace System.Compiler{
       return members;
     }
     public virtual Method VisitMethod(Method method){
-      if (method == null) return null;
+      if (method == null) return null;      
       method.Attributes = this.VisitAttributeList(method.Attributes);
       method.ReturnAttributes = this.VisitAttributeList(method.ReturnAttributes);
       method.SecurityAttributes = this.VisitSecurityAttributeList(method.SecurityAttributes);

@@ -1329,6 +1329,7 @@ namespace System.Compiler{
     AddressOf,
     AssignmentStatement,
     Block,
+    BlockHole, //HS D
     Catch,
     Construct,
     ConstructArray,
@@ -1715,8 +1716,8 @@ namespace System.Compiler{
     Static = 0x0010,
     Final = 0x0020,
     Virtual = 0x0040,
-    Operation = 0x0060, //HS D: FIXME?!
-    Transformable = 0x1100, //HS D: FIXME?!
+    Operation = 0x9000, //HS D: FIXME?!
+    Transformable = 0x9100, //HS D: FIXME?!
     HideBySig = 0x0080,
     VtableLayoutMask = 0x0100,
     ReuseSlot = 0x0000,
@@ -3775,17 +3776,45 @@ namespace System.Compiler{
       public ConstructArray Ops;
       public ConstructArray CondVars;
       public ConstructArray ArgVars;
-      public BlockHole(SourceContext sourceContext, Literal repeat, Literal ifbranches, Literal branchops, Literal conjunctions, ConstructArray ops, ConstructArray condvars, ConstructArray argvars) 
-	  : base(NodeType.Nop){
-	  this.HoleId = Hole.Ctr++;
+      public Hashtable ClassOpMethods; //HACK FIXME
+      public Method DeclaringMethod; //HACK FIXME
+      public BlockHole(SourceContext sourceContext, Literal repeat, Literal ifbranches, Literal branchops, Literal conjunctions, ConstructArray ops, ConstructArray condvars, ConstructArray argvars, Method declaringMethod, Hashtable opMethods) 
+	  : base(NodeType.BlockHole, sourceContext){
+	  //this.HoleId = Hole.Ctr++;
 	  this.Repeat = repeat;
 	  this.IfBranches = ifbranches;
 	  this.BranchOps = branchops;
 	  this.Conjunctions = conjunctions;
-	  this.Ops = ops;
 	  this.CondVars = condvars;
 	  this.ArgVars = argvars;
+	  this.DeclaringMethod = declaringMethod;
+	  this.ClassOpMethods = opMethods;
+	  //FIXME:
+	  ExpressionList nInits = new ExpressionList();
+	  foreach (Expression e in ops.Initializers) {
+	      string vN = (string) ((Literal) e).Value;	      
+	      Identifier v = new Identifier(vN);
+	      nInits.Add(new Literal(v));
+	  }
+	  ops.Initializers = nInits;
+	  nInits = new ExpressionList();
+	  foreach (Expression e in condvars.Initializers) {
+	      string vN = (string) ((Literal) e).Value;	      
+	      Identifier v = new Identifier(vN);
+	      nInits.Add(new Literal(v));
+	  }
+	  condvars.Initializers = nInits;
+	  nInits = new ExpressionList();
+	  foreach (Expression e in argvars.Initializers) {
+	      string vN = (string) ((Literal) e).Value;	      
+	      Identifier v = new Identifier(vN);
+	      nInits.Add(new Literal(v));
+	  }
+	  argvars.Initializers = nInits;
+	  this.Ops = ops;
+
       }
+
   }
 
 #if !MinimalReader
@@ -14579,7 +14608,7 @@ namespace System.Compiler{
     }
   }
   public class ArglistArgumentExpression : NaryExpression {
-    public ArglistArgumentExpression(ExpressionList args, SourceContext sctx) : base(args, NodeType.ArglistArgumentExpression) {
+      public ArglistArgumentExpression(ExpressionList args, SourceContext sctx) : base(args, NodeType.ArglistArgumentExpression) {
       this.SourceContext = sctx;
     }
   }

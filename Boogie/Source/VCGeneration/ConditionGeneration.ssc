@@ -250,6 +250,7 @@ namespace VC
 
       //HS D
       public static Hashtable! DefaultHoleValues;
+      public static bool ReportSynOpts = true;
 
       //HS D
       public static Random! rand = new Random();

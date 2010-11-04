@@ -1663,6 +1663,8 @@ namespace Microsoft.Boogie
     public int NumRandomInputGenerations, NumInputGenerations;
     public VariableSeq RefTypeInParams, ArrayInParams;
     public Hashtable InParamsTypes, TypeFields;
+    public int BlockHoleStmtIdx;
+    public System.Compiler.ExpressionList BlockHolesInfo;
     
     //HS D: HACK FIXME ALL       
     public Function ArrayLengthFn, ArrayGetFn;
@@ -2308,7 +2310,11 @@ namespace Microsoft.Boogie
           proc.CheckIntAttribute("inline", ref inline);
 	  proc.CheckBooleanAttribute("HasBlockHole", ref HasBlockHole);
           
-	  if (!HasBlockHole) {
+	  if (HasBlockHole) {
+	      // get block holes info...
+	      //BlockHolesInfo.......
+	      proc.CheckIntAttribute("BlockHoleStmtIdx", ref BlockHoleStmtIdx);
+	  } else {
 	      bool res = false;
 	      foreach (Variable! lvar in this.LocVars)
 		  if (lvar is Hole)

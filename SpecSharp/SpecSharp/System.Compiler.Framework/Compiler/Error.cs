@@ -226,6 +226,7 @@ namespace System.Compiler{
     NoSuchMember,
     NoSuchMethod,
     NoSuchOperator,
+    NoSuchOperation, //HS D
     NoSuchQualifiedType,
     NoSuchVariable,
     NoSuchType,

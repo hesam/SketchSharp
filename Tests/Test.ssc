@@ -247,7 +247,6 @@ class Test {
         return a.Length + ?! == b.Length;
     }
 
-
     static int inline1()
         ensures result == 43;
     {
@@ -264,6 +263,7 @@ class Test {
     }
 
     /*
+
 
    */
 
