@@ -1,0 +1,210 @@
+
+using System;
+using Microsoft.Contracts;
+
+public class List {
+
+    // ------------------------------------------------------------------   
+    //  Globals
+    // ------------------------------------------------------------------   
+    
+    const int LENGTH = 10;
+
+    // ------------------------------------------------------------------   
+    //  C1
+    // ------------------------------------------------------------------   
+    
+    // Insert_Insert 
+    [Verify(false)]
+    static int Insert_Insert_C1(int[]! a, int[]! b, int size, int pos1, int val1, int pos2, int val2) 
+	requires a.Length == LENGTH;
+	requires a != b;
+        requires forall {int i in (0 : size); a[i] == b[i]};
+        requires a.Length == b.Length;      
+        requires size < a.Length - 1;
+        requires size >= 0;
+        requires pos1 <= size;
+        requires pos2 <= size;
+        requires pos1 >= 0;
+        requires pos2 >= 0;
+        modifies a[*], b[*];
+        ensures forall {int i in (0 : result); a[i] == b[i]};
+    {
+	int sizea = size, sizeb = size;
+	
+	// op2     << op1
+	// Insert2 << Insert1
+	sizea = Insert(a, sizea, pos1, val1);       
+	sizea = T_Insert_Insert(a, sizea, pos2, val2, pos1, val1);
+	
+	// op1     << op2
+	// Insert1 << Insert2
+	sizeb = Insert(b, sizeb, pos2, val2);       
+	sizeb = T_Insert_Insert(b, sizeb, pos1, val1, pos2, val2);
+	
+	assert sizea == sizeb;
+	return sizea;
+    }
+
+    // Insert_Delete 
+    [Verify(true)]
+    static int Insert_Delete_C1(int[]! a, int[]! b, int size, int pos1, int val1, int pos2) 
+	requires a.Length == LENGTH;
+	requires a != b;
+        requires forall {int i in (0 : size); a[i] == b[i]};
+        requires a.Length == b.Length;      
+        requires size < a.Length;
+        requires size >= 0;
+        requires pos1 <= size;
+        requires pos2 < size;
+        requires pos1 >= 0;
+        requires pos2 >= 0;
+        modifies a[*], b[*];
+        ensures forall {int i in (0 : result); a[i] == b[i]};
+    {
+	int sizea = size, sizeb = size;
+	
+	// op2     << op1
+	// Delete2 << Insert1
+	sizea = Insert(a, sizea, pos1, val1);       
+	sizea = T_Delete_Insert(a, sizea, pos2, pos1, val1);
+	
+	// op1     << op2
+	// Insert1 << Delete2
+	sizeb = Delete(b, sizeb, pos2);       
+	sizeb = T_Insert_Delete(b, sizeb, pos1, val1, pos2);
+	
+	assert sizea == sizeb;
+	return sizea;
+    }
+    
+    // ------------------------------------------------------------------   
+    //  Transforms
+    // ------------------------------------------------------------------   
+    
+    [Inline]
+    [Verify(true)]
+    static int T_Insert_Insert(int[]! a, int size, int pos1, int val1, int pos2, int val2)
+        modifies a[*];
+    {
+	if (pos1 > pos2)
+	    return Insert(a, size, pos1 + 1, val1);
+	else if (pos1 == pos2 && val1 > val2)
+	    return Insert(a, size, pos1 + 1, val1);
+	else
+	    return Insert(a, size, pos1 + 1, val1);
+    }
+
+    [Inline]
+    [Verify(true)]
+    static int T_Insert_Delete(int[]! a, int size, int pos1, int val1, int pos2)
+        modifies a[*];
+    {
+	if (pos1 > pos2)
+	    return Insert(a, size, pos1 - 1, val1);	
+	else
+	    return Insert(a, size, pos1, val1);	
+    }
+
+    [Inline]
+    [Verify(true)]
+    static int T_Delete_Insert(int[]! a, int size, int pos1, int pos2, int val2)
+        modifies a[*];
+    {
+// 	if (pos1 >= pos2)
+// 	    return Delete(a, size, pos1 + ?!);
+// 	else
+// 	    return Delete(a, size, pos1);
+	?!{repeat: 1, ifbranches: 2, branchops: 1, conjunctions: 1, ops: {Delete}, condvars: {pos1, pos2}, argvars: {pos1}}
+    }
+  
+    // ------------------------------------------------------------------   
+    //  Operations
+    // ------------------------------------------------------------------   
+    
+    // Insert
+    [Verify(false)]
+    static operation int Insert(int[]! a, int size, int pos, transformable int val)
+        requires size < a.Length;
+        requires pos >= 0;
+        requires pos <= size;
+        modifies a[*];    
+        ensures forall {int i in (0 : pos); a[i] == old(a[i])};
+        ensures a[pos] == val;
+        ensures forall {int i in (pos+1 : size+1); a[i] == old(a[i-1])};
+        ensures result == size + 1;
+    {
+	int[]! copy = ArrayCopy(a);
+	return InsertH(a, size, pos, val, copy);
+    }
+    
+    [Inline]
+    [Verify(false)]
+    static int InsertH(int[]! a, int size, int pos, int val, int[]! aCp)
+	modifies a[*], aCp.0;
+    {
+	for (int i = size; i > pos; i--) 
+	    invariant i <= size;
+	    invariant forall {int j in (i+1 : size+1); a[j] == aCp[j-1]};
+	    invariant forall {int j in (0 : pos); a[j] == aCp[j]};
+	    {
+		a[i] = aCp[i-1];
+	    }
+	    a[pos] = val;
+	    return size + 1;
+    }
+
+    // Delete
+    [Verify(false)]
+    static operation int Delete(int[]! a, int size, transformable int pos)
+        requires size <= a.Length;
+        requires pos >= 0;
+        requires pos < size;
+        modifies a[*];    
+        ensures forall {int i in (0 : pos); a[i] == old(a[i])};
+        ensures forall {int i in (pos : size-1); a[i] == old(a[i+1])};
+        ensures result == size - 1;
+    {
+        int[]! copy = ArrayCopy(a);
+        return DeleteH(a, size, pos, copy);
+    }
+
+    [Inline]
+    [Verify(false)]
+    static int DeleteH(int[]! a, int size, int pos, int[]! aCp)
+        modifies a[*], aCp.0;
+    {
+        for (int i = size - 1; i > pos; i--) 
+            invariant i <= size - 1;
+            invariant forall {int j in (0 : pos); a[j] == aCp[j]};
+            invariant forall {int j in (i+1 : size); a[j-1] == aCp[j]};
+        {
+            a[i-1] = aCp[i];
+        }
+        return size - 1;
+    }
+    
+    // ------------------------------------------------------------------   
+    //  Helpers
+    // ------------------------------------------------------------------   
+    
+    [Verify(false)]
+    static int[]! ArrayCopy(int[]! src)    	
+	ensures result.Length == src.Length;
+        ensures forall {int i in (0 : src.Length); result[i] == src[i]};
+        ensures result != src;
+    {
+	int[] dest = new int[src.Length];
+	for(int i = 0; i < src.Length; i++)
+	    invariant forall{int j in (0:i); dest[j] == src[j]};
+	{
+	    dest[i] = src[i];
+	}
+	return dest;	
+    }
+    
+    [Verify(false)]
+    public static void Main(string[] args) { }
+    
+}
+    
