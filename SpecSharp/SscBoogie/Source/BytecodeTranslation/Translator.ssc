@@ -151,12 +151,9 @@ namespace Microsoft.Boogie
         RunTypeAnalysis(method, cfg);
 
         this.instructionTranslator = new InstructionTranslator(this.sink, sig, this.typeAnalysis);
-        this.sink.InstructionTranslator = this.instructionTranslator;
-        
+        this.sink.InstructionTranslator = this.instructionTranslator;        
         sig.GenerateMethodPrelude(method, sig, entry);
-        
         RunLoopAnalysis(method, cfg, sig, entry, exit);
-
 #if DEBUG_PRINT
         System.Console.WriteLine("Here are all translated blocks:");
         foreach (Cci.Block! cciBlk in (!)sink.blockTranslationAll.Keys) {
@@ -214,14 +211,52 @@ namespace Microsoft.Boogie
             assert ! Sink.IsInstrumentationCode(currentCfgBlock);
             
             instructionTranslator.CurrentCfgBlock = currentCfgBlock;
-            
-            // Translate the statements within this block
+
+	    //HS D: see if block has any block holes, if so translate here...?
+	    bool hasBlockHole = false;
             for (int i = 0; i < currentCfgBlock.Length; i ++)
             {
-               Cci.Statement statement = (Cci.Statement) currentCfgBlock[i];
-               this.instructionTranslator.Visit(statement, null);
-            }
-            
+		Cci.Statement statement = (Cci.Statement) currentCfgBlock[i];
+		if (statement is Cci.ExpressionStatement &&
+		    ((Cci.ExpressionStatement)statement).Expression is Cci.MethodCall &&
+		    ((Cci.MemberBinding) ((Cci.MethodCall) ((Cci.ExpressionStatement)statement).Expression).Callee).BoundMember.Name.Name == "BlockHole") {
+		    hasBlockHole = true;
+		    sink.MarkProcedureWithBlockHole(method);
+		    break;		  
+		} 
+	    }
+	    //HS D: HACK FIXME
+	    int idx = 0;
+	    if (hasBlockHole) 
+		{
+		    int[] ints = new int[4];
+		    List<string!>[] arrs = new List<string!>[3];
+		    Cci.AssignmentStatement aStmt;
+		    while (idx < 4) {
+			aStmt = (Cci.AssignmentStatement) currentCfgBlock[idx];
+			ints[idx++] = (int) ((Cci.Literal) aStmt.Source).Value;
+		    }
+		    for (int j = 0; j < 3; j++) {
+			aStmt = (Cci.AssignmentStatement) currentCfgBlock[idx++];
+			int sz = (int) ((Cci.Literal) aStmt.Source).Value;
+			List<string!> arr = new List<string!>(sz);
+			while (sz-- > 0) {
+			    idx += 3;
+			    aStmt = (Cci.AssignmentStatement) currentCfgBlock[idx++];
+			    arr.Add(((Cci.Literal) aStmt.Source).Value.ToString());
+			}
+			arrs[j] = arr;
+			idx++;
+		    }
+		    instructionTranslator.currentBlock.Cmds.Add(new Bpl.BlockHole(NoToken, ints[0], ints[1], ints[2], ints[3], arrs[0], arrs[1], arrs[2]));
+		    idx++;
+		}
+	    // Translate the statements within this block
+	    for (int i = idx; i < currentCfgBlock.Length; i ++)
+		{
+		    Cci.Statement statement = (Cci.Statement) currentCfgBlock[i];
+		    this.instructionTranslator.Visit(statement, null);
+		}	    
             // Add a pack ``command'' to the end of a non-deferring constructor of a non-guarded class, unless it carries a [NoDefaultContract] attribute.
             if (instructionTranslator.currentBlock.TransferCmd is ReturnCmd &&
                 method is Cci.InstanceInitializer && !((Cci.InstanceInitializer)method).IsDeferringConstructor &&

@@ -74,7 +74,6 @@ namespace Microsoft.Boogie
   using AI = Microsoft.AbstractInterpretationFramework;
   using Microsoft.Contracts;
 
-
   public abstract class Absy
   {
     public IToken! tok;
@@ -138,7 +137,6 @@ namespace Microsoft.Boogie
   {
     [Rep]
     public List<Declaration!>! TopLevelDeclarations;
-
     public Program()
       : base(Token.NoToken)
     {
@@ -321,6 +319,25 @@ namespace Microsoft.Boogie
       }
       return globals;
     }
+
+    //HS D: HACK FIXME
+    public Procedure GetProcedure(string! procName) {
+	foreach (Declaration! decl in this.TopLevelDeclarations)
+	    {
+		Implementation impl = decl as Implementation;
+		if (impl == null) continue;
+		Procedure! proc = (!)impl.Proc;
+		string! procN = proc.Name;
+		int l = procN.IndexOf(".") + 1;
+		int u = procN.IndexOf("$");
+		//HACK FIXME:
+		string! shortName = procN.Substring(l, (u == -1 ? procN.Length : u) - l);
+		if (shortName == procName)
+		    return proc;
+	    }
+	return null;
+    }
+
   }
 
   //---------------------------------------------------------------------
@@ -410,6 +427,18 @@ namespace Microsoft.Boogie
       }
       return true;
     }
+
+    //HS D
+    public bool CheckArrayAttribute(string! name, ref bool[] result)
+    {
+      Expr? expr = FindExprAttribute(name);
+      if (expr != null) {
+	  Console.WriteLine("have {0}", expr);
+          return false;
+      }
+      return true;
+    }
+
 
     public void AddAttribute(string! name, object! val)
     {
@@ -1050,6 +1079,12 @@ namespace Microsoft.Boogie
         this.id = Ctr++;        
         base(tok, typedIdent);
     }
+    public Hole(IToken! tok, Type! type)
+    {	
+	TypedIdent typedIdent = new TypedIdent (Token.NoToken, "?!_" + Ctr, type);
+	this.id = Ctr++;
+	base(tok, typedIdent);
+    }
   }
 
   public class Incarnation : LocalVariable
@@ -1488,6 +1523,13 @@ namespace Microsoft.Boogie
     public IdentifierExprSeq! Modifies;
     public EnsuresSeq! Ensures;
 
+    //HS D:
+    public bool HasBlockHole; 
+    public bool OpChecked, IsOperation, IsTransformable;
+    public bool[] ArgsTransformable;
+    public bool[] ArgsRef;
+    public String[] ArgsName;
+
     // Abstract interpretation:  Procedure-specific invariants...
     [Rep]
     public readonly ProcedureSummary! Summary;
@@ -1656,15 +1698,13 @@ namespace Microsoft.Boogie
     public Procedure Proc;
  
     //HS D
-    public bool IsStatic, HasBlockHole;
+    public bool IsStatic;
     public Hashtable/*<string,Hole>*/ HoleVars;
     public int NumHoles, HoleIdxL, HoleIdxU;
     public int NumParams, NumIntParams, NumRefTypeParams;
     public int NumRandomInputGenerations, NumInputGenerations;
     public VariableSeq RefTypeInParams, ArrayInParams;
     public Hashtable InParamsTypes, TypeFields;
-    public int BlockHoleStmtIdx;
-    public System.Compiler.ExpressionList BlockHolesInfo;
     
     //HS D: HACK FIXME ALL       
     public Function ArrayLengthFn, ArrayGetFn;
@@ -2303,17 +2343,13 @@ namespace Microsoft.Boogie
       }
 
       //HS D
-      public bool IsSketchingAndInit()
+      public bool IsSketchingAndInit(Program! program)
       {
 	  Procedure! proc = (!) this.Proc;
           int inline = -1;
-          proc.CheckIntAttribute("inline", ref inline);
-	  proc.CheckBooleanAttribute("HasBlockHole", ref HasBlockHole);
-          
-	  if (HasBlockHole) {
-	      // get block holes info...
-	      //BlockHolesInfo.......
-	      proc.CheckIntAttribute("BlockHoleStmtIdx", ref BlockHoleStmtIdx);
+          proc.CheckIntAttribute("inline", ref inline);          
+	  if (proc.HasBlockHole) {
+	      DesugarBlockHoles(program);
 	  } else {
 	      bool res = false;
 	      foreach (Variable! lvar in this.LocVars)
@@ -2331,19 +2367,21 @@ namespace Microsoft.Boogie
 	  Hashtable types = new Hashtable();
           int n = 0;
           int ni = 0, na = 0, nr = 0;
-          int iMin = -1;
+          int iMin = int.MaxValue;
           int iMax = -1;
           foreach (Variable! lvar in this.LocVars) {
 	      // HS D
 	      string! varN = lvar.Name;
 	      if (lvar is Hole)
 		  {
+		      // Console.WriteLine("HS D - hole {0} -> {1} (id={2})", varN, lvar, ((Hole) lvar).id);
+
 		      tmp[varN] = lvar;
 		      n++;
 		      int i = ((Hole) lvar).id;
-		      if (i > iMax || iMax == -1)
+		      if (i > iMax)
 			  iMax = i;
-		      if (i < iMin || iMin == -1)
+		      if (i < iMin)
 			  iMin = i;
                   }
 	      types[varN + "$in"] = lvar.TypedIdent.WhereExpr;
@@ -2351,6 +2389,8 @@ namespace Microsoft.Boogie
           this.HoleIdxL = iMin;
           this.HoleIdxU = iMax;
 	  this.HoleVars = tmp; 
+	  //Console.WriteLine("HS D - hole min max {0} {1}", iMin, iMax);
+
 	  this.NumHoles = tmp.Count;
 	  this.RefTypeInParams = new VariableSeq();
 	  this.ArrayInParams = new VariableSeq();
@@ -2406,7 +2446,90 @@ namespace Microsoft.Boogie
               }
           return true;
       }
+
+      //HS D
+      public void AddHoleVar(Hole lvar)
+      {
+	  this.LocVars.Add(lvar);
+	  // int i = ((Hole) lvar).id;
+	  // if (i > HoleIdxU || HoleIdxU == -1)
+	  //      HoleIdxU = i;
+	  // if (i < HoleIdxL || HoleIdxL == -1)
+	  //      HoleIdxL = i;
+	  // this.HoleVars[lvar.Name] = lvar; 
+	  // this.NumHoles++;
+      }
+
+      //HS D
+      protected void DesugarBlockHoles(Program! program)
+      {
+        foreach ( Block b in this.Blocks )
+	    {
+		CmdSeq passiveCmds = new CmdSeq();
+		foreach (Cmd! c in b.Cmds)
+		    {
+			if (c is BlockHole) {
+			    BlockHole bh = (BlockHole) c;
+			    bh.SetOps(program);
+			    List<Procedure!> ops = bh.Ops;
+			    Procedure op = ops[0];
+			    bool opTr = op.IsTransformable, isOp = op.IsOperation;
+			    bool[] trPrms = op.ArgsTransformable;
+			    bool[] refOutPrms = op.ArgsRef;
+			    String[] namePrms = op.ArgsName;
+			    // Console.WriteLine("HS D - op {0} isop {2} tr {1}", op, opTr, isOp);			    
+			    // for (int i = 0; i < op.InParams.Length; ++i) {
+			    // 	Console.WriteLine("HS D - i {0} tr {1} ref {2}", op.InParams[i], trPrms[i], refOutPrms[i]);
+			    // }
+			    GenOpCall(op, opTr, namePrms, trPrms, refOutPrms, passiveCmds);
+			} else {
+			    passiveCmds.Add(c);
+			}
+		    }
+		b.Cmds = passiveCmds;	
+	    }	
+      }
+
+
+    //HS D
+      public void GenOpCall(Procedure op, bool opTr, String[] namePrms, bool[] trPrms, bool[] refOutPrms, CmdSeq passiveCmds) {
+	List<Expr>! ins = new List<Expr>();
+	List<IdentifierExpr>! outs = new List<IdentifierExpr>();
+	Expr arg;
+	CmdSeq holeDecls = new CmdSeq();
+	for (int i = 0; i < op.InParams.Length; ++i) {
+	    Variable p = op.InParams[i];
+	    bool pTr = trPrms[i];
+	    if (pTr) {
+		IdentifierExpr stackVar = new IdentifierExpr(Token.NoToken, new LocalVariable(Token.NoToken, new TypedIdent (Token.NoToken, "stack_" + namePrms[i], (!)p.TypedIdent.Type)));
+		AssignCmd ac = Cmd.SimpleAssign(Token.NoToken, stackVar, GenLambdaHole(false));
+		passiveCmds.Add(ac);
+		ins.Add(stackVar);
+	    } else {
+		arg = new IdentifierExpr(Token.NoToken, new LocalVariable(Token.NoToken, new TypedIdent (Token.NoToken, namePrms[i], (!)p.TypedIdent.Type)));
+		ins.Add(arg);
+		if (refOutPrms[i])
+		    outs.Add((IdentifierExpr) arg);		    
+	    }	   
+	}
+	CallCmd cc = new CallCmd(Token.NoToken, op.Name, ins, outs);
+	cc.Proc = op;			    
+	
+	passiveCmds.Add(cc);
+    }
+
+    //HS D
+      public Expr GenLambdaHole(bool isBool) {
+	Expr res;
+	TypedIdent ident = new TypedIdent (Token.NoToken, "?!_" + Hole.Ctr, Type.Int);
+	Hole hole = new Hole(Token.NoToken, ident);
+	res = new IdentifierExpr(Token.NoToken, hole);
+	AddHoleVar(hole);
+	return res;
+    }
+
   }
+
 
 
   public class TypedIdent : Absy

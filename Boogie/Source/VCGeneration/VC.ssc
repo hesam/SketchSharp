@@ -16,6 +16,7 @@ using Microsoft.Contracts;
 using Microsoft.Basetypes;
 using Microsoft.Boogie.VCExprAST;
 
+
 namespace VC
 {
   using Bpl = Microsoft.Boogie;
@@ -1532,7 +1533,8 @@ namespace VC
                   {
                       callbackN.label2absy = label2absy;
                       callbackN.sketchStartBlk = (!)impl.Blocks[0];
-                      AddRandomInputTuples(ch, callbackN, impl, ch.TheoremProver.Context);                                    
+		      //if (!CommandLineOptions.Clo.IsConditionSketching)
+			  AddRandomInputTuples(ch, callbackN, impl, ch.TheoremProver.Context);                                    
                   }
               else if (callbackN.synthesisStep == SynthesisStep.Verification)
                   AddSynthesisModelTuples(ch, callbackN, impl, ch.TheoremProver.Context);              
@@ -1704,18 +1706,20 @@ namespace VC
                               {				  
                                   int ln = l.ToInt;
 				  List<object>! curr = (List<object>!) rVals[i];
+				  Hashtable! currVals = (Hashtable!) curr[2]; 
 				  bool isArray = (bool) (!) curr[0]; 
+				  //Console.WriteLine("HS D - Hey {0} -> {1}", v, isArray);
 				  if (isArray) {
 				      //array...
-				      Hashtable! currVals = (Hashtable!) curr[2]; 
 				      IdentifierExpr! vE = new IdentifierExpr(Token.NoToken, v);
 				      AddArrayLengthAssertion(impl, tc, translator, gen, exprs, vE, l);
 				      if (ln > 0)
 					  AddArrayElementAssertion(impl, tc, translator, gen, exprs, vE, ln, currVals, false);
 				  } else {
 				      //field...
-				      Hashtable! currVals = (Hashtable!) curr[2];
-				      AddFieldAssertion(impl, tc, translator, gen, exprs, v, ln, currVals, false);
+				      // foreach (string! fv in currVals.Keys)
+				      // 	  Console.WriteLine("HS D - field {0} . {1} -> {2}", v, fv, currVals[fv]);
+				      AddFieldAssertion(impl, tc, translator, gen, exprs, new IdentifierExpr(Token.NoToken, v), ln, currVals, false);
 				  }		 
                               }
                           expr = gen.NAry(VCExpressionGenerator.AndOp, exprs);
@@ -1808,7 +1812,7 @@ namespace VC
         //Close();
         //HS D END
 
-        if (impl.IsSketchingAndInit())
+        if (impl.IsSketchingAndInit(program))
             {
                 Close(); //HS D:  //FIXME: there is a bug if we use prev checkers for synthesis
                 synthesisStep = SynthesisStep.Sketching;
@@ -1825,7 +1829,7 @@ namespace VC
 		    Console.WriteLine("                         logfile path: {0}", CommandLineOptions.Clo.SimplifyLogFilePath);
 		    Console.WriteLine("                         int bitwidth: {0}", CommandLineOptions.Clo.SynOpt_IntBitWidth);
 		    Console.WriteLine("  number of initial input generations: {0}", CommandLineOptions.Clo.SynOpt_NumRandomInputGenerations);
-		    Console.WriteLine("             max number of iterations: {0}", CommandLineOptions.Clo.SynOpt_NumCEGARIterations);
+		    Console.WriteLine("             max number of iterations: {0}", CommandLineOptions.Clo.SynOpt_NumCEGARIterations + 1);
 		    Console.WriteLine("..................................................................");
 		    Console.WriteLine();
 		    ReportSynOpts = false;
@@ -1842,6 +1846,7 @@ namespace VC
       if (impl.SkipVerification) {
         return Outcome.Inconclusive; // not sure about this one
       }
+
 
      //HS D
       Hashtable/*TransferCmd->ReturnCmd*/ gotoCmdOrigins = new Hashtable();
@@ -2074,6 +2079,8 @@ namespace VC
                       //check here that synthesis verifies
                       if (CEGARItr == 0)
 			  impl.RevertImpl();
+		      // if (CommandLineOptions.Clo.TraceSketch)
+		      // 	  PrintSynthesisModel(((CounterexampleCollector) callback).examples);
                       outcome = VerifyImplementation(impl, program, callback, SynthesisStep.Verification, CEGARItr, ((CounterexampleCollector) callback).examples);
                   }
               else
@@ -2101,7 +2108,7 @@ namespace VC
                             // move onto a new CEGAR iteration...
                             if (CommandLineOptions.Clo.TraceSketch)
                                 Console.WriteLine("Synthesis of {0} - Moving onto iteration #{1}..." , impl.Name, CEGARItr + 2);
-                                
+			    // PrintSynthesisModel(((CounterexampleCollector) callback).examples);
                             outcome = VerifyImplementation(impl, program, callback, SynthesisStep.Sketching, CEGARItr + 1, ((CounterexampleCollector) callback).examples);
                         }
                 }
@@ -2608,7 +2615,7 @@ namespace VC
 
         if (callback.synthesisStep != SynthesisStep.None)
             {
-                newCounterexample = ExtractSynthesisModel((!) errModel, (!) callback.Impl, (!) callback.IncarId2IncarMap, callback.synthesisStep);
+                newCounterexample = ExtractSynthesisModel((!) errModel, (!) callback.Impl, context, (!) callback.IncarId2IncarMap, callback.synthesisStep);
             }
         else
             {
@@ -3163,7 +3170,19 @@ namespace VC
         Hashtable! blockIncarMap  /*<String!, Block!> */ = new Hashtable();
         Hashtable! incar2IncarMap = new Hashtable/*Block -> IncarnationMap*/();
         if (isSketching)
-        {              
+        {
+	    //desugar any block holes here...?
+	    if (((!)impl.Proc).HasBlockHole) {
+		//DesugarBlockHoles(impl, program);
+		#region Debug Tracing
+		    if (CommandLineOptions.Clo.TraceVerify) 
+			{
+			    Console.WriteLine("after desugaring block holes");
+			    EmitImpl(impl, true);
+			}
+		#endregion
+	    }
+	    // replicate blocks by number of random input gens....
             AddBlockIncarnations(impl, blockIncarMap, incar2IncarMap);
             ((!)callback).IncarId2IncarMap = incar2IncarMap;
           
@@ -3527,7 +3546,7 @@ namespace VC
     }
     
       //HS D
-      static Counterexample ExtractSynthesisModel(ErrorModel! errModel, Implementation! impl, Hashtable! incarId2IncarMap, SynthesisStep synthesisStep)
+    static Counterexample ExtractSynthesisModel(ErrorModel! errModel, Implementation! impl, DeclFreeProverContext! context, Hashtable! incarId2IncarMap, SynthesisStep synthesisStep)
       { 
 
         //HS D: 
@@ -3549,11 +3568,12 @@ namespace VC
                             {
                                 string! addr = "_" + j;
                                 Hashtable lastIncarMap = (Hashtable) incarId2IncarMap[addr];
-                                AddToSynthesisModel(frms, errModel, addr, synMod, synModD, refTypeVals, lastIncarMap);
+                                AddToSynthesisModel(frms, errModel, context, addr, synMod, synModD, refTypeVals, lastIncarMap, false);
                             }
                     } 
-                else
-		    AddToSynthesisModel(frms, errModel, "", synMod, synModD, refTypeVals, null);                        
+                else {
+		    AddToSynthesisModel(frms, errModel, context, "", synMod, synModD, refTypeVals, null, true);                        
+		}
             }
         else
             {                
@@ -3574,23 +3594,27 @@ namespace VC
         return synMod;
     }
 
-      static void AddToSynthesisModel(VariableSeq! frms, ErrorModel! errModel, String! keyAddr, SynthesisModel! synMod, Dictionary<Absy!, CalleeCounterexampleInfo!>! synModD, Hashtable! refTypeVals, Hashtable /*Variable -> Variable*/ incarnationMap)
-      {
-          bool isSynthesisVerify = incarnationMap == null;
-          
+    static void AddToSynthesisModel(VariableSeq! frms, ErrorModel! errModel, DeclFreeProverContext! context, String! keyAddr, SynthesisModel! synMod, Dictionary<Absy!, CalleeCounterexampleInfo!>! synModD, Hashtable! refTypeVals, Hashtable /*Variable -> Variable*/ incarnationMap, bool isSynthesisVerify)
+      {          
           VariableSeq! vars = new VariableSeq();
+
           if (isSynthesisVerify)
               {
-                  for (int k = 0; k < frms.Length; k++)
-                      vars.Add((!) frms[k]);
+                  for (int k = 0; k < frms.Length; k++) {
+		      Variable v0 = (!) frms[k];
+                      vars.Add(v0);
+		  }
               }
           else 
               { //isRandInpGen
                   Hashtable! incarnationMapN = (!) incarnationMap;
-                  foreach (Variable! v in incarnationMapN.Keys)
+                  foreach (Variable! v in incarnationMapN.Keys) {
+			  // Console.WriteLine("HS D - adding {0}", (!) ((IdentifierExpr!) incarnationMapN[v]).Decl);
+
                       vars.Add((!) ((IdentifierExpr!) incarnationMapN[v]).Decl);
+		  }
               }                          
-          //FIXME: assuming types are only int or int[] 
+
           foreach (Variable! v in vars)
               {                  
                   // if the ints/array lengths/elements are determined given in
@@ -3614,8 +3638,22 @@ namespace VC
                       }                      
                   else //referece or array type...
                       {
-                          assert hasIt;
-                          int vPtr = errModel.identifierToPartition[v.Name];
+			  // Console.WriteLine("HS D - looked for {0} -> {1}", v.Name, hasIt); 
+			  string! name = v.Name;
+			  //HS D - HACK FIXME:
+			   if (!hasIt) {
+
+			      int ctr = 99;
+			      while (!hasIt && ctr >= 0) {
+				  name = v.Name + "@@" + (ctr--);
+				  hasIt = errModel.identifierToPartition.ContainsKey(name);
+			      }
+			      assert hasIt;			  
+			  }
+			   //Console.WriteLine("HS D - looking for {0}", name);
+
+                          int vPtr = errModel.identifierToPartition[name]; //v.Name];
+			  // Console.WriteLine("HS D - looked for {0} -> {1} ? {2}", name, vPtr, refTypeVals.ContainsKey(vPtr));
 			  if (!refTypeVals.ContainsKey(vPtr))
 			      continue;
                           o = refTypeVals[vPtr];			  
@@ -3629,6 +3667,8 @@ namespace VC
 			      x.Add(o);
 			  }
                       }
+		  //Console.WriteLine("HS D - added ctreg {0} -> {1}", v, x);
+
 		  CalleeCounterexampleInfo cci = new CalleeCounterexampleInfo(synMod, x);
 		  synModD.Add(v, cci);
               }
@@ -3639,40 +3679,72 @@ namespace VC
       {
           int preHeapId, U2IntId, typeOfId, fieldsId;
 	  int nullId, elementsIntTypeId, arrayTypeId;
-          List<List<int>> U2IntFunc, TypeOfFunc, mapTypeSelFunc, arrayGetFunc, arrayLengthFunc;
+          List<List<int>> U2IntFunc, TypeOfFunc, FieldTypeOfFunc, mapTypeSelFunc, arrayGetFunc, arrayLengthFunc, HeapFunc;
           Hashtable! heap2Array = new Hashtable();
           Hashtable! u2Int = new Hashtable();
 	  Hashtable! typeOf = new Hashtable();
+	  Hashtable! fieldTypeOf = new Hashtable();
 	  Hashtable! knownArraysTps = new Hashtable();
 	  Hashtable! objTypes = new Hashtable();
           refTypeVals = new Hashtable();
 	  errModel.identifierToPartition.TryGetValue("null", out nullId);
+	  errModel.identifierToPartition.TryGetValue("System.Array", out arrayTypeId);
           errModel.identifierToPartition.TryGetValue("$Heap", out preHeapId);
           bool hasArrayLengthAsserts = errModel.definedFunctions.TryGetValue("$Length", out arrayLengthFunc);
           bool hasMapTypeSelect = errModel.definedFunctions.TryGetValue("MapType0Select", out mapTypeSelFunc);
 	  bool hasU2Int = errModel.definedFunctions.TryGetValue("U_2_int", out U2IntFunc);
 	  bool hasTypeOf = errModel.definedFunctions.TryGetValue("$Is", out TypeOfFunc);
+	  bool hasFieldTypeOf = errModel.definedFunctions.TryGetValue("DeclType", out FieldTypeOfFunc);
+	  bool hasIsHeap = errModel.definedFunctions.TryGetValue("IsHeap", out HeapFunc);
 	  int aDefArrLnInt = 0;
 	  BigNum aDefVal = BigNum.FromInt(0);
+	  BigNum aDefArrLn = aDefVal;
 	  int vd;
 	  List<int>! entry;
+
+	  // determine preheap id
+	  if (preHeapId == 0 && hasIsHeap) {
+	      List<List<int>>! HeapFuncN = (!) HeapFunc;
+	      preHeapId = ((!) HeapFuncN[0])[0];
+	  }
 	  // read in types
 	  if (hasTypeOf) {
 	      List<List<int>>! TypeOfFuncN = (!) TypeOfFunc;
 	      typeOf[-1] = ((!) TypeOfFuncN[TypeOfFuncN.Count - 1])[0]; //def
 
 	      for (int j = 0; j < TypeOfFuncN.Count - 1; j++)
+	  	  {
+	  	      entry = (!) TypeOfFunc[j];
+	  	      int objTp = entry[1];
+	  	      if (knownArraysTps.ContainsKey(objTp))
+	  		  continue;
+	  	      List<string!>! strsObjTp = (List<string!>!) errModel.partitionToIdentifiers[objTp];
+	  	      if (strsObjTp.Count == 0) { //must be array
+	  		  knownArraysTps[objTp] = true;
+	  		  continue;
+	  	      }
+	  	      typeOf[entry[0]] = objTp;
+	  	  }
+	  }
+	  // read in types
+	  if (hasFieldTypeOf) {
+	      List<List<int>>! FieldTypeOfFuncN = (!) FieldTypeOfFunc;
+	      fieldTypeOf[-1] = ((!) FieldTypeOfFuncN[FieldTypeOfFuncN.Count - 1])[0]; //def
+
+	      for (int j = 0; j < FieldTypeOfFuncN.Count - 1; j++)
 		  {
-		      entry = (!) TypeOfFunc[j];
+		      entry = (!) FieldTypeOfFunc[j];
+		      // Console.WriteLine("HS D -  obj {0} type {1}", entry[0], entry[1]);
+
 		      int objTp = entry[1];
-		      if (knownArraysTps.ContainsKey(objTp))
-			  continue;
-		      List<string!>! strsObjTp = (List<string!>!) errModel.partitionToIdentifiers[objTp];
-		      if (strsObjTp.Count == 0) { //must be array
-			  knownArraysTps[objTp] = true;
-			  continue;
-		      }
-		      typeOf[entry[0]] = objTp;
+		      // if (knownArraysTps.ContainsKey(objTp))
+		      // 	  continue;
+		      // List<string!>! strsObjTp = (List<string!>!) errModel.partitionToIdentifiers[objTp];
+		      // if (strsObjTp.Count == 0) { //must be array
+		      // 	  knownArraysTps[objTp] = true;
+		      // 	  continue;
+		      // }
+		      fieldTypeOf[entry[0]] = objTp;
 		  }
 	  }
 
@@ -3682,7 +3754,7 @@ namespace VC
 		//first get the 'else' (def) array length...	      
 		entry = (!) arrayLengthFuncN[arrayLengthFuncN.Count - 1];
 		vd = entry[0]; 
-		BigNum aDefArrLn = (BigNum) ((!) errModel.partitionToValue[vd]);
+		aDefArrLn = (BigNum) ((!) errModel.partitionToValue[vd]);
 		aDefArrLnInt = aDefArrLn.ToInt;
 		for (int j = 0; j < arrayLengthFuncN.Count - 1; j++)
 		    {
@@ -3691,22 +3763,21 @@ namespace VC
 			if (typeOf.ContainsKey(a)) //must not be an array
 			    continue;
 			BigNum ln = (BigNum) ((!) errModel.partitionToValue[entry[1]]);
-			int lnInt = ln.ToInt;
+			// int lnInt = ln.ToInt;
 			List<object> ArrayVal = new List<object>();
 			refTypeVals[a] = ArrayVal;
 			ArrayVal.Add(true);
 			ArrayVal.Add(ln);
 			Hashtable! tmp2 = new Hashtable();
 			ArrayVal.Add(tmp2);
-			for (int q = 0; q < lnInt; q++)
-			    tmp2[q] = aDefVal;
+			// for (int q = 0; q < lnInt; q++)
+			//     tmp2[q] = aDefVal;
 		    }
 	    }
 	  
 	  if (hasMapTypeSelect)
 	    {
 		errModel.identifierToPartition.TryGetValue("$elementsInt", out elementsIntTypeId);
-		errModel.identifierToPartition.TryGetValue("System.Array", out arrayTypeId);
 		bool hasArrayValAsserts = errModel.definedFunctions.TryGetValue("ArrayGet", out arrayGetFunc);		
 		List<List<int>>! mapTypeSelFuncN = (!) mapTypeSelFunc;
 		Hashtable! refsToFix = new Hashtable();
@@ -3733,9 +3804,12 @@ namespace VC
 			    refTypeVals[obj] = null;
 			    continue;
 			}
-			bool isArray = !typeOf.ContainsKey(obj);
+			// Console.WriteLine("HS D -  heap {0} obj {1} subsject {2} value {3}", heap, obj, subject, v);
+			//FIXME:
+			bool isArray = fieldTypeOf[subject] != null && ((int) fieldTypeOf[subject] == arrayTypeId); //!fieldTypeOf.ContainsKey(subject) && !typeOf.ContainsKey(obj);
 			List<string!>! strFld = (List<string!>!) errModel.partitionToIdentifiers[subject];
 			string! fld = strFld[0];
+			// Console.WriteLine("HS D -  obj {0} isArarray {1} fld {2} isField? {3} - typeof {5} - fieldtypeof {4} - fieldTypeOf[subject] {6} arraytype {7}", obj, isArray, fld, IsFieldName(fld), fieldTypeOf.ContainsKey(subject), typeOf.ContainsKey(obj), fieldTypeOf[subject], arrayTypeId); 
 			if (isArray) 
 			    {
 				heap2Array[entry[3]] = obj;
@@ -3754,18 +3828,22 @@ namespace VC
 					objVal.Add(tmp2);
 				    }
 				Hashtable! rVals = (Hashtable!) ((List<object>!) refTypeVals[obj])[2];
-				objTypes[obj] = typeOf[obj];
+				//objTypes[obj] = typeOf[obj];
+				objTypes[v] = fieldTypeOf[fld]; 
 				if (u2Int.ContainsKey(v)) //HACK FIXME
 				    {
 					rVals[fld] = (BigNum) ((!) errModel.partitionToValue[(int) ((!) u2Int[v])]);
 				    }
-				else //must be array field
+				else //must be array or reftype field
 				  {
+				      //Console.WriteLine("HS D - MapTypeSel {0} . {1} -> {2}", obj, fld, v);
 				      heap2Array[entry[3]] = entry[1];
-				      List<object!> vl = new List<object!>();
-				      vl.Add(fld);
-				      vl.Add(v);
-				      refsToFix[rVals] = vl;
+				      if (!refsToFix.ContainsKey(rVals)) {
+					  //List<object!> vl = new List<object!>();
+					  refsToFix[rVals] = new Hashtable();
+				      }
+				      Hashtable! vl = (Hashtable!) refsToFix[rVals];
+				      vl[fld] = v;
 				  }  
 			    }
 			else
@@ -3774,29 +3852,41 @@ namespace VC
 			    }
 		    }
 		// give default values to fields not set...
+		//HS D - HACK FIXME:
 		Hashtable typeFields = impl.TypeFields;
 		if (typeFields != null) {
-		  foreach (int obj in objTypes.Keys) {
-		    int tp = (int) ((!) objTypes[obj]);
-		    if (!refTypeVals.ContainsKey(obj))
-		      {
-			List<object> objVal = new List<object>();
-			refTypeVals[obj] = objVal;
-			objVal.Add(false);
-			objVal.Add(aDefVal);
-			Hashtable! tmp2 = new Hashtable();
-			objVal.Add(tmp2);
-		      }
-		    Hashtable! rVals = (Hashtable!) ((List<object>!) refTypeVals[obj])[2];
-		    string! tpN = ((List<string!>!)errModel.partitionToIdentifiers[tp])[0];
-		    List<Variable!>! tpFlds = (List<Variable!>!) ((Hashtable!) typeFields[tpN])["int"]; //FIXME
-		    foreach (Variable! fld in tpFlds) {
-		      string! fldN = fld.Name;
-		      if (!rVals.ContainsKey(fldN)) {
-			rVals[fldN] = aDefVal; //FIXME
-		      }
+		    foreach (int obj in objTypes.Keys) {
+			// must be array:
+			if (objTypes[obj] == null)
+			    continue;
+			//Console.WriteLine("HS D - lookup obj {0} type {1}", obj, objTypes[obj]);
+
+			int tp = (int) ((!) objTypes[obj]);
+			if (!refTypeVals.ContainsKey(obj))
+			    {
+				List<object> objVal = new List<object>();
+				refTypeVals[obj] = objVal;
+				objVal.Add(false);
+				objVal.Add(aDefVal);
+				Hashtable! tmp2 = new Hashtable();
+				objVal.Add(tmp2);
+			    }
+			Hashtable! rVals = (Hashtable!) ((List<object>!) refTypeVals[obj])[2];
+			string! tpN = ((List<string!>!)errModel.partitionToIdentifiers[tp])[0];
+			// Console.Write("HS D - noon. {0} {1} {2} {3}", obj, tp, tpN, typeFields[tpN]);
+			
+			if (typeFields[tpN] != null) {
+			    //Console.WriteLine(" {0}", ((Hashtable!) typeFields[tpN])["int"]);
+			    
+			    List<Variable!>! tpFlds = (List<Variable!>!) ((Hashtable!) typeFields[tpN])["int"]; //FIXME
+			    foreach (Variable! fld in tpFlds) {
+				string! fldN = fld.Name;
+				if (!rVals.ContainsKey(fldN)) {
+				    rVals[fldN] = aDefVal; //FIXME
+				}
+			    }
+			}
 		    }
-		  }
 		}
 		// read in array element values...
 		if (hasArrayValAsserts)
@@ -3819,11 +3909,11 @@ namespace VC
 						List<object> vals = new List<object>();
 						Hashtable! tmp2 = new Hashtable();
 						vals.Add(true);
-						vals.Add(BigNum.FromInt(0));
+						vals.Add(aDefArrLn); //BigNum.FromInt(0));
 						vals.Add(tmp2);
 						refTypeVals[a] = vals;
-						for (int q = 0; q < aDefArrLnInt; q++)
-						    tmp2[q] = aDefVal;
+						// for (int q = 0; q < aDefArrLnInt; q++)
+						//     tmp2[q] = aDefVal;
 					    }
 					int i = entry[1];
 					int v = entry[2];
@@ -3837,8 +3927,12 @@ namespace VC
 		// fix array field refs...
 		foreach (Hashtable! vs in refsToFix.Keys) 
 		    {
-			List<object!>! vl = (List<object!>!) refsToFix[vs];
-			vs[vl[0]] = (List<object!>) refTypeVals[(int) vl[1]];
+			//List<object!>! vl = (List<object!>!) refsToFix[vs];
+			//vs[vl[0]] = (List<object!>) refTypeVals[(int) vl[1]];
+			Hashtable! vl = (Hashtable!) refsToFix[vs];
+			foreach (string! fld in vl.Keys) {
+			    vs[fld] = (List<object!>) refTypeVals[(int) ((!) vl[fld])];
+			}
 		    }
 	    }
       }
@@ -4640,8 +4734,7 @@ namespace VC
         }
         
         VCContext context = new VCContext(label2absy, proverCtxt, controlFlowVariable);
-        VCExpr vc = Wlp.Block(block, (!) SuccCorrect, context);
-
+        VCExpr vc = Wlp.Block(block, (!) SuccCorrect, context, ((!)callback).CEGARItr); //<--- HS D 
         v = gen.Variable(block.Label + "_correct", Bpl.Type.Bool);
         bindings.Add(gen.LetBinding(v, vc));
         blockVariables.Add(block, v);
@@ -4686,7 +4779,7 @@ namespace VC
       }
 
       VCContext context = new VCContext(label2absy, proverCtxt);
-      vc = Wlp.Block(block, SuccCorrect, context);
+      vc = Wlp.Block(block, SuccCorrect, context, -1); //<--- HS D <--- 
       //  gen.MarkAsSharedFormula(vc);  PR: don't know yet what to do with this guy
 
       blockEquations.Add(block, vc);
@@ -4750,7 +4843,7 @@ namespace VC
           SuccCorrect = SuccessorsCorrect(b, BlkCorrect, BlkReached, doomed, gen);
         }
 
-        VCExpr wlp = Wlp.Block(b, SuccCorrect, context);
+        VCExpr wlp = Wlp.Block(b, SuccCorrect, context, -1); //<--- //HS D
         if (BlkReached != null) {
           wlp = gen.Implies((VCExprVar!)BlkReached[b], wlp);
         }
@@ -4800,12 +4893,11 @@ namespace VC
                           String addr = "_" + j;
                           Hashtable! incarnationMap = (Hashtable!) incarId2IncarMap[addr];
                           Substitution incarnationSubst = Substituter.SubstitutionFromHashtable(incarnationMap);
-                          Expr! iC = Substituter.Apply(incarnationSubst, c);                          
+                          Expr! iC = Substituter.Apply(incarnationSubst, c);
                           vc = context.Ctxt.BoogieExprTranslator.Translate(iC);
                           exprs.Add(vc);
                       }
-              }
-         
+              }         
           if (frms.Length > 0)
               {
                   Hashtable! toVars = new Hashtable();
@@ -4870,7 +4962,11 @@ namespace VC
                   exprs[r] = exprs[i];
                   exprs[i] = t;
               }
-
+	  Variable purityVar0 = translator.LookupUnboundVariable("$PurityAxiomsCanBeAssumed");
+	  if (purityVar0 != null) {
+	      VCExpr! purityVar = translator.LookupVariable(purityVar0);
+	      exprs.Add(purityVar);
+	  }
           vc = gen.Not(gen.NAry(VCExpressionGenerator.AndOp, exprs));
           vc = gen.Implies(gen.LabelPos("42", VCExpressionGenerator.True), vc); //FIXME!
           
@@ -4910,27 +5006,27 @@ namespace VC
 	  Expr! elementsVar = new IdentifierExpr(Token.NoToken, translator.LookupUnboundVariable("$elementsInt")); 
 	  args.Add(elementsVar);
 	  Expr heapExpr0 = Expr.Select(heapVar, args);
-	  for(int q = 0; q < length; q++)
-		{
-		    BigNum idx = BigNum.FromInt(q); //idxs[q];
-		    VCExpr! right = gen.Integer((BigNum) (!) vals[q]); 
-		    ExprSeq! es2 = new ExprSeq();
-		    es2.Add(heapExpr0);
-		    es2.Add(new LiteralExpr(Token.NoToken, idx));
-		    Expr left0 = new NAryExpr(Token.NoToken, aG, es2);
-		    left0.Typecheck(tc);
-		    VCExpr! left = translator.Translate(left0);
-		    VCExpr! arrayValExpr = notEq ? gen.Neq(left, right) : gen.Eq(left, right);
-		    exprs.Add(arrayValExpr);                          
-		}
+	  // for(int q = 0; q < length; q++)
+	  foreach (int q in vals.Keys)
+	  	{
+	  	    BigNum idx = BigNum.FromInt(q); //idxs[q];
+	  	    VCExpr! right = gen.Integer((BigNum) (!) vals[q]); 
+	  	    ExprSeq! es2 = new ExprSeq();
+	  	    es2.Add(heapExpr0);
+	  	    es2.Add(new LiteralExpr(Token.NoToken, idx));
+	  	    Expr left0 = new NAryExpr(Token.NoToken, aG, es2);
+	  	    left0.Typecheck(tc);
+	  	    VCExpr! left = translator.Translate(left0);
+	  	    VCExpr! arrayValExpr = notEq ? gen.Neq(left, right) : gen.Eq(left, right);
+	  	    exprs.Add(arrayValExpr);                          
+	  	}
       }
 
-    static void AddFieldAssertion(Implementation! impl, TypecheckingContext! tc, Boogie2VCExprTranslator! translator, VCExpressionGenerator! gen, List<VCExpr!>! exprs, Variable! v, int length, Hashtable! vals, bool notEq)
+    static void AddFieldAssertion(Implementation! impl, TypecheckingContext! tc, Boogie2VCExprTranslator! translator, VCExpressionGenerator! gen, List<VCExpr!>! exprs, Expr! tgt, int length, Hashtable! vals, bool notEq)
       {
           Expr! heapVar = new IdentifierExpr(Token.NoToken, (!) impl.HeapVar);
           List<Expr!>! args = new List<Expr!>();
-          IdentifierExpr! vE = new IdentifierExpr(Token.NoToken, v);
-          args.Add(vE);
+          args.Add(tgt);
 	  args.Add(Expr.True);
 	  foreach (string! fld in vals.Keys)
 	      {
@@ -4942,6 +5038,7 @@ namespace VC
 		  Expr left0 = Expr.Select(heapVar, args);
                   left0.Typecheck(tc);
 		  object! val = fv;
+		  //Console.WriteLine("HS D - Good afternoon. field {1} val is {0}", fv, fld);
 		  if (val is BigNum) 
 		      {
 			  VCExpr! left = translator.Translate(left0);
@@ -4950,13 +5047,27 @@ namespace VC
 			  exprs.Add(objFldExpr);
 
 		      } 
-		  else { //field is array...
-		      List<Object>! arrFldVal = (List<Object>!) val; 
-		      BigNum l = (BigNum) ((!) arrFldVal[1]);
-		      AddArrayLengthAssertion(impl, tc, translator, gen, exprs, left0, l); //FIXME
+		  else { //field is array or reftype...
+		      List<Object>! arrFldVal = (List<Object>!) val;
+		      // Console.WriteLine("HS D -  howdy {0}", arrFldVal);
 		      Hashtable! currVals = (Hashtable!) arrFldVal[2]; 
-		      if (currVals.Keys.Count > 0)
-			  AddArrayElementAssertion(impl, tc, translator, gen, exprs, left0, l.ToInt, currVals, false);
+		      bool isArray = (bool) (!) arrFldVal[0]; 
+		      // Console.WriteLine("HS D - Good afternoon. field {0} : {1}", fv, isArray);
+
+		      if (isArray) { //Array field
+			  BigNum l = (BigNum) ((!) arrFldVal[1]);
+			  AddArrayLengthAssertion(impl, tc, translator, gen, exprs, left0, l); //FIXME
+			  if (currVals.Keys.Count > 0)
+			      AddArrayElementAssertion(impl, tc, translator, gen, exprs, left0, l.ToInt, currVals, false);
+		      } else { //reftype field
+			  if (currVals.Keys.Count > 0) {
+
+				      // foreach (string! fv in currVals.Keys)
+				      // 	  Console.WriteLine("HS D - field1 {0} . {1} -> {2}", tgt, fv, currVals[fv]);
+
+			      AddFieldAssertion(impl, tc, translator, gen, exprs, left0, length, currVals, notEq);			     	      
+			  }
+		      }
 		  }
 	      }	  	  
       }
@@ -4989,6 +5100,7 @@ namespace VC
 			exprs.Add(f);
 		    }
 	    }
+	/*
 	Hashtable typeFlds = (!) impl.TypeFields;
 	foreach (Variable! v in (!) impl.RefTypeInParams)
 	    {
@@ -5021,6 +5133,7 @@ namespace VC
 			}
 		}
 	    }
+	*/
     }
 
     private static Hashtable/* Block --> VCExprVar */! BlockVariableMap(List<Block!>! blocks, string! suffix,
@@ -5149,7 +5262,7 @@ namespace VC
         }
 
         VCExpr X = gen.Let(bindings, SuccCorrect);
-        VCExpr wlp = Wlp.Block(b, X, context);
+        VCExpr wlp = Wlp.Block(b, X, context, -1); //<--- //HS D
         if (BlkReached != null) {
           wlp = gen.Implies((VCExprVar!)BlkReached[b], wlp);
         }
@@ -5325,6 +5438,7 @@ namespace VC
     static Graph<Block>! GraphFromImpl(Implementation! impl) {
       Graph<Block>! g = new Graph<Block>();
       g.AddSource((!)impl.Blocks[0]); // there is always at least one node in the graph
+      // Console.WriteLine("HS D - dag -> add source {0}", (!)impl.Blocks[0]);
       foreach (Block! b in impl.Blocks)
       {
         GotoCmd gtc = b.TransferCmd as GotoCmd;
@@ -5333,6 +5447,7 @@ namespace VC
           foreach (Block! dest in (!)gtc.labelTargets)
           {
             g.AddEdge(b,dest);
+	    // Console.WriteLine("HS D - dag -> add edge {0}:{1}", b, dest);
           }
         }
       }

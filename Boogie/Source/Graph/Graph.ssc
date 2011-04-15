@@ -427,6 +427,7 @@ public class Graph<Node> {
       for (int i = 0; i < n; i++){
         if (incomingEdges[i] == 0){
           rootIndex = i;
+	  //Console.WriteLine("HS D - in sort found root {0}", rootIndex);
           break;
         }
       }
@@ -436,6 +437,7 @@ public class Graph<Node> {
       // mark root so it won't be used again
       incomingEdges[rootIndex] = -1;
       Node root = numberToNode[rootIndex].Val; 
+      //Console.WriteLine("HS D - in sort adding {0}", root);
       sorted.Add(root);
       ++sortedIndex;
       foreach (Node s in this.Successors(root)){

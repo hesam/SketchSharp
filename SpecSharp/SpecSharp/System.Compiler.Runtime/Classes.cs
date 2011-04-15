@@ -6604,35 +6604,24 @@ namespace Microsoft.Contracts{
   /// Indicates 
   /// </summary>
   [AttributeUsage(AttributeTargets.Method, AllowMultiple=false)]
-  public sealed class IsOperationAttribute : Attribute{
+  public sealed class GeneratorAttribute : Attribute{
   }
-  /*
+
     //HS D
   /// <summary>
   /// Indicates 
   /// </summary>
   [AttributeUsage(AttributeTargets.Method, AllowMultiple=false)]
-  public sealed class HasBlockHoleAttribute : Attribute{
-    public int blockHoleInfo1;
-    public int blockHoleInfo2;
-    public int blockHoleInfo3;
-    public int blockHoleInfo4;
-    public int blockHoleInfo5;
-    public string[] blockHoleInfo6;
-    public string[] blockHoleInfo7;
-    public string[] blockHoleInfo8;
-    public HasBlockHoleAttribute(int bhInfo1, int bhInfo2, int bhInfo3, int bhInfo4, int bhInfo5, string[] bhInfo6, string[] bhInfo7, string[] bhInfo8){
-	this.blockHoleInfo1 = bhInfo1;
-	this.blockHoleInfo2 = bhInfo2;
-	this.blockHoleInfo3 = bhInfo3;
-	this.blockHoleInfo4 = bhInfo4;
-	this.blockHoleInfo5 = bhInfo5;
-	this.blockHoleInfo6 = bhInfo6;
-	this.blockHoleInfo7 = bhInfo7;
-	this.blockHoleInfo8 = bhInfo8;
-    }
+  public sealed class OperationAttribute : Attribute{
   }
-  */
+
+    //HS D
+  /// <summary>
+  /// Indicates 
+  /// </summary>
+  [AttributeUsage(AttributeTargets.Method, AllowMultiple=false)]
+  public sealed class IsOperationAttribute : Attribute{
+  }
   [AttributeUsage(AttributeTargets.Field, AllowMultiple = true, Inherited = false)]
   public sealed class DependentAttribute : Attribute {
     /// <summary>

@@ -86,6 +86,7 @@ public class List {
     //  OT
     // ------------------------------------------------------------------   
 
+    /*
     // Insert_Insert 
     [Verify(true)]
     static void Insert_Insert_T(List! a, List! b, int pos1, int val1, int pos2, int val2) 
@@ -120,8 +121,6 @@ public class List {
 	b.Insert(pos2, val2);       
 	b.Insert_Insert_T_Sketch(pos1, val1, pos2, val2);
     }
-    /*
-
     */
 
     /*
@@ -353,8 +352,8 @@ public class List {
     // ------------------------------------------------------------------   
     //  Transforms
     // ------------------------------------------------------------------   
-    
-    /*
+
+    /*    
     [Inline]
     [Verify(true)]
     void Insert_Inverse_Sketch(int pos, int val)
@@ -394,6 +393,7 @@ public class List {
     }
     */
 
+    /*
     [Inline]
     [Verify(true)]
     void Insert_Insert_T_Sketch(int pos1, int val1, int pos2, int val2)
@@ -490,10 +490,7 @@ public class List {
 	    //Insert(pos1, val1);
 	    Insert(h9a*pos1+h9b, val1);	
     }
-    /*
-
     */
-
 
     /*
     [Inline]

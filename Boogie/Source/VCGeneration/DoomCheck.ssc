@@ -252,7 +252,7 @@ namespace VC
             VCContext context = new VCContext(label2absy, proverCtxt);
     //        m_Context = context;
 
-            VCExpr vc = Wlp.Block(block, SuccCorrect, context);
+            VCExpr vc = Wlp.Block(block, SuccCorrect, context, -1); //<---- //HS D
 
             v = gen.Variable(block.Label + "_correct", Microsoft.Boogie.Type.Bool);            
             

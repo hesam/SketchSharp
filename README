@@ -1,26 +1,25 @@
-Skottie: Sketching using Boogie
+Sketch#: Sketching in Spec#
 
-This tool is a fork starting from:
+This tool is a fork from:
     Boogie v54898 (http://boogie.codeplex.com/)
     SpecSharp v54900 (http://specsharp.codeplex.com/)
-
 
 BUILD INSTRUCTIONS
 ------------------
 
 A. Builld SscSharp [* Run as Admin ]
 
-   cd $SKOTTIE\SpecSharp\SpecSharp\Microsoft.SpecSharp\LastKnownGood9
+   cd $SKETCH#\SpecSharp\SpecSharp\Microsoft.SpecSharp\LastKnownGood9
    clean.cmd
    RegisterLKG.cmd
 
-   cd $SKOTTIE\SpecSharp\SpecSharp
+   cd $SKETCH#\SpecSharp\SpecSharp
    devenv SpecSharp.sln /build DebugCommandLine
    devenv SpecSharp.sln /build Debug
 
 B. Build Boogie/SscBoogie
 
-   cd $SKOTTIE\Boogie\Binaries
+   cd $SKETCH#\Boogie\Binaries
    nmake
    cd ..\Source
    devenv Boogie.sln /build Debug
@@ -34,7 +33,7 @@ B. Build Boogie/SscBoogie
 COMPILING INSTRUCTIONS
 ----------------------
 
-$SKOTTIE\Boogie\Binaries\ssc.exe /debug+ <FILENAME>.ssc
+$SKETCH#\Boogie\Binaries\ssc.exe /debug+ <FILENAME>.ssc
 
     * Notes: 
       
@@ -43,13 +42,16 @@ $SKOTTIE\Boogie\Binaries\ssc.exe /debug+ <FILENAME>.ssc
 SKETCHING INSTRUCTIONS
 ----------------------
 
-$SKOTTIE\SpecSharp\SscBoogie\Binaries\SscBoogie.exe /sketch <Options> <FILENAME>.exe
+$SKETCH#\SpecSharp\SscBoogie\Binaries\SscBoogie.exe /sketch <Options> <FILENAME>.exe
 
     * Notes: 
       
         /sketch is required!
+
+    * Attributes on method declarations:
         
-        [Inline] attribute enabled on method decls
+        [Inline]	    : inlines body (same holes on each instance)
+        [Inline][Generator] : inlines body (fresh holes on each instance)
 
     * Options:
 
@@ -63,7 +65,7 @@ $SKOTTIE\SpecSharp\SscBoogie\Binaries\SscBoogie.exe /sketch <Options> <FILENAME>
     
         /numCEGARItrs:N        
 
-            MAX number of CEGAR based synthesis iterations (default = 20)
+            MAX number of CEGAR based synthesis iterations (default = 10)
 
         /numRandInpGen:N       
 

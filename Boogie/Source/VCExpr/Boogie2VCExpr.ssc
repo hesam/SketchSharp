@@ -262,8 +262,8 @@ namespace Microsoft.Boogie.VCExprAST
 
     //HS D
     //HACK FIXME
-    public Variable! LookupUnboundVariable(string! name) {
-	return (Variable!) UnboundVariables.LookupVariableByName(name);
+    public Variable LookupUnboundVariable(string! name) {
+	return (Variable) UnboundVariables.LookupVariableByName(name);
     }
     
     //HS D

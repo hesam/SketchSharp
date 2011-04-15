@@ -632,6 +632,11 @@ namespace Microsoft.Boogie.AbstractInterpretation
       {
         // skip
       }
+      //HS D
+      else if (cmd is BlockHole)
+      {
+        // skip
+      }
       #endregion      
       else if (cmd is SugaredCmd)
       {

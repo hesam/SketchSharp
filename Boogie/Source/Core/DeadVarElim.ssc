@@ -250,6 +250,7 @@ namespace Microsoft.Boogie
       }
       
       IEnumerable<Block> sortedNodes = dag.TopologicalSort();
+
 	  foreach (Block! block in sortedNodes) {
 	    Set<Variable!>! liveVarsAfter = new Set<Variable!>();
 	    if (block.TransferCmd is GotoCmd) {
@@ -347,6 +348,8 @@ namespace Microsoft.Boogie
         foreach (Variable! v in stCmd.Locals) {
           liveSet.Remove(v);
         }
+	//HS D
+      } else if (cmd is BlockHole) {
       } else {
         assert false;
       }

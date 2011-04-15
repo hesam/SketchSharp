@@ -56,7 +56,7 @@ namespace Microsoft.Boogie {
       inlineCallback = cb;
     }
     
-    public static void ProcessImplementation(Program! program, Implementation! impl, InlineCallback cb)
+      public static void ProcessImplementation(Program! program, Implementation! impl, InlineCallback cb, bool generator) // <---- //HS D
       requires impl.Proc != null;
     {
       Inliner inliner = new Inliner(cb);
@@ -69,7 +69,7 @@ namespace Microsoft.Boogie {
       bool inlined = false;
       //HS D
       Hashtable! seenHoles = new Hashtable();
-      List<Block!>! newBlocks = inliner.DoInline(impl.Blocks, program, newLocalVars, newModifies, out inlined, seenHoles); //<---- //HS D
+      List<Block!>! newBlocks = inliner.DoInline(impl.Blocks, program, newLocalVars, newModifies, out inlined, seenHoles, generator); //X 2 <---- //HS D
 
       if (!inlined) return;
       
@@ -90,10 +90,10 @@ namespace Microsoft.Boogie {
     }
     
     
-    public static void ProcessImplementation(Program! program, Implementation! impl)
+      public static void ProcessImplementation(Program! program, Implementation! impl, bool generator) //<---- //HS D
       requires impl.Proc != null;
     {
-      ProcessImplementation(program, impl, null);
+	ProcessImplementation(program, impl, null, generator); // <--- //HS D
     }
     
     protected void EmitImpl(Implementation! impl)
@@ -165,7 +165,7 @@ namespace Microsoft.Boogie {
     }
     
     private List<Block!>! DoInlineBlocks(Stack<Procedure!>! callStack, List<Block!>! blocks, Program! program, 
-                                         VariableSeq! newLocalVars, IdentifierExprSeq! newModifies, ref bool inlinedSomething, Hashtable! seenHoles) //<--- //HS D
+                                         VariableSeq! newLocalVars, IdentifierExprSeq! newModifies, ref bool inlinedSomething, Hashtable! seenHoles, bool generator) //<--- X 2 //HS D
     {
       List<Block!>! newBlocks = new List<Block!>();
 
@@ -220,7 +220,7 @@ namespace Microsoft.Boogie {
               // increment the counter for the procedure to be used in constructing the locals and formals
               NextInlinedProcLabel(proc.Name);
               
-              BeginInline(newLocalVars, newModifies, proc, impl, seenHoles); //<--- //HS D
+              BeginInline(newLocalVars, newModifies, proc, impl, seenHoles, generator); //<--- X 2 //HS D
               
               List<Block!>! inlinedBlocks = CreateInlinedBlocks(callCmd, proc, impl, nextBlockLabel);
               
@@ -228,7 +228,7 @@ namespace Microsoft.Boogie {
 
               recursiveProcUnrollMap[impl.Name] = recursiveProcUnrollMap[impl.Name] - 1;
               callStack.Push((!)impl.Proc);
-              inlinedBlocks = DoInlineBlocks(callStack, inlinedBlocks, program, newLocalVars, newModifies, ref inlinedSomething, seenHoles);//<--- //HS D
+              inlinedBlocks = DoInlineBlocks(callStack, inlinedBlocks, program, newLocalVars, newModifies, ref inlinedSomething, seenHoles, generator);//<--- X 2 //HS D
               callStack.Pop();
               recursiveProcUnrollMap[impl.Name] = recursiveProcUnrollMap[impl.Name] + 1;
               
@@ -267,16 +267,16 @@ namespace Microsoft.Boogie {
       return newBlocks;
     }
 
-      protected List<Block!>! DoInline(List<Block!>! blocks, Program! program, VariableSeq! newLocalVars, IdentifierExprSeq! newModifies, out bool inlined, Hashtable! seenHoles) //<---- //HS D
+      protected List<Block!>! DoInline(List<Block!>! blocks, Program! program, VariableSeq! newLocalVars, IdentifierExprSeq! newModifies, out bool inlined, Hashtable! seenHoles, bool generator) //X 2 <---- //HS D
     {
       inlinedProcLblMap.Clear();
       recursiveProcUnrollMap.Clear();
     
       inlined = false;
-      return DoInlineBlocks(new Stack<Procedure!>(), blocks, program, newLocalVars, newModifies, ref inlined, seenHoles); //<--- //HS D
+      return DoInlineBlocks(new Stack<Procedure!>(), blocks, program, newLocalVars, newModifies, ref inlined, seenHoles, generator); //X 2 <--- //HS D
     }
     
-      protected void BeginInline(VariableSeq! newLocalVars, IdentifierExprSeq! newModifies, Procedure! proc, Implementation! impl, Hashtable! seenHoles) { //<--- //HS D
+      protected void BeginInline(VariableSeq! newLocalVars, IdentifierExprSeq! newModifies, Procedure! proc, Implementation! impl, Hashtable! seenHoles, bool generator) { //X 2 <--- //HS D
       Hashtable substMap = new Hashtable();
       
 
@@ -287,10 +287,18 @@ namespace Microsoft.Boogie {
           bool isHole = locVar is Hole;
           if (isHole)
               {
-                  if (seenHoles.ContainsKey(locVar))
-                      continue;                          
-                  localVar = (LocalVariable) locVar;
-                  seenHoles[locVar] = true;
+		  // multiple calls to regular inlines don't generate new holes
+		  // but generator inlines do...
+		  if (generator && seenHoles.ContainsKey(locVar)) {
+		      TypedIdent ident = new TypedIdent (Token.NoToken, "?!_" + Hole.Ctr, locVar.TypedIdent.Type);
+
+		      localVar = new Hole(Token.NoToken, ident);
+		  } else {
+		      if (seenHoles.ContainsKey(locVar))
+			  continue;                          
+		      localVar = (LocalVariable) locVar;
+		  }
+		  seenHoles[locVar] = true;
               }
           else 
               localVar = new LocalVariable(Token.NoToken, new TypedIdent(Token.NoToken, GetProcVarName(proc.Name, locVar.Name), locVar.TypedIdent.Type, locVar.TypedIdent.WhereExpr));
@@ -392,6 +400,7 @@ namespace Microsoft.Boogie {
       for(int i = 0; i < locVars.Length; ++i) {
         Expr whereExpr = ((!)locVars[i]).TypedIdent.WhereExpr;
         if(whereExpr != null) {
+	    // Console.WriteLine("HS D - var {0} whereexpr {1} ({2})", locVars[i], whereExpr, proc.Name);
           whereExpr = Substituter.Apply(codeCopier.Subst, whereExpr);
           // FIXME we cannot overwrite it, can we?!
           ((!)locVars[i]).TypedIdent.WhereExpr = whereExpr;

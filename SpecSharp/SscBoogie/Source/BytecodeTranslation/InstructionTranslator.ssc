@@ -1009,8 +1009,7 @@ namespace Microsoft.Boogie
         if (callee == null || statement == null) { return null; }
         
         if (arguments == null) { arguments = new Cci.ExpressionList(); }
-        
-#if ROB_DEBUG    
+#if ROB_DEBUG     
     System.IO.TextWriter W = new System.IO.StreamWriter(@"\temp\funs.txt", true);
     W.WriteLine(callee.FullName); W.Close();
 #endif    

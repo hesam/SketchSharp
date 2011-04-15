@@ -56,9 +56,8 @@ namespace Microsoft.SpecSharp{
 
 
     private static Guid dummyGuid = new Guid();
-   
-    public static Hashtable opMethods = new Hashtable(); //HS D: HACK FIXME
-    private Method currMethod; //HS D: HACK FIXME
+    private TypeNode currentTypeNode; //HS D: HACK FIXME
+    private static Hashtable definedTypeNodes = new Hashtable(); //HS D: HACK FIXME
 
     public Parser(Module symbolTable){
       this.module = symbolTable;
@@ -744,6 +743,8 @@ namespace Microsoft.SpecSharp{
             c.IsAbstractSealedContainerForStatics = true;
             c.Flags &= ~TypeFlags.SpecialName;
           }
+	  //HS D: HACK FIXME
+	  this.currentTypeNode = t;
           break;
         case Token.Interface: 
           t = new Interface();
@@ -875,6 +876,7 @@ namespace Microsoft.SpecSharp{
         this.SkipTo(followers, Error.NamespaceUnexpected);
       if (isPartial) this.MergeWithCompleteType(t);        
     }
+    
     private void AddTypeToModule(TypeNode t){
       Identifier name = t.Name;
       if (Cci.TargetPlatform.GenericTypeNamesMangleChar != 0) {
@@ -1271,8 +1273,8 @@ namespace Microsoft.SpecSharp{
           case Token.Readonly:
           case Token.Volatile:
           case Token.Virtual:
-	  case Token.Operation: //HS D
-	  case Token.Transformable: //HS D
+	      //case Token.Operation: //HS D
+	      //case Token.Transformable: //HS D
           case Token.Override:
           case Token.Extern:
             if (parsingInterface && this.currentToken != Token.Readonly && this.currentToken != Token.Static)
@@ -1470,8 +1472,8 @@ namespace Microsoft.SpecSharp{
         case Token.Readonly:
         case Token.Volatile:
         case Token.Virtual:
-        case Token.Operation: //HS D
-        case Token.Transformable: //HS D
+	    //case Token.Operation: //HS D
+	    //case Token.Transformable: //HS D
         case Token.Override:
         case Token.Extern:
         case Token.Unsafe:
@@ -3078,38 +3080,9 @@ namespace Microsoft.SpecSharp{
       }
       this.ParseMethodContract(m, followers|Token.LeftBrace|Token.Semicolon, ref swallowedSemicolonAlready);
       if (!abstractMethod) {
-	  this.currMethod = m; //HS D: HACK FIXME
         m.Body = this.ParseBody(m, sctx, followers, swallowedSemicolonAlready);
         if (m.Body != null) {
           m.SourceContext.EndPos = m.Body.SourceContext.EndPos;	  
-	  /*
-	  //HS D: see if there are block holes in the body...
-	  //HACK FIXME
-	  if (m.Body.Statements != null) {
-	      TypeNode intTp = CoreSystemTypes.Int32;
-	      TypeNode strTp = CoreSystemTypes.String.GetArrayType(1);
-	      ExpressionList bHoles = new ExpressionList();
-	      StatementList sl = m.Body.Statements;
-	      for (int i = 0; i < sl.Count; i++) {
-		  Statement s = sl[i];
-		  if (s is BlockHole) {
-		      BlockHole bh = (BlockHole) s;
-		      bHoles.Add(new Literal(i, intTp));
-		      bHoles.Add(bh.Repeat);
-		      bHoles.Add(bh.IfBranches);
-		      bHoles.Add(bh.BranchOps);
-		      bHoles.Add(bh.Conjunctions);
-		      bHoles.Add(bh.Ops);
-		      bHoles.Add(bh.CondVars);
-		      bHoles.Add(bh.ArgVars);
-		      InstanceInitializer oCtor = SystemTypes.HasBlockHoleAttribute.GetConstructor(intTp, intTp, intTp, intTp, intTp, strTp, strTp, strTp);
-		      AttributeNode attr = new AttributeNode(new MemberBinding(null, oCtor), bHoles, AttributeTargets.Method);
-		      m.Attributes.Add(attr);
-		      break;
-		  }
-	      }
-	  }
-	  */
 	}
       } else if (!swallowedSemicolonAlready) {
 	  m.SourceContext.EndPos = this.scanner.endPos;
@@ -3562,14 +3535,13 @@ namespace Microsoft.SpecSharp{
             this.inUnsafeCode = true;
             break;
 	  //HS D
-          case Token.Operation:
-	      result |= MethodFlags.Operation;
-	      opMethods[member.Name.Name] = member; //HACK FIXME
-	      break;
+          // case Token.Operation:
+	  //     result |= MethodFlags.Operation;
+	  //     break;
 	  //HS D
-          case Token.Transformable:
-	      result |= MethodFlags.Transformable;
-	      break;
+          // case Token.Transformable:
+	  //     result |= MethodFlags.Transformable;
+	  //     break;
           default:
             Debug.Assert(false);
             this.HandleError(member.Name.SourceContext, Error.InvalidModifier, modifierContexts[i].SourceText);
@@ -3701,11 +3673,11 @@ namespace Microsoft.SpecSharp{
             goto case Token.Ref;
           }
           break;
-	  //HS D
-          case Token.Transformable:
-	      p.Flags = ParameterFlags.Transformable;
-	      this.GetNextToken();
-	      break;
+	  // //HS D
+          // case Token.Transformable:
+	  //     p.Flags = ParameterFlags.Transformable;
+	  //     this.GetNextToken();
+	  //     break;
       }
       bool voidParam = false;
       if (this.currentToken == Token.Void){
@@ -4230,11 +4202,35 @@ namespace Microsoft.SpecSharp{
 	ConstructArray condvars = templateParams.ContainsKey("condvars") ? (ConstructArray) templateParams["condvars"] : empty;
 	ConstructArray argvars = templateParams.ContainsKey("argvars") ? (ConstructArray) templateParams["argvars"] : empty;
 	SourceContext sctx = this.scanner.CurrentSourceContext;
-	BlockHole result = new BlockHole(sctx, repeat, ifbranches, branchops, conjunctions, ops, condvars, argvars, this.currMethod, opMethods); 
+	BlockHole result = new BlockHole(sctx, repeat, ifbranches, branchops, conjunctions, ops, condvars, argvars); //, this.currMethod, opMethods); 
 	result.SourceContext = sctx;
+	//HS D: HACK FIXME	
+	DefineBlockHoleMethod(this.currentTypeNode);
+
 	return result;
     }
     
+    //HS D
+    //HACK FIXME: define a BlockHole method so can represent block holes by calls to it
+    private void DefineBlockHoleMethod(TypeNode t) {
+	if (definedTypeNodes.ContainsKey(t))
+	    return;
+	definedTypeNodes[t] = true;
+	ParameterList parList = new ParameterList();
+	TypeNode intTp = CoreSystemTypes.Int32;
+	TypeNode strTp = CoreSystemTypes.Object.GetArrayType(1);
+	parList.Add(new Parameter(null, ParameterFlags.None, new Identifier("repeat"), intTp, null, null));
+	parList.Add(new Parameter(null, ParameterFlags.None, new Identifier("ifbranches"), intTp, null, null));
+	parList.Add(new Parameter(null, ParameterFlags.None, new Identifier("branchops"), intTp, null, null));
+	parList.Add(new Parameter(null, ParameterFlags.None, new Identifier("conjunctions"), intTp, null, null));
+	parList.Add(new Parameter(null, ParameterFlags.None, new Identifier("ops"), strTp, null, null));
+	parList.Add(new Parameter(null, ParameterFlags.None, new Identifier("condvars"), strTp, null, null));
+	parList.Add(new Parameter(null, ParameterFlags.None, new Identifier("argvars"), strTp, null, null));
+	Method m = new Method(t, null, new Identifier("BlockHole"), parList, this.TypeExpressionFor(Token.Void), new Block());
+	m.Flags |= MethodFlags.Static;
+	t.Members.Add(m);	
+    }
+
     //HS D
     private Expression ParseCommaSeparetedIdentifierSet() {
 	this.Skip(Token.LeftBrace);
@@ -7638,8 +7634,8 @@ namespace Microsoft.SpecSharp{
       AddOrRemoveOrModifier |= Token.Readonly;
       AddOrRemoveOrModifier |= Token.Volatile;
       AddOrRemoveOrModifier |= Token.Virtual;
-      AddOrRemoveOrModifier |= Token.Operation; //HS D
-      AddOrRemoveOrModifier |= Token.Transformable; //HS D
+      //AddOrRemoveOrModifier |= Token.Operation; //HS D
+      //AddOrRemoveOrModifier |= Token.Transformable; //HS D
       AddOrRemoveOrModifier |= Token.Override;
       AddOrRemoveOrModifier |= Token.Extern;
       AddOrRemoveOrModifier |= Token.Unsafe;
@@ -7711,8 +7707,8 @@ namespace Microsoft.SpecSharp{
       GetOrLeftBracketOrSetOrModifier |= Token.Readonly;
       GetOrLeftBracketOrSetOrModifier |= Token.Volatile;
       GetOrLeftBracketOrSetOrModifier |= Token.Virtual;
-      GetOrLeftBracketOrSetOrModifier |= Token.Operation; //HS D
-      GetOrLeftBracketOrSetOrModifier |= Token.Transformable; //HS D
+      //GetOrLeftBracketOrSetOrModifier |= Token.Operation; //HS D
+      //GetOrLeftBracketOrSetOrModifier |= Token.Transformable; //HS D
       GetOrLeftBracketOrSetOrModifier |= Token.Override;
       GetOrLeftBracketOrSetOrModifier |= Token.Extern;
       GetOrLeftBracketOrSetOrModifier |= Token.Unsafe;
@@ -7821,7 +7817,7 @@ namespace Microsoft.SpecSharp{
       ParameterTypeStart |= Token.Ref;
       ParameterTypeStart |= Token.Out;
       ParameterTypeStart |= Token.Params;
-      ParameterTypeStart |= Token.Transformable; //HS D
+      //ParameterTypeStart |= Token.Transformable; //HS D
 
       PrimaryStart = new TokenSet();
       PrimaryStart |= Parser.IdentifierOrNonReservedKeyword;
@@ -7899,8 +7895,8 @@ namespace Microsoft.SpecSharp{
       TypeMemberStart |= Token.Readonly;
       TypeMemberStart |= Token.Volatile;
       TypeMemberStart |= Token.Virtual;
-      TypeMemberStart |= Token.Operation; //HS
-      TypeMemberStart |= Token.Transformable; //HS
+      //TypeMemberStart |= Token.Operation; //HS
+      //TypeMemberStart |= Token.Transformable; //HS
       TypeMemberStart |= Token.Override;
       TypeMemberStart |= Token.Extern;
       TypeMemberStart |= Token.Unsafe;

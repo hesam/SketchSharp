@@ -1979,21 +1979,6 @@ namespace System.Compiler {
       this.typeSystem.insideUnsafeCode = savedInsideUnsafeCode;
       return block;
     }
-    //HS D
-    //FIXME
-    public override Statement VisitBlockHole(BlockHole block) {
-        ExpressionList ops = block.Ops.Initializers;
-	Hashtable classOpMethods = block.ClassOpMethods;
-	foreach (Literal l in ops) {
-	    Identifier op = (Identifier) l.Value; //FIXME:
-	    string opN = op.Name;
-	    if (!classOpMethods.ContainsKey(opN)) {
-		Console.WriteLine("Did you forget to mark method " + opN + " as operation?");
-		this.HandleError(block, Error.NoSuchOperation, opN);
-	    }
-	}
-	return block;
-    }
     public override Expression VisitBlockExpression(BlockExpression blockExpression) {
       if (blockExpression == null) return null;
       blockExpression.Block = this.VisitBlock(blockExpression.Block);

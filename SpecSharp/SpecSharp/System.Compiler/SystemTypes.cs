@@ -1,3 +1,4 @@
+
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) Microsoft Corporation.  All Rights Reserved.
@@ -1323,8 +1324,9 @@ namespace System.Compiler{
     public static Class/*!*/ PeerAttribute;
     public static Class/*!*/ CapturedAttribute;
     public static Class/*!*/ InlineAttribute; //HS D
-    public static Class/*!*/ IsOperationAttribute; //HS D
-    public static Class/*!*/ HasBlockHoleAttribute; //HS D
+    public static Class/*!*/ GeneratorAttribute; //HS D
+    public static Class/*!*/ OperationAttribute; //HS D
+    //public static Class/*!*/ IsOperationAttribute; //HS D
     public static Class/*!*/ LockProtectedAttribute;
     public static Class/*!*/ RequiresLockProtectedAttribute;
     public static Class/*!*/ ImmutableAttribute;
@@ -1750,8 +1752,9 @@ namespace System.Compiler{
       PeerAttribute = (Class)GetCompilerRuntimeTypeNodeFor(CompilerGuardsNs, "PeerAttribute", ElementType.Class);
       CapturedAttribute = (Class)GetCompilerRuntimeTypeNodeFor(CompilerGuardsNs, "CapturedAttribute", ElementType.Class);
       InlineAttribute = (Class)GetCompilerRuntimeTypeNodeFor(CompilerGuardsNs, "InlineAttribute", ElementType.Class); //HS D
-      IsOperationAttribute = (Class)GetCompilerRuntimeTypeNodeFor(CompilerGuardsNs, "IsOperationAttribute", ElementType.Class); //HS D
-      HasBlockHoleAttribute = (Class)GetCompilerRuntimeTypeNodeFor(CompilerGuardsNs, "HasBlockHoleAttribute", ElementType.Class); //HS D
+      GeneratorAttribute = (Class)GetCompilerRuntimeTypeNodeFor(CompilerGuardsNs, "GeneratorAttribute", ElementType.Class); //HS D
+      OperationAttribute = (Class)GetCompilerRuntimeTypeNodeFor(CompilerGuardsNs, "OperationAttribute", ElementType.Class); //HS D
+      // IsOperationAttribute = (Class)GetCompilerRuntimeTypeNodeFor(CompilerGuardsNs, "IsOperationAttribute", ElementType.Class); //HS D
       LockProtectedAttribute = (Class)GetCompilerRuntimeTypeNodeFor(CompilerGuardsNs, "LockProtectedAttribute", ElementType.Class);
       RequiresLockProtectedAttribute = (Class)GetCompilerRuntimeTypeNodeFor(CompilerGuardsNs, "RequiresLockProtectedAttribute", ElementType.Class);
       ImmutableAttribute = (Class)GetCompilerRuntimeTypeNodeFor(CompilerGuardsNs, "ImmutableAttribute", ElementType.Class);
@@ -2034,8 +2037,9 @@ namespace System.Compiler{
       PeerAttribute = null;
       CapturedAttribute = null;
       InlineAttribute = null; //HS D
-      IsOperationAttribute = null; //HS D
-      HasBlockHoleAttribute = null; //HS D 
+      GeneratorAttribute = null; //HS D
+      OperationAttribute = null; //HS D
+      //IsOperationAttribute = null; //HS D
       LockProtectedAttribute = null;
       RequiresLockProtectedAttribute = null;
       ImmutableAttribute = null;

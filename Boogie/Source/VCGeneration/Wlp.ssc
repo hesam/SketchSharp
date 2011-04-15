@@ -3,6 +3,7 @@
 // Copyright (C) Microsoft Corporation.  All Rights Reserved.
 //
 //-----------------------------------------------------------------------------
+
 using System;
 using System.Collections;
 using Microsoft.Boogie;
@@ -38,22 +39,32 @@ namespace VC {
   
   public class Wlp
   {
-    public static VCExpr! Block(Block! b, VCExpr! N, VCContext! ctxt)
+      public static VCExpr! Block(Block! b, VCExpr! N, VCContext! ctxt, int CEGARItr)
       modifies ctxt.*;
     {
       VCExpressionGenerator! gen = ctxt.Ctxt.ExprGen;
       VCExpr! res = N;
-
+      
       //HS D
       if (CommandLineOptions.Clo.synthesisStep == SynthesisStep.Sketching)
           {
+	      //bool isConditionSketching = CommandLineOptions.Clo.IsConditionSketching && CEGARItr > 0;
+	      bool toNegate = true; //!isConditionSketching;
+	      //HS D: HACK FIXME
+	      // if (isConditionSketching && b.Label.Equals("PreconditionGeneratedEntry0")) {
+	      // 	  res = gen.Not(N);
+	      // 	  // Console.WriteLine("HS D - flipped res -> {0}", res);
+
+	      // }
               if (b.Cmds.Length > 0)
                   {
                       int i = b.Cmds.Length - 1;
-                      res = Cmd((!) b.Cmds[i], res, ctxt, true); //<--- //HS D
+                      res = Cmd((!) b.Cmds[i], res, ctxt, true, toNegate); //<--- //HS D
+		      // Console.WriteLine("HS D - Hey res now {0} -> {1}", b.Cmds[i], res);
                       while (--i>=0)
                           {
-                              res = Cmd((!) b.Cmds[i], res, ctxt, false); //<--- ///HS D
+                              res = Cmd((!) b.Cmds[i], res, ctxt, false, false); //<--- ///HS D
+			      // Console.WriteLine("HS D - Hey res now {0} -> {1}", b.Cmds[i], res);
                           }
                   }
           }
@@ -61,7 +72,7 @@ namespace VC {
           {
               for (int i = b.Cmds.Length; --i>=0; )
                   {
-                      res = Cmd((!) b.Cmds[i], res, ctxt, false); //<--- //HS D
+                      res = Cmd((!) b.Cmds[i], res, ctxt, false, false); //<--- //HS D
                   }                            
           }
       
@@ -79,7 +90,7 @@ namespace VC {
     /// Computes the wlp for an assert or assume command "cmd".
     /// </summary>
     //public static VCExpr! Cmd(Cmd! cmd, VCExpr! N, VCContext! ctxt)
-    public static VCExpr! Cmd(Cmd! cmd, VCExpr! N, VCContext! ctxt, bool negate) //<--- //HS D
+    public static VCExpr! Cmd(Cmd! cmd, VCExpr! N, VCContext! ctxt, bool last, bool negate) //<--- //X 2 HS D
     {
       VCExpressionGenerator! gen = ctxt.Ctxt.ExprGen;
       if (cmd is AssertCmd) {
@@ -92,8 +103,8 @@ namespace VC {
         //HS D
         else if (CommandLineOptions.Clo.synthesisStep == SynthesisStep.Sketching)
             {
-                return (negate && cmd is AssertEnsuresCmd) ? 
-                    gen.Not(C) : gen.Implies(C, N);
+                return (last && cmd is AssertEnsuresCmd) ? 
+                    (negate ? gen.Not(C) : C) : gen.Implies(C, N);
             }
 
         else {
@@ -177,7 +188,7 @@ namespace VC {
       if ( r is AtomicRE )
       {
         AtomicRE ar = (AtomicRE) r;
-        return Block(ar.b, N, ctxt);
+        return Block(ar.b, N, ctxt, -1); //<--- HS D 
       }
       else if ( r is Sequential )
       {

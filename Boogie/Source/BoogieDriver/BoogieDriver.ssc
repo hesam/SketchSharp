@@ -435,9 +435,14 @@ namespace Microsoft.Boogie
       List<Declaration!>! TopLevelDeclarations = program.TopLevelDeclarations;
       if (CommandLineOptions.Clo.ProcedureInlining != CommandLineOptions.Inlining.None) {
         bool inline = false;
+	//HS D
+	bool generator = false;
         foreach (Declaration d in TopLevelDeclarations) {
           if (d.FindExprAttribute("inline") != null) {
             inline = true;
+	    //HS D
+	    if (d.FindExprAttribute("generator") != null)
+		generator = true;
           }
         }
         if (inline && CommandLineOptions.Clo.LazyInlining == 0) {
@@ -451,7 +456,7 @@ namespace Microsoft.Boogie
           foreach (Declaration d in TopLevelDeclarations) {
             Implementation impl = d as Implementation;
             if (impl != null && !impl.SkipVerification) {
-              Inliner.ProcessImplementation(program, impl);
+		Inliner.ProcessImplementation(program, impl, generator); // <-- //HS D
             }
           }
           foreach (Declaration d in TopLevelDeclarations) {

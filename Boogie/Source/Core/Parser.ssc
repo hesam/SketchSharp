@@ -1771,7 +1771,7 @@ out VariableSeq! ins, out VariableSeq! outs, out QKeyValue kv) {
                     //HS D
 		case 301: {
 			Get();
-                        Console.WriteLine("HS D");
+                        //Console.WriteLine("HS D");
 			e = new IdentifierExpr(t, new Hole(t, new TypedIdent(t, "?!", Bpl.Type.Int)));
 			break;
 		}

@@ -780,6 +780,21 @@ namespace System.Compiler{
     //FIXME: move!
     public virtual Statement VisitBlockHole(BlockHole block){
 	if (block == null) return null;
+
+	SourceContext sctx = block.SourceContext;	
+	ExpressionList args = new ExpressionList();
+	args.Add(block.Repeat);
+	args.Add(block.IfBranches);
+	args.Add(block.BranchOps);
+	args.Add(block.Conjunctions);
+	args.Add(block.Ops);
+	args.Add(block.CondVars);
+	args.Add(block.ArgVars);
+	Expression tgt = new Identifier("BlockHole", sctx);
+	MethodCall c = new MethodCall(tgt, args);
+	return new ExpressionStatement(c);
+
+	/*
 	//HACK FIXME...
 	int repeatN = (int) block.Repeat.Value;
 	object ifBranchesOrig = block.IfBranches.Value;	
@@ -814,10 +829,10 @@ namespace System.Compiler{
 	Console.WriteLine("HS D - block hole...\n");
 	PrintMe(0, res);
 	return res;
+	*/
     }
     
-
-
+    /*
     //HS D
     public static Statement GenIfBranch(SourceContext sctx, int ifBranches, bool ifBranchesNoElse, int conjunctions, Expression tgt, ExpressionList condVars, ExpressionList argVars, ParameterList ps, bool isVoid, bool opTr, bool[] trPrms, ParameterList callingMtdParams) {
 	Statement[] opCalls = new Statement[ifBranches];
@@ -978,6 +993,7 @@ namespace System.Compiler{
 	    break;
 	}
     }
+    */
 
 #if !MinimalReader
     public virtual Expression VisitBlockExpression(BlockExpression blockExpression){

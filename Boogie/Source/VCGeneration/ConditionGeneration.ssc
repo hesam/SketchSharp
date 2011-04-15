@@ -891,6 +891,71 @@ namespace VC
             impl.Blocks.Add(b);        
       }
 
+    //   //HS D
+    //   protected void DesugarBlockHoles(Implementation! impl, Program! program)
+    //   {
+    //     foreach ( Block b in impl.Blocks )
+    // 	    {
+    // 		CmdSeq passiveCmds = new CmdSeq();
+    // 		foreach (Cmd! c in b.Cmds)
+    // 		    {
+    // 			if (c is BlockHole) {
+    // 			    BlockHole bh = (BlockHole) c;
+    // 			    bh.SetOps(program);
+    // 			    List<Procedure!> ops = bh.Ops;
+    // 			    Procedure op = ops[0];
+    // 			    bool opTr = op.IsTransformable, isOp = op.IsOperation;
+    // 			    bool[] trPrms = op.ArgsTransformable;
+    // 			    bool[] refOutPrms = op.ArgsRef;
+    // 			    String[] namePrms = op.ArgsName;
+    // 			    Console.WriteLine("HS D - op {0} isop {2} tr {1}", op, opTr, isOp);			    
+    // 			    for (int i = 0; i < op.InParams.Length; ++i) {
+    // 				Console.WriteLine("HS D - i {0} tr {1} ref {2}", op.InParams[i], trPrms[i], refOutPrms[i]);
+    // 			    }
+    // 			    CallCmd cc = GenOpCall(impl, op, opTr, namePrms, trPrms, refOutPrms);
+    // 			    passiveCmds.Add(cc);
+    // 			} else {
+    // 			    passiveCmds.Add(c);
+    // 			}
+    // 		    }
+    // 		b.Cmds = passiveCmds;	
+    // 	    }	
+    //   }
+
+
+    // //HS D
+    //   public CallCmd GenOpCall(Implementation! impl, Procedure op, bool opTr, String[] namePrms, bool[] trPrms, bool[] refOutPrms) {
+    // 	List<Expr>! ins = new List<Expr>();
+    // 	List<IdentifierExpr>! outs = new List<IdentifierExpr>();
+    // 	Expr arg;
+    // 	for (int i = 0; i < op.InParams.Length; ++i) {
+    // 	    Variable p = op.InParams[i];
+    // 	    bool pTr = trPrms[i];
+    // 	    if (pTr) {
+    // 		arg = GenLambdaHole(impl, false);
+    // 		ins.Add(arg);
+    // 	    } else {
+    // 		arg = new IdentifierExpr(Token.NoToken, new LocalVariable(Token.NoToken, new TypedIdent (Token.NoToken, namePrms[i], (!)p.TypedIdent.Type)));
+    // 		ins.Add(arg);
+    // 		if (refOutPrms[i])
+    // 		    outs.Add((IdentifierExpr) arg);		    
+    // 	    }	   
+    // 	}
+    // 	CallCmd cc = new CallCmd(Token.NoToken, op.Name, ins, outs);
+    // 	cc.Proc = op;			    
+
+    // 	return cc;
+    // }
+
+    // //HS D
+    //   public static Expr GenLambdaHole(Implementation! impl, bool isBool) {
+    // 	Expr res;
+    // 	Hole hole = new Hole(Token.NoToken, new TypedIdent (Token.NoToken, "?!_" + Hole.Ctr, Bpl.Type.Int));
+    // 	res = new IdentifierExpr(Token.NoToken, hole);
+    // 	impl.AddHoleVar(hole);
+    // 	return res;
+    // }
+
 
     /// <summary>
     /// Helperfunction to restore the predecessor relations after loop unrolling
@@ -978,6 +1043,11 @@ namespace VC
         return new Hashtable();
       }
 
+      // foreach (Block! pred in b.Predecessors)
+      // {
+      // 	  Console.WriteLine("HS D - block {0} <- pred {1}", pred, b);w
+      // }
+
       Hashtable /*Variable -> Expr*/ incarnationMap = null;
       Set /*Variable*/ fixUps = new Set /*Variable*/ ();
       foreach (Block! pred in b.Predecessors)
@@ -985,8 +1055,14 @@ namespace VC
         assert block2Incarnation.Contains(pred);  // otherwise, Passive Transformation found a block whose predecessors have not been processed yet
         Hashtable /*Variable -> Expr*/ predMap = (Hashtable! /*Variable -> Expr*/) block2Incarnation[pred];
 
+	// Console.WriteLine("HS D - block {0} <- pred {1}", pred, b);
+	// foreach (Object! v in predMap.Keys)
+	//     Console.WriteLine("HS D - predmap {0}->{1}", v, predMap[v]);
+
         if (incarnationMap == null)
         {
+	    // Console.WriteLine("HS D - incar = null...");
+
           incarnationMap = (Hashtable /*Variable -> Expr*/)predMap.Clone();
           continue;
         }
@@ -1034,6 +1110,8 @@ namespace VC
         Variable v_prime = CreateIncarnation(v, b);
         IdentifierExpr ie = new IdentifierExpr(v_prime.tok, v_prime);
         assert incarnationMap != null;
+	  // Console.WriteLine("HS D - for b {0} fixing: {1}->{2}", b, v, ie);
+
         incarnationMap[v] = ie;
         foreach (Block! pred in b.Predecessors )
         {
@@ -1084,6 +1162,8 @@ namespace VC
                   {
                       if (!incarnationMap.ContainsKey(v))
                           {
+			      // Console.WriteLine("HS D - for b {0} fixing1: {1}->{2}", b, v, iIncarMap[v]);
+
                               incarnationMap.Add(v, (!) (IdentifierExpr!) iIncarMap[v]);                                  
                           }
                   }                                    
@@ -1115,14 +1195,21 @@ namespace VC
       #region Topological sort -- need to process in a linearization of the partial order
       Graph<Block> dag = new Graph<Block>();
       dag.AddSource((!)impl.Blocks[0]); // there is always at least one node in the graph
+      //Console.WriteLine("HS D - dag -> add source {0}", (!)impl.Blocks[0]);
+
       foreach (Block b in impl.Blocks)
       {
-        GotoCmd gtc = b.TransferCmd as GotoCmd;
+
+	// Console.WriteLine("HS D - for b {0}", b);
+
+        GotoCmd gtc = b.TransferCmd as GotoCmd; 
         if (gtc != null)
         {
           assume gtc.labelTargets != null;
           foreach (Block! dest in gtc.labelTargets)
           {
+	      //Console.WriteLine("HS D - dag -> add edge {0}:{1}", b, dest);
+
             dag.AddEdge(b,dest);
           }
         }
@@ -1147,8 +1234,14 @@ namespace VC
 
       foreach (Block! b in sortedNodes )
       {
+	  //Console.WriteLine("HS D - sorted b {0}", b);
+
         assert !block2Incarnation.Contains(b);
         Hashtable /*Variable -> Expr*/ incarnationMap = ComputeIncarnationMap(b, block2Incarnation);
+
+	// Console.WriteLine("HS D - b {0}", b);
+	// foreach (Object! v in incarnationMap.Keys)
+	//     Console.WriteLine("HS D - map {0}->{1}", v, incarnationMap[v]);
         
         #region Each block's map needs to be available to successor blocks
         block2Incarnation.Add(b,incarnationMap);
@@ -1193,7 +1286,6 @@ namespace VC
            
           PredicateCmd! pc = (PredicateCmd) c.Clone();
           Expr! copy = Substituter.ApplyReplacingOldExprs(incarnationSubst, oldFrameSubst, pc.Expr);
-
           if (pc is AssertCmd) {
             ((AssertCmd) pc).OrigExpr = pc.Expr;
             assert ((AssertCmd) pc).IncarnationMap == null;

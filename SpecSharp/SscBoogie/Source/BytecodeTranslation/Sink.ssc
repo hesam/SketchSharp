@@ -2070,38 +2070,33 @@ namespace Microsoft.Boogie
           sig.InParameters, sig.OutParameters,
           sig.Requires, sig.Modifies, sig.Ensures);
 
-
         //HS D: FIXME:
         if (CommandLineOptions.Clo.Sketching) {
             if (method.IsStatic)            
                 procedure.AddAttribute("IsStatic", Bpl.Expr.True);
             if (method.Inline)
-                procedure.AddAttribute("inline", new Bpl.LiteralExpr(NoToken, BigNum.FromInt(1))); //HS D - FIXME
-	    /*
-            if (method.IsOperation) {
-                procedure.AddAttribute("IsOperation", Bpl.Expr.True);
-		if (method.IsTransformable)            
-		    procedure.AddAttribute("IsTransformable", Bpl.Expr.True);
-		bool[]! trPrms = new bool[method.Parameters.Count];
-		for (int i = 0; i < method.Parameters.Count; i++) {
-		    Cci.Parameter! p = (!) method.Parameters[i];
-		    trPrms[i] = (p.Flags & Cci.ParameterFlags.Transformable) > 0;
-		}
-		procedure.AddAttribute("TransformableParams", trPrms);
-	    }
-	    Cci.AttributeNode blockHoleAttr = method.GetAttribute(Cci.SystemTypes.HasBlockHoleAttribute);
-	    if (blockHoleAttr != null) {		
-		procedure.AddAttribute("HasBlockHole", Bpl.Expr.True);
-		procedure.AddAttribute("BlockHoleStmtIdx", (!) ((!) blockHoleAttr.Expressions)[0]);
-		procedure.AddAttribute("BlockHoleInfo", blockHoleAttr.Expressions);
-		
-		foreach (Cci.Literal bhe in blockHoleAttr.Expressions) {
-		    Console.WriteLine("HS D - wow attr block hole {0}:{1}", bhe.Value, bhe.Value.GetType());		    
-		}
-		int blockHoleStmtIdx = (int) ((Cci.Literal) (blockHoleAttr.Expressions[0])).Value;
-		Console.WriteLine("HS D - bh idx is {0}", blockHoleStmtIdx);			
-	    }
-	    */
+                procedure.AddAttribute("inline", new Bpl.LiteralExpr(NoToken, BigNum.FromInt(1))); //FIXME
+            if (method.Generator)
+                procedure.AddAttribute("generator", Bpl.Expr.True);
+
+	    // if (method.IsOperation) {
+	    // 	procedure.IsOperation = true;
+	    // 	procedure.IsTransformable = method.IsTransformable;
+
+	    // 	Cci.ParameterList ps = method.Parameters;
+	    // 	bool[] trPrms = new bool[ps.Count];
+	    // 	bool[] refPrms = new bool[ps.Count];
+	    // 	String[] namePrms = new String[ps.Count];
+	    // 	for (int i = 0; i < ps.Count; i++) {
+	    // 	    Cci.Parameter p = ps[i];
+	    // 	    trPrms[i] = (p.Flags & Cci.ParameterFlags.Transformable) > 0;
+	    // 	    refPrms[i] = IsOutParameter(p);
+	    // 	    namePrms[i] = p.Name.Name;
+	    // 	}
+	    // 	procedure.ArgsTransformable = trPrms;
+	    // 	procedure.ArgsRef = refPrms;
+	    // 	procedure.ArgsName = namePrms;
+	    // }
 	}
 
         this.toplevelDeclarations.Add(procedure);
@@ -2124,7 +2119,13 @@ namespace Microsoft.Boogie
         }
       }
     }
-
+      
+      //HS D
+      public void MarkProcedureWithBlockHole(Cci.Method! method) {
+	  Bpl.Procedure procedure = (Bpl.Procedure) this.declaredProcedures[method];
+	  procedure.HasBlockHole = true;
+      }
+      
     private void HandleModelFields(Cci.TypeNode! type) {
       if (!(type is Cci.Class)) return;
       if (Equals(type.FullName, "<Module>")) return;              

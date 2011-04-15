@@ -234,6 +234,9 @@ namespace Microsoft.Boogie
      
       PopulatePrePost(this.Requires, this.Ensures, isConsistencyCheckMethod);
 
+      // foreach (Bpl.Ensures! ens in this.Ensures)
+      // 	  Console.WriteLine("HS D - ens cond  {0} free? {1}", ens.Condition, ens.Free);
+
       // We need to add the heap to the modifies clause even for pure methods, because although conceptually the heap doesn't change,
       // in the current implementation we must still allow the implementation to assign to $Heap.
       this.Modifies.Add(sink.HeapExpr());
@@ -815,7 +818,6 @@ namespace Microsoft.Boogie
       requires method.CciKind == Cci.CciMemberKind.Regular; //don't generate the axiom (and its check) for methodology methods.
       requires method.DeclaringType != null;
     {                         
-
       #region Step 1: Create the Cci consistencyCheckerMethod contract 
       
         Cci.Method consistencyCheckerMethod = null;
@@ -869,6 +871,7 @@ namespace Microsoft.Boogie
         sink.copyBackCommands = new List<Bpl.Cmd!>();
         
         MethodSignature! checkerSig = new MethodSignature(consistencyCheckerMethod, sink, sink.om, true);                               
+
         //Note that the translation of this special purpose method will vary slightly from that of the original method.
         //Exactly how the translation varies is decided further down the pipeline.              
       #endregion //step 2
@@ -917,6 +920,8 @@ namespace Microsoft.Boogie
           //duplicate the postcondition to avoid sharing problems. As the contract has not been resolved yet, use UnresolvedDuplicator.
           UnresolvedDuplicator uDup = new UnresolvedDuplicator();
           foreach (Ensures! ens in checkerSig.Ensures) {
+	      // Console.WriteLine("HS D - ens cond  {0} free? {1}", ens.Condition, ens.Free);
+
             if (ens.Free) continue; //free postconditions don't have to hold and should therefore not end up in the guard we are creating
             posts.Add(uDup.VisitExpr(ens.Condition));
           }
@@ -926,6 +931,7 @@ namespace Microsoft.Boogie
       #endregion
                     
       #region Step 5: construct the purity axiom using the method specification (i.e., the #M axiom)
+
         
         //Declare the #M and ##M functions
         MethodSignature.DeclareFunctionsForPureMethod(method, sink); //Todo: integrate this method as a region      
@@ -958,11 +964,14 @@ namespace Microsoft.Boogie
         //add the non-free preconditions of checkerSig to the antecedent.        
         foreach (Bpl.Requires! req in checkerSig.Requires) {
           if (!req.Free) {
-            Bpl.Expr reqCond = sink.QuantifyOverActivityIndicator(req.Condition);
-            ante = Bpl.Expr.And(ante, reqCond);
+	      Bpl.Expr reqCond = sink.QuantifyOverActivityIndicator(req.Condition);
+	      ante = Bpl.Expr.And(ante, reqCond);	      
           }
         }                            
-        
+	//HS D: HACK FIXME!!
+	if (CommandLineOptions.Clo.Sketching)
+	    ante = Bpl.Expr.True;
+
         //Now set up the *conclusion* of the axiom: where clauses of output parameters.
         //For int parameters, the where clause is suppressed for the following reason.
         //Consider a method: [Pure] int m(int i) ensures result == i+1;
@@ -984,7 +993,7 @@ namespace Microsoft.Boogie
             }
           }
         } 
-        
+
         //Add the ensures clauses of checkerSig to the conclusion. Note that these include the free postconditions.
         //However, we can't allow old() to appear in the axiom. User-supplied postconditions of pure methods are not
         //allowed to mention old(). As the checkerMethod is not called in code, free postconditions don't matter for
@@ -996,8 +1005,13 @@ namespace Microsoft.Boogie
         foreach (Bpl.Ensures! ens in checkerSig.Ensures) {
           OldFinder of = new OldFinder();
           of.VisitExpr(ens.Condition);
+
           if (of.ContainsOld) continue;
+            // Console.WriteLine("HS D - ens cond  {0}", ens.Condition);
+
           Bpl.Expr ensCond = sink.QuantifyOverActivityIndicator(ens.Condition);
+            // Console.WriteLine("HS D - ens cond  {0}", ensCond);
+
           if (concl == Bpl.Expr.True) {
             concl = ensCond;
           } else {
@@ -1017,7 +1031,9 @@ namespace Microsoft.Boogie
           Bpl.Expr res = Sink.Binary(BinaryOperator.Opcode.Eq, oneHashFun, Bpl.Expr.Ident((!)thisVarPurityAxiom));
           concl = Bpl.Expr.And(concl, res);
         }          
-        
+
+            // Console.WriteLine("HS D - concl  {0}", concl);
+
         Bpl.Expr cond = Bpl.Expr.Imp(ante, concl);
 
         //Duplicate the condition, replacing result by fn.
@@ -1027,12 +1043,13 @@ namespace Microsoft.Boogie
         }
         cond = dupAndReplace.VisitExpr(cond); 
 
+
         //quantify universally over the input parameters
         if (bvars.Count > 0) {
           Bpl.Trigger trig = new Bpl.Trigger(NoToken, true, new ExprSeq(oneHashFun));
           cond = new Bpl.ForallExpr(NoToken, new VariableSeq(bvars.ToArray()), trig, cond);
         }
-                                                                                            
+
         //Add PurityAxiomsCanBeAssumed flag 
         cond = Bpl.Expr.Imp(Sink.Ident(Prelude.PurityAxiomsCanBeAssumed, Bpl.Type.Bool), cond);
         
@@ -1210,7 +1227,7 @@ namespace Microsoft.Boogie
         assert twoHashArgs != null;
         Bpl.Function funExpVer = new Bpl.Function(NoToken, "##" + uniqName, twoHashArgs, resultExpVer);
         sink.AddDeclaration(funExpVer, true);                                
-      
+
       } else if (method.IsConfined && !method.IsStatic) {
         Bpl.Variable resultExpVer = new Bpl.Formal(NoToken, new Bpl.TypedIdent(NoToken, "", returnType), false);
         Bpl.Function funExpVer = new Bpl.Function(NoToken, "##" + uniqName, formalsExpVer, resultExpVer);

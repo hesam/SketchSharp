@@ -232,6 +232,7 @@ namespace Microsoft.Boogie
       //HS D
       public bool Sketching = false;
       public bool IsImplSketching = false;
+      //public bool IsConditionSketching = false;
       //HS D
       public SynthesisStep synthesisStep = SynthesisStep.None;
       
@@ -239,7 +240,7 @@ namespace Microsoft.Boogie
       //Synthesis Options
       public int SynOpt_NumThreads = 0; 
       public int SynOpt_NumRandomInputGenerations = 1;
-      public int SynOpt_NumCEGARIterations = 20;
+      public int SynOpt_NumCEGARIterations = 9;
       public int SynOpt_RandGenArrayLengthBound = 10;
       public bool SynOpt_UnboundRandInpArrLen = false;
       public Cci.TypeNode! SynOpt_IntBitWidth = (!) Cci.SystemTypes.Int8;
@@ -1248,9 +1249,13 @@ namespace Microsoft.Boogie
         //HS D
         case "-numCEGARItrs":
         case "/numCEGARItrs":
-            if (ps.ConfirmArgumentCount(1))
-                this.SynOpt_NumCEGARIterations = System.Convert.ToInt32(args[ps.i]);
-            else 
+            if (ps.ConfirmArgumentCount(1)) {
+		int n = System.Convert.ToInt32(args[ps.i]);
+		if (n >= 1)
+		    this.SynOpt_NumCEGARIterations = n - 1;
+		else
+		    ps.Error("Invalid argument \"{0}\" to option {1}: need > 0", args[ps.i], ps.s);
+            } else 
                 ps.Error("Invalid argument \"{0}\" to option {1}", args[ps.i], ps.s);
             break;
        //HS D
@@ -1273,6 +1278,7 @@ namespace Microsoft.Boogie
               ps.CheckBooleanFlag("wait", ref Wait) ||
               ps.CheckBooleanFlag("trace", ref Trace) ||
               ps.CheckBooleanFlag("sketch", ref Sketching) || //HS D
+              // ps.CheckBooleanFlag("conditionSketch", ref IsConditionSketching) || //HS D
               ps.CheckBooleanFlag("unboundRandInpArrLen", ref SynOpt_UnboundRandInpArrLen) || //HS D
               ps.CheckBooleanFlag("traceTimes", ref TraceTimes) ||
               ps.CheckBooleanFlag("noResolve", ref NoResolve) ||

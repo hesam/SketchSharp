@@ -674,6 +674,7 @@ namespace Microsoft.Boogie
   // Block
     //HS D
   //public sealed class Block : Absy 
+
   public class Block : Absy
   {
     public string! Label;  // Note, Label is mostly readonly, but it can change to the name of a nearby block during block coalescing and empty-block removal
@@ -2168,6 +2169,58 @@ namespace Microsoft.Boogie
     }
   }
 
+  //HS D
+  public class BlockHole : Cmd
+  {
+      public int Repeat;
+      public int IfBranches;
+      public int BranchOps;
+      public int Conjunctions;
+      public List<string!>! OpNs;      
+      public List<string!>! CondVars;
+      public List<string!>! ArgVars;
+      public List<Procedure!> Ops;
+      public BlockHole(IToken! tok, int repeat, int ifBranches, int branchOps, 
+		       int conjunctions, List<string!>! opNs, List<string!>! condVars, 
+		       List<string!>! argVars)
+	  : base(tok)
+	  {
+	      this.Repeat = repeat;
+	      this.IfBranches = ifBranches;
+	      this.BranchOps = branchOps;
+	      this.Conjunctions = conjunctions;
+	      this.OpNs = opNs;
+	      this.CondVars = condVars;
+	      this.ArgVars = argVars;
+	  }
+      
+      public override void Emit(TokenTextWriter! stream, int level)
+      {
+	  stream.Write(this, level, "blockhole (" + Repeat + "," + IfBranches + "," + BranchOps + "," + Conjunctions + "," + OpNs.Count + "," + CondVars.Count +  "," + ArgVars.Count);
+	  stream.WriteLine(");");
+      }
+      public override void Resolve(ResolutionContext! rc)
+      {
+      }
+      public override void Typecheck(TypecheckingContext! tc)
+      {
+      }
+      public override void AddAssignedVariables(VariableSeq! vars) { }
+      
+      public override Absy! StdDispatch(StandardVisitor! visitor)
+      {
+	  return this;
+      }
+
+      //HS D: HACK FIXME
+      public void SetOps(Program! program) {
+	  this.Ops = new List<Procedure!>();	  
+	  foreach (string! opN in this.OpNs)
+	      this.Ops.Add(program.GetProcedure(opN));	      
+      }
+      
+  }
+  
   // An AssertCmd that is a loop invariant check before the loop iteration starts
   public class LoopInitAssertCmd : AssertCmd
   {
@@ -2480,6 +2533,7 @@ namespace Microsoft.Boogie
       public IncarnationBlock(IToken! tok, string! label, CmdSeq! cmds, TransferCmd transferCmd, int id)
       : base (tok, label, cmds, transferCmd)
       {
+
           this.IncarId = id;
       }
     }

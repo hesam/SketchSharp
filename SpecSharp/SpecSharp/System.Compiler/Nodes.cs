@@ -1716,8 +1716,8 @@ namespace System.Compiler{
     Static = 0x0010,
     Final = 0x0020,
     Virtual = 0x0040,
-    Operation = 0x9000, //HS D: FIXME?!
-    Transformable = 0x9100, //HS D: FIXME?!
+	//Operation = 0x9000, //HS D: FIXME?!
+	//Transformable = 0x9100, //HS D: FIXME?!
     HideBySig = 0x0080,
     VtableLayoutMask = 0x0100,
     ReuseSlot = 0x0000,
@@ -1747,7 +1747,7 @@ namespace System.Compiler{
     None = 0x0000,
     In = 0x0001,
     Out = 0x0002,
-    Transformable = 0x0004, //HS D //FIXME?!
+	//Transformable = 0x0004, //HS D //FIXME?!
     Optional = 0x0010,
     ReservedMask = 0xf000,
     HasDefault = 0x1000,
@@ -3776,43 +3776,16 @@ namespace System.Compiler{
       public ConstructArray Ops;
       public ConstructArray CondVars;
       public ConstructArray ArgVars;
-      public Hashtable ClassOpMethods; //HACK FIXME
-      public Method DeclaringMethod; //HACK FIXME
-      public BlockHole(SourceContext sourceContext, Literal repeat, Literal ifbranches, Literal branchops, Literal conjunctions, ConstructArray ops, ConstructArray condvars, ConstructArray argvars, Method declaringMethod, Hashtable opMethods) 
+      public BlockHole(SourceContext sourceContext, Literal repeat, Literal ifbranches, Literal branchops, Literal conjunctions, ConstructArray ops, ConstructArray condvars, ConstructArray argvars)
 	  : base(NodeType.BlockHole, sourceContext){
 	  //this.HoleId = Hole.Ctr++;
 	  this.Repeat = repeat;
 	  this.IfBranches = ifbranches;
 	  this.BranchOps = branchops;
 	  this.Conjunctions = conjunctions;
+	  this.Ops = ops;
 	  this.CondVars = condvars;
 	  this.ArgVars = argvars;
-	  this.DeclaringMethod = declaringMethod;
-	  this.ClassOpMethods = opMethods;
-	  //FIXME:
-	  ExpressionList nInits = new ExpressionList();
-	  foreach (Expression e in ops.Initializers) {
-	      string vN = (string) ((Literal) e).Value;	      
-	      Identifier v = new Identifier(vN);
-	      nInits.Add(new Literal(v));
-	  }
-	  ops.Initializers = nInits;
-	  nInits = new ExpressionList();
-	  foreach (Expression e in condvars.Initializers) {
-	      string vN = (string) ((Literal) e).Value;	      
-	      Identifier v = new Identifier(vN);
-	      nInits.Add(new Literal(v));
-	  }
-	  condvars.Initializers = nInits;
-	  nInits = new ExpressionList();
-	  foreach (Expression e in argvars.Initializers) {
-	      string vN = (string) ((Literal) e).Value;	      
-	      Identifier v = new Identifier(vN);
-	      nInits.Add(new Literal(v));
-	  }
-	  argvars.Initializers = nInits;
-	  this.Ops = ops;
-
       }
 
   }
@@ -16858,13 +16831,22 @@ namespace System.Compiler{
 	get{return this.GetAttribute(Cci.SystemTypes.InlineAttribute) != null;}
     }
     //HS D
-    public virtual bool IsOperation{
-	get{return (this.Flags & MethodFlags.Operation) != 0;}
+    public virtual bool Generator {
+	get{return this.GetAttribute(Cci.SystemTypes.GeneratorAttribute) != null;}
+    }
+
+    //HS D
+    public virtual bool Operation {
+	get{return this.GetAttribute(Cci.SystemTypes.OperationAttribute) != null;}
     }
     //HS D
-    public virtual bool IsTransformable{
-	get{return (this.Flags & MethodFlags.Transformable) != 0;}
-    }
+    // public virtual bool IsOperation{
+    // 	get{return (this.Flags & MethodFlags.Operation) != 0;}
+    // }
+    // //HS D
+    // public virtual bool IsTransformable{
+    // 	get{return (this.Flags & MethodFlags.Transformable) != 0;}
+    // }
 #if !MinimalReader
     public virtual bool IsNonSealedVirtual{
       get{

@@ -39,8 +39,6 @@ public class Stack {
     */
 
     /*
-
-
     // Pop_Inverse 
     [Verify(true)]
     static void Pop_Inverse(Stack! a, Stack! b) 
@@ -179,6 +177,7 @@ public class Stack {
     //  Commutativity Condition
     // -------------------------------------------------------------
 
+
     /*
     // Push_Push 
     [Verify(true)]
@@ -216,7 +215,6 @@ public class Stack {
 	assert (h1a*val1+h1b*val2+h1c>=0 && h2a*val1+h2b*val2+h2c>=0) <==> 
 	    forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
     }
-    
     */
 
     /*
@@ -401,7 +399,9 @@ public class Stack {
 		   Push(h7a*val1+h7b*val2+h7c);
             }
     }
+    */
 
+    /*
     [Inline]
     [Verify(true)]
     void Pop_Pop_T_Sketch()
