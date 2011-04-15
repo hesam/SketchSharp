@@ -1,0 +1,606 @@
+
+using System;
+using Microsoft.Contracts;
+public class treeNode {
+
+    // ------------------------------------------------------------------   
+    //  Globals
+    // ------------------------------------------------------------------   
+    
+    // ------------------------------------------------------------------   
+    //  Fields
+    // ------------------------------------------------------------------   
+
+    public string text;
+    public int GUID;
+    [Peer] public treeNode parentNode;
+    [Peer] public treeNode nextSibling;
+    [Peer] public treeNode prevSibling;
+    [Peer] public treeNode firstChild;
+    [Peer] public treeNode lastChild;
+    public bool isLeaf;	
+
+    [Verify(false)]
+    public treeNode(){
+	nextSibling = firstChild = lastChild = null;
+	isLeaf = true;
+    }
+
+    [Verify(false)]
+    public treeNode(int ID, string txt)
+    {
+	nextSibling = firstChild = lastChild = null;
+	GUID=ID;
+	text=txt;
+	isLeaf = true;
+    }
+
+    [Verify(false)]
+    public treeNode(int ID, string text, bool nonLeaf){
+	nextSibling = firstChild = lastChild = null;
+	if(nonLeaf){
+	    isLeaf=false;
+	    treeNode t=new treeNode(0,"");
+	    this.firstChild=this.lastChild=t;
+	    t.parentNode=this;
+	}
+	
+    }
+
+    // ------------------------------------------------------------------   
+    //  Operational Transforms
+    // ------------------------------------------------------------------   
+
+    /*
+    // InsertAfter_InsertAfter
+    [Verify(true)]
+    static void InsertAfter_InsertAfter_C1(treeNode! a, treeNode! b, int ID1, treeNode! t1a, treeNode! t2a, int ID2, treeNode! t1b, treeNode! t2b) 
+	requires a.GUID == 0;
+        requires a.firstChild == a.lastChild;
+        requires a.firstChild != null;
+	requires a.firstChild.GUID == 1;
+        requires a.firstChild.parentNode == a;
+	requires a.firstChild.nextSibling == null;
+	requires a.firstChild.prevSibling == null;    
+        requires a != b;
+	requires b.GUID == 0;
+	requires b.firstChild == b.lastChild;
+        requires b.firstChild != null;
+	requires b.firstChild.GUID == 1;
+	requires b.firstChild.parentNode == b;
+	requires b.firstChild.nextSibling == null;
+	requires b.firstChild.prevSibling == null;
+        requires a.GUID == b.GUID;
+        requires a.firstChild.GUID == b.firstChild.GUID;
+        requires ID1 == 1;
+        requires ID2 == 1;
+        requires t1a != t1b;
+        requires t1a != t2a;
+        requires t1a != t2b;
+        requires t1b != t2a;
+        requires t1b != t2b;
+        requires t2a != t2b;
+        requires t1a.GUID == t1b.GUID;
+        requires t2a.GUID == t2b.GUID;
+        requires a != t1a;
+        requires a != t1b;
+        requires a != t2a;
+        requires a != t2b;
+        requires b != t1a;
+        requires b != t1b;
+        requires b != t2a;
+        requires b != t2b;
+        requires t1a.GUID == 2;
+        requires t1b.GUID == 2;
+        requires t2a.GUID == 3;
+        requires t2b.GUID == 3;
+        requires a != b;
+        requires a != a.firstChild;
+        requires a.firstChild != t1a;
+        requires a.firstChild != t1b;
+        requires a.firstChild != t2a;
+        requires a.firstChild != t2b;
+        requires b != b.firstChild;
+        requires b.firstChild != t1a;
+        requires b.firstChild != t1b;
+        requires b.firstChild != t2a;
+        requires b.firstChild != t2b;
+        requires b != a.firstChild;
+        requires b.firstChild != a;
+        requires b.firstChild != a.firstChild;
+        requires a != b.firstChild;
+        requires a.firstChild != b;
+        modifies a.firstChild.nextSibling, b.firstChild.nextSibling, t1a.prevSibling, t1a.nextSibling, t2a.nextSibling, t2a.prevSibling, t1b.prevSibling, t1b.nextSibling, t2b.nextSibling, t2b.prevSibling;
+        ensures a.firstChild.GUID == b.firstChild.GUID;
+        ensures a.firstChild.nextSibling.GUID == b.firstChild.nextSibling.GUID;
+        ensures a.firstChild.nextSibling.nextSibling.GUID == b.firstChild.nextSibling.nextSibling.GUID;
+    {
+	a.InsertAfter(ID1, t1a);
+	a.T_InsertAfter_InsertAfter(ID2, t2a, ID1, t1a);
+	b.InsertAfter(ID2, t2b);
+	b.T_InsertAfter_InsertAfter(ID1, t1b, ID2, t2b);
+    } 
+    */
+
+    // ------------------------------------------------------------------   
+    //  Commutativity Conditions
+    // ------------------------------------------------------------------   
+    
+    // InsertAfter_InsertAfter
+    [Verify(true)]
+    static void InsertAfter_InsertAfter_Commute_Cond(treeNode! a, treeNode! b, int ID1, treeNode! t1a, treeNode! t2a, int ID2, treeNode! t1b, treeNode! t2b) 
+	requires a.GUID == 0;
+        requires a.firstChild != a.lastChild;
+        requires a.firstChild != null;
+        requires a.lastChild != null;
+	requires a.firstChild.GUID == 1;
+        requires a.firstChild.parentNode == a;
+        requires a.firstChild.nextSibling.GUID == 2;
+        requires a.firstChild.nextSibling == a.lastChild;
+        requires a.firstChild.nextSibling.nextSibling == null;
+        requires a.firstChild.nextSibling.prevSibling == a.firstChild;
+	requires a.firstChild.prevSibling == null;    
+        requires a != b;
+	requires b.GUID == 0;
+        requires b.firstChild != b.lastChild;
+        requires b.firstChild != null;
+        requires b.lastChild != null;
+	requires b.firstChild.GUID == 1;
+        requires b.firstChild.parentNode == b;
+        requires b.firstChild.nextSibling.GUID == 2;
+        requires  b.firstChild.nextSibling == b.lastChild;
+        requires  b.firstChild.nextSibling.nextSibling == null;
+        requires  b.firstChild.nextSibling.prevSibling == b.firstChild;
+	requires b.firstChild.prevSibling == null;    
+        requires a.GUID == b.GUID;
+        requires a.firstChild.GUID == b.firstChild.GUID;
+        requires t1a.nextSibling == null;
+        requires t1b.nextSibling == null;
+        requires t2a.nextSibling == null;
+        requires t2b.nextSibling == null;
+        requires t1a.prevSibling == null;
+        requires t1b.prevSibling == null;
+        requires t2a.prevSibling == null;
+        requires t2b.prevSibling == null;
+        requires t1a != t1b;
+        requires t1a != t2a;
+        requires t1a != t2b;
+        requires t1b != t2a;
+        requires t1b != t2b;
+        requires t2a != t2b;
+        requires t1a.GUID == t1b.GUID;
+        requires t2a.GUID == t2b.GUID;
+        requires t1a.GUID != t2a.GUID;
+        requires t1a.GUID > 2;
+        requires t2a.GUID > 2;
+        requires a != t1a;
+        requires a != t1b;
+        requires a != t2a;
+        requires a != t2b;
+        requires b != t1a;
+        requires b != t1b;
+        requires b != t2a;
+        requires b != t2b;
+        // requires t1a.GUID == 3;
+        // requires t1b.GUID == 3;
+        // requires t2a.GUID == 4;
+        // requires t2b.GUID == 4;
+        requires a != b;
+        requires a != a.firstChild;
+        requires a != a.lastChild;
+        requires a.firstChild != t1a;
+        requires a.firstChild != t1b;
+        requires a.firstChild != t2a;
+        requires a.firstChild != t2b;
+        requires a.lastChild != t1a;
+        requires a.lastChild != t1b;
+        requires a.lastChild != t2a;
+        requires a.lastChild != t2b;
+        requires b != b.firstChild;
+        requires b != b.lastChild;
+        requires b.firstChild != t1a;
+        requires b.firstChild != t1b;
+        requires b.firstChild != t2a;
+        requires b.firstChild != t2b;
+        requires b.lastChild != t1a;
+        requires b.lastChild != t1b;
+        requires b.lastChild != t2a;
+        requires b.lastChild != t2b;
+        requires b != a.firstChild;
+        requires b != a.lastChild;
+        requires b.firstChild != a;
+        requires b.firstChild != a.firstChild;
+        requires b.lastChild != a.firstChild;
+        requires b.firstChild != a.lastChild;
+        requires b.lastChild != a.lastChild;
+        requires a != b.firstChild;
+        requires a != b.lastChild;
+        requires a.firstChild != b;
+    requires ID1 == 1 || ID1 == 2;
+    requires ID2 == 1 || ID2 == 2;
+    modifies a.firstChild.nextSibling, b.firstChild.nextSibling, a.firstChild.nextSibling.nextSibling, a.firstChild.nextSibling.nextSibling.nextSibling, b.firstChild.nextSibling.nextSibling, b.firstChild.nextSibling.nextSibling.nextSibling, a.lastChild.nextSibling, b.lastChild.nextSibling, a.lastChild.prevSibling, b.lastChild.prevSibling, t1a.prevSibling, t1a.nextSibling, t2a.nextSibling, t2a.prevSibling, t1b.prevSibling, t1b.nextSibling, t2b.nextSibling, t2b.prevSibling;
+        // ensures a.firstChild.GUID == b.firstChild.GUID;
+        // ensures a.firstChild.nextSibling.GUID == b.firstChild.nextSibling.GUID;
+        // ensures a.firstChild.nextSibling.nextSibling.GUID == b.firstChild.nextSibling.nextSibling.GUID;
+        ensures a.firstChild.GUID == 1;
+    {
+
+	int h1a = ?!; 
+	int h1b = ?!;
+	int h1c = ?!;
+	int h1d = ?!;
+	int h1e = ?!;
+	int h2a = ?!;
+	int h2b = ?!;
+	int h2c = ?!;
+	int h2d = ?!;
+	int h2e = ?!;
+
+	assert h1a >= -1 && h1a <= 1;
+	assert h1b >= -1 && h1b <= 1;
+	assert h1c >= -1 && h1c <= 1;
+	assert h1d >= -1 && h1d <= 1;
+	assert h1e >= -1 && h1e <= 1;
+	assert h2a >= -1 && h2a <= 1;
+	assert h2b >= -1 && h2b <= 1;
+	assert h2c >= -1 && h2c <= 1;
+	assert h2d >= -1 && h2d <= 1;
+	assert h2e >= -1 && h2e <= 1;
+	/*
+	*/
+	a.InsertAfter(ID1, t1a);
+	a.InsertAfter(ID2, t2a);
+	b.InsertAfter(ID2, t2b);
+	b.InsertAfter(ID1, t1b);
+	
+	// assert a.firstChild.GUID == 1;
+	// assert a.firstChild.nextSibling.GUID == 4;
+	// assert a.firstChild.nextSibling.nextSibling.GUID == 3;
+	// assert a.firstChild.nextSibling.nextSibling.nextSibling.GUID == 2;
+	// assert b.firstChild.GUID == 1;
+	// assert b.firstChild.nextSibling.GUID == 3;
+	// assert b.firstChild.nextSibling.nextSibling.GUID == 4;
+	// assert b.firstChild.nextSibling.nextSibling.nextSibling.GUID == 2;
+
+	assert (//ID1 != ID2
+	    h1a*ID1+h1b*ID2+h1c*t1a.GUID+h1d*t2a.GUID+h1e>=0 || 
+	    h2a*ID1+h2b*ID2+h2c*t1a.GUID+h2d*t2a.GUID+h2e>=0 
+	    ) <==> (a.firstChild.GUID == b.firstChild.GUID &&
+		    a.firstChild.nextSibling.GUID == b.firstChild.nextSibling.GUID &&
+		    a.firstChild.nextSibling.nextSibling.GUID == b.firstChild.nextSibling.nextSibling.GUID &&
+		    a.firstChild.nextSibling.nextSibling.nextSibling.GUID == b.firstChild.nextSibling.nextSibling.nextSibling.GUID);
+    } 
+
+    // ------------------------------------------------------------------   
+    //  Transforms
+    // ------------------------------------------------------------------   
+
+    /*
+    [Inline]
+    [Verify(true)]
+    void T_InsertAfter_InsertAfter(int ID1, treeNode! t1, int ID2, treeNode! t2)
+	modifies this.0, t1.prevSibling, this.firstChild.nextSibling, this.firstChild.nextSibling.nextSibling;
+    {
+	int h1a = ?!;
+	int h1b = ?!;
+	int h1c = ?!;
+	assert h1a >= -1 && h1a <= 1;
+	assert h1b >= -1 && h1b <= 1;
+	assert h1c >= -1 && h1c <= 1;
+
+	// if (t1.GUID >= t2.GUID)
+	//     InsertAfter(t2.GUID, t1);
+	// else
+	//     InsertAfter(ID1, t1);
+
+	if (h1a*t1.GUID+h1b*t2.GUID+h1c>=0)
+	    if (?!)
+		InsertAfter(ID1, t1);
+	    else
+		InsertAfter(t2.GUID, t1);
+	else
+	    if (?!)
+		InsertAfter(ID1, t1);
+	    else
+		InsertAfter(t2.GUID, t1);
+
+    }
+    */
+
+    
+    // ------------------------------------------------------------------   
+    //  Operations
+    // ------------------------------------------------------------------   
+
+    //InsertAfter
+    [Verify(false)]
+    [Operation]
+    public bool InsertAfter(int ID, treeNode! t)
+	requires this.firstChild != null;
+        requires this.firstChild.GUID == ID || (this.firstChild.nextSibling != null && this.firstChild.nextSibling.GUID == ID) || (this.firstChild.nextSibling.nextSibling != null && this.firstChild.nextSibling.nextSibling.GUID == ID);
+        modifies this.0, t.prevSibling, t.nextSibling, this.firstChild.nextSibling, this.firstChild.nextSibling.nextSibling, this.firstChild.nextSibling.prevSibling, this.firstChild.nextSibling.nextSibling.nextSibling;
+        ensures this.firstChild.GUID == ID ==> 
+	    (t.nextSibling == old(this.firstChild.nextSibling) &&
+	     (old(this.firstChild.nextSibling) != null ==> t.nextSibling.prevSibling == t) &&
+	     (old(this.firstChild.nextSibling.nextSibling) == null ==>
+	      this.firstChild.nextSibling.nextSibling.nextSibling == null) &&
+	     (old(this.firstChild.nextSibling.nextSibling) != null ==> 
+	      (this.firstChild.nextSibling.nextSibling.nextSibling == old(this.firstChild.nextSibling.nextSibling) && this.firstChild.nextSibling.nextSibling.nextSibling.prevSibling == old(this.firstChild.nextSibling.nextSibling.prevSibling))) &&
+	     this.firstChild.nextSibling == t &&
+	     t.prevSibling == this.firstChild);
+        ensures (this.firstChild.GUID != ID && old(this.firstChild.nextSibling) != null && old(this.firstChild.nextSibling.GUID) == ID) ==> 
+	    (t.nextSibling == old(this.firstChild.nextSibling.nextSibling) &&
+	     (t.nextSibling != null ==> t.nextSibling.prevSibling == t) &&
+	     this.firstChild == old(this.firstChild) &&
+	     this.firstChild.nextSibling == old(this.firstChild.nextSibling) &&
+	     this.firstChild.nextSibling.prevSibling == old(this.firstChild.nextSibling.prevSibling) &&
+	     this.firstChild.nextSibling.nextSibling == t &&
+	     t.prevSibling == this.firstChild.nextSibling);
+        ensures ((!(this.firstChild.GUID == ID || (old(this.firstChild.nextSibling) != null && old(this.firstChild.nextSibling.GUID == ID)))) && (old(this.firstChild.nextSibling.nextSibling) != null && old(this.firstChild.nextSibling.nextSibling.GUID) == ID)) ==> 
+	(this.firstChild.nextSibling == old(this.firstChild.nextSibling) &&
+	 this.firstChild.nextSibling.prevSibling == old(this.firstChild.nextSibling.prevSibling) &&
+	 this.firstChild.nextSibling.nextSibling == old(this.firstChild.nextSibling.nextSibling) &&
+	 this.firstChild.nextSibling.nextSibling.nextSibling == t &&
+	 t.nextSibling == null &&
+	 t.prevSibling == this.firstChild.nextSibling.nextSibling);
+        ensures (!(this.firstChild.GUID == ID || (old(this.firstChild.nextSibling) != null && old(this.firstChild.nextSibling.GUID == ID)) || (old(this.firstChild.nextSibling.nextSibling) != null && old(this.firstChild.nextSibling.nextSibling.GUID) == ID))) ==>
+    	(this.firstChild.nextSibling == old(this.firstChild.nextSibling) &&
+    	 this.firstChild.nextSibling.prevSibling == old(this.firstChild.nextSibling.prevSibling));
+
+    {
+	if(this.firstChild==null){
+	    return false;
+	}
+	treeNode child = this.lastChild;
+	if(child.GUID==ID && this.firstChild==child){
+	    t.prevSibling=child;
+	    t.nextSibling=null;
+	    child.nextSibling=t;
+	    child.prevSibling=null;
+	    t.parentNode=this;
+	    this.lastChild=t;
+	    this.firstChild=child;
+	    return true;
+	}
+	if(child.GUID==ID){
+	    t.prevSibling=child;
+	    t.nextSibling=null;
+	    child.nextSibling=t;
+	    
+	    t.parentNode=this;
+	    this.lastChild=t;
+	    return true;	    
+	}
+	child = this.firstChild;
+	if(child.GUID==ID){
+	    t.nextSibling=child.nextSibling;
+	    child.nextSibling.prevSibling=t;
+	    t.prevSibling=child;
+	    child.nextSibling=t;
+	    t.parentNode=this;
+	    
+	    return true;
+	}
+	while(child!=this.lastChild && child.GUID!=ID){
+	    child=child.nextSibling;
+	}
+	if(child.GUID==ID){
+	    t.prevSibling=child;
+	    t.nextSibling=child.nextSibling;
+	    child.nextSibling.prevSibling=t;		
+	    child.nextSibling=t;
+	    t.parentNode=this;
+	    return true;
+	}
+	else return false;
+    }
+
+    //InsertBefore
+    [Verify(false)]
+    public bool InsertBefore(int ID, treeNode! t)
+    {
+	if(this.firstChild==null){
+	    return false;
+	}
+	treeNode child = this.lastChild;
+	if(child.GUID==ID && this.firstChild==child){
+	    t.prevSibling=null;
+	    t.nextSibling=child;
+	    child.prevSibling=t;
+	    child.nextSibling=null;
+	    this.lastChild=child;
+	    this.firstChild=t;
+	    t.parentNode=this;
+	    return true;
+	}
+	if(child.GUID==ID){
+	    t.prevSibling=child.prevSibling;
+	    t.nextSibling=child;
+	    child.prevSibling.nextSibling=t;
+	    child.prevSibling=t;
+	    t.parentNode=this;
+	    return true;
+	    
+	}
+	child = this.firstChild;
+	if(child.GUID==ID){
+	    t.prevSibling=null;
+	    t.nextSibling=child;
+	    child.prevSibling=t;
+	    this.firstChild=t;
+	    t.parentNode=this;			
+	    return true;
+	}
+	while(child!=this.lastChild && child.GUID!=ID){
+	    child=child.nextSibling;
+	}
+	if(child.GUID==ID){
+	    t.prevSibling=child.prevSibling;
+	    t.nextSibling=child;
+	    child.prevSibling.nextSibling=t;		
+	    child.prevSibling=t;
+	    
+	    return true;
+	}
+	else return false;
+    }
+    
+    // RemoveChild
+    [Verify(false)]
+    public bool RemoveChild(int ID)
+    {
+	if(this.firstChild==null){
+	    return false;
+	}
+	treeNode child = this.lastChild;
+	if(child.GUID==ID && child==firstChild){
+	    this.firstChild=this.lastChild=null;
+	    return true;
+	}
+	if(child.GUID==ID){
+	    child.prevSibling.nextSibling=null;
+	    this.lastChild=child.prevSibling;
+	    return true;
+	}
+	child = this.firstChild;
+	if(child.GUID==ID){
+	    child.nextSibling.prevSibling=null;
+	    this.firstChild=child.nextSibling;
+	    return true;
+	}
+	
+	while(child!=this.lastChild && child.GUID!=ID){
+	    child=child.nextSibling;
+	}
+	if(child.GUID==ID){
+	    child.nextSibling.prevSibling=child.prevSibling;
+	    child.prevSibling.nextSibling=child.nextSibling;		
+	    return true;
+	}
+	else return false;
+    }
+
+    //ReplaceChild
+    [Verify(false)]
+    public bool ReplaceChild(int ID, treeNode! t)
+    {
+	if(this.firstChild==null){
+	    return false;
+	}
+	treeNode child = this.lastChild;
+	if(child.GUID==ID && this.firstChild==child){
+	    t.prevSibling=t.nextSibling=null;
+	    t.parentNode=this;
+	    this.lastChild=t;
+	    this.firstChild=t;
+	    return true;
+	}
+	if(child.GUID==ID){
+	    t.prevSibling=child.prevSibling;
+	    child.prevSibling.nextSibling=t;
+	    t.nextSibling=null;
+	    t.parentNode=this;
+	    this.lastChild=t;
+	    return true;
+	    
+	}
+	child = this.firstChild;
+	if(child.GUID==ID){
+	    t.nextSibling=child.nextSibling;
+	    child.nextSibling.prevSibling=t;
+	    t.prevSibling=null;
+	    t.parentNode=this;
+	    this.firstChild=t;
+	    return true;
+	}
+	while(child!=this.lastChild && child.GUID!=ID){
+	    child=child.nextSibling;
+	}
+	if(child.GUID==ID){
+	    t.prevSibling=child.prevSibling;
+	    t.nextSibling=child.nextSibling;
+	    child.prevSibling.nextSibling=t;		
+	    child.nextSibling.prevSibling=t;
+	    t.parentNode=this;
+	    return true;
+	}
+	else return false;
+    }
+    
+    // setText
+    [Verify(false)]
+    public bool setText(string val){
+	this.text=val;
+	return true;
+    }
+
+    //AppendChild
+    [Verify(false)]
+    public bool AppendChild(treeNode! t)
+    {
+	return true;
+    }
+        
+    // ------------------------------------------------------------------   
+    //  Helpers
+    // ------------------------------------------------------------------   
+
+    [Verify(false)]
+    public void Print()
+    {
+	treeNode child = this.firstChild;
+	Console.WriteLine("{0}-->",child.GUID);
+	while(child!=this.lastChild){
+	    child=child.nextSibling;
+	    Console.WriteLine("{0}-->",child.GUID);
+	}
+    }
+
+    [Verify(false)]
+    public static void Main(){
+	treeNode root=new treeNode(-1,"",true);
+	int ch=-1;
+	int oldID, newID;
+	treeNode t;
+	while(ch!=0){
+	    Console.WriteLine("enter choice : 0:quit, 1:IB, 2:IA, 3:R, 4:Replace, 5:print");
+	    string inp=Console.ReadLine();
+	    ch=Convert.ToInt32(inp);
+	    switch(ch){
+	    case 1: 
+		Console.WriteLine("oldID:");
+		oldID=Convert.ToInt32(Console.ReadLine());
+		Console.WriteLine("newID:");
+		newID=Convert.ToInt32(Console.ReadLine());
+		t = new treeNode(newID,"");
+		Console.WriteLine("{0}",root.InsertBefore(oldID, t));
+		break;
+	    case 2: 
+		Console.WriteLine("oldID:");
+		oldID=Convert.ToInt32(Console.ReadLine());
+		Console.WriteLine("newID:");
+		newID=Convert.ToInt32(Console.ReadLine());
+		t = new treeNode(newID,"");
+		Console.WriteLine("{0}",root.InsertAfter(oldID, t));
+		break;
+	    case 3: 
+		Console.WriteLine("ID:");
+		newID=Convert.ToInt32(Console.ReadLine());
+		t = new treeNode(newID,"");
+		Console.WriteLine("{0}",root.RemoveChild(newID));
+		break;
+	    case 4: 
+		Console.WriteLine("oldID:");
+		oldID=Convert.ToInt32(Console.ReadLine());
+		Console.WriteLine("newID:");
+		newID=Convert.ToInt32(Console.ReadLine());
+		t = new treeNode(newID,"");
+		Console.WriteLine("{0}",root.ReplaceChild(oldID, t));
+		break;
+	    default:
+		root.Print();
+		break;
+	    }
+	}
+    }
+}

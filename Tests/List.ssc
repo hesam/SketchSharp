@@ -1,0 +1,664 @@
+
+using System;
+using Microsoft.Contracts;
+
+public class List {
+
+    // ------------------------------------------------------------------   
+    //  Globals
+    // ------------------------------------------------------------------   
+    
+    const int LENGTH = 5;
+
+    // ------------------------------------------------------------------   
+    //  Fields
+    // ------------------------------------------------------------------   
+
+    [Peer] public int[]! elements;
+    public int size;
+
+    invariant size >= 0;
+
+    [Verify(false)]
+    public List() { this.elements = new int[LENGTH]; }
+
+    // ------------------------------------------------------------------   
+    //  Inverse
+    // ------------------------------------------------------------------   
+
+    /*
+    // Insert_Inverse 
+    [Verify(true)]
+    static void Insert_Inverse(List! a, List! b, int pos, int val) 
+	requires a.elements.Length <= LENGTH;
+        requires a.elements != b.elements;
+        requires a.elements.Length == b.elements.Length;
+        requires a.size == b.size;
+        requires forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+        requires a.elements.Length == b.elements.Length;      
+        requires a.size < a.elements.Length - 1;
+        requires a.size >= 0;
+        requires pos <= a.size;
+        requires pos >= 0;
+        modifies a.size, a.elements[*];
+        ensures a.size == b.size;
+        ensures forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+	ensures a.size > 0 ==> a.elements[0] == b.elements[0];
+	ensures a.size > 1 ==> a.elements[1] == b.elements[1];
+	ensures a.size > 2 ==> a.elements[2] == b.elements[2];    
+	ensures a.size > 3 ==> a.elements[3] == b.elements[3];    
+	ensures a.size > 4 ==> a.elements[4] == b.elements[4];    
+    {
+	a.Insert(pos, val);       
+	a.Insert_Inverse_Sketch(pos, val);
+    }
+    */
+
+    /*
+    // Delete_Inverse 
+    [Verify(true)]
+    static void Delete_Inverse(List! a, List! b, int pos) 
+	requires a.elements.Length <= LENGTH;
+        requires a.elements != b.elements;
+        requires a.elements.Length == b.elements.Length;
+        requires a.size == b.size;
+        requires forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+        requires a.elements.Length == b.elements.Length;      
+        requires a.size <= a.elements.Length;
+        requires a.size >= 0;
+        requires pos < a.size;
+        requires pos >= 0;
+        modifies a.size, a.elements[*];
+        ensures a.size == b.size;
+        ensures forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+	ensures a.size > 0 ==> a.elements[0] == b.elements[0];
+	ensures a.size > 1 ==> a.elements[1] == b.elements[1];
+	ensures a.size > 2 ==> a.elements[2] == b.elements[2];    
+	ensures a.size > 3 ==> a.elements[3] == b.elements[3];    
+	ensures a.size > 4 ==> a.elements[4] == b.elements[4];    
+    {
+	a.Delete(pos);       
+	a.Delete_Inverse_Sketch(pos);
+    }
+    */
+
+    // ------------------------------------------------------------------   
+    //  OT
+    // ------------------------------------------------------------------   
+
+    // Insert_Insert 
+    [Verify(true)]
+    static void Insert_Insert_T(List! a, List! b, int pos1, int val1, int pos2, int val2) 
+	requires a.elements.Length <= LENGTH;
+        requires a.elements != b.elements;
+        requires a.elements.Length == b.elements.Length;
+        requires a.size == b.size;
+        requires forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+        requires a.elements.Length == b.elements.Length;      
+        requires a.size < a.elements.Length - 1;
+        requires a.size >= 0;
+        requires pos1 <= a.size;
+        requires pos2 <= a.size;
+        requires pos1 >= 0;
+        requires pos2 >= 0;
+        modifies a.size, a.elements[*], b.size, b.elements[*];
+        ensures a.size == b.size;
+        ensures forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+	ensures a.size > 0 ==> a.elements[0] == b.elements[0];
+	ensures a.size > 1 ==> a.elements[1] == b.elements[1];
+	ensures a.size > 2 ==> a.elements[2] == b.elements[2];    
+	ensures a.size > 3 ==> a.elements[3] == b.elements[3];    
+	ensures a.size > 4 ==> a.elements[4] == b.elements[4];    
+    {
+	// op2     << op1
+	// Insert2 << Insert1
+	a.Insert(pos1, val1);       
+	a.Insert_Insert_T_Sketch(pos2, val2, pos1, val1);
+	
+	// op1     << op2
+	// Insert1 << Insert2
+	b.Insert(pos2, val2);       
+	b.Insert_Insert_T_Sketch(pos1, val1, pos2, val2);
+    }
+    /*
+
+    */
+
+    /*
+    // Insert_Delete 
+    [Verify(true)]
+    static void Insert_Delete_T(List! a, List! b, int pos1, int val1, int pos2) 
+	requires a.elements.Length <= LENGTH;
+        requires a.elements != b.elements;
+        requires a.elements.Length == b.elements.Length;
+        requires a.size == b.size;
+        requires forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+        requires a.elements.Length == b.elements.Length;      
+        requires a.size < a.elements.Length;
+        requires a.size > 0;
+        requires pos1 <= a.size;
+        requires pos2 < a.size;
+        requires pos1 >= 0;
+        requires pos2 >= 0;
+        modifies a.size, a.elements[*], b.size, b.elements[*];
+        ensures a.size == b.size;
+        ensures forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+	ensures a.size > 0 ==> a.elements[0] == b.elements[0];
+	ensures a.size > 1 ==> a.elements[1] == b.elements[1];
+	ensures a.size > 2 ==> a.elements[2] == b.elements[2];    
+	ensures a.size > 3 ==> a.elements[3] == b.elements[3];    
+	ensures a.size > 4 ==> a.elements[4] == b.elements[4];    
+
+    {
+	// op2     << op1
+	// Delete2 << Insert1
+	a.Insert(pos1, val1);
+	a.Delete_Insert_T_Sketch(pos2, pos1, val1);
+	
+	// op1     << op2
+	// Insert1 << Delete2
+	b.Delete(pos2);       
+	b.Insert_Delete_T_Sketch(pos1, val1, pos2);
+    }
+    */
+
+    // ------------------------------------------------------------------   
+    //  Commutativity Conditions
+    // ------------------------------------------------------------------   
+
+    /*
+    
+    // Insert_Insert 
+    [Verify(true)]
+    static void Insert_Insert_Commute_Cond(List! a, List! b, int pos1, int val1, int pos2, int val2) 
+	requires a.elements.Length <= LENGTH;
+        requires a.elements != b.elements;
+        requires a.elements.Length == b.elements.Length;
+        requires a.size == b.size;
+        requires forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+        requires a.elements.Length == b.elements.Length;      
+        requires a.size < a.elements.Length - 1;
+        requires a.size >= 0;
+        requires pos1 <= a.size;
+        requires pos2 <= a.size;
+        requires pos1 >= 0;
+        requires pos2 >= 0;
+        modifies a.size, a.elements[*], b.size, b.elements[*];
+        ensures a.size == b.size;
+        ensures a.size == old(a.size) + 2;
+        // rule out commuting conditions depending on state:
+        requires !(pos1 > pos2 && a.elements[pos1-1] == val1);
+        requires !(pos1 < pos2 && a.elements[pos2-1] == val2);
+    {
+	int h1a = ?!;
+	int h1b = ?!;
+	int h1c = ?!;
+	int h1d = ?!;
+	int h1e = ?!;
+	int h2a = ?!;
+	int h2b = ?!;
+	int h2c = ?!;
+	int h2d = ?!;
+	int h2e = ?!;
+	int h3a = ?!;
+	int h3b = ?!;
+	int h3c = ?!;
+	int h3d = ?!;
+	int h3e = ?!;
+	int h4a = ?!;
+	int h4b = ?!;
+	int h4c = ?!;
+	int h4d = ?!;
+	int h4e = ?!;
+	assert h1a >= -1 && h1a <= 1;
+	assert h1b >= -1 && h1b <= 1;
+	assert h1c >= -1 && h1c <= 1;
+	assert h1d >= -1 && h1d <= 1;
+	assert h1e >= -1 && h1e <= 1;
+	assert h2a >= -1 && h2a <= 1;
+	assert h2b >= -1 && h2b <= 1;
+	assert h2c >= -1 && h2c <= 1;
+	assert h2d >= -1 && h2d <= 1;
+	assert h2e >= -1 && h2e <= 1;
+	assert h3a >= -1 && h3a <= 1;
+	assert h3b >= -1 && h3b <= 1;
+	assert h3c >= -1 && h3c <= 1;
+	assert h3d >= -1 && h3d <= 1;
+	assert h3e >= -1 && h3e <= 1;
+	assert h4a >= -1 && h4a <= 1;
+	assert h4b >= -1 && h4b <= 1;
+	assert h4c >= -1 && h4c <= 1;
+	assert h4d >= -1 && h4d <= 1;
+	assert h4e >= -1 && h4e <= 1;
+
+	a.Insert(pos1, val1);       
+	a.Insert(pos2, val2);
+
+	b.Insert(pos2, val2);       
+	b.Insert(pos1, val1);
+	assert (h1a*pos1+h1b*pos2+h1c*val1+h1d*val2+h1e>=0 && 
+		h2a*pos1+h2b*pos2+h2c*val1+h2d*val2+h2e>=0 &&
+		h3a*pos1+h3b*pos2+h3c*val1+h3d*val2+h3e>=0 &&
+		h4a*pos1+h4b*pos2+h4c*val1+h4d*val2+h4e>=0) <==> 
+	    forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+  
+    }
+
+    */
+
+    /*
+    // Delete_Delete 
+    [Verify(true)]
+    static void Delete_Delete_Commute_Cond(List! a, List! b, int pos1, int val1, int pos2, int val2) 
+	requires a.elements.Length <= LENGTH;
+        requires a.elements != b.elements;
+        requires a.elements.Length == b.elements.Length;
+        requires a.size == b.size;
+        requires forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+        requires a.elements.Length == b.elements.Length;      
+        requires a.size <= a.elements.Length;
+        requires a.size > 1;
+        requires pos1 < a.size - 1;
+        requires pos2 < a.size - 1;
+        requires pos1 >= 0;
+        requires pos2 >= 0;
+        modifies a.size, a.elements[*], b.size, b.elements[*];
+        ensures a.size == b.size;
+        ensures a.size == old(a.size) - 2;
+        // rule out commuting conditions depending on state:
+        requires !(pos1 <= pos2 && a.elements[pos2] == a.elements[pos2+1]);
+        requires !(pos1 > pos2 && a.elements[pos1] == a.elements[pos1+1]);
+
+    requires a.size <= 3;
+    {
+	int h1a = ?!;
+	// int h1b = ?!;
+	// int h1c = ?!;
+	// int h2a = ?!;
+	// int h2b = ?!;
+	// int h2c = ?!;
+	assert h1a >= -1 && h1a <= 1;
+	// assert h1b >= -1 && h1b <= 1;
+	// assert h1c >= -1 && h1c <= 1;
+	// assert h2a >= -1 && h2a <= 1;
+	// assert h2b >= -1 && h2b <= 1;
+	// assert h2c >= -1 && h2c <= 1;
+
+	a.Delete(pos1);       
+	a.Delete(pos2);
+
+	b.Delete(pos2);       
+	b.Delete(pos1);
+	assert (h1a*pos1+pos2 >= 0 //h1b*pos2+h1c>=0
+		//&& h2a*pos1+h2b*pos2+h2c>=0		
+		) <==> 
+	    forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};	   
+    }
+    */
+
+    
+    /*
+    // Insert_Delete 
+    [Verify(true)]
+    static void Insert_Delete_Commute_Cond(List! a, List! b, int pos1, int val1, int pos2) 
+	requires a.elements.Length <= LENGTH;
+        requires a.elements != b.elements;
+        requires a.elements.Length == b.elements.Length;
+        requires a.size == b.size;
+        requires forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+        requires a.elements.Length == b.elements.Length;      
+        requires a.size < a.elements.Length;
+        requires a.size > 0;
+        requires pos1 <= a.size;
+        requires pos2 < a.size;
+        requires pos1 >= 0;
+        requires pos2 >= 0;
+        modifies a.size, a.elements[*], b.size, b.elements[*];
+        ensures a.size == b.size;
+        ensures a.size == old(a.size);
+        // rule out commuting conditions depending on state:
+        requires !(pos1 < pos2 && a.elements[pos2-1] == a.elements[pos2]);
+        requires !(pos1 >= pos2 && a.elements[pos1] == val1);
+    {
+	int h1a = ?!;
+	int h1b = ?!;
+	int h1c = ?!;
+	int h1d = ?!;
+	int h2a = ?!;
+	int h2b = ?!;
+	int h2c = ?!;
+	int h2d = ?!;
+	assert h1a >= -1 && h1a <= 1;
+	assert h1b >= -1 && h1b <= 1;
+	assert h1c >= -1 && h1c <= 1;
+	assert h1d >= -1 && h1d <= 1;
+	assert h2a >= -1 && h2a <= 1;
+	assert h2b >= -1 && h2b <= 1;
+	assert h2c >= -1 && h2c <= 1;
+	assert h2d >= -1 && h2d <= 1;
+
+	a.Insert(pos1, val1);       
+	a.Delete(pos2);
+
+	b.Delete(pos2);       
+	b.Insert(pos1, val1);
+	assert (h1a*pos1+h1b*pos2+h1c*val1+h1d>=0 && 
+		h2a*pos1+h2b*pos2+h2c*val1+h2d>=0
+		) <==> 
+	    forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+  
+    }
+    */
+
+    // ------------------------------------------------------------------   
+    //  Transforms
+    // ------------------------------------------------------------------   
+    
+    /*
+    [Inline]
+    [Verify(true)]
+    void Insert_Inverse_Sketch(int pos, int val)
+	modifies size, elements[*];
+    {
+	if (?!)
+	    Insert(?!*pos+?!*val+?!,?!*pos+?!*val+?!);	
+	else
+	    Delete(?!*pos+?!*val+?!);	
+    }
+    */
+
+    /*
+    [Inline]
+    [Generator]
+    [Verify(true)]
+    static int f() {
+	if (?!)
+	    return 0;
+	else if (?!)
+	    return 1;
+	else
+	    return -1;
+    }
+    */
+
+    /*
+    [Inline]
+    [Verify(true)]
+    void Delete_Inverse_Sketch(int pos)
+	modifies size, elements[*];
+    {
+	if (?!)
+	    Insert(?!*pos+?!,?!*pos+?!);	
+	else
+	    Delete(?!*pos+?!);	
+    }
+    */
+
+    [Inline]
+    [Verify(true)]
+    void Insert_Insert_T_Sketch(int pos1, int val1, int pos2, int val2)
+	modifies size, elements[*];
+    {
+	int h1a = ?!;
+	int h1b = ?!;
+	int h1c = ?!;
+	int h1d = ?!;
+	int h1e = ?!;
+	int h2a = ?!;
+	int h2b = ?!;
+	int h2c = ?!;
+	int h2d = ?!;
+	int h2e = ?!;
+	int h3a = ?!;
+	int h3b = ?!;
+	int h3c = ?!;
+	int h3d = ?!;
+	int h3e = ?!;
+	int h4a = ?!;
+	int h4b = ?!;
+	int h5a = ?!;
+	int h5b = ?!;
+	int h5c = ?!;
+	int h5d = ?!;
+	int h5e = ?!;
+	int h6a = ?!;
+	int h6b = ?!;
+	int h6c = ?!;
+	int h6d = ?!;
+	int h6e = ?!;
+	int h7a = ?!;
+	int h7b = ?!;
+	int h7c = ?!;
+	int h7d = ?!;
+	int h7e = ?!;
+	int h8a = ?!;
+	int h8b = ?!;
+	int h9a = ?!;
+	int h9b = ?!;
+
+	assert h1a >= -1 && h1a <= 1;
+	assert h1b >= -1 && h1b <= 1;
+	assert h1c >= -1 && h1c <= 1;
+	assert h1d >= -1 && h1d <= 1;
+	assert h1e >= -1 && h1e <= 1;
+	assert h2a >= -1 && h2a <= 1;
+	assert h2b >= -1 && h2b <= 1;
+	assert h2c >= -1 && h2c <= 1;
+	assert h2d >= -1 && h2d <= 1;
+	assert h2e >= -1 && h2e <= 1;
+	assert h3a >= -1 && h3a <= 1;
+	assert h3b >= -1 && h3b <= 1;
+	assert h3c >= -1 && h3c <= 1;
+	assert h3d >= -1 && h3d <= 1;
+	assert h3e >= -1 && h3e <= 1;
+	assert h4a >= -1 && h4a <= 1;
+	assert h4b >= -1 && h4b <= 1;
+	assert h5a >= -1 && h5a <= 1;
+	assert h5b >= -1 && h5b <= 1;
+	assert h5c >= -1 && h5c <= 1;
+	assert h5d >= -1 && h5d <= 1;
+	assert h5e >= -1 && h5e <= 1;
+	assert h6a >= -1 && h6a <= 1;
+	assert h6b >= -1 && h6b <= 1;
+	assert h6c >= -1 && h6c <= 1;
+	assert h6d >= -1 && h6d <= 1;
+	assert h6e >= -1 && h6e <= 1;
+	assert h7a >= -1 && h7a <= 1;
+	assert h7b >= -1 && h7b <= 1;
+	assert h7c >= -1 && h7c <= 1;
+	assert h7d >= -1 && h7d <= 1;
+	assert h7e >= -1 && h7e <= 1;
+	assert h8a >= -1 && h8a <= 1;
+	assert h8b >= -1 && h8b <= 1;
+	assert h9a >= -1 && h9a <= 1;
+	assert h9b >= -1 && h9b <= 1;
+	
+	//if (pos1 > pos2)
+	//if (h1a*pos1+h1b*pos2+h1c>=0)
+	if (h1a*pos1+h1b*pos2+h1c*val1+h1d*val2+h1e>=0 && 
+	    h2a*pos1+h2b*pos2+h2c*val1+h2d*val2+h2e>=0 && 
+	    h3a*pos1+h3b*pos2+h3c*val1+h3d*val2+h3e>=0)
+	    //Insert(pos1 + 1, val1);	
+	    Insert(h4a*pos1+h4b, val1);	
+	//else if (pos1 == pos2 && val1 > val2)
+	else if (h5a*pos1+h5b*pos2+h5c*val1+h5d*val2+h5e>=0 && 
+		 h6a*pos1+h6b*pos2+h6c*val1+h6d*val2+h6e>=0 && 
+		 h7a*pos1+h7b*pos2+h7c*val1+h7d*val2+h7e>=0)
+	    //Insert(pos1 + 1, val1);
+	    Insert(h8a*pos1+h8b, val1);	
+	else
+	    //Insert(pos1, val1);
+	    Insert(h9a*pos1+h9b, val1);	
+    }
+    /*
+
+    */
+
+
+    /*
+    [Inline]
+    [Verify(true)]
+    void Insert_Delete_T_Sketch(int pos1, int val1, int pos2)
+	modifies size, elements[*];
+    {
+
+	int h1a = ?!;
+	int h1b = ?!;
+	int h1c = ?!;
+	int h2a = ?!;
+	int h2b = ?!;
+	int h2c = ?!;
+	int h3a = ?!;
+	int h3b = ?!;
+	int h3c = ?!;
+
+	assert h1a >= -1 && h1a <= 1;
+	assert h1b >= -1 && h1b <= 1;
+	assert h1c >= -1 && h1c <= 1;
+	assert h2a >= -1 && h2a <= 1;
+	assert h2b >= -1 && h2b <= 1;
+	assert h2c >= -1 && h2c <= 1;
+	assert h3a >= -1 && h3a <= 1;
+	assert h3b >= -1 && h3b <= 1;
+	assert h3c >= -1 && h3c <= 1;
+
+	//if (pos1 > pos2)
+	if (h1a*pos1+h1b*pos2+h1c>=0)
+	    //Insert(pos1 - 1, val1);
+	    Insert(h2a*pos1+h2b*pos2+h2c, val1);
+	else 
+	    //Insert(pos1, val1);
+	    Insert(h3a*pos1+h3b*pos2+h3c, val1);
+	//?!{repeat: 1, ifbranches: 2, branchops: 1, conjunctions: 1, ops: {Insert}, condvars: {pos1, pos2}, argvars: {pos1}}
+    }
+
+    [Inline]
+    [Verify(true)]
+    void Delete_Insert_T_Sketch(int pos1, int pos2, int val2)
+	modifies size, elements[*];
+    {
+	int h1a = ?!;
+	int h1b = ?!;
+	int h1c = ?!;
+	int h2a = ?!;
+	int h2b = ?!;
+	int h2c = ?!;
+	int h3a = ?!;
+	int h3b = ?!;
+	int h3c = ?!;
+
+	assert h1a >= -1 && h1a <= 1;
+	assert h1b >= -1 && h1b <= 1;
+	assert h1c >= -1 && h1c <= 1;
+	assert h2a >= -1 && h2a <= 1;
+	assert h2b >= -1 && h2b <= 1;
+	assert h2c >= -1 && h2c <= 1;
+	assert h3a >= -1 && h3a <= 1;
+	assert h3b >= -1 && h3b <= 1;
+	assert h3c >= -1 && h3c <= 1;
+
+	//if (pos1 >= pos2)
+	if (h1a*pos1+h1b*pos2+h1c>=0)
+	    //Delete(pos1 + 1);
+	    Delete(h2a*pos1+h2b*pos2+h2c);
+	else
+	    //Delete(pos1);
+	    Delete(h3a*pos1+h3b*pos2+h3c);
+// 	?!{repeat: 1, ifbranches: 2, branchops: 1, conjunctions: 1, ops: {Delete}, condvars: {pos1, pos2}, argvars: {pos1}}
+
+    }
+    */
+  
+    // ------------------------------------------------------------------   
+    //  Operations
+    // ------------------------------------------------------------------   
+    
+    // Insert
+    [Verify(false)]
+    [Operation]
+    void Insert(int pos, int val)
+        requires size < elements.Length;
+        requires pos >= 0;
+        requires pos <= size;
+        modifies size, elements[*];    
+        ensures forall {int i in (0 : pos); elements[i] == old(elements[i])};
+        ensures elements[pos] == val;
+        ensures forall {int i in (pos+1 : size); elements[i] == old(elements[i-1])};
+        ensures size == old(size) + 1;
+    {
+	int[]! copy = ArrayCopy(elements);
+	InsertH(pos, val, copy);
+    }
+    
+    [Inline]
+    [Verify(false)]
+    void InsertH(int pos, int val, int[]! elementsCp)
+        modifies size, elements[*], elementsCp.0;
+    {
+	for (int i = size; i > pos; i--) 
+	    invariant i <= size;
+	    invariant forall {int j in (i+1 : size+1); elements[j] == elementsCp[j-1]};
+	    invariant forall {int j in (0 : pos); elements[j] == elementsCp[j]};
+	{
+	    elements[i] = elementsCp[i-1];
+	}
+	elements[pos] = val;
+	size++;
+    }
+
+    // Delete
+    [Verify(false)]
+    [Operation]
+    void Delete(int pos)
+        requires size <= elements.Length;
+        requires pos >= 0;
+        requires pos < size;
+        modifies size, elements[*];
+        ensures forall {int i in (0 : pos); elements[i] == old(elements[i])};
+        ensures forall {int i in (pos : size); elements[i] == old(elements[i+1])};
+        ensures size == old(size) - 1;
+    {
+        int[]! copy = ArrayCopy(elements);
+        DeleteH(pos, copy);
+    }
+
+    [Inline]
+    [Verify(false)]
+    void DeleteH(int pos, int[]! elementsCp)
+        modifies size, elements[*], elementsCp.0;
+    {
+        for (int i = size - 1; i > pos; i--) 
+            invariant i <= size - 1;
+            invariant forall {int j in (0 : pos); elements[j] == elementsCp[j]};
+            invariant forall {int j in (i+1 : size); elements[j-1] == elementsCp[j]};
+        {
+            elements[i-1] = elementsCp[i];
+        }
+        size--;
+    }
+    
+    // ------------------------------------------------------------------   
+    //  Helpers
+    // ------------------------------------------------------------------   
+    
+    [Verify(false)]
+    static int[]! ArrayCopy(int[]! src)
+	modifies src.0;
+	ensures result.Length == src.Length;
+        ensures forall {int i in (0 : src.Length); result[i] == src[i]};
+        ensures result != src;
+    {
+	int[] dest = new int[src.Length];
+	for(int i = 0; i < src.Length; i++)
+	    invariant forall{int j in (0:i); dest[j] == src[j]};
+	{
+	    dest[i] = src[i];
+	}
+	return dest;	
+    }
+    
+    [Verify(false)]
+    public static void Main(string[] args) { }
+    
+}
+    

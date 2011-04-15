@@ -1,0 +1,561 @@
+
+using System;
+using Microsoft.Contracts;
+
+public class Stack {
+
+    const int Capacity = 5;
+    [Peer] public int[]! elements;
+    public int size;
+    
+    invariant size >= 0;
+
+    [Verify(false)]
+    public Stack() { this.elements = new int[Capacity]; }
+
+    // -------------------------------------------------------------
+    //  Inverse 
+    // -------------------------------------------------------------
+
+
+    /*    
+    // Push_Inverse 
+    [Verify(true)]
+    static void Push_Inverse(Stack! a, Stack! b, int val) 
+        requires a != b;
+        requires a.elements != b.elements;
+        requires a.elements.Length == b.elements.Length;
+        requires a.size == b.size;
+        requires forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+        requires a.size < a.elements.Length - 1;
+        requires a.size >= 0;
+        modifies a.size, a.elements[*];
+        ensures a.size == b.size;
+        ensures forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+    {
+        a.Push(val);
+        a.Push_Inverse_Sketch(val);
+    }
+    */
+
+    /*
+
+
+    // Pop_Inverse 
+    [Verify(true)]
+    static void Pop_Inverse(Stack! a, Stack! b) 
+        requires a != b;
+        requires a.elements != b.elements;
+        requires a.elements.Length == b.elements.Length;
+        requires a.size == b.size;
+        requires forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+        requires a.size <= a.elements.Length;
+        requires a.size > 0;
+        modifies a.size, a.elements[*];
+        ensures a.size == b.size;
+        ensures forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+    {
+        int ret = a.Pop();
+        a.Pop_Inverse_Sketch(ret);
+    }
+
+    */
+
+    // -------------------------------------------------------------
+    //  OT 
+    // -------------------------------------------------------------
+
+    /*
+    // Push_Push 
+    [Verify(true)]
+    static void Push_Push_T(Stack! a, Stack! b, int val1, int val2) 
+        requires a != b;
+        requires a.elements != b.elements;
+        requires a.elements.Length == b.elements.Length;
+        requires a.size == b.size;
+        requires forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+        requires a.size < a.elements.Length - 1;
+        requires a.size >= 0;
+        modifies a.size, a.elements[*], b.size, b.elements[*];
+        ensures a.size == old(a.size) + 2;
+        ensures a.size == b.size;       
+        ensures forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+	ensures a.size > 0 ==> a.elements[0] == b.elements[0];
+	ensures a.size > 1 ==> a.elements[1] == b.elements[1];
+	ensures a.size > 2 ==> a.elements[2] == b.elements[2];
+	ensures a.size > 3 ==> a.elements[3] == b.elements[3];
+	ensures a.size > 4 ==> a.elements[4] == b.elements[4];
+
+        ensures (a.elements[0] == val1 && a.elements[1] == val2) ||
+	        (a.elements[0] == val2 && a.elements[1] == val1);
+    {
+        // C1:
+
+        // op2    << op1
+        // Push   << Push
+        a.Push(val1);
+        // Push2 << Push1
+        a.Push_Push_T_Sketch(val2, val1); //T(op2,op1)
+
+        // op1    << op2
+        // Push << Push
+        b.Push(val2);
+        // Push1 << Push2
+        b.Push_Push_T_Sketch(val1, val2); //T(op1,op2)
+    }
+    */
+
+    /*
+    // Pop_Pop 
+    [Verify(true)]
+    static void Pop_Pop_T(Stack! a, Stack! b) 
+        requires a != b;
+        requires a.elements != b.elements;
+        requires a.elements.Length == b.elements.Length;
+        requires a.size == b.size;
+        requires forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+        requires a.size <= a.elements.Length;
+        requires a.size >= 2;
+        modifies a.size, a.elements[*], b.size, b.elements[*];
+        ensures a.size == old(a.size) - 2;
+        ensures a.size == b.size;       
+        ensures forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+	ensures a.size > 0 ==> a.elements[0] == b.elements[0];
+	ensures a.size > 1 ==> a.elements[1] == b.elements[1];
+	ensures a.size > 2 ==> a.elements[2] == b.elements[2];
+	ensures a.size > 3 ==> a.elements[3] == b.elements[3];
+	ensures a.size > 4 ==> a.elements[4] == b.elements[4];
+    {
+        // C1:
+
+        // op2    << op1
+        // Pop   << Pop
+        a.Pop();
+        // Pop2 << Pop1
+        a.Pop_Pop_T_Sketch(); //T(op2,op1)
+
+        // op1    << op2
+        // Pop << Pop
+        b.Pop();
+        // Pop1 << Pop2
+        b.Pop_Pop_T_Sketch(); //T(op1,op2)
+    }
+    */
+
+    /*
+    // Push_Pop 
+    [Verify(true)]
+    static void Push_Pop_T(Stack! a, Stack! b, int val1) 
+        requires a != b;
+        requires a.elements != b.elements;
+        requires a.elements.Length == b.elements.Length;
+        requires a.size == b.size;
+        requires forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+        requires a.size < a.elements.Length;
+        requires a.size > 0;
+        modifies a.size, a.elements[*], b.size, b.elements[*];
+        ensures a.size == old(a.size);
+        ensures a.size == b.size;       
+        ensures forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+	ensures a.size > 0 ==> a.elements[0] == b.elements[0];
+	ensures a.size > 1 ==> a.elements[1] == b.elements[1];
+	ensures a.size > 2 ==> a.elements[2] == b.elements[2];
+	ensures a.size > 3 ==> a.elements[3] == b.elements[3];
+	ensures a.size > 4 ==> a.elements[4] == b.elements[4];
+
+        ensures a.elements[0] == val1;
+    {
+        // C1:
+
+        a.Push(val1);
+        a.Pop_Push_T_Sketch(val1); //T(op2,op1)
+
+        b.Pop();
+        b.Push_Pop_T_Sketch(val1); //T(op1,op2)
+    }
+    */
+
+    // -------------------------------------------------------------
+    //  Commutativity Condition
+    // -------------------------------------------------------------
+
+    /*
+    // Push_Push 
+    [Verify(true)]
+    static void Push_Push_Commute_Cond(Stack! a, Stack! b, int val1, int val2) 
+        requires a != b;
+        requires a.elements != b.elements;
+        requires a.elements.Length == b.elements.Length;
+        requires a.size == b.size;
+        requires forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+        requires a.size < a.elements.Length - 1;
+        requires a.size >= 0;
+        modifies a.size, a.elements[*], b.size, b.elements[*];
+        ensures a.size == old(a.size) + 2;
+        ensures a.size == b.size;       
+    {
+	int h1a = ?!;
+	int h1b = ?!;
+	int h1c = ?!;
+	int h2a = ?!;
+	int h2b = ?!;
+	int h2c = ?!;
+	assert h1a >= -1 && h1a <= 1;
+	assert h1b >= -1 && h1b <= 1;
+	assert h1c >= -1 && h1c <= 1;
+	assert h2a >= -1 && h2a <= 1;
+	assert h2b >= -1 && h2b <= 1;
+	assert h2c >= -1 && h2c <= 1;
+
+        a.Push(val1);
+        a.Push(val2);
+
+        b.Push(val2);
+        b.Push(val1);
+
+	assert (h1a*val1+h1b*val2+h1c>=0 && h2a*val1+h2b*val2+h2c>=0) <==> 
+	    forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+    }
+    
+    */
+
+    /*
+    // Pop_Pop
+    [Verify(true)]
+    static void Pop_Pop_Commute_Cond(Stack! a, Stack! b) 
+        requires a != b;
+        requires a.elements != b.elements;
+        requires a.elements.Length == b.elements.Length;
+        requires a.size == b.size;
+        requires forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+        requires a.size <= a.elements.Length;
+        requires a.size > 1;
+        modifies a.size, a.elements[*], b.size, b.elements[*];
+        ensures a.size == old(a.size) - 2;
+        ensures a.size == b.size;       
+    {
+	bool h1 = ?!;
+
+        a.Pop();
+        a.Pop();
+
+        b.Pop();
+        b.Pop();
+
+	assert h1 <==> 
+	    forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+    }
+    */
+
+    /*
+    // Push_Pop 
+    [Verify(true)]
+    static void Push_Pop_Commute_Cond(Stack! a, Stack! b, int val1) 
+        requires a != b;
+        requires a.elements != b.elements;
+        requires a.elements.Length == b.elements.Length;
+        requires a.size == b.size;
+        requires forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+        requires a.size < a.elements.Length;
+        requires a.size > 0;
+        modifies a.size, a.elements[*], b.size, b.elements[*];
+        ensures a.size == old(a.size);
+        ensures a.size == b.size;       
+    {
+	int h1a = ?!;
+	int h1b = ?!;
+	int h2a = ?!;
+	int h2b = ?!;
+	assert h1a >= -1 && h1a <= 1;
+	assert h1b >= -1 && h1b <= 1;
+	assert h2a >= -1 && h2a <= 1;
+	assert h2b >= -1 && h2b <= 1;
+
+        a.Push(val1);
+        a.Pop();
+
+        b.Pop();
+        b.Push(val1);
+
+	assert (h1a*val1+h1b>=0 && h2a*val1+h2b>=0) <==> 
+	    forall {int i in (0 : a.size); a.elements[i] == b.elements[i]};
+    }
+    */
+
+    // -------------------------------------------------------------
+    //  Sketches
+    // -------------------------------------------------------------
+
+    /*
+    [Inline]
+    [Verify(true)]
+    void Push_Inverse_Sketch(int val)
+	modifies size, elements[*];
+    {
+	if (?!)		
+	    Push(?!*val+?!);
+	else if (?!)
+	    Pop();
+    }
+    */
+
+
+    /*
+    [Inline]
+    [Verify(true)]
+    void Pop_Inverse_Sketch(int ret)
+	modifies size, elements[*];
+    {
+	int h1a = ?!;
+	int h1b = ?!;
+	assert h1a >= -1 && h1a <= 1;
+	assert h1b >= -1 && h1b <= 1;
+
+	if (?!)		
+	    Push(h1a*ret+h1b);
+	else if (?!)
+	    Pop();
+    }
+    */
+
+    /*
+    [Inline]
+    [Verify(true)]
+    void Push_Push_T_Sketch(int val1, int val2)
+	modifies size, elements[*];
+    {
+	int h1a = ?!; 
+	int h1b = ?!;
+	int h1c = ?!;
+	int h2a = ?!;
+	int h2b = ?!;
+	int h2c = ?!;
+	int h3a = ?!;
+	int h3b = ?!;
+	int h3c = ?!;
+	int h4a = ?!;
+	int h4b = ?!;
+	int h4c = ?!;
+	int h5a = ?!;
+	int h5b = ?!;
+	int h5c = ?!;
+	int h6a = ?!;
+	int h6b = ?!;
+	int h6c = ?!;
+	int h7a = ?!;
+	int h7b = ?!;
+	int h7c = ?!;
+
+	assert h1a >= -1 && h1a <= 1;
+	assert h1b >= -1 && h1b <= 1;
+	assert h1c >= -1 && h1c <= 1;
+	assert h2a >= -1 && h2a <= 1;
+	assert h2b >= -1 && h2b <= 1;
+	assert h2c >= -1 && h2c <= 1;
+	assert h3a >= -1 && h3a <= 1;
+	assert h3b >= -1 && h3b <= 1;
+	assert h3c >= -1 && h3c <= 1;
+	assert h4a >= -1 && h4a <= 1;
+	assert h4b >= -1 && h4b <= 1;
+	assert h4c >= -1 && h4c <= 1;
+	assert h5a >= -1 && h5a <= 1;
+	assert h5b >= -1 && h5b <= 1;
+	assert h5c >= -1 && h5c <= 1;
+	assert h6a >= -1 && h6a <= 1;
+	assert h6b >= -1 && h6b <= 1;
+	assert h6c >= -1 && h6c <= 1;
+	assert h7a >= -1 && h7a <= 1;
+	assert h7b >= -1 && h7b <= 1;
+	assert h7c >= -1 && h7c <= 1;
+
+	//if (val1>=val2)
+        if (h1a*val1+h1b*val2+h1c>=0) {
+	    //   Push(val1);
+	    if (?!)
+		Pop();
+	    else if (?!)
+		Push(h2a*val1+h2b*val2+h2c);
+	    if (?!)
+		Pop();
+	    else if (?!)
+		Push(h3a*val1+h3b*val2+h3c);
+	    if (?!)
+		Pop();
+	    else if (?!)
+		Push(h4a*val1+h4b*val2+h4c);
+	} else {
+		//Pop();
+		if (?!)
+		    Pop();
+		else if (?!)
+		    Push(h5a*val1+h5b*val2+h5c);
+		//Push(val1);
+		if (?!)
+		   Pop();
+		else if (?!)
+		    Push(h6a*val1+h6b*val2+h6c);
+		//Push(val2);
+		if (?!)
+		   Pop();
+		else if (?!)
+		   Push(h7a*val1+h7b*val2+h7c);
+            }
+    }
+
+    [Inline]
+    [Verify(true)]
+    void Pop_Pop_T_Sketch()
+	modifies size, elements[*];
+    {
+	//   Pop();
+	if (?!)
+	   Pop();
+	else
+	   Push(?!);
+    }
+    */
+
+    /*
+    [Inline]
+    [Verify(true)]
+    void Push_Pop_T_Sketch(int val1)
+	modifies size, elements[*];
+    {
+	int h1a = ?!; 
+	int h1b = ?!;
+
+	assert h1a >= -1 && h1a <= 1;
+	assert h1b >= -1 && h1b <= 1;
+
+	if (?!)
+	    Pop();
+	else if (?!)
+	    Push(h1a*val1+h1b);
+    }
+
+    [Inline]
+    [Verify(true)]
+    void Pop_Push_T_Sketch(int val1)
+	modifies size, elements[*];
+    {
+	int h1a = ?!; 
+	int h1b = ?!;
+	int h2a = ?!;
+	int h2b = ?!;
+	int h3a = ?!;
+	int h3b = ?!;
+
+	assert h1a >= -1 && h1a <= 1;
+	assert h1b >= -1 && h1b <= 1;
+	assert h2a >= -1 && h2a <= 1;
+	assert h2b >= -1 && h2b <= 1;
+	assert h3a >= -1 && h3a <= 1;
+	assert h3b >= -1 && h3b <= 1;
+
+	if (?!)
+	    Pop();
+	else if (?!)
+	    Push(h1a*val1+h1b);
+	if (?!)
+	    Pop();
+	else if (?!)
+	    Push(h2a*val1+h2b);
+	if (?!)
+	    Pop();
+	else if (?!)
+	    Push(h3a*val1+h3b);
+    }
+    */
+
+    // -------------------------------------------------------------
+    //  Operations
+    // -------------------------------------------------------------
+
+    // Push
+    [Verify(false)]
+    [Operation]
+    void Push(int val)
+        requires elements.Length > 0;
+        requires size < elements.Length;
+        requires size >= 0;
+        modifies size, elements[*];    
+        ensures elements[0] == val;
+        ensures forall {int i in (1 : size); elements[i] == old(elements[i-1])};
+        ensures size == old(size) + 1;
+    {   
+        int[]! copy = ArrayCopy(elements);        
+        PushH(val, copy);
+    }
+
+    [Inline]
+    [Verify(false)]
+    void PushH(int val, int[]! elementsCp)
+        modifies size, elements[*], elementsCp.0;
+    {
+        for (int i = 1; i <= size; i++) 
+            invariant i <= size + 1;
+            invariant forall {int j in (1 : i); elements[j] == elementsCp[j-1]};
+        {
+            elements[i] = elementsCp[i-1];
+        }
+        elements[0] = val;
+        size++;
+    }
+
+    // Pop
+    [Verify(false)]
+    [Operation]
+    int Pop()
+        requires size <= elements.Length;
+        requires size > 0;
+        modifies size, elements[*];
+        ensures result == old(elements[0]);
+        ensures forall {int i in (0 : size); elements[i] == old(elements[i+1])};
+        ensures size == old(size) - 1;
+    {
+        int[]! copy = ArrayCopy(elements);
+        int val = PopH(copy);
+        return val;
+    }
+
+    [Inline]
+    [Verify(false)]
+    int PopH(int[]! elementsCp)
+        modifies size, elements[*], elementsCp.0;
+    {
+        int val = elements[0];
+        for (int i = 0; i < size - 1; i++) 
+            invariant forall {int j in (0 : i); elements[j] == elementsCp[j+1]};
+        {
+            elements[i] = elementsCp[i+1];
+        }
+        size--;
+        return val;
+    }
+
+
+    // -------------------------------------------------------------
+    //  Helpers
+    // -------------------------------------------------------------
+
+    [Verify(false)]
+    static int[]! ArrayCopy(int[]! src)
+	modifies src.0;
+        ensures result.Length == src.Length;
+        ensures forall {int i in (0 : src.Length); result[i] == src[i]};
+        ensures result != src;
+    {
+        int[] dest = new int[src.Length];
+        for(int i = 0; i < src.Length; i++)
+            invariant forall{int j in (0:i); dest[j] == src[j]};
+        {
+            dest[i] = src[i];
+        }
+        return dest;	
+    }
+
+    [Verify(false)]
+    public static void Main(string[] args) { }
+
+}
+    

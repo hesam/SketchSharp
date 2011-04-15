@@ -3,6 +3,7 @@ using Microsoft.Contracts;
 class Test {
 
     // fields
+    public Test! o;
     public int fa;
     public int fb;
     public int[] fc;
@@ -15,6 +16,7 @@ class Test {
 	fa -= 5;
 	fb = fb + ?!;
     }
+
 
     void f1(int t, int[]! a)
         requires a.Length <= 5;
@@ -50,6 +52,20 @@ class Test {
       one.fa = ?!(one.fc.Length);
     }
 
+
+    int f6() 
+	ensures o.fa == 5 ==> result == 10;
+    {
+	return o.fa + ?!;
+    }
+
+    static int min1(int a, int b)
+       ensures (a <= b ==> result == a) && 
+               (b < a  ==> result == b);
+    {
+       return ?!(a, b) ? ?!(a, b) : ?!(a, b);
+    }
+
     static int bool0()
         ensures result == 5;
     {
@@ -76,6 +92,13 @@ class Test {
         ensures result > 7;
     {        
         return a + ?!;
+    }
+
+    static void m2(int a)
+        ensures true;
+    {
+	int h = ?!;
+        assert a > h ==> a + 10 > 20;
     }
 
     static int add(int a)
@@ -122,13 +145,6 @@ class Test {
             res = ?!(res, x);
 
         return res;
-    }
-
-    static int min1(int a, int b)
-       ensures (a <= b ==> result == a) && 
-               (b < a  ==> result == b);
-    {
-       return ?!(a, b) ? ?!(a, b) : ?!(a, b);
     }
 
     static int min2(int a, int b)
@@ -262,10 +278,11 @@ class Test {
         return ?!;
     }
 
+   
     /*
 
-
    */
+
 
     /*
     DOES NOT WORK YET:
